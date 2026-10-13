@@ -12,6 +12,7 @@ import {
   settingsStore,
   useStore,
 } from '../lib/store'
+import { SourceSettings } from './settings/SourceSettings'
 
 const DEFAULT_SERVER = 'http://127.0.0.1:11470'
 
@@ -244,6 +245,7 @@ export function Settings() {
       </header>
       <AddonsSection />
       <PlaybackSection />
+      <SourceSettings />
       <DataSection />
     </div>
   )
