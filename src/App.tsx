@@ -12,6 +12,10 @@ import { Settings } from './pages/Settings'
 
 // El reproductor (con hls.js) se descarga recién al dar play: la portada carga más liviana.
 const Player = lazy(() => import('./pages/Player').then((m) => ({ default: m.Player })))
+const Calendar = lazy(() => import('./pages/Calendar').then((m) => ({ default: m.Calendar })))
+const YearReview = lazy(() => import('./pages/YearReview').then((m) => ({ default: m.YearReview })))
+
+const pageFallback = <div className="page"><div className="spinner" /></div>
 
 function SpatialNav() {
   const navigate = useNavigate()
@@ -47,6 +51,8 @@ export function App() {
           <Route path="detail/:type/:id" element={<Detail />} />
           <Route path="list" element={<MyList />} />
           <Route path="history" element={<History />} />
+          <Route path="history/year" element={<Suspense fallback={pageFallback}><YearReview /></Suspense>} />
+          <Route path="calendar" element={<Suspense fallback={pageFallback}><Calendar /></Suspense>} />
           <Route path="settings" element={<Settings />} />
           <Route path="*" element={<Home />} />
         </Route>

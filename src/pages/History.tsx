@@ -62,6 +62,14 @@ export function History() {
           <span><b>{stats.episodes}</b> episodios</span>
           <span><b>{stats.hours}</b> h vistas</span>
         </div>
+        <div className="history-actions">
+          <Link to="/history/year" className="btn btn-primary">
+            ✨ Tu año {new Date().getFullYear()}
+          </Link>
+          <Link to="/calendar" className="btn">
+            📅 Calendario
+          </Link>
+        </div>
       </header>
       <div className="filters">
         {FILTERS.map((f) => (
