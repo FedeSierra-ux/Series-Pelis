@@ -2,6 +2,7 @@ import { useSyncExternalStore } from 'react'
 import { createStore, get, set } from 'idb-keyval'
 import { CINEMETA_ADDON, fetchManifest } from './addons'
 import type { InstalledAddon, MetaPreview } from './types'
+import { DEFAULT_CATALOG_PREFS, normalizePrefs, type CatalogPrefs } from './catalogPrefs'
 
 // Datos del usuario guardados en el navegador (IndexedDB). En la v0.2 se van a
 // sincronizar con Cloudflare D1; por eso todo pasa por estos stores y no por
@@ -87,6 +88,27 @@ export async function installAddon(manifestUrl: string) {
 
 export function removeAddon(transportUrl: string) {
   addonsStore.set((list) => list.filter((a) => a.transportUrl !== transportUrl))
+}
+
+/** Activa o desactiva un addon sin desinstalarlo. */
+export function setAddonEnabled(transportUrl: string, enabled: boolean) {
+  addonsStore.set((list) =>
+    list.map((a) => {
+      if (a.transportUrl !== transportUrl) return a
+      const { disabled: _old, ...rest } = a
+      return enabled ? rest : { ...rest, disabled: true }
+    }),
+  )
+}
+
+/** Agrega addons de los que ya tenemos el manifest (por ejemplo, importados de Stremio). */
+export function addInstalledAddons(entries: InstalledAddon[]) {
+  addonsStore.set((list) => {
+    const urls = new Set(list.map((a) => a.transportUrl))
+    const ids = new Set(list.map((a) => a.manifest.id))
+    const fresh = entries.filter((e) => !urls.has(e.transportUrl) && !ids.has(e.manifest.id))
+    return fresh.length ? [...list, ...fresh] : list
+  })
 }
 
 export function moveAddon(transportUrl: string, delta: -1 | 1) {
@@ -285,6 +307,10 @@ export function toggleWatchlist(meta: MetaPreview) {
   })
 }
 
+// ---------- Catálogos (gestor: renombrar, ocultar, reordenar, fusionar) ----------
+
+export const catalogPrefsStore = new PersistedStore<CatalogPrefs>('catalogPrefs', DEFAULT_CATALOG_PREFS)
+
 // ---------- Ajustes ----------
 
 export interface SubtitleStyle {
@@ -380,6 +406,8 @@ export function exportData() {
     watchlist: watchlistStore.get(),
     settings: settingsStore.get(),
     trackPrefs: trackPrefsStore.get(),
+    disabledAddons: addonsStore.get().filter((a) => a.disabled).map((a) => a.transportUrl),
+    catalogPrefs: catalogPrefsStore.get(),
   }
 }
 
@@ -394,6 +422,8 @@ export async function importData(raw: unknown) {
   for (const url of data.addons ?? []) {
     if (!installed.has(url)) await installAddon(url).catch(() => {})
   }
+  if (data.disabledAddons?.length) data.disabledAddons.forEach((url) => setAddonEnabled(url, false))
+  if (data.catalogPrefs) catalogPrefsStore.set(normalizePrefs(data.catalogPrefs))
 }
 
 // ---------- Arranque ----------
@@ -406,6 +436,7 @@ export async function hydrateStores() {
     settingsStore.hydrate(),
     lastSourceStore.hydrate(),
     trackPrefsStore.hydrate(),
+    catalogPrefsStore.hydrate(),
   ])
   if (addonsStore.get().length === 0) addonsStore.set([CINEMETA_ADDON])
   // No bloquea el arranque.

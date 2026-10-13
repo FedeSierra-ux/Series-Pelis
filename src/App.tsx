@@ -15,6 +15,7 @@ const Player = lazy(() => import('./pages/Player').then((m) => ({ default: m.Pla
 const Calendar = lazy(() => import('./pages/Calendar').then((m) => ({ default: m.Calendar })))
 const YearReview = lazy(() => import('./pages/YearReview').then((m) => ({ default: m.YearReview })))
 const Person = lazy(() => import('./pages/Person').then((m) => ({ default: m.Person })))
+const CatalogManager = lazy(() => import('./pages/CatalogManager').then((m) => ({ default: m.CatalogManager })))
 
 const pageFallback = <div className="page"><div className="spinner" /></div>
 
@@ -56,6 +57,7 @@ export function App() {
           <Route path="history/year" element={<Suspense fallback={pageFallback}><YearReview /></Suspense>} />
           <Route path="calendar" element={<Suspense fallback={pageFallback}><Calendar /></Suspense>} />
           <Route path="settings" element={<Settings />} />
+          <Route path="settings/catalogs" element={<Suspense fallback={pageFallback}><CatalogManager /></Suspense>} />
           <Route path="*" element={<Home />} />
         </Route>
       </Routes>

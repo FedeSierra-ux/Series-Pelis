@@ -38,6 +38,8 @@ export interface InstalledAddon {
   /** URL del manifest, por ejemplo https://v3-cinemeta.strem.io/manifest.json */
   transportUrl: string
   manifest: Manifest
+  /** Desactivado por el usuario: sigue instalado pero no se consulta (los datos viejos no tienen el campo). */
+  disabled?: boolean
 }
 
 export interface MetaPreview {
