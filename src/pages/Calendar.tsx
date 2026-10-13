@@ -1,7 +1,7 @@
 import { useMemo } from 'react'
 import { Link } from 'react-router-dom'
 import { useEpisodeSpoilers } from '../components/Spoiler'
-import { Empty } from '../components/Status'
+import { EmptyState } from '../components/EmptyState'
 import { episodeLabel, smallPoster } from '../lib/format'
 import { useTitle } from '../lib/hooks'
 import { episodeLink, useUpNext, type EpisodeItem } from '../lib/upNext'
@@ -105,10 +105,12 @@ export function Calendar() {
       )}
 
       {data && data.followed === 0 && (
-        <Empty>
-          Todavía no seguís ninguna serie. Mirá alguna o agregala a <Link to="/list">Mi lista</Link> y acá vas a ver sus
-          próximos episodios.
-        </Empty>
+        <EmptyState
+          icon="calendar"
+          title="Todavía no seguís ninguna serie"
+          text="Mirá alguna o agregala a Mi lista y acá vas a ver sus próximos episodios."
+          action={{ label: 'Ir a Mi lista', to: '/list' }}
+        />
       )}
 
       {data && data.followed > 0 && (

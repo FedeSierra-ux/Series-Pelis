@@ -1,0 +1,43 @@
+/* Estado vacío (EmptyState.tsx). Solo variables del tema: hereda el Tema 2 solo. */
+.empty-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  max-width: 440px;
+  margin: 32px auto;
+  padding: 36px 24px 32px;
+  border-radius: var(--radius-lg, 20px);
+  background: var(--bg-2);
+  text-align: center;
+}
+.empty-state-icon {
+  display: grid;
+  place-items: center;
+  width: 64px;
+  height: 64px;
+  margin-bottom: 4px;
+  border-radius: 50%;
+  background: color-mix(in srgb, var(--accent) 18%, transparent);
+  color: var(--accent);
+}
+.empty-state-title {
+  margin: 0;
+  font-size: 1.25rem;
+  font-weight: 700;
+  color: var(--text);
+}
+.empty-state-text {
+  margin: 0;
+  font-size: 1rem;
+  line-height: 1.5;
+  color: var(--muted);
+}
+.empty-state-text a {
+  color: var(--accent);
+  text-decoration: underline;
+}
+.empty-state-action {
+  margin-top: 10px;
+}
