@@ -1238,3 +1238,48 @@ select:focus-visible {
     font-size: 18px;
   }
 }
+
+/* ---------- v0.2 fuentes ---------- */
+
+.auto-play-banner {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px 16px;
+  margin-bottom: 12px;
+  padding: 12px 14px;
+  border-radius: 10px;
+  background: rgba(139, 92, 246, 0.16);
+  border: 1px solid var(--accent);
+  font-size: 0.92rem;
+}
+.auto-play-actions {
+  display: flex;
+  gap: 8px;
+}
+.stream-item.recommended {
+  border-color: rgba(139, 92, 246, 0.6);
+}
+.stream-badge {
+  grid-column: 1 / -1;
+  justify-self: start;
+  font-size: 0.7rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  padding: 2px 8px;
+  border-radius: 999px;
+  color: #fff;
+  background: linear-gradient(135deg, var(--accent), var(--accent-2));
+}
+.source-field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  max-width: 520px;
+}
+.source-field span {
+  font-size: 0.9rem;
+  color: var(--muted);
+}
