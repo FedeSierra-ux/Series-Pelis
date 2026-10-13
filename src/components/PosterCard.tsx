@@ -71,11 +71,12 @@ export const PosterCard = memo(function PosterCard({ meta, progress, watched, su
         ) : (
           <div className="poster-fallback">{meta.name}</div>
         )}
-        {watched && <span className="badge-watched" title="Vista">✓</span>}
         {posterLabel && <span className={`poster-label poster-label-${posterLabel}`}>{LABEL_TEXT[posterLabel]}</span>}
-        {posterRating === 'on' && (
-          <span className={progress ? 'poster-rating-wrap above-progress' : 'poster-rating-wrap'}>
-            <PosterRating value={meta.imdbRating} />
+        {/* Arriba a la derecha: el puntaje y, debajo, el ✓ de "vista". */}
+        {((posterRating === 'on' && meta.imdbRating) || watched) && (
+          <span className="poster-corner">
+            {posterRating === 'on' && <PosterRating value={meta.imdbRating} />}
+            {watched && <span className="badge-watched" title="Vista">✓</span>}
           </span>
         )}
         {progress !== undefined && progress > 0 && (

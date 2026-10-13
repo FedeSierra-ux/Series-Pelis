@@ -516,9 +516,6 @@ select:focus-visible {
   font-size: 0.78rem;
 }
 .badge-watched {
-  position: absolute;
-  top: 8px;
-  right: 8px;
   width: 26px;
   height: 26px;
   display: grid;
@@ -2737,28 +2734,33 @@ select:focus-visible {
   --poster-badge-fg: #fff;
 }
 
-/* Puntaje de IMDb impreso sobre el póster (estilo RPDB). */
-.poster-rating-wrap {
+/* Arriba a la derecha del póster: el puntaje de IMDb (estilo RPDB) y, debajo, el ✓ de "vista". */
+.poster-corner {
   position: absolute;
-  left: 6px;
-  bottom: 6px;
+  top: 6px;
+  right: 6px;
   max-width: calc(100% - 12px);
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 5px;
   pointer-events: none;
 }
-.poster-rating-wrap.above-progress {
-  bottom: 10px;
+/* En "Seguir viendo" el ✕ para quitar ocupa esa esquina: va debajo. */
+.poster-card-wrap .poster-corner {
+  top: 42px;
 }
 .poster-rating {
   display: inline-flex;
   align-items: center;
-  gap: 5px;
-  padding: 2px 7px 2px 2px;
-  border-radius: 6px;
+  gap: 4px;
+  padding: 2px 6px 2px 2px;
+  border-radius: 5px;
   background: var(--poster-badge-bg);
   color: var(--poster-badge-fg);
   font-weight: 800;
-  font-size: clamp(0.72rem, calc(var(--poster-w) * 0.07), 0.92rem);
-  line-height: 1.3;
+  font-size: clamp(0.64rem, calc(var(--poster-w) * 0.058), 0.8rem);
+  line-height: 1;
   font-variant-numeric: tabular-nums;
   box-shadow: 0 1px 6px rgba(0, 0, 0, 0.45);
   -webkit-backdrop-filter: blur(4px);
@@ -2770,8 +2772,9 @@ select:focus-visible {
   font-weight: 900;
   font-size: 0.78em;
   letter-spacing: -0.02em;
-  padding: 1px 4px;
-  border-radius: 4px;
+  line-height: 1;
+  padding: 2px 4px;
+  border-radius: 3px;
 }
 
 /* Etiquetas: una sola por póster, arriba a la izquierda (el ✓ de "vista" va a la derecha). */
@@ -4851,4 +4854,30 @@ input[type='password']:focus-visible {
   height: 10px;
   border-radius: 5px;
   background: #c4b0ff;
+}
+
+/* ---------- Pantalla de error (en vez de pantalla negra) ---------- */
+.error-screen {
+  max-width: 760px;
+}
+.error-screen h1 {
+  margin-bottom: 6px;
+}
+.error-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin: 18px 0;
+}
+.error-detail {
+  background: var(--bg-2);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  color: var(--muted);
+  font-size: 0.8rem;
+  padding: 12px;
+  white-space: pre-wrap;
+  word-break: break-word;
+  max-height: 40vh;
+  overflow: auto;
 }

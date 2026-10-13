@@ -1,5 +1,6 @@
 import { lazy, Suspense, useEffect } from 'react'
 import { BrowserRouter, Route, Routes, useLocation, useNavigate } from 'react-router-dom'
+import { ErrorBoundary } from './components/ErrorBoundary'
 import { Layout } from './components/Layout'
 import { Onboarding } from './components/Onboarding'
 import { Screensaver } from './components/Screensaver'
@@ -44,37 +45,39 @@ export function App() {
     <BrowserRouter>
       <SpatialNav />
       <ScrollToTop />
-      <Screensaver />
-      <Onboarding />
-      <Routes>
-        <Route
-          path="/watch/:type/:id"
-          element={
-            <Suspense fallback={<div className="player"><div className="player-spinner" /></div>}>
-              <Player />
-            </Suspense>
-          }
-        />
-        <Route element={<Layout />}>
-          <Route index element={<Home />} />
-          <Route path="discover/:type" element={<Discover />} />
-          <Route path="search" element={<Search />} />
-          <Route path="detail/:type/:id" element={<Detail />} />
-          <Route path="person/:id" element={<Suspense fallback={pageFallback}><Person /></Suspense>} />
-          <Route path="together" element={<Suspense fallback={pageFallback}><Together /></Suspense>} />
-          <Route path="lists" element={<Suspense fallback={pageFallback}><ListsIndex /></Suspense>} />
-          <Route path="lists/:id" element={<Suspense fallback={pageFallback}><ListPage /></Suspense>} />
-          <Route path="list" element={<MyList />} />
-          <Route path="history" element={<History />} />
-          <Route path="history/year" element={<Suspense fallback={pageFallback}><YearReview /></Suspense>} />
-          <Route path="history/diary" element={<Suspense fallback={pageFallback}><Diary /></Suspense>} />
-          <Route path="history/goals" element={<Suspense fallback={pageFallback}><Goals /></Suspense>} />
-          <Route path="calendar" element={<Suspense fallback={pageFallback}><Calendar /></Suspense>} />
-          <Route path="settings" element={<Settings />} />
-          <Route path="settings/catalogs" element={<Suspense fallback={pageFallback}><CatalogManager /></Suspense>} />
-          <Route path="*" element={<Home />} />
-        </Route>
-      </Routes>
+      <ErrorBoundary>
+        <Screensaver />
+        <Onboarding />
+        <Routes>
+          <Route
+            path="/watch/:type/:id"
+            element={
+              <Suspense fallback={<div className="player"><div className="player-spinner" /></div>}>
+                <Player />
+              </Suspense>
+            }
+          />
+          <Route element={<Layout />}>
+            <Route index element={<Home />} />
+            <Route path="discover/:type" element={<Discover />} />
+            <Route path="search" element={<Search />} />
+            <Route path="detail/:type/:id" element={<Detail />} />
+            <Route path="person/:id" element={<Suspense fallback={pageFallback}><Person /></Suspense>} />
+            <Route path="together" element={<Suspense fallback={pageFallback}><Together /></Suspense>} />
+            <Route path="lists" element={<Suspense fallback={pageFallback}><ListsIndex /></Suspense>} />
+            <Route path="lists/:id" element={<Suspense fallback={pageFallback}><ListPage /></Suspense>} />
+            <Route path="list" element={<MyList />} />
+            <Route path="history" element={<History />} />
+            <Route path="history/year" element={<Suspense fallback={pageFallback}><YearReview /></Suspense>} />
+            <Route path="history/diary" element={<Suspense fallback={pageFallback}><Diary /></Suspense>} />
+            <Route path="history/goals" element={<Suspense fallback={pageFallback}><Goals /></Suspense>} />
+            <Route path="calendar" element={<Suspense fallback={pageFallback}><Calendar /></Suspense>} />
+            <Route path="settings" element={<Settings />} />
+            <Route path="settings/catalogs" element={<Suspense fallback={pageFallback}><CatalogManager /></Suspense>} />
+            <Route path="*" element={<Home />} />
+          </Route>
+        </Routes>
+      </ErrorBoundary>
     </BrowserRouter>
   )
 }
