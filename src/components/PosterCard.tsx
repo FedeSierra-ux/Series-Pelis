@@ -1,4 +1,4 @@
-import { memo, useRef } from 'react'
+import { memo, useRef, type KeyboardEvent, type MouseEvent } from 'react'
 import { Link } from 'react-router-dom'
 import { prefetchMeta } from '../lib/addons'
 import { smallPoster } from '../lib/format'
@@ -13,9 +13,12 @@ interface Props {
   subtitle?: string
   to?: string
   eager?: boolean
+  /** Muestra un botón ✕ sobre la tarjeta (por ejemplo para sacarla de "Seguir viendo"). */
+  onRemove?: () => void
+  removeLabel?: string
 }
 
-export const PosterCard = memo(function PosterCard({ meta, progress, watched, subtitle, to, eager }: Props) {
+export const PosterCard = memo(function PosterCard({ meta, progress, watched, subtitle, to, eager, onRemove, removeLabel }: Props) {
   const prefetched = useRef(false)
   // Precargamos la ficha cuando el usuario se detiene en el póster: al entrar ya está lista.
   const prefetch = () => {
@@ -25,7 +28,7 @@ export const PosterCard = memo(function PosterCard({ meta, progress, watched, su
   }
   const src = smallPoster(meta.id, meta.poster)
 
-  return (
+  const card = (
     <Link
       to={to ?? `/detail/${meta.type}/${encodeURIComponent(meta.id)}`}
       className={`poster-card shape-${meta.posterShape ?? 'poster'}`}
@@ -55,6 +58,36 @@ export const PosterCard = memo(function PosterCard({ meta, progress, watched, su
         </span>
       </div>
     </Link>
+  )
+  if (!onRemove) return card
+
+  const label = removeLabel ?? 'Quitar'
+  // El ✕ queda encima del póster, así que la navegación espacial nunca lo elegiría:
+  // con ↑ desde la tarjeta se llega al botón y con ↓ se vuelve.
+  const onCardKey = (e: KeyboardEvent<HTMLDivElement>) => {
+    const target = e.target as HTMLElement
+    if (e.key === 'ArrowUp' && target.classList.contains('poster-card')) {
+      e.preventDefault()
+      target.parentElement?.querySelector<HTMLElement>('.poster-remove')?.focus()
+    } else if (e.key === 'ArrowDown' && target.classList.contains('poster-remove')) {
+      e.preventDefault()
+      target.parentElement?.querySelector<HTMLElement>('.poster-card')?.focus()
+    }
+  }
+  const remove = (e: MouseEvent<HTMLButtonElement>) => {
+    // Pasamos el foco a la tarjeta vecina para no dejar al control remoto "en el aire".
+    const wrap = e.currentTarget.parentElement
+    const neighbor = (wrap?.nextElementSibling ?? wrap?.previousElementSibling)?.querySelector<HTMLElement>('.poster-card')
+    onRemove()
+    if (neighbor) requestAnimationFrame(() => neighbor.focus({ preventScroll: false }))
+  }
+  return (
+    <div className="poster-card-wrap" onKeyDown={onCardKey}>
+      {card}
+      <button type="button" className="poster-remove" aria-label={label} title={label} onClick={remove}>
+        ✕
+      </button>
+    </div>
   )
 })
 

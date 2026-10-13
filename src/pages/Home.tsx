@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { PosterCard } from '../components/PosterCard'
 import { ImdbRating } from '../components/Rating'
@@ -7,7 +7,8 @@ import { browsableCatalogs } from '../lib/addons'
 import { episodeLabel } from '../lib/format'
 import { useAddons, useCatalog, useTitle } from '../lib/hooks'
 import { catalogLabel, genreLabel } from '../lib/i18n'
-import { continueWatching, progressStore, toggleWatchlist, useStore, watchlistStore } from '../lib/store'
+import { continueWatching, hideFromContinue, progressStore, toggleWatchlist, useStore, watchlistStore } from '../lib/store'
+import { episodeLink, useUpNext } from '../lib/upNext'
 import type { CatalogDef, InstalledAddon, MetaPreview } from '../lib/types'
 
 const ROW_LIMIT = 30
@@ -97,6 +98,62 @@ function Hero({ addon, catalog }: { addon: InstalledAddon; catalog: CatalogDef }
   )
 }
 
+const UNDO_MS = 5000
+
+/** Aviso "Quitado de Seguir viendo · Deshacer" que se va solo a los 5 s. */
+function useUndoHide() {
+  const [undo, setUndo] = useState<{ name: string; ids: string[] }>()
+  const timer = useRef<ReturnType<typeof setTimeout>>(undefined)
+  useEffect(() => () => clearTimeout(timer.current), [])
+
+  const hide = useCallback((metaId: string, name: string) => {
+    // Guardamos qué entradas estaban visibles para devolver exactamente esas.
+    const ids = Object.values(progressStore.get())
+      .filter((e) => e.metaId === metaId && !e.hidden)
+      .map((e) => e.videoId)
+    hideFromContinue(metaId)
+    setUndo({ name, ids })
+    clearTimeout(timer.current)
+    timer.current = setTimeout(() => setUndo(undefined), UNDO_MS)
+  }, [])
+
+  const restore = useCallback(() => {
+    if (!undo) return
+    progressStore.set((all) => {
+      const copy = { ...all }
+      for (const id of undo.ids) {
+        if (!copy[id]) continue
+        const { hidden: _hidden, ...rest } = copy[id]
+        copy[id] = rest
+      }
+      return copy
+    })
+    clearTimeout(timer.current)
+    setUndo(undefined)
+  }, [undo])
+
+  return { undo, hide, restore }
+}
+
+function UpNextRow() {
+  const { data } = useUpNext()
+  const items = data?.next ?? []
+  if (items.length === 0) return null
+  return (
+    <Row title="Tus series: siguiente episodio">
+      {items.map((it) => (
+        <PosterCard
+          key={it.videoId}
+          meta={{ id: it.metaId, type: 'series', name: it.seriesName, poster: it.poster }}
+          progress={it.progress}
+          subtitle={episodeLabel(it.season, it.episode) || 'Siguiente'}
+          to={episodeLink(it.metaId, it.season, it.videoId)}
+        />
+      ))}
+    </Row>
+  )
+}
+
 export function Home() {
   useTitle(undefined)
   const addons = useAddons()
@@ -104,6 +161,7 @@ export function Home() {
   const catalogs = browsableCatalogs(addons)
   const resume = continueWatching(progress)
   const heroSource = catalogs.find((c) => c.catalog.type === 'movie') ?? catalogs[0]
+  const { undo, hide, restore } = useUndoHide()
 
   return (
     <div className="page home" data-nav-root>
@@ -118,10 +176,14 @@ export function Home() {
               progress={e.duration ? e.position / e.duration : 0}
               subtitle={e.season !== undefined ? episodeLabel(e.season, e.episode) : 'Continuar'}
               to={`/detail/${e.type}/${encodeURIComponent(e.metaId)}${e.season !== undefined ? `?season=${e.season}&video=${encodeURIComponent(e.videoId)}` : ''}`}
+              onRemove={() => hide(e.metaId, e.name)}
+              removeLabel="Quitar de Seguir viendo"
             />
           ))}
         </Row>
       )}
+
+      <UpNextRow />
 
       {catalogs.map(({ addon, catalog }, i) => (
         <CatalogRow key={`${addon.transportUrl}|${catalog.type}|${catalog.id}`} addon={addon} catalog={catalog} eager={i < 3} />
@@ -130,6 +192,17 @@ export function Home() {
       {catalogs.length === 0 && (
         <div className="empty">
           No hay catálogos. <Link to="/settings">Agregá un addon</Link> para empezar.
+        </div>
+      )}
+
+      {undo && (
+        <div className="undo-toast" role="status">
+          <span>
+            Quitado de Seguir viendo<span className="muted"> · {undo.name}</span>
+          </span>
+          <button type="button" className="btn btn-small" onClick={restore}>
+            Deshacer
+          </button>
         </div>
       )}
     </div>

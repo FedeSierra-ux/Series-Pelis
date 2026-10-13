@@ -1283,3 +1283,431 @@ select:focus-visible {
   font-size: 0.9rem;
   color: var(--muted);
 }
+
+/* ---------- v0.2 biblioteca ---------- */
+
+/* Quitar de "Seguir viendo": el ✕ va encima del póster, fuera del Link. */
+.poster-card-wrap {
+  position: relative;
+  flex: 0 0 var(--poster-w);
+  width: var(--poster-w);
+}
+.poster-card-wrap > .poster-card {
+  width: 100%;
+}
+.poster-remove {
+  position: absolute;
+  top: 6px;
+  right: 6px;
+  z-index: 2;
+  width: 30px;
+  height: 30px;
+  display: grid;
+  place-items: center;
+  padding: 0;
+  border-radius: 50%;
+  border: 1px solid rgba(255, 255, 255, 0.25);
+  background: rgba(11, 11, 16, 0.78);
+  color: var(--text);
+  font: inherit;
+  font-size: 0.8rem;
+  font-weight: 700;
+  cursor: pointer;
+  opacity: 0;
+  transition: opacity 0.15s, background 0.15s;
+}
+.poster-card-wrap:hover .poster-remove,
+.poster-card-wrap:focus-within .poster-remove {
+  opacity: 1;
+}
+.poster-remove:hover,
+.poster-remove:focus-visible {
+  opacity: 1;
+  background: var(--accent-2);
+  border-color: transparent;
+}
+.poster-remove:focus-visible {
+  outline-offset: 2px;
+  border-radius: 50%;
+}
+/* En pantallas táctiles no hay hover: el botón se ve siempre. */
+@media (hover: none) {
+  .poster-remove {
+    opacity: 1;
+  }
+}
+
+.undo-toast {
+  position: fixed;
+  left: 50%;
+  bottom: 24px;
+  transform: translateX(-50%);
+  z-index: 40;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  max-width: calc(100vw - 32px);
+  padding: 8px 8px 8px 18px;
+  border-radius: 999px;
+  background: rgba(29, 29, 40, 0.97);
+  border: 1px solid var(--line);
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+  animation: toast-in 0.2s ease-out;
+}
+.undo-toast > span {
+  min-width: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+@keyframes toast-in {
+  from {
+    opacity: 0;
+    transform: translate(-50%, 12px);
+  }
+}
+
+/* Historial: accesos a "Tu año" y al calendario. */
+.history-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+/* ---------- Calendario ---------- */
+
+.cal-sub {
+  margin: 6px 0 0;
+  max-width: 560px;
+}
+.cal-section {
+  margin-bottom: 32px;
+}
+.cal-section > h2 {
+  font-size: clamp(1.1rem, 1.8vw, 1.4rem);
+  margin-bottom: 14px;
+}
+.cal-day {
+  margin-bottom: 18px;
+}
+.cal-day h3 {
+  font-size: 0.95rem;
+  color: var(--muted);
+  margin-bottom: 8px;
+}
+.cal-day h3::first-letter {
+  text-transform: uppercase;
+}
+.cal-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 360px), 1fr));
+  gap: 8px;
+}
+.cal-item {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 8px;
+  border-radius: var(--radius);
+  background: var(--bg-2);
+  min-width: 0;
+  transition: background 0.15s;
+}
+.cal-item:hover,
+.cal-item:focus-visible {
+  background: var(--bg-3);
+}
+.cal-thumb {
+  flex: 0 0 auto;
+  width: 120px;
+  aspect-ratio: 16 / 9;
+  border-radius: 8px;
+  overflow: hidden;
+  background: var(--bg-3);
+}
+.cal-thumb img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+.cal-thumb.is-poster img {
+  object-position: center 20%;
+}
+.cal-text {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  min-width: 0;
+  flex: 1;
+}
+.cal-text > * {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.cal-badge {
+  color: #fff;
+  background: rgba(139, 92, 246, 0.35);
+  padding: 1px 8px;
+  border-radius: 999px;
+  font-size: 0.72rem;
+  font-weight: 600;
+}
+.cal-skeleton .skeleton-line {
+  margin: 3px 0;
+}
+
+/* ---------- Tu año ---------- */
+
+.year-back {
+  display: inline-block;
+  color: var(--muted);
+  font-size: 0.9rem;
+  margin-bottom: 4px;
+}
+.year-back:hover,
+.year-back:focus-visible {
+  color: var(--text);
+}
+.year-hero {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 20px 32px;
+  padding: clamp(20px, 3vw, 36px);
+  margin-bottom: 16px;
+  border-radius: calc(var(--radius) * 1.5);
+  background:
+    radial-gradient(120% 140% at 0% 0%, rgba(139, 92, 246, 0.45), transparent 55%),
+    radial-gradient(120% 140% at 100% 100%, rgba(225, 29, 72, 0.35), transparent 55%),
+    var(--bg-2);
+  border: 1px solid var(--line);
+}
+.year-hero-main {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.year-big {
+  font-size: clamp(3.2rem, 11vw, 6rem);
+  font-weight: 900;
+  line-height: 1;
+  letter-spacing: -0.04em;
+  font-variant-numeric: tabular-nums;
+}
+.year-big-label {
+  font-size: clamp(1rem, 1.8vw, 1.25rem);
+  font-weight: 600;
+  color: #e4e4ec;
+}
+.year-kpis {
+  margin: 0;
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, auto));
+  gap: 12px 28px;
+}
+.year-kpis div {
+  display: flex;
+  flex-direction: column-reverse;
+  gap: 2px;
+}
+.year-kpis dt {
+  color: var(--muted);
+  font-size: 0.8rem;
+}
+.year-kpis dd {
+  margin: 0;
+  font-size: clamp(1.6rem, 3.2vw, 2.4rem);
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+}
+.year-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 300px), 1fr));
+  gap: 16px;
+}
+.year-card {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 18px 20px;
+  border-radius: var(--radius);
+  background: var(--bg-2);
+  border: 1px solid var(--line);
+  min-width: 0;
+}
+.year-page > .year-card {
+  margin-bottom: 16px;
+}
+.year-card h2 {
+  font-size: 0.85rem;
+  font-weight: 700;
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+.year-card-stat {
+  justify-content: flex-start;
+}
+.year-num {
+  font-size: clamp(2.2rem, 5vw, 3rem);
+  font-weight: 900;
+  line-height: 1;
+  letter-spacing: -0.03em;
+}
+.year-num small {
+  font-size: 1rem;
+  font-weight: 600;
+  letter-spacing: 0;
+  color: var(--muted);
+}
+.year-num-text {
+  font-size: clamp(1.8rem, 4vw, 2.4rem);
+}
+.year-num-text::first-letter {
+  text-transform: uppercase;
+}
+.year-bars,
+.year-titles {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.year-bar-label {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  font-weight: 600;
+  font-size: 0.92rem;
+  margin-bottom: 4px;
+}
+.year-bar {
+  display: block;
+  height: 8px;
+  border-radius: 999px;
+  background: var(--bg-3);
+  overflow: hidden;
+}
+.year-bar > span {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  background: linear-gradient(90deg, var(--accent), var(--accent-2));
+}
+.year-title {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-width: 0;
+  padding: 4px;
+  margin: -4px;
+  border-radius: 10px;
+}
+.year-title:hover,
+.year-title:focus-visible {
+  background: var(--bg-3);
+}
+.year-title img {
+  flex: 0 0 auto;
+  width: 40px;
+  aspect-ratio: 2 / 3;
+  object-fit: cover;
+  border-radius: 6px;
+  background: var(--bg-3);
+}
+.year-title-text {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+.year-title-text > * {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.year-kicker {
+  font-size: 0.72rem;
+  font-weight: 700;
+  color: var(--accent);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+/* Mapa de actividad estilo GitHub (SVG). */
+.heatmap-scroll {
+  overflow-x: auto;
+  scrollbar-width: thin;
+  padding-bottom: 4px;
+}
+.heatmap {
+  display: block;
+  max-width: none;
+}
+.hm-label {
+  fill: var(--muted);
+  font-size: 10px;
+}
+.hm-l0 {
+  fill: var(--bg-3);
+}
+.hm-l1 {
+  fill: rgba(139, 92, 246, 0.35);
+}
+.hm-l2 {
+  fill: rgba(139, 92, 246, 0.6);
+}
+.hm-l3 {
+  fill: #a78bfa;
+}
+.hm-l4 {
+  fill: #f0abfc;
+}
+.hm-future {
+  opacity: 0.35;
+}
+.heatmap rect:hover {
+  stroke: #fff;
+  stroke-width: 1.5;
+}
+.hm-legend {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 4px;
+}
+.hm-legend svg {
+  display: block;
+}
+
+@media (max-width: 760px) {
+  /* El menú de abajo ya tiene 7 ítems: el calendario se abre desde Historial. */
+  .nav-link.nav-desktop-only {
+    display: none;
+  }
+  .undo-toast {
+    bottom: calc(76px + env(safe-area-inset-bottom));
+  }
+  .year-kpis {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    width: 100%;
+  }
+  .cal-thumb {
+    width: 96px;
+  }
+}
+
+@media (min-width: 1100px) {
+  /* En PC el mapa entra entero: que ocupe el ancho de la tarjeta. */
+  .heatmap {
+    width: 100%;
+    height: auto;
+  }
+}
