@@ -279,6 +279,10 @@ export interface Settings {
   sourceRules: SourceRules
   /** Reproductor externo para el botón "Abrir en…". */
   externalPlayer: 'system' | 'vlc' | 'none'
+  /** API key (v3) o Read Access Token (v4) de TMDB. Vacío = solo Cinemeta. */
+  tmdbKey: string
+  /** Reproducir el tráiler sin sonido en la portada de Inicio (necesita TMDB). */
+  heroTrailer: boolean
 }
 
 export const settingsStore = new PersistedStore<Settings>('settings', {
@@ -292,6 +296,8 @@ export const settingsStore = new PersistedStore<Settings>('settings', {
   stillWatchingAfter: 3,
   sourceRules: { mode: 'manual', rememberLast: true, preferredQuality: '1080p', preferKeywords: [], excludeKeywords: ['cam', 'hdcam', 'telesync', 'hdts'] },
   externalPlayer: 'system',
+  tmdbKey: '',
+  heroTrailer: true,
 })
 
 // ---------- Copia de seguridad ----------
