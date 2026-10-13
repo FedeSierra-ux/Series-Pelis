@@ -1,0 +1,121 @@
+/* Guía del control remoto: capa a pantalla completa con cuatro tarjetas. Pensada para 1920×1080 con
+   html[data-tv] (letra base de 22 px); en la PC y el celular se achica sola. */
+
+.tv-hints {
+  position: fixed;
+  inset: 0;
+  z-index: 205;
+  display: grid;
+  place-items: center;
+  padding: clamp(16px, 3vw, 48px);
+  background: color-mix(in srgb, var(--bg) 90%, transparent);
+  backdrop-filter: blur(8px);
+  overflow-y: auto;
+}
+.tv-hints-box {
+  width: min(100%, 1560px);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: clamp(14px, 2vh, 28px);
+  text-align: center;
+  outline: none;
+}
+.tv-hints-box h2 {
+  font-size: clamp(1.5rem, 2.6vw, 2.4rem);
+  font-family: var(--font-display, inherit);
+}
+.tv-hints-sub {
+  margin: 0;
+  color: var(--muted);
+  font-size: clamp(0.95rem, 1.3vw, 1.15rem);
+}
+.tv-hints-cards {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  width: 100%;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  gap: clamp(12px, 1.6vw, 24px);
+}
+.tv-hint {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  padding: clamp(18px, 2vw, 32px) clamp(14px, 1.6vw, 24px);
+  border-radius: var(--radius-lg, calc(var(--radius) * 1.5));
+  background: var(--bg-2);
+  border: 1px solid var(--line);
+  text-align: center;
+}
+.tv-hint-icon {
+  width: clamp(64px, 6vw, 96px);
+  height: clamp(64px, 6vw, 96px);
+  color: var(--accent);
+}
+.tv-hint-icon svg {
+  width: 100%;
+  height: 100%;
+  display: block;
+}
+.tv-hint h3 {
+  font-size: clamp(1.05rem, 1.5vw, 1.35rem);
+  font-family: var(--font-display, inherit);
+}
+.tv-hint p {
+  margin: 0;
+  color: var(--muted);
+  font-size: clamp(0.9rem, 1.1vw, 1.05rem);
+  line-height: 1.45;
+  max-width: 34ch;
+}
+.tv-hints-actions {
+  display: flex;
+  justify-content: center;
+}
+.tv-hints-ok {
+  font-size: clamp(1rem, 1.3vw, 1.25rem);
+  padding: 14px 44px;
+}
+/* El botón arranca enfocado por código (sin tecla previa): el anillo se ve igual. */
+.tv-hints-ok:focus {
+  outline: 3px solid #fff;
+  outline-offset: 3px;
+}
+[data-theme='2'] .tv-hints-ok:focus {
+  outline: var(--focus-ring, 4px solid var(--accent));
+}
+
+/* Tema 2: tarjetas tonales, como el resto de la interfaz. */
+[data-theme='2'] .tv-hint {
+  background: var(--surface-1, var(--bg-2));
+  border-color: var(--outline, var(--line));
+}
+
+@media (max-width: 720px) {
+  .tv-hints {
+    place-items: start center;
+  }
+  .tv-hints-cards {
+    grid-template-columns: 1fr;
+  }
+  .tv-hint {
+    flex-direction: row;
+    text-align: left;
+    align-items: flex-start;
+    display: grid;
+    grid-template-columns: 56px 1fr;
+    column-gap: 14px;
+    row-gap: 4px;
+  }
+  .tv-hint-icon {
+    width: 56px;
+    height: 56px;
+    grid-row: span 2;
+  }
+  .tv-hint p {
+    max-width: none;
+  }
+}

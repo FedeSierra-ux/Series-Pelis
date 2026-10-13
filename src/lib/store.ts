@@ -602,6 +602,8 @@ export interface Settings {
   showAdvanced: boolean
   /** Ya se mostró (o se salteó) el asistente inicial. */
   onboardingDone: boolean
+  /** Ya se vio la guía del control remoto (la capa con tarjetas que aparece la primera vez en la TV). */
+  hintsSeen: boolean
   /** Apariencia: '1' clásico (por defecto) o '2' nuevo (riel lateral, tonos violáceos, Sora/DM Sans). */
   theme: '1' | '2'
 }
@@ -638,6 +640,7 @@ export const settingsStore = new PersistedStore<Settings>('settings', {
   tvMode: 'auto',
   showAdvanced: false,
   onboardingDone: false,
+  hintsSeen: false,
   theme: '1',
 })
 
