@@ -1,5 +1,19 @@
 # Changelog
 
+## [0.9.1] - 2026-10-13
+
+### Arreglado
+- **Pantalla en negro al cambiar de sección** (Chrome 150 en adelante, en PC y celular): desde esa versión
+  `window.scrollTo()` devuelve una promesa, y el efecto que subía la página al navegar (en la v0.8) la devolvía como
+  si fuera su limpieza. Al ir a otra página React intentaba llamarla, tiraba "is not a function" y se caía toda la
+  app. La v0.9.0 ya no lo tenía; ahora un test revisa que ningún efecto vuelva a devolver llamadas del navegador que
+  dan promesas.
+
+### Cambiado
+- Cambiar de página ya no vuelve a armar toda la app: el menú, el protector de pantalla y los avisos quedan
+  montados y solo se rearma la pantalla nueva (menos trabajo en cada click, se nota en la TV). Si una pantalla
+  falla, al ir a otra se sigue recuperando sola.
+
 ## [0.9.0] - 2026-10-13
 
 Auditoría completa de la v0.8 (revisión de código, pruebas reales en PC, celular y TV, y auditoría visual): 40 bugs

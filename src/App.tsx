@@ -78,7 +78,7 @@ export function App() {
       <SpatialNav />
       <GlobalShortcuts />
       <ScrollMemory />
-      <ErrorBoundary>
+      <ErrorBoundary keepMounted>
         <Screensaver />
         <Onboarding />
         {/* Después del asistente: la guía de la TV espera a que cierre y la ayuda "?" va encima de todo. */}
@@ -89,9 +89,11 @@ export function App() {
           <Route
             path="/watch/:type/:id"
             element={
-              <Suspense fallback={<div className="player"><div className="player-spinner" /></div>}>
-                <Player />
-              </Suspense>
+              <ErrorBoundary>
+                <Suspense fallback={<div className="player"><div className="player-spinner" /></div>}>
+                  <Player />
+                </Suspense>
+              </ErrorBoundary>
             }
           />
           <Route element={<Layout />}>
