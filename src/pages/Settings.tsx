@@ -16,6 +16,7 @@ import {
   useStore,
 } from '../lib/store'
 import { AddonExplorer } from './settings/AddonExplorer'
+import { AppearanceSettings } from './settings/AppearanceSettings'
 import { PlayerSettings } from './settings/PlayerSettings'
 import { SourceSettings } from './settings/SourceSettings'
 import { StremioImport } from './settings/StremioImport'
@@ -272,6 +273,7 @@ export function Settings() {
       <AddonsSection />
       <StremioImport />
       <TmdbSettings />
+      <AppearanceSettings />
       <PlaybackSection />
       <PlayerSettings />
       <SourceSettings />

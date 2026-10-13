@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
+import { ContinueCard } from '../components/ContinueCard'
 import { PosterCard } from '../components/PosterCard'
 import { ImdbRating } from '../components/Rating'
 import { Row } from '../components/Row'
@@ -9,6 +10,7 @@ import { episodeLabel } from '../lib/format'
 import { useCatalog, useTitle } from '../lib/hooks'
 import { catalogLabel, genreLabel } from '../lib/i18n'
 import { continueWatching, hideFromContinue, progressStore, settingsStore, toggleWatchlist, useStore, watchlistStore, type WatchEntry } from '../lib/store'
+import { useTheme } from '../lib/theme'
 import { episodeLink, useUpNext } from '../lib/upNext'
 import type { CatalogDef, InstalledAddon, MetaPreview } from '../lib/types'
 import { useNearViewport } from './home/lazy'
@@ -167,6 +169,7 @@ export function Home() {
   const resume = continueWatching(progress)
   const heroSource = (catalogs.find((c) => c.type === 'movie') ?? catalogs[0])?.sources[0]
   const { undo, hide, restore } = useUndoHide()
+  const landscapeResume = useTheme() === '2'
   // TMDB es opcional: sin key, Inicio queda igual que siempre.
   const tmdbKey = useStore(settingsStore).tmdbKey.trim()
   const trendingDay = useTrending('day', tmdbKey)
@@ -186,17 +189,22 @@ export function Home() {
 
       {resume.length > 0 && (
         <Row title="Seguir viendo" moreTo="/history">
-          {resume.map((e) => (
-            <PosterCard
-              key={e.videoId}
-              meta={{ id: e.metaId, type: e.type, name: e.name, poster: e.poster }}
-              progress={e.duration ? e.position / e.duration : 0}
-              subtitle={e.season !== undefined ? episodeLabel(e.season, e.episode) : 'Continuar'}
-              to={`/detail/${e.type}/${encodeURIComponent(e.metaId)}${e.season !== undefined ? `?season=${e.season}&video=${encodeURIComponent(e.videoId)}` : ''}`}
-              onRemove={() => hide(e.metaId, e.name)}
-              removeLabel="Quitar de Seguir viendo"
-            />
-          ))}
+          {resume.map((e) => {
+            const to = `/detail/${e.type}/${encodeURIComponent(e.metaId)}${e.season !== undefined ? `?season=${e.season}&video=${encodeURIComponent(e.videoId)}` : ''}`
+            // Tema 2: tarjetas apaisadas con el tiempo que falta.
+            if (landscapeResume) return <ContinueCard key={e.videoId} entry={e} to={to} onRemove={() => hide(e.metaId, e.name)} />
+            return (
+              <PosterCard
+                key={e.videoId}
+                meta={{ id: e.metaId, type: e.type, name: e.name, poster: e.poster }}
+                progress={e.duration ? e.position / e.duration : 0}
+                subtitle={e.season !== undefined ? episodeLabel(e.season, e.episode) : 'Continuar'}
+                to={to}
+                onRemove={() => hide(e.metaId, e.name)}
+                removeLabel="Quitar de Seguir viendo"
+              />
+            )
+          })}
         </Row>
       )}
 

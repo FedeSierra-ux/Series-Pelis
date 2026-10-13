@@ -12,6 +12,8 @@
     "test": "vitest run --dir src"
   },
   "dependencies": {
+    "@fontsource/dm-sans": "^5.3.0",
+    "@fontsource/sora": "^5.3.0",
     "hls.js": "^1.7.3",
     "idb-keyval": "^6.3.0",
     "react": "^19.3.0",

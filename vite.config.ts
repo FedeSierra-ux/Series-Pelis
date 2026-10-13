@@ -40,6 +40,15 @@ export default defineConfig({
         navigateFallbackDenylist: [/^\/api\//],
         runtimeCaching: [
           {
+            // Fuentes del Tema 2 (empaquetadas): se guardan la primera vez que se usan y después andan sin conexión.
+            urlPattern: ({ request, sameOrigin }) => sameOrigin && request.destination === 'font',
+            handler: 'CacheFirst',
+            options: {
+              cacheName: 'fonts',
+              expiration: { maxEntries: 20, maxAgeSeconds: 60 * 60 * 24 * 365 },
+            },
+          },
+          {
             // Pósters, fondos, logos y miniaturas de episodios: casi nunca cambian.
             urlPattern: ({ url }) => /(^|\.)metahub\.space$/.test(url.hostname) || url.hostname === 'image.tmdb.org',
             handler: 'CacheFirst',
