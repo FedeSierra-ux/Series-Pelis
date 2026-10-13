@@ -1,6 +1,7 @@
 import { Component, useEffect, useState, type ErrorInfo, type ReactNode } from 'react'
 import { useLocation } from 'react-router-dom'
 import { isChunkLoadError, isOffline } from '../lib/errors'
+import { ReportButton } from './ReportButton'
 
 type Props = { children: ReactNode }
 type State = { error: Error | null; stack: string }
@@ -100,7 +101,7 @@ function ErrorScreen({ error, componentStack }: { error: Error; componentStack: 
   return (
     <div className="page error-screen" role="alert">
       <h1>Algo falló</h1>
-      <p className="muted">Esta pantalla no se pudo abrir. Probá volver o recargar; si sigue pasando, mandá el detalle.</p>
+      <p className="muted">Esta pantalla no se pudo abrir. Probá volver o recargar; si sigue pasando, mandá el informe.</p>
       <div className="error-actions">
         <button className="btn" onClick={() => history.back()}>
           ← Volver
@@ -108,6 +109,7 @@ function ErrorScreen({ error, componentStack }: { error: Error; componentStack: 
         <button className="btn btn-primary" onClick={() => location.reload()}>
           Recargar
         </button>
+        <ReportButton kind="app" error={error} context={{ componentStack: componentStack.trim().split('\n').slice(0, 6).join('\n') }} />
         <button className="btn btn-ghost" onClick={copy}>
           Copiar detalle
         </button>
