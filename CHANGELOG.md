@@ -1,5 +1,34 @@
 # Changelog
 
+## [0.5.0] - 2026-10-13
+
+Descubrir, ficha y biblioteca (segunda de las tres versiones del cuestionario de funciones).
+
+### Agregado
+- **Búsqueda mientras escribís** y **búsquedas recientes** (se borran de a una o todas).
+- **Personas en la búsqueda** (con TMDB) y **"juntos"**: escribí "Darín y Francella" o usá "Buscar con otra
+  persona…" en la página de alguien para ver los títulos donde aparecen los dos.
+- **Filtros y orden en Descubrir**: género, años, puntaje mínimo y orden; con TMDB también idioma, país y plataforma
+  en Argentina. Quedan en la URL, así que al volver de una ficha siguen puestos.
+- **Listas curadas** (`/lists`): mejor puntaje de IMDb (aproximación con las más populares de Cinemeta),
+  ganadoras del Oscar a Mejor película (Wikidata) y, con TMDB, sagas y listas temáticas. Se pueden sumar a Inicio.
+- **Etiquetas clickeables** en la ficha: géneros, dirección, elenco y palabras clave.
+- **Puntaje de IMDb sobre el póster** (o debajo, o sin puntaje) y **etiquetas**: Episodio nuevo, Temporada nueva,
+  Top 10 y Estreno.
+- **Tráiler al pasar por un póster**: a los 2 s, sin sonido y con subtítulos en español (no en el celular).
+- **"¿Sabías que?"** en la ficha, con datos de Wikipedia en español.
+- **Tu puntaje con estrellas** (de 0,5 a 5) en la ficha y al terminar de ver algo. Se ve en Mi lista, Historial y el Diario.
+- **"Ya no me interesa"**: saca el título de las recomendaciones y filas de Inicio (se deshace desde Ajustes).
+- **Para vos**: recomendaciones con TMDB según lo que viste y puntuaste, con **el porqué** en una línea.
+- **Modo sin spoilers**: difumina las miniaturas y oculta la sinopsis de los episodios que no viste.
+- **Diario** (`/history/diary`): todo lo que viste con fecha, agrupado por mes y día, con "La volviste a ver".
+- **Tu año en modo historia**, animado, con **Compartir** (imagen de 1080×1920).
+- **Metas y logros** (`/history/goals`): meta anual de pelis, episodios u horas y 11 logros.
+
+### Corregido
+- La caché de imágenes del service worker guardaba respuestas opacas, que Chrome cuenta como ~7 MB cada una:
+  podía llenar la cuota del navegador y entonces dejaban de guardarse ajustes, progreso y Mi lista sin avisar.
+
 ## [0.4.0] - 2026-10-13
 
 Reproductor, subtítulos y fuentes (primera de las tres versiones que salieron del cuestionario de funciones).
