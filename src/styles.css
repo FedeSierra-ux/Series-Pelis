@@ -2469,3 +2469,262 @@ select:focus-visible {
   font-size: 0.9rem;
   color: var(--muted);
 }
+
+/* ---------- v0.5 gustos ---------- */
+
+/* Tu puntaje con estrellas (ficha y final del reproductor). */
+.star-rating {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px 10px;
+  margin-top: 4px;
+}
+.star-rating-label {
+  font-weight: 600;
+  font-size: 0.9rem;
+  color: var(--muted);
+}
+.star-input {
+  display: inline-flex;
+  margin-left: -6px;
+  padding: 2px 6px;
+  border-radius: 10px;
+  cursor: pointer;
+  touch-action: manipulation;
+  user-select: none;
+}
+.star-input.drafting {
+  background: var(--bg-3);
+}
+.stars {
+  display: inline-flex;
+  gap: 2px;
+}
+.star {
+  display: inline-block;
+  width: 1.15em;
+  font-size: 1.75rem;
+  line-height: 1.1;
+  text-align: center;
+  color: var(--line);
+  color: color-mix(in srgb, var(--muted) 45%, transparent);
+  transition: color 0.12s, transform 0.12s;
+}
+.star-full {
+  color: var(--accent);
+}
+.star-half {
+  color: transparent;
+  background: linear-gradient(90deg, var(--accent) 50%, var(--line) 50%);
+  background: linear-gradient(90deg, var(--accent) 50%, color-mix(in srgb, var(--muted) 45%, transparent) 50%);
+  -webkit-background-clip: text;
+  background-clip: text;
+}
+.star-input:focus-visible .star-full,
+.star-input.drafting .star-full {
+  transform: scale(1.08);
+}
+.star-rating-label + .star-rating-hint:not(:empty)::before {
+  content: '· ';
+}
+.star-rating-hint {
+  min-width: 4ch;
+  font-size: 0.85rem;
+  color: var(--muted);
+}
+.star-clear {
+  padding: 4px 10px;
+}
+
+/* "★ 4,5" chiquito: historial, Mi lista, Ajustes. */
+.user-stars {
+  display: inline-block;
+  font-size: 0.78rem;
+  font-weight: 700;
+  color: var(--accent);
+  white-space: nowrap;
+  vertical-align: middle;
+}
+.rated-card {
+  position: relative;
+  min-width: 0;
+}
+.user-stars.on-poster {
+  position: absolute;
+  top: 6px;
+  left: 6px;
+  z-index: 1;
+  padding: 2px 8px;
+  border-radius: 999px;
+  background: rgba(11, 11, 16, 0.82);
+  pointer-events: none;
+}
+
+/* "Ya no me interesa" */
+.not-interested.on {
+  border-color: var(--danger);
+  color: var(--danger);
+}
+
+/* "Para vos": el porqué debajo de cada póster. */
+.foryou-item {
+  flex: 0 0 var(--poster-w);
+  width: var(--poster-w);
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+.foryou-item .poster-card {
+  width: 100%;
+}
+.foryou-why {
+  margin: 2px 0 0;
+  font-size: 0.74rem;
+  line-height: 1.3;
+  color: var(--muted);
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  line-clamp: 2;
+  overflow: hidden;
+}
+
+/* Modo sin spoilers */
+.spoiler-blur {
+  position: relative;
+}
+.spoiler-blur img {
+  filter: blur(14px) brightness(0.7);
+  transform: scale(1.15);
+}
+.spoiler-blur::after {
+  content: '🙈';
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  font-size: 1.3rem;
+  opacity: 0.8;
+}
+.spoiler-hidden {
+  font-style: italic;
+  color: var(--muted);
+}
+.spoiler-reveal {
+  display: block;
+  max-width: 62ch;
+  margin: 0;
+  padding: 10px 14px;
+  border: 1px dashed var(--line);
+  border-radius: var(--radius);
+  background: none;
+  color: var(--muted);
+  font: inherit;
+  font-size: 0.9rem;
+  text-align: left;
+  cursor: pointer;
+}
+.spoiler-reveal:hover,
+.spoiler-reveal:focus-visible {
+  color: var(--text);
+  border-color: var(--muted);
+}
+
+/* Reproductor: "¿Qué te pareció?" al final de la peli o del último episodio. */
+.player-rate {
+  position: absolute;
+  top: 84px;
+  right: var(--gutter);
+  z-index: 3;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 4px;
+  max-width: calc(100vw - 2 * var(--gutter));
+  padding: 12px 16px;
+  border-radius: var(--radius);
+  background: rgba(20, 20, 28, 0.92);
+  animation: rate-in 0.25s ease-out;
+}
+.player-rate-title {
+  font-size: 1rem;
+}
+.player-rate-name {
+  max-width: 260px;
+  font-size: 0.82rem;
+  color: var(--muted);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.player-rate .star-rating {
+  margin: 0;
+}
+.player-rate .star-input:focus-visible {
+  outline: 3px solid #fff;
+  outline-offset: 2px;
+}
+.player-rate-close {
+  align-self: flex-end;
+}
+@keyframes rate-in {
+  from {
+    opacity: 0;
+    transform: translateY(-8px);
+  }
+}
+@media (max-width: 760px) {
+  .player-rate {
+    top: 104px;
+    padding: 10px 12px;
+  }
+  .player-rate .star {
+    font-size: 1.6rem;
+  }
+}
+
+/* Ajustes → Gustos y spoilers */
+.taste-settings .check + .check {
+  margin-top: 8px;
+}
+.taste-list {
+  list-style: none;
+  margin: 8px 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.taste-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 4px 6px;
+  border-radius: 10px;
+  background: var(--bg-2);
+}
+.taste-link {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+  padding: 2px;
+  border-radius: 8px;
+}
+.taste-link img,
+.taste-ph {
+  flex: none;
+  width: 32px;
+  aspect-ratio: 2 / 3;
+  border-radius: 4px;
+  object-fit: cover;
+  background: var(--bg-3);
+}
+.taste-name {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}

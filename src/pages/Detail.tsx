@@ -1,12 +1,17 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { Link, useLocation, useNavigate, useParams, useSearchParams } from 'react-router-dom'
+import { NotInterestedButton } from '../components/NotInterested'
 import { ImdbRating } from '../components/Rating'
+import { SpoilerText, useEpisodeSpoilers } from '../components/Spoiler'
+import { StarRatingInput } from '../components/StarRating'
 import { ErrorBox } from '../components/Status'
 import { TmdbSections } from '../components/TmdbExtras'
 import { getStreams } from '../lib/addons'
 import { episodeLabel, formatTime, relativeDate } from '../lib/format'
 import { useAddons, useMeta, useTitle, useTmdbDetails } from '../lib/hooks'
 import { genreLabel, typeLabel } from '../lib/i18n'
+import { useRating } from '../lib/ratings'
+import { hideTitleSynopsis } from '../lib/spoilers'
 import { lastSourceStore, progressStore, setWatched, settingsStore, toggleWatchlist, useStore, watchlistStore } from '../lib/store'
 import { analyzeStreams, playable, streamKey, type RankedStream } from '../lib/streamPicker'
 import {
@@ -372,6 +377,11 @@ function DetailPage({ type, id }: { type: string; id: string }) {
   const { data: tmdb } = useTmdbDetails(type, id)
   const progress = useStore(progressStore)
   const watchlist = useStore(watchlistStore)
+  // v0.5 gustos: tu puntaje y el modo sin spoilers.
+  const rated = !!useRating(id)
+  const spoilerSettings = useStore(settingsStore)
+  const hideEpisodeSpoiler = useEpisodeSpoilers()
+  const hideSynopsis = hideTitleSynopsis(spoilerSettings, id, progress, rated)
   // Con TMDB, título, sinopsis, frase y géneros en español; el puntaje sigue siendo el de IMDb (Cinemeta).
   const title = (tmdb && itemTitle(tmdb)) || meta?.name
   useTitle(title)
@@ -451,7 +461,11 @@ function DetailPage({ type, id }: { type: string; id: string }) {
               {meta.runtime && <span>{meta.runtime}</span>}
             </div>
             {genres.length > 0 && <div className="chips">{genres.map((g) => <span key={g} className="chip">{g}</span>)}</div>}
-            {description && <p className="detail-desc">{description}</p>}
+            {description && (
+              <SpoilerText key={id} hidden={hideSynopsis}>
+                <p className="detail-desc">{description}</p>
+              </SpoilerText>
+            )}
             <dl className="credits">
               {meta.director?.length ? (<><dt>Dirección</dt><dd>{meta.director.join(', ')}</dd></>) : null}
               {meta.cast?.length && !hasTmdbCast ? (<><dt>Elenco</dt><dd>{meta.cast.slice(0, 6).join(', ')}</dd></>) : null}
@@ -476,7 +490,9 @@ function DetailPage({ type, id }: { type: string; id: string }) {
                   Ver en IMDb
                 </a>
               )}
+              <NotInterestedButton title={{ id, type, name: meta.name, poster: meta.poster }} tmdbId={tmdb?.id} />
             </div>
+            <StarRatingInput title={{ id, type, name: meta.name, poster: meta.poster }} tmdbId={tmdb?.id} />
             {!isSeries && movieProgress && !movieProgress.watched && movieProgress.position > 30 && (
               <p className="muted">
                 Te quedaste en {formatTime(movieProgress.position)} de {formatTime(movieProgress.duration)} ·{' '}
@@ -510,10 +526,12 @@ function DetailPage({ type, id }: { type: string; id: string }) {
                   const p = progress[v.id]
                   const released = v.released ?? v.firstAired
                   const upcoming = released ? new Date(released).getTime() > Date.now() : false
+                  // Sin spoilers: lo que no viste va difuminado hasta que lo elegís.
+                  const spoil = v.id !== selectedVideoId && hideEpisodeSpoiler({ metaId: id, videoId: v.id, season: v.season, episode: episodeNumber(v) })
                   return (
                     <li key={v.id} className={`episode ${v.id === selectedVideoId ? 'selected' : ''} ${p?.watched ? 'watched' : ''}`}>
                       <button className="episode-main" onClick={() => selectVideo(v)}>
-                        <div className="episode-thumb">
+                        <div className={`episode-thumb${spoil ? ' spoiler-blur' : ''}`}>
                           {v.thumbnail && <img src={v.thumbnail} alt="" loading="lazy" decoding="async" />}
                           {p && p.duration > 0 && !p.watched && (
                             <div className="progress-bar"><div style={{ width: `${(p.position / p.duration) * 100}%` }} /></div>
@@ -528,7 +546,12 @@ function DetailPage({ type, id }: { type: string; id: string }) {
                             {upcoming && ' · Próximamente'}
                             {v.rating && ` · ★ ${v.rating}`}
                           </span>
-                          {(v.overview ?? v.description) && <span className="episode-desc">{v.overview ?? v.description}</span>}
+                          {(v.overview ?? v.description) &&
+                            (spoil ? (
+                              <span className="episode-desc spoiler-hidden">Sinopsis oculta · elegilo para verla</span>
+                            ) : (
+                              <span className="episode-desc">{v.overview ?? v.description}</span>
+                            ))}
                         </div>
                       </button>
                       <button

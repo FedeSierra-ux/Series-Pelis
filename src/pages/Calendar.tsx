@@ -1,5 +1,6 @@
 import { useMemo } from 'react'
 import { Link } from 'react-router-dom'
+import { useEpisodeSpoilers } from '../components/Spoiler'
 import { Empty } from '../components/Status'
 import { episodeLabel, smallPoster } from '../lib/format'
 import { useTitle } from '../lib/hooks'
@@ -30,7 +31,7 @@ function groupByDay(items: EpisodeItem[], today: number) {
   return groups
 }
 
-function CalendarItem({ it }: { it: EpisodeItem }) {
+function CalendarItem({ it, spoil }: { it: EpisodeItem; spoil?: boolean }) {
   const now = Date.now()
   const aired = it.released <= now
   const time = it.hasTime ? new Date(it.released).toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit' }) : undefined
@@ -38,7 +39,7 @@ function CalendarItem({ it }: { it: EpisodeItem }) {
   return (
     <li>
       <Link to={episodeLink(it.metaId, it.season, it.videoId)} className="cal-item">
-        <div className={`cal-thumb${it.thumbnail ? '' : ' is-poster'}`}>
+        <div className={`cal-thumb${it.thumbnail ? (spoil ? ' spoiler-blur' : '') : ' is-poster'}`}>
           {img && <img src={img} alt="" loading="lazy" decoding="async" />}
         </div>
         <div className="cal-text">
@@ -65,6 +66,7 @@ function CalendarItem({ it }: { it: EpisodeItem }) {
 export function Calendar() {
   useTitle('Calendario')
   const { data, loading } = useUpNext()
+  const hideEpisodeSpoiler = useEpisodeSpoilers()
   const today = dayStart(Date.now())
 
   const { upcoming, recent } = useMemo(() => {
@@ -119,7 +121,7 @@ export function Calendar() {
                 <h3>{g.label}</h3>
                 <ul className="cal-list">
                   {g.items.map((it) => (
-                    <CalendarItem key={it.videoId} it={it} />
+                    <CalendarItem key={it.videoId} it={it} spoil={!it.watched && hideEpisodeSpoiler(it)} />
                   ))}
                 </ul>
               </div>
@@ -134,7 +136,7 @@ export function Calendar() {
                   <h3>{g.label}</h3>
                   <ul className="cal-list">
                     {g.items.map((it) => (
-                      <CalendarItem key={it.videoId} it={it} />
+                      <CalendarItem key={it.videoId} it={it} spoil={!it.watched && hideEpisodeSpoiler(it)} />
                     ))}
                   </ul>
                 </div>

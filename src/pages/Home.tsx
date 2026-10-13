@@ -7,9 +7,12 @@ import { browsableCatalogs } from '../lib/addons'
 import { episodeLabel } from '../lib/format'
 import { useAddons, useCatalog, useTitle } from '../lib/hooks'
 import { catalogLabel, genreLabel } from '../lib/i18n'
+import { useHiddenIds } from '../lib/ratings'
+import { withoutHidden } from '../lib/recommend'
 import { continueWatching, hideFromContinue, progressStore, settingsStore, toggleWatchlist, useStore, watchlistStore, type WatchEntry } from '../lib/store'
 import { episodeLink, useUpNext } from '../lib/upNext'
 import type { CatalogDef, InstalledAddon, MetaPreview } from '../lib/types'
+import { ForYouRow } from './home/ForYouRow'
 import { useNearViewport } from './home/lazy'
 import { TmdbHero } from './home/TmdbHero'
 import { BecauseRow, onlyTitles, Top10Row, TrendingWeekRow, useTrending, type Seed } from './home/TmdbRows'
@@ -19,7 +22,8 @@ const ROW_LIMIT = 30
 function CatalogRow({ addon, catalog, eager }: { addon: InstalledAddon; catalog: CatalogDef; eager: boolean }) {
   const [ref, visible] = useNearViewport<HTMLDivElement>(eager)
   const { data, loading, error } = useCatalog(visible ? addon : undefined, visible ? catalog : undefined)
-  const items = data?.slice(0, ROW_LIMIT) ?? []
+  const hidden = useHiddenIds()
+  const items = withoutHidden(data?.slice(0, ROW_LIMIT) ?? [], hidden)
   const moreTo = `/discover/${catalog.type}?addon=${encodeURIComponent(addon.transportUrl)}&catalog=${encodeURIComponent(catalog.id)}`
   return (
     <div ref={ref}>
@@ -42,7 +46,8 @@ function Hero({ addon, catalog }: { addon: InstalledAddon; catalog: CatalogDef }
   const { data } = useCatalog(addon, catalog)
   const watchlist = useStore(watchlistStore)
   const [index, setIndex] = useState(0)
-  const pool = (data ?? []).filter((m) => m.background || m.id.startsWith('tt')).slice(0, 8)
+  const hidden = useHiddenIds()
+  const pool = withoutHidden(data ?? [], hidden).filter((m) => m.background || m.id.startsWith('tt')).slice(0, 8)
 
   useEffect(() => {
     if (pool.length < 2) return
@@ -167,7 +172,11 @@ export function Home() {
   // TMDB es opcional: sin key, Inicio queda igual que siempre.
   const tmdbKey = useStore(settingsStore).tmdbKey.trim()
   const trendingDay = useTrending('day', tmdbKey)
-  const heroItems = useMemo(() => onlyTitles(trendingDay.data?.results).filter((i) => i.backdrop_path).slice(0, 8), [trendingDay.data])
+  const hidden = useHiddenIds()
+  const heroItems = useMemo(
+    () => onlyTitles(trendingDay.data?.results).filter((i) => i.backdrop_path && !hidden.has(`tmdb:${i.media_type}:${i.id}`)).slice(0, 8),
+    [trendingDay.data, hidden],
+  )
   const seedsKey = JSON.stringify(recentSeeds(progress))
   const seeds = useMemo(() => JSON.parse(seedsKey) as Seed[], [seedsKey])
 
@@ -201,6 +210,7 @@ export function Home() {
 
       {tmdbKey && (
         <>
+          <ForYouRow tmdbKey={tmdbKey} />
           <Top10Row state={trendingDay} />
           {seeds.map((seed) => (
             <BecauseRow key={seed.metaId} seed={seed} tmdbKey={tmdbKey} />
