@@ -24,7 +24,13 @@ arreglados, la TV más cómoda y cuatro funciones nuevas.
 - Revisión automática en GitHub (tipos, tests y build) en cada cambio.
 
 ### Cambiado
-- TV: el texto es más grande para leerlo a tres metros (pósters, riel, chips, sinopsis y botones).
+- TV: todo se ve más grande para leerlo a tres metros (letra de 22 px, títulos de fila, pósters de 240 px, chips,
+  pestañas, botones y el menú lateral del Tema 2 con más espacio). Se activa solo al detectar un televisor o con el
+  ajuste "Interfaz para TV".
+- Tema 2: la portada de Inicio ahora es redondeada y con margen, igual que la de la ficha.
+- Los desplegables (Mi lista, Ajustes) tienen una flecha propia y el estilo de cada tema.
+- TV en vivo en PC y TV: la lista de canales se desplaza dentro de su panel y el reproductor queda siempre a la vista.
+- El mensaje de error del reproductor en la TV es más ancho, con letra y botones más grandes.
 - Íconos de línea en el menú del Tema 1, en los botones del Historial y en "Teclado", en lugar de emojis (se ven
   iguales en cualquier dispositivo).
 - "Ordenar" en Mi lista, "Calidad preferida" y "Tamaño máximo" en Ajustes y "Fusionar con…" en Catálogos usan el
@@ -90,6 +96,17 @@ Ajustes, datos y TV en vivo:
 - TV en vivo: "Pantalla completa" funciona en iPhone, y los canales con coma en el nombre ("Canal 9, Buenos Aires")
   ya no se cortan.
 - La lista "Ganadoras del Oscar" avisa cuando está tardando más de lo normal y ofrece probar de nuevo si falla.
+
+Apariencia:
+- El botón "Ver ahora" del Tema 1 tenía poco contraste: ahora el texto blanco cumple AA (≥ 4,7:1), también al pasar
+  el mouse.
+- La portada que se mostraba mientras cargaba no brillaba y saltaba al aparecer la real: ahora mide lo mismo y tiene
+  la animación.
+- En el celular, "Ver ahora" y "+ Mi lista" miden lo mismo en vez de uno estirado y otro chico.
+- En el celular, el tilde de "episodio visto", los filtros de TV en vivo, "Filtros", las pestañas y los botones chicos
+  (Metas, "Mostrar en Inicio") miden al menos 44 px para tocarlos sin errar.
+- Radios de esquina unificados en variables (`--radius-sm`, `--radius`, `--radius-lg`) para que los dos temas se
+  mantengan parejos.
 
 ## [0.8.0] - 2026-10-13
 
