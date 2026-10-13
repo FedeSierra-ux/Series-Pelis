@@ -1,4 +1,5 @@
 import { NavLink, Outlet } from 'react-router-dom'
+import { HoverTrailerLayer } from './HoverTrailer'
 
 // En el celular entran 7 ítems abajo: "Calendario" se oculta ahí y se llega desde Historial.
 const LINKS: { to: string; label: string; icon: string; end?: boolean; desktopOnly?: boolean }[] = [
@@ -34,6 +35,7 @@ export function Layout() {
       <main className="main">
         <Outlet />
       </main>
+      <HoverTrailerLayer />
     </div>
   )
 }

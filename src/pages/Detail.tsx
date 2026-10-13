@@ -6,6 +6,7 @@ import { SpoilerText, useEpisodeSpoilers } from '../components/Spoiler'
 import { StarRatingInput } from '../components/StarRating'
 import { ErrorBox } from '../components/Status'
 import { TmdbSections } from '../components/TmdbExtras'
+import { WikiTrivia } from '../components/WikiTrivia'
 import { getStreams } from '../lib/addons'
 import { episodeLabel, formatTime, relativeDate } from '../lib/format'
 import { useAddons, useMeta, useTitle, useTmdbDetails } from '../lib/hooks'
@@ -589,6 +590,7 @@ function DetailPage({ type, id }: { type: string; id: string }) {
       )}
 
       {tmdb && <TmdbSections details={tmdb} type={toTmdbType(type)} />}
+      {id.startsWith('tt') && <WikiTrivia imdbId={id} />}
     </div>
   )
 }

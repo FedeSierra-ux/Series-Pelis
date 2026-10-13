@@ -1,11 +1,13 @@
-import { memo, useRef, type KeyboardEvent, type MouseEvent } from 'react'
+import { memo, useEffect, useRef, type FocusEvent, type KeyboardEvent, type MouseEvent } from 'react'
 import { Link } from 'react-router-dom'
 import { prefetchMeta } from '../lib/addons'
 import { smallPoster } from '../lib/format'
-import { addonsStore } from '../lib/store'
+import { armTrailer, disarmTrailer } from '../lib/hoverTrailer'
+import { LABEL_TEXT, usePosterLabel } from '../lib/posterLabels'
+import { addonsStore, settingsStore, useStore } from '../lib/store'
 import { imdbFromTmdb, parseTmdbId } from '../lib/tmdb'
 import type { MetaPreview } from '../lib/types'
-import { ImdbRating } from './Rating'
+import { ImdbRating, PosterRating } from './Rating'
 
 interface Props {
   meta: MetaPreview
@@ -31,13 +33,35 @@ export const PosterCard = memo(function PosterCard({ meta, progress, watched, su
     else prefetchMeta(addonsStore.get(), meta.type, meta.id)
   }
   const src = smallPoster(meta.id, meta.poster)
+  // v0.5: puntaje sobre el póster, etiqueta y tráiler al quedarse encima.
+  const { posterRating, posterLabels } = useStore(settingsStore)
+  const posterLabel = usePosterLabel(meta, posterLabels)
+  const linkRef = useRef<HTMLAnchorElement>(null)
+  useEffect(() => {
+    const el = linkRef.current
+    return () => {
+      if (el) disarmTrailer(el)
+    }
+  }, [])
+  const onEnter = (e: MouseEvent<HTMLAnchorElement>) => {
+    prefetch()
+    armTrailer({ anchor: e.currentTarget, meta, via: 'mouse' })
+  }
+  const onFocus = (e: FocusEvent<HTMLAnchorElement>) => {
+    prefetch()
+    // Solo con teclado o control remoto (no al hacer clic con el mouse).
+    if (e.currentTarget.matches(':focus-visible')) armTrailer({ anchor: e.currentTarget, meta, via: 'focus' })
+  }
 
   const card = (
     <Link
       to={to ?? `/detail/${meta.type}/${encodeURIComponent(meta.id)}`}
+      ref={linkRef}
       className={`poster-card shape-${meta.posterShape ?? 'poster'}`}
-      onMouseEnter={prefetch}
-      onFocus={prefetch}
+      onMouseEnter={onEnter}
+      onMouseLeave={(e) => disarmTrailer(e.currentTarget, 'mouse')}
+      onFocus={onFocus}
+      onBlur={(e) => disarmTrailer(e.currentTarget, 'focus')}
       onTouchStart={prefetch}
       title={meta.name}
     >
@@ -48,6 +72,12 @@ export const PosterCard = memo(function PosterCard({ meta, progress, watched, su
           <div className="poster-fallback">{meta.name}</div>
         )}
         {watched && <span className="badge-watched" title="Vista">✓</span>}
+        {posterLabel && <span className={`poster-label poster-label-${posterLabel}`}>{LABEL_TEXT[posterLabel]}</span>}
+        {posterRating === 'on' && (
+          <span className={progress ? 'poster-rating-wrap above-progress' : 'poster-rating-wrap'}>
+            <PosterRating value={meta.imdbRating} />
+          </span>
+        )}
         {progress !== undefined && progress > 0 && (
           <div className="progress-bar">
             <div style={{ width: `${Math.min(100, progress * 100)}%` }} />
@@ -58,7 +88,7 @@ export const PosterCard = memo(function PosterCard({ meta, progress, watched, su
         <span className="poster-title">{meta.name}</span>
         <span className="poster-sub">
           {subtitle ?? meta.releaseInfo ?? meta.year}
-          <ImdbRating value={meta.imdbRating} size="sm" />
+          {posterRating === 'below' && <ImdbRating value={meta.imdbRating} size="sm" />}
         </span>
       </div>
     </Link>

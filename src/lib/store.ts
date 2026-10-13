@@ -377,6 +377,12 @@ export interface Settings {
   spoilerUnstarted: boolean
   /** Ofrecer puntuar con estrellas al terminar una peli o el último episodio. */
   askRatingAtEnd: boolean
+  /** v0.5: puntaje de IMDb sobre el póster, debajo (como antes) o sin puntaje. */
+  posterRating: 'on' | 'below' | 'off'
+  /** v0.5: etiquetas "Episodio nuevo", "Temporada nueva", "Top 10" y "Estreno" en los pósters. */
+  posterLabels: boolean
+  /** v0.5: tráiler en una tarjeta ampliada al quedarse unos segundos sobre un póster (no en celulares). */
+  hoverTrailer: boolean
 }
 
 export const settingsStore = new PersistedStore<Settings>('settings', {
@@ -403,6 +409,9 @@ export const settingsStore = new PersistedStore<Settings>('settings', {
   spoilerFree: false,
   spoilerUnstarted: false,
   askRatingAtEnd: true,
+  posterRating: 'on',
+  posterLabels: true,
+  hoverTrailer: true,
 })
 
 // ---------- Copia de seguridad ----------

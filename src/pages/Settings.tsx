@@ -12,6 +12,7 @@ import {
   useStore,
 } from '../lib/store'
 import { PlayerSettings } from './settings/PlayerSettings'
+import { PosterSettings } from './settings/PosterSettings'
 import { SourceSettings } from './settings/SourceSettings'
 import { TasteSettings } from './settings/TasteSettings'
 import { TmdbSettings } from './settings/TmdbSettings'
@@ -234,6 +235,7 @@ export function Settings() {
       </header>
       <AddonsSection />
       <TmdbSettings />
+      <PosterSettings />
       <PlaybackSection />
       <PlayerSettings />
       <SourceSettings />
