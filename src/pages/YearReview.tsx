@@ -1,6 +1,6 @@
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
-import { Empty } from '../components/Status'
+import { EmptyState } from '../components/EmptyState'
 import { episodeLabel, smallPoster } from '../lib/format'
 import { useAddons, useTitle } from '../lib/hooks'
 import { availableYears, computeYearStats, entriesOfYear, formatDuration, loadYearMetas, type DayCell, type TitleStat } from '../lib/stats'
@@ -169,9 +169,12 @@ export function YearReview() {
       </header>
 
       {empty ? (
-        <Empty>
-          No hay nada visto en {year}. Lo que reproduzcas va a aparecer acá. <Link to="/history">Volver al historial</Link>
-        </Empty>
+        <EmptyState
+          icon="sparkles"
+          title={`No hay nada visto en ${year}`}
+          text="Lo que reproduzcas va a aparecer acá, con tus horas, géneros y rachas."
+          action={{ label: 'Ver el historial', to: '/history' }}
+        />
       ) : (
         <>
           <section className="year-hero">

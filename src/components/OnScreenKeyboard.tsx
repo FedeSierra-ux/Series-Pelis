@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState, type KeyboardEvent } from 'react'
 import { applyKey, oskRows, type OskKey, type OskLayer } from '../lib/osk'
 import { useTvMode } from '../lib/tv'
+import { Theme2Icon } from './Theme2Icons'
 
 interface KeyboardProps {
   value: string
@@ -136,7 +137,8 @@ export function KeyboardToggle({ alwaysToggle, openInTv, onDone, ...props }: Tog
           setFocusKeys(true)
         }}
       >
-        ⌨ {open ? 'Ocultar teclado' : 'Teclado'}
+        <Theme2Icon name="keyboard" size={20} />
+        {open ? 'Ocultar teclado' : 'Teclado'}
       </button>
       {open && (
         <OnScreenKeyboard

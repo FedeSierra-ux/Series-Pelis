@@ -20,12 +20,16 @@ interface Props {
   placeholder?: string
   disabled?: boolean
   className?: string
+  /** Abrir la lista apenas aparece (ej. "Fusionar con…", que no tiene paso previo). */
+  autoOpen?: boolean
+  /** Se avisa cada vez que la lista se cierra, se haya elegido algo o no. */
+  onClose?: () => void
 }
 
 const CLOSE_KEYS = new Set(['Escape', 'GoBack', 'BrowserBack', 'Backspace'])
 
-export function Picker({ label, value, options, onChange, placeholder, disabled, className }: Props) {
-  const [open, setOpen] = useState(false)
+export function Picker({ label, value, options, onChange, placeholder, disabled, className, autoOpen, onClose }: Props) {
+  const [open, setOpen] = useState(!!autoOpen)
   const [pos, setPos] = useState<{ top: number; left: number; minWidth: number; maxHeight: number }>()
   const button = useRef<HTMLButtonElement>(null)
   const list = useRef<HTMLDivElement>(null)
@@ -35,7 +39,9 @@ export function Picker({ label, value, options, onChange, placeholder, disabled,
 
   const close = (refocus = true) => {
     setOpen(false)
+    // El foco vuelve al botón que abrió la lista (si no, queda en <body> y el próximo Atrás se va de la página).
     if (refocus) requestAnimationFrame(() => button.current?.focus({ preventScroll: true }))
+    onClose?.()
   }
 
   useLayoutEffect(() => {
@@ -69,14 +75,34 @@ export function Picker({ label, value, options, onChange, placeholder, disabled,
     }
   }, [open, pos])
 
+  /** ↑/↓ se quedan dentro de la lista: en la primera o la última opción no se mueven (no se sale a la página). */
+  const moveFocus = (delta: -1 | 1) => {
+    const opts = Array.from(list.current?.querySelectorAll<HTMLElement>('[role="option"]') ?? [])
+    if (!opts.length) return
+    const i = opts.indexOf(document.activeElement as HTMLElement)
+    const next = opts[Math.min(opts.length - 1, Math.max(0, (i < 0 ? (delta > 0 ? -1 : opts.length) : i) + delta))]
+    next.focus({ preventScroll: true })
+    next.scrollIntoView({ block: 'nearest' })
+  }
+
   const onKeyDown = (e: KeyboardEvent) => {
     if (CLOSE_KEYS.has(e.key)) {
       // Antes de que la navegación espacial lo tome como "volver a la página anterior".
       e.preventDefault()
       e.stopPropagation()
       close()
-    } else if (e.key === 'Tab') {
+    } else if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
       e.preventDefault()
+      e.stopPropagation()
+      moveFocus(e.key === 'ArrowDown' ? 1 : -1)
+    } else if (e.key === 'ArrowLeft' || e.key === 'ArrowRight' || e.key === 'Tab') {
+      // Nada que elegir a los costados: el foco se queda en la lista.
+      e.preventDefault()
+      e.stopPropagation()
+    } else if (e.key === 'Home' || e.key === 'End') {
+      e.preventDefault()
+      const opts = list.current?.querySelectorAll<HTMLElement>('[role="option"]')
+      opts?.[e.key === 'Home' ? 0 : opts.length - 1]?.focus({ preventScroll: true })
     }
   }
 

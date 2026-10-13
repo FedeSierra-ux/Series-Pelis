@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useRef, useState, type KeyboardEvent } from 'react'
 import { useLocation } from 'react-router-dom'
 import { CINEMETA_URL } from '../lib/addons'
 import { useAddons } from '../lib/hooks'
@@ -9,6 +9,7 @@ import { AddonUrlForm } from './AddonUrlForm'
 import { KeyboardToggle } from './OnScreenKeyboard'
 
 const OPEN_EVENT = 'sp-open-onboarding'
+const BACK_KEYS = new Set(['Escape', 'GoBack', 'BrowserBack', 'Backspace'])
 
 /** Vuelve a abrir el asistente (desde Ajustes). */
 export function openOnboarding() {
@@ -198,8 +199,29 @@ export function Onboarding() {
   }
   const last = step === STEPS.length - 1
 
+  // "Atrás" del control (Escape, Backspace, GoBack): vuelve un paso o, en el primero, cierra el asistente.
+  // Nunca llega a la navegación general (que cambiaría la página que está debajo).
+  const onKeyDown = (e: KeyboardEvent<HTMLDivElement>) => {
+    if (!BACK_KEYS.has(e.key) || e.defaultPrevented || e.altKey || e.ctrlKey || e.metaKey) return
+    const t = e.target
+    const typing = t instanceof HTMLTextAreaElement || (t instanceof HTMLInputElement && !['checkbox', 'radio', 'range', 'button', 'submit'].includes(t.type))
+    // Backspace dentro de un campo borra; Escape lo suelta.
+    if (typing) {
+      e.stopPropagation()
+      if (e.key === 'Escape') {
+        e.preventDefault()
+        t.blur()
+      }
+      return
+    }
+    e.preventDefault()
+    e.stopPropagation()
+    if (step > 0) setStep(step - 1)
+    else finish()
+  }
+
   return (
-    <div className="onboarding" data-nav-scope data-no-screensaver>
+    <div className="onboarding" data-nav-scope data-no-screensaver onKeyDown={onKeyDown}>
       <div ref={boxRef} className="ob-box" role="dialog" aria-modal="true" aria-labelledby="ob-title">
         <ol className="ob-steps" aria-label={`Paso ${step + 1} de ${STEPS.length}`}>
           {STEPS.map((s, i) => (
