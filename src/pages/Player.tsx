@@ -8,13 +8,15 @@ import { androidIntent, externalLaunch } from '../lib/externalPlayers'
 import { episodeLabel, formatTime, isHls } from '../lib/format'
 import { useTitle } from '../lib/hooks'
 import { langLabel } from '../lib/i18n'
-import { findNextStream, prefetchNextStreams } from '../lib/nextEpisode'
+import { findNextStream, nextEpisodeSeason, prefetchNextStreams } from '../lib/nextEpisode'
 import { setReturnVideo } from '../lib/returnVideo'
 import { currentPlatform } from '../lib/platform'
 import { getSegments, imdbIdOf, type Segment, type Segments } from '../lib/segments'
 import { progressStore, rememberTracks, saveProgress, settingsStore, trackPrefsStore, useStore } from '../lib/store'
 import { audioPrefs, guessAudioLang, lang3, langRank, subtitleClasses } from '../lib/subtitlePrefs'
+import { useTvMode } from '../lib/tv'
 import type { PlayState } from './Detail'
+import './player/player-fixes.css'
 import { CreditsNotice } from './player/CreditsNotice'
 import { RateAtEnd } from './player/RateAtEnd'
 import { daysAway, RECAP_AFTER_DAYS, RecapOffer } from './player/RecapOffer'
@@ -30,8 +32,12 @@ const SEEK_STEP = 10
 const NEXT_COUNTDOWN_S = 10
 /** Sin datos de créditos, la tarjeta del siguiente episodio aparece este tiempo antes del final. */
 const NEXT_FALLBACK_S = 30
-/** Tráilers y clips: no se guardan en el historial. */
-const MIN_HISTORY_S = 300
+/** Tráilers y clips: no se guardan en el historial. Los episodios de serie pueden ser cortos (webseries). */
+const MIN_HISTORY_S = 120
+const MIN_HISTORY_EPISODE_S = 60
+/** Errores de red de HLS: cuántas veces se reintenta antes de mostrar el error. */
+const HLS_NETWORK_RETRIES = 2
+const HLS_RETRY_MS = 1000
 /** Episodios seguidos que pasaron solos, sin que nadie toque nada (para el "¿Seguís viendo?"). */
 const AUTONEXT_KEY = 'sp-autonext-count'
 const SLEEP_KEY = 'sp-sleep-at'
@@ -119,6 +125,8 @@ function PlayerView({ state, resume }: { state: PlayState; resume?: Resume }) {
   const rootRef = useRef<HTMLDivElement>(null)
   const playBtnRef = useRef<HTMLButtonElement>(null)
   const hlsRef = useRef<Hls | null>(null)
+  /** Identifica la corrida actual del efecto de carga (ver la limpieza de ese efecto). */
+  const attachToken = useRef<object | null>(null)
   const hideTimer = useRef<ReturnType<typeof setTimeout>>(undefined)
   const toastTimer = useRef<ReturnType<typeof setTimeout>>(undefined)
   const menuOpener = useRef<HTMLElement | null>(null)
@@ -127,6 +135,15 @@ function PlayerView({ state, resume }: { state: PlayState; resume?: Resume }) {
   const autoSkipped = useRef(new Set<string>())
   const seekbarRef = useRef<HTMLInputElement>(null)
   const switchSource = useSwitchSource(state)
+  const tvMode = useTvMode()
+  // Buscar el siguiente episodio puede tardar varios segundos: si mientras tanto el usuario salió, no se navega.
+  const aliveRef = useRef(true)
+  useEffect(() => {
+    aliveRef.current = true
+    return () => {
+      aliveRef.current = false
+    }
+  }, [])
 
   const [playing, setPlaying] = useState(false)
   const [buffering, setBuffering] = useState(true)
@@ -181,6 +198,9 @@ function PlayerView({ state, resume }: { state: PlayState; resume?: Resume }) {
     if (!el) return
     const url = state.playUrl
     let disposed = false
+    let retryTimer: ReturnType<typeof setTimeout> | undefined
+    const token = {}
+    attachToken.current = token
 
     const start = () => {
       if (askStillRef.current) return
@@ -220,8 +240,27 @@ function PlayerView({ state, resume }: { state: PlayState; resume?: Resume }) {
         })
         hls.on(HlsLib.Events.SUBTITLE_TRACKS_UPDATED, (_e, data) => subs.onHlsTracks(data.subtitleTracks))
         hls.on(HlsLib.Events.SUBTITLE_TRACK_SWITCH, (_e, data) => subs.onHlsSwitch(data.id))
+        // Un corte de red o un tropiezo del decodificador no tienen por qué terminar en la tarjeta de error:
+        // primero se reintenta (como hace el propio Stremio) y recién después se avisa.
+        let networkRetries = 0
+        let mediaRecovered = false
         hls.on(HlsLib.Events.ERROR, (_e, data) => {
-          if (data.fatal) setError(`Error de reproducción (${data.details})`)
+          if (!data.fatal) return
+          if (data.type === HlsLib.ErrorTypes.NETWORK_ERROR && networkRetries < HLS_NETWORK_RETRIES) {
+            networkRetries++
+            setBuffering(true)
+            clearTimeout(retryTimer)
+            retryTimer = setTimeout(() => {
+              if (!disposed) hls.startLoad()
+            }, HLS_RETRY_MS)
+            return
+          }
+          if (data.type === HlsLib.ErrorTypes.MEDIA_ERROR && !mediaRecovered) {
+            mediaRecovered = true
+            hls.recoverMediaError()
+            return
+          }
+          setError(`Error de reproducción (${data.details})`)
         })
         start()
       })
@@ -231,8 +270,20 @@ function PlayerView({ state, resume }: { state: PlayState; resume?: Resume }) {
     }
     return () => {
       disposed = true
-      hlsRef.current?.destroy()
+      clearTimeout(retryTimer)
+      const hls = hlsRef.current
       hlsRef.current = null
+      // Cortar la descarga al salir (un MP4 directo seguiría bajando). Tanto `destroy()` de hls.js como
+      // `load()` ponen la posición en 0, así que va en una microtarea: el guardado del progreso, que
+      // corre en la limpieza del efecto siguiente, todavía tiene que ver dónde quedó.
+      queueMicrotask(() => {
+        // Si el efecto ya volvió a correr sobre el mismo <video> (doble montaje de StrictMode en desarrollo),
+        // la fuente nueva ya está puesta y no hay instancia de hls.js de esta corrida: no se toca nada.
+        if (attachToken.current !== token) return
+        hls?.destroy()
+        el.removeAttribute('src')
+        el.load()
+      })
     }
   }, [state.playUrl])
 
@@ -272,9 +323,11 @@ function PlayerView({ state, resume }: { state: PlayState; resume?: Resume }) {
   }, [time, duration, state])
 
   // ---------- Progreso ----------
-  const persist = useCallback(() => {
-    const el = videoRef.current
-    if (!el || !Number.isFinite(el.duration) || el.duration < MIN_HISTORY_S || el.currentTime < 5) return
+  /** `target`: el <video> capturado antes de desmontar (en la limpieza del efecto la ref ya es null). */
+  const persist = useCallback((target?: HTMLVideoElement | null) => {
+    const el = target instanceof HTMLVideoElement ? target : videoRef.current
+    const minDuration = video ? MIN_HISTORY_EPISODE_S : MIN_HISTORY_S
+    if (!el || !Number.isFinite(el.duration) || el.duration < minDuration || el.currentTime < 5) return
     saveProgress({
       videoId,
       metaId: meta.id,
@@ -291,17 +344,19 @@ function PlayerView({ state, resume }: { state: PlayState; resume?: Resume }) {
   }, [videoId, meta, video])
 
   useEffect(() => {
+    // Capturado acá: con el "atrás" del navegador la ref ya está en null cuando corre la limpieza.
+    const el = videoRef.current
     const t = setInterval(() => {
-      if (videoRef.current && !videoRef.current.paused) persist()
+      if (el && !el.paused) persist(el)
     }, SAVE_EVERY_MS)
-    const onHide = () => persist()
+    const onHide = () => persist(el)
     window.addEventListener('pagehide', onHide)
     document.addEventListener('visibilitychange', onHide)
     return () => {
       clearInterval(t)
       window.removeEventListener('pagehide', onHide)
       document.removeEventListener('visibilitychange', onHide)
-      persist()
+      persist(el)
     }
   }, [persist])
 
@@ -310,7 +365,8 @@ function PlayerView({ state, resume }: { state: PlayState; resume?: Resume }) {
     if (!el) return
     setDuration(el.duration)
     const saved = progressStore.get()[videoId]
-    if (resume) el.currentTime = Math.min(resume.at, Math.max(0, el.duration - 1))
+    // `resume.at === 0` es "sin posición" (se cambió de fuente antes de que cargara el video): vale lo guardado.
+    if (resume && resume.at > 0) el.currentTime = Math.min(resume.at, Math.max(0, el.duration - 1))
     else if (saved && !saved.watched && saved.position > 30 && saved.position < el.duration - 30) {
       el.currentTime = saved.position
       setResumedFrom(saved.position)
@@ -372,13 +428,19 @@ function PlayerView({ state, resume }: { state: PlayState; resume?: Resume }) {
     persist()
     setNextLoading(true)
     const next = settings.autoplayNext ? await findNextStream(state).catch(() => undefined) : undefined
+    if (!aliveRef.current) return
     setNextLoading(false)
-    if (next) navigate(`/watch/${meta.type}/${encodeURIComponent(next.video!.id)}`, { state: next, replace: true })
-    else
-      navigate(
-        `/detail/${meta.type}/${encodeURIComponent(meta.id)}?season=${state.video?.season ?? 1}&video=${encodeURIComponent(state.nextVideoId)}`,
-        { replace: true },
-      )
+    if (next) {
+      navigate(`/watch/${meta.type}/${encodeURIComponent(next.video!.id)}`, { state: next, replace: true })
+      return
+    }
+    // Sin stream para seguir solo, vuelve a la ficha en el siguiente episodio: con su temporada, que
+    // puede no ser la actual (fin de temporada). La ficha ya está en caché, así que esto es inmediato.
+    const season = (await nextEpisodeSeason(state).catch(() => undefined)) ?? state.video?.season ?? 1
+    if (!aliveRef.current) return
+    navigate(`/detail/${meta.type}/${encodeURIComponent(meta.id)}?season=${season}&video=${encodeURIComponent(state.nextVideoId)}`, {
+      replace: true,
+    })
   }
 
   // Al cambiar de fuente se vuelve a poner el subtítulo (y el retraso) que estaba activo.
@@ -522,8 +584,12 @@ function PlayerView({ state, resume }: { state: PlayState; resume?: Resume }) {
     if (!el || pick.url === state.playUrl) return
     persist()
     const hls = hlsRef.current
+    // Si el video nunca llegó a cargar (enlace caído) la posición actual es 0 y pisaría la guardada:
+    // la nueva fuente sigue desde donde se había quedado (o desde donde venía el cambio anterior).
+    const loaded = Number.isFinite(el.duration) && el.currentTime >= 5
+    const savedAt = resume?.at || progressStore.get()[videoId]?.position || 0
     switchSource(pick, {
-      at: el.currentTime,
+      at: loaded ? el.currentTime : savedAt,
       sub: subs.active,
       subDelay: subs.delay,
       audioLang: hls && audioTrack >= 0 ? hls.audioTracks[audioTrack]?.lang : undefined,
@@ -748,14 +814,22 @@ function PlayerView({ state, resume }: { state: PlayState; resume?: Resume }) {
 
       {error && (
         <div
-          className="player-error player-float player-modal"
+          className={`player-error player-float player-modal ${tvMode ? 'player-error-tv' : ''}`}
           role="alert"
           style={{ ['--player-bg' as string]: meta.background ? `url("${meta.background}")` : undefined }}
         >
           <div className="player-error-card">
             <span className="player-error-icon">
-              <PlayerIcon name="alert" size={40} />
+              <PlayerIcon name="alert" size={tvMode ? 48 : 40} />
             </span>
+            <div className="player-error-heading">
+              <strong>{meta.name}</strong>
+              {video && (
+                <span>
+                  {[episodeLabel(video.season, video.episode), video.title ?? video.name].filter(Boolean).join(' · ')}
+                </span>
+              )}
+            </div>
             <p>{error}</p>
             {errorSources && (
               <div className="player-error-sources">
@@ -764,7 +838,7 @@ function PlayerView({ state, resume }: { state: PlayState; resume?: Resume }) {
             )}
             <div className="hero-actions">
               {!errorSources && (
-                <button className="btn btn-primary" onClick={() => setErrorSources(true)} autoFocus>
+                <button className="btn btn-primary" onClick={() => setErrorSources(true)} autoFocus data-autofocus>
                   Elegir otra fuente
                 </button>
               )}
@@ -776,9 +850,12 @@ function PlayerView({ state, resume }: { state: PlayState; resume?: Resume }) {
                   Abrir en otro reproductor
                 </a>
               )}
-              <button className="btn" onClick={() => copyText(state.playUrl).then((ok) => flash(ok ? 'Enlace copiado' : 'No se pudo copiar el enlace'))}>
-                Copiar enlace
-              </button>
+              {/* En la TV no hay dónde pegar el enlace. */}
+              {!tvMode && (
+                <button className="btn" onClick={() => copyText(state.playUrl).then((ok) => flash(ok ? 'Enlace copiado' : 'No se pudo copiar el enlace'))}>
+                  Copiar enlace
+                </button>
+              )}
             </div>
           </div>
         </div>

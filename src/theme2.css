@@ -12,6 +12,8 @@
   --text: #f2eff7;
   --muted: #a8a3b3;
   --accent: #c4b0ff;
+  /* El lila claro lleva texto oscuro encima: el relleno es el mismo acento. */
+  --accent-fill: #c4b0ff;
   --accent-2: #a98fff;
   --on-accent: #1f0f4d;
   --surface-1: #1c1a22;
@@ -20,6 +22,7 @@
   --rail-bg: #121118;
   --outline: #4a4556;
   --text-soft: #d9d4e3;
+  --radius-sm: 12px;
   --radius: 18px;
   --radius-lg: 28px;
   --font-body: 'DM Sans', system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
@@ -120,6 +123,13 @@
   outline: 3px solid var(--accent);
   outline-offset: 2px;
 }
+/* El desplegable es una tarjeta, no una píldora: así se distingue de los campos de texto. */
+[data-theme='2'] select {
+  border-radius: var(--radius);
+  background-color: var(--bg-2);
+  padding-right: 44px;
+  background-position: right 16px center;
+}
 
 [data-theme='2'] .tab {
   border: 0;
@@ -217,7 +227,8 @@
   padding: 4px 0;
   border-radius: 16px;
   color: var(--muted);
-  font-size: 12px;
+  /* En rem: crece con el tamaño base (18 px en PC grande, 22 px en la TV). */
+  font-size: 0.8rem;
   font-weight: 500;
 }
 .t2-rail-spacer {
@@ -298,11 +309,13 @@
 
 /* ---------- Portada (hero) a todo el ancho, debajo del buscador (v0.7) ---------- */
 
+/* Redondeada y con margen, igual que la portada de la ficha (.detail-hero). */
 [data-theme='2'] .hero {
-  margin: 18px 0 8px;
+  margin: 12px var(--gutter) 8px;
   min-height: clamp(380px, 66vh, 660px);
   align-items: flex-end;
   overflow: hidden;
+  border-radius: var(--radius-lg);
   background-color: var(--surface-1);
   background-position: center 20%;
 }
@@ -961,7 +974,8 @@
 
   /* Portada: imagen arriba a todo el ancho y el texto abajo. */
   [data-theme='2'] .hero {
-    margin: 4px 0 6px;
+    margin: 0 12px 6px;
+    border-radius: 22px;
     min-height: 470px;
     align-items: flex-end;
     background-size: max(100%, 534px) auto;
@@ -970,6 +984,10 @@
   }
   [data-theme='2'] .hero-shade {
     background: linear-gradient(to bottom, rgba(11, 11, 16, 0) 110px, var(--bg) 290px);
+  }
+  /* El esqueleto conserva el brillo: el tamaño de fondo de arriba es para la imagen. */
+  [data-theme='2'] .hero-skeleton {
+    background-size: 200% 100%;
   }
   [data-theme='2'] .hero-content {
     padding: 0 16px 20px;
@@ -1031,4 +1049,57 @@
     min-width: 46px;
     height: 46px;
   }
+}
+
+/* ---------- Modo TV (html[data-tv]): riel más ancho, píldoras y controles grandes ---------- */
+
+@media (min-width: 761px) {
+  html[data-tv][data-theme='2'] {
+    --rail-w: 104px;
+  }
+  html[data-tv] .t2-rail {
+    gap: 6px;
+    padding-top: 22px;
+  }
+  html[data-tv] .t2-logo {
+    width: 56px;
+    height: 56px;
+    border-radius: 18px;
+    font-size: 22px;
+    margin-bottom: 14px;
+  }
+  html[data-tv] .t2-rail-link {
+    width: 96px;
+    gap: 4px;
+    padding: 5px 0;
+    font-size: 0.8rem;
+  }
+  html[data-tv] .t2-pill {
+    width: 68px;
+    height: 40px;
+    border-radius: 20px;
+  }
+  html[data-tv] .t2-pill svg {
+    width: 26px;
+    height: 26px;
+  }
+  html[data-tv] .t2-searchbar {
+    height: 58px;
+    border-radius: 29px;
+    font-size: 1rem;
+  }
+}
+html[data-tv][data-theme='2'] .hero .hero-actions .btn {
+  height: 58px;
+  padding: 0 30px;
+  font-size: 1.1rem;
+}
+html[data-tv][data-theme='2'] .hero-meta {
+  font-size: 1rem;
+}
+html[data-tv][data-theme='2'] .row-more {
+  font-size: 1rem;
+}
+html[data-tv][data-theme='2'] .btn-small {
+  padding: 10px 18px;
 }

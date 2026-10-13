@@ -7,6 +7,11 @@ describe('conversión a VTT', () => {
     expect(srtToVtt('1\r\n00:00:01,000 --> 00:00:02,500\r\nHola\r\n')).toBe('WEBVTT\n\n1\n00:00:01.000 --> 00:00:02.500\nHola\n')
   })
 
+  it('SRT con la hora de un solo dígito', () => {
+    expect(srtToVtt('1\n0:00:01,000 --> 0:00:03,000\nHola\n')).toBe('WEBVTT\n\n1\n00:00:01.000 --> 00:00:03.000\nHola\n')
+    expect(srtToVtt('1\n1:02:03,400 --> 10:02:04,500\nHola\n')).toBe('WEBVTT\n\n1\n01:02:03.400 --> 10:02:04.500\nHola\n')
+  })
+
   it('ASS/SSA básico, sin estilos', () => {
     const ass = [
       '[Script Info]',
@@ -57,6 +62,11 @@ describe('stripSdh', () => {
   it('deja el diálogo normal como está', () => {
     const vtt = 'WEBVTT\n\n00:00:01.000 --> 00:00:02.000\n- ¿Vamos?\n- Sí, dale.\n'
     expect(stripSdh(vtt)).toBe(vtt)
+  })
+
+  it('no confunde "NO:", "SÍ:" u "OK:" con el nombre de quien habla', () => {
+    const vtt = 'WEBVTT\n\n00:00:01.000 --> 00:00:02.000\nNO: no vayas.\n- SÍ: ya lo sé.\n\n00:00:03.000 --> 00:00:04.000\nOK: dale.\n\n00:00:05.000 --> 00:00:06.000\nANA: ¿Vamos?\n- EH: ¿qué?\n'
+    expect(stripSdh(vtt)).toBe('WEBVTT\n\n00:00:01.000 --> 00:00:02.000\nNO: no vayas.\n- SÍ: ya lo sé.\n\n00:00:03.000 --> 00:00:04.000\nOK: dale.\n\n00:00:05.000 --> 00:00:06.000\n¿Vamos?\n- EH: ¿qué?\n')
   })
 })
 

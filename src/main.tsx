@@ -4,6 +4,7 @@ import { App } from './App'
 import { hydrateStores } from './lib/store'
 import { probeServerTmdb } from './lib/tmdb'
 import { initTheme, preloadThemeFonts } from './lib/theme'
+import { syncTvAttr } from './lib/tv'
 import './styles.css'
 import './theme2.css'
 
@@ -29,6 +30,8 @@ window.addEventListener('vite:preloadError', (event) => {
 // "Seguir viendo" y los addons aparezcan en el primer render.
 hydrateStores().finally(() => {
   initTheme()
+  // `data-tv` en <html>: letras y controles grandes para mirar desde el sillón.
+  syncTvAttr()
   createRoot(document.getElementById('root')!).render(
     <StrictMode>
       <App />

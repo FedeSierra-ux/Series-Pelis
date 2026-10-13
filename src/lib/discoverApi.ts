@@ -113,7 +113,11 @@ export interface DiscoverPage {
   totalPages: number
 }
 
-export const today = () => new Date().toISOString().slice(0, 10)
+/** Hoy en la zona horaria del dispositivo (con UTC, de noche en Argentina ya era "mañana"). */
+export function today(now = new Date()): string {
+  const pad = (n: number) => String(n).padStart(2, '0')
+  return `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}`
+}
 
 export async function tmdbDiscover(type: string, filters: DiscoverFilters, page: number): Promise<DiscoverPage> {
   const kind = tmdbKind(type)

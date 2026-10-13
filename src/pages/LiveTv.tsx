@@ -158,8 +158,18 @@ export function LiveTv() {
   }, [muted])
 
   const toggleFullscreen = useCallback(() => {
-    if (document.fullscreenElement) document.exitFullscreen().catch(() => {})
-    else screenRef.current?.requestFullscreen().catch(() => {})
+    if (document.fullscreenElement) {
+      document.exitFullscreen().catch(() => {})
+      return
+    }
+    const screen = screenRef.current
+    if (screen && typeof screen.requestFullscreen === 'function') {
+      screen.requestFullscreen().catch(() => {})
+      return
+    }
+    // iPhone (Safari): un div no tiene requestFullscreen; solo el <video> sabe ir a pantalla completa.
+    const video = videoRef.current as (HTMLVideoElement & { webkitEnterFullscreen?: () => void }) | null
+    video?.webkitEnterFullscreen?.()
   }, [])
 
   // Control remoto: CH+/CH− cambian de canal siempre; ▲/▼ solo en pantalla completa

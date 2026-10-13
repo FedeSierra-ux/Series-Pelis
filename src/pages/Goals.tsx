@@ -6,6 +6,7 @@ import { useAddons, useTitle } from '../lib/hooks'
 import { loadYearMetas } from '../lib/stats'
 import { diaryStore, goalsStore, progressStore, useStore } from '../lib/store'
 import type { Meta } from '../lib/types'
+import { EmptyState } from '../components/EmptyState'
 import { GoalBars, METRIC_LABEL, useYearGoal } from './goals/GoalBars'
 
 // Metas anuales ("52 pelis en 2026") y logros que se desbloquean con el diario.
@@ -133,7 +134,11 @@ export function Goals() {
         {lines.length > 0 ? (
           <GoalBars lines={lines} year={year} />
         ) : (
-          <p className="muted small">Elegí cuántas pelis, episodios u horas querés ver en {year}. Se cuentan con tu diario.</p>
+          <EmptyState
+            icon="trophy"
+            title={`Sin meta para ${year}`}
+            text="Elegí arriba cuántas pelis, episodios u horas querés ver. Se cuentan con tu diario."
+          />
         )}
       </section>
 

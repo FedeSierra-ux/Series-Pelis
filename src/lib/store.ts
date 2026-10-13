@@ -83,11 +83,28 @@ export const addonsStore = new PersistedStore<InstalledAddon[]>('addons', [CINEM
 /** `updated`: ya estaba y se actualizó; `disabled`: ya estaba apagado y sigue apagado. */
 export type InstallStatus = 'new' | 'updated' | 'disabled'
 
+/**
+ * Identidad de un addon instalado: su URL (sin mayúsculas en el dominio ni barra final). El mismo addon
+ * con otra configuración (Torrentio con TorBox y Torrentio con Real-Debrid) tiene el mismo `manifest.id`
+ * pero otra URL, y son dos addons distintos.
+ */
+export function addonKey(transportUrl: string): string {
+  try {
+    const u = new URL(transportUrl.trim())
+    u.hash = ''
+    return `${u.protocol.toLowerCase()}//${u.host.toLowerCase()}${u.pathname.replace(/\/+$/, '')}${u.search}`
+  } catch {
+    return transportUrl.trim()
+  }
+}
+
+export const sameAddon = (a: string, b: string) => addonKey(a) === addonKey(b)
+
 export async function installAddon(manifestUrl: string): Promise<{ manifest: Manifest; status: InstallStatus }> {
   const manifest = await fetchManifest(manifestUrl)
   let status: InstallStatus = 'new'
   addonsStore.set((list) => {
-    const existing = list.findIndex((a) => a.transportUrl === manifestUrl || a.manifest.id === manifest.id)
+    const existing = list.findIndex((a) => sameAddon(a.transportUrl, manifestUrl))
     const entry: InstalledAddon = { transportUrl: manifestUrl, manifest }
     if (existing < 0) return [...list, entry]
     // Volver a pegar la URL no lo prende: si estaba apagado, sigue apagado (se avisa en pantalla).
@@ -116,9 +133,14 @@ export function setAddonEnabled(transportUrl: string, enabled: boolean) {
 /** Agrega addons de los que ya tenemos el manifest (por ejemplo, importados de Stremio). */
 export function addInstalledAddons(entries: InstalledAddon[]) {
   addonsStore.set((list) => {
-    const urls = new Set(list.map((a) => a.transportUrl))
-    const ids = new Set(list.map((a) => a.manifest.id))
-    const fresh = entries.filter((e) => !urls.has(e.transportUrl) && !ids.has(e.manifest.id))
+    const urls = new Set(list.map((a) => addonKey(a.transportUrl)))
+    const fresh: InstalledAddon[] = []
+    for (const e of entries) {
+      const key = addonKey(e.transportUrl)
+      if (urls.has(key)) continue
+      urls.add(key)
+      fresh.push(e)
+    }
     return fresh.length ? [...list, ...fresh] : list
   })
 }
@@ -134,20 +156,65 @@ export function moveAddon(transportUrl: string, delta: -1 | 1) {
   })
 }
 
-/** Actualiza los manifests en segundo plano (catálogos o géneros nuevos). */
-async function refreshManifests() {
+/** Cada cuánto se vuelve a bajar el manifest de cada addon (catálogos o géneros nuevos). */
+export const MANIFEST_TTL_MS = 24 * 60 * 60 * 1000
+const MANIFEST_CHECKED_KEY = 'sp-manifest-checked'
+
+/** Cuándo se revisó por última vez cada addon (por URL), en localStorage para no bajar todo en cada arranque. */
+function manifestChecks(): Record<string, number> {
+  try {
+    const raw = localStorage.getItem(MANIFEST_CHECKED_KEY)
+    const parsed: unknown = raw ? JSON.parse(raw) : undefined
+    return isPlain(parsed) ? (parsed as Record<string, number>) : {}
+  } catch {
+    return {}
+  }
+}
+
+function saveManifestChecks(checks: Record<string, number>) {
+  try {
+    localStorage.setItem(MANIFEST_CHECKED_KEY, JSON.stringify(checks))
+  } catch {
+    // Sin localStorage (modo privado): se revisa en cada arranque, como antes.
+  }
+}
+
+/**
+ * Actualiza en segundo plano los manifests que no se revisaron en las últimas 24 h. Si ningún manifest
+ * cambió no se toca la lista: así Buscar, "Tus series" y "Tu año" no repiten sus pedidos al arrancar.
+ */
+export async function refreshManifests(now = Date.now()) {
+  const checks = manifestChecks()
   const fresh = new Map<string, InstalledAddon['manifest']>()
+  const due = addonsStore.get().filter((a) => now - (checks[addonKey(a.transportUrl)] ?? 0) >= MANIFEST_TTL_MS)
+  if (due.length === 0) return
   await Promise.all(
-    addonsStore.get().map(async (a) => {
+    due.map(async (a) => {
       try {
         fresh.set(a.transportUrl, await fetchManifest(a.transportUrl))
+        checks[addonKey(a.transportUrl)] = now
       } catch {
-        // Si un addon no responde dejamos el manifest que ya teníamos.
+        // Si un addon no responde dejamos el manifest que ya teníamos y se vuelve a probar en el próximo arranque.
       }
     }),
   )
+  // Olvidamos los addons que ya no están para que la marca no crezca sin fin.
+  const installed = new Set(addonsStore.get().map((a) => addonKey(a.transportUrl)))
+  for (const k of Object.keys(checks)) if (!installed.has(k)) delete checks[k]
+  saveManifestChecks(checks)
   // Mezclamos sobre la lista actual: mientras tanto el usuario pudo agregar o quitar addons.
-  addonsStore.set((list) => list.map((a) => (fresh.has(a.transportUrl) ? { ...a, manifest: fresh.get(a.transportUrl)! } : a)))
+  const list = addonsStore.get()
+  const changed = list.some((a) => {
+    const next = fresh.get(a.transportUrl)
+    return !!next && JSON.stringify(next) !== JSON.stringify(a.manifest)
+  })
+  if (!changed) return
+  addonsStore.set((cur) =>
+    cur.map((a) => {
+      const next = fresh.get(a.transportUrl)
+      return next && JSON.stringify(next) !== JSON.stringify(a.manifest) ? { ...a, manifest: next } : a
+    }),
+  )
 }
 
 // ---------- Progreso e historial ----------
@@ -176,6 +243,20 @@ export interface WatchEntry {
 export const progressStore = new PersistedStore<Record<string, WatchEntry>>('progress', {})
 
 const WATCHED_RATIO = 0.9
+/** Retroceder más que esto respecto de donde iba cuenta como "lo empezó de nuevo". */
+const RESTART_GAP_S = 60
+
+const ratioOf = (e: { position: number; duration: number } | undefined) => (e && e.duration > 0 ? e.position / e.duration : 0)
+
+/**
+ * Algo ya visto que se vuelve a mirar: desde el principio (lo anterior había quedado al final, o se marcó
+ * visto a mano sin reproducirlo) o bastante antes de donde iba. Deja de contar como visto para que vuelva
+ * a "Seguir viendo" y retome; al terminarlo otra vez, el diario lo anota de nuevo.
+ */
+export function restartedWatched(prev: WatchEntry | undefined, next: { position: number; duration: number }): boolean {
+  if (!prev?.watched || ratioOf(next) >= WATCHED_RATIO) return false
+  return prev.duration <= 0 || ratioOf(prev) >= WATCHED_RATIO || next.position < prev.position - RESTART_GAP_S
+}
 
 export function saveProgress(entry: Omit<WatchEntry, 'watched' | 'updatedAt' | 'firstWatchedAt' | 'hidden'>) {
   const before = progressStore.get()[entry.videoId]
@@ -183,7 +264,7 @@ export function saveProgress(entry: Omit<WatchEntry, 'watched' | 'updatedAt' | '
   progressStore.set((all) => {
     const prev = all[entry.videoId]
     const now = Date.now()
-    const watched = prev?.watched || (entry.duration > 0 && entry.position / entry.duration >= WATCHED_RATIO)
+    const watched = restartedWatched(prev, entry) ? false : prev?.watched || ratioOf(entry) >= WATCHED_RATIO
     return {
       ...all,
       [entry.videoId]: { ...entry, watched, updatedAt: now, firstWatchedAt: prev?.firstWatchedAt ?? now },
@@ -216,6 +297,55 @@ export function setWatched(
         firstWatchedAt: prev?.firstWatchedAt ?? now,
       },
     }
+  })
+}
+
+/**
+ * Marca (o desmarca) varios videos de una vez, por ejemplo una temporada entera: una sola escritura
+ * del progreso y una del diario. Misma lógica que `setWatched`; lo que ya estaba como se pide no se toca.
+ */
+export function setWatchedMany(
+  bases: Array<Pick<WatchEntry, 'videoId' | 'metaId' | 'type' | 'name' | 'poster' | 'season' | 'episode' | 'episodeTitle'>>,
+  watched: boolean,
+) {
+  progressStore.set((all) => {
+    const now = Date.now()
+    const next = { ...all }
+    const changed: typeof bases = []
+    for (const base of bases) {
+      const prev = all[base.videoId]
+      if (!watched) {
+        if (!prev) continue
+        delete next[base.videoId]
+        changed.push(base)
+        continue
+      }
+      if (prev?.watched) continue
+      changed.push(base)
+      next[base.videoId] = {
+        ...base,
+        position: prev?.position ?? 0,
+        duration: prev?.duration ?? 0,
+        watched: true,
+        updatedAt: now,
+        firstWatchedAt: prev?.firstWatchedAt ?? now,
+      }
+    }
+    if (changed.length === 0) return all
+    diaryStore.set((d) => {
+      let entries = d.entries
+      for (const base of changed) {
+        if (!watched) {
+          entries = withoutLatest(entries, base.videoId)
+          continue
+        }
+        if (isDuplicate(entries, base.videoId, now)) continue
+        const entry = diaryEntryFrom({ ...base, duration: all[base.videoId]?.duration }, now, 'manual')
+        entries = { ...entries, [entry.id]: entry }
+      }
+      return entries === d.entries ? d : { ...d, entries }
+    })
+    return next
   })
 }
 
@@ -514,6 +644,8 @@ export const settingsStore = new PersistedStore<Settings>('settings', {
 // ---------- Copia de seguridad ----------
 
 export function exportData() {
+  // La key de TMDB es personal y no va en la copia (se comparte entre casas y se manda por chat).
+  const { tmdbKey: _tmdbKey, ...settings } = settingsStore.get()
   return {
     app: 'series-pelis',
     version: 1,
@@ -521,7 +653,7 @@ export function exportData() {
     addons: addonsStore.get().map((a) => a.transportUrl),
     progress: progressStore.get(),
     watchlist: watchlistStore.get(),
-    settings: settingsStore.get(),
+    settings,
     trackPrefs: trackPrefsStore.get(),
     ratings: ratingsStore.get(),
     notInterested: notInterestedStore.get(),
@@ -534,27 +666,52 @@ export function exportData() {
   }
 }
 
+/** Un bloque `{ id: {...}, ... }` de la copia: solo las entradas que son objetos. Si el bloque no es un objeto, nada. */
+function plainRecord<T>(v: unknown): Record<string, T> | undefined {
+  if (!isPlain(v)) return undefined
+  const out: Record<string, T> = {}
+  for (const [k, e] of Object.entries(v)) if (isPlain(e)) out[k] = e as T
+  return out
+}
+
+const stringList = (v: unknown): string[] => (Array.isArray(v) ? v.filter((x): x is string => typeof x === 'string') : [])
+
+/** Importa una copia. Lo que no tenga la forma esperada (por ejemplo, `progress` como texto) se ignora. */
 export async function importData(raw: unknown) {
-  const data = raw as ReturnType<typeof exportData>
-  if (!data || data.app !== 'series-pelis') throw new Error('El archivo no es una copia de Series-Pelis')
-  if (data.progress) progressStore.set((all) => ({ ...all, ...data.progress }))
-  if (data.watchlist) watchlistStore.set((all) => ({ ...all, ...data.watchlist }))
-  if (data.settings) settingsStore.merge({ ...settingsStore.get(), ...data.settings })
-  if (data.trackPrefs) trackPrefsStore.set((all) => ({ ...all, ...data.trackPrefs }))
-  if (data.ratings) ratingsStore.set((all) => ({ ...all, ...data.ratings }))
-  if (data.notInterested) notInterestedStore.set((all) => ({ ...all, ...data.notInterested }))
-  if (data.diary) diaryStore.set((d) => ({ v: 1, entries: { ...d.entries, ...data.diary } }))
-  else if (data.progress) diaryStore.set((d) => ({ v: 1, entries: { ...d.entries, ...missingFromProgress(d.entries, data.progress) } }))
-  if (data.goals) goalsStore.set((g) => ({ byYear: { ...g.byYear, ...data.goals.byYear }, seen: [...new Set([...g.seen, ...(data.goals.seen ?? [])])] }))
-  if (Array.isArray(data.recentSearches)) recentSearchesStore.set(data.recentSearches.filter((q) => typeof q === 'string').slice(0, 10))
-  const installed = new Set(addonsStore.get().map((a) => a.transportUrl))
-  for (const url of data.addons ?? []) {
-    if (!installed.has(url)) await installAddon(url).catch(() => {})
+  if (!isPlain(raw) || raw.app !== 'series-pelis') throw new Error('El archivo no es una copia de Series-Pelis')
+  const data = raw as Partial<Record<keyof ReturnType<typeof exportData>, unknown>>
+  const progress = plainRecord<WatchEntry>(data.progress)
+  const watchlist = plainRecord<ListItem>(data.watchlist)
+  const trackPrefs = plainRecord<TrackPref>(data.trackPrefs)
+  const ratings = plainRecord<RatingEntry>(data.ratings)
+  const notInterested = plainRecord<NotInterestedEntry>(data.notInterested)
+  const diary = plainRecord<DiaryEntry>(data.diary)
+  if (progress) progressStore.set((all) => ({ ...all, ...progress }))
+  if (watchlist) watchlistStore.set((all) => ({ ...all, ...watchlist }))
+  if (isPlain(data.settings)) {
+    // La key de TMDB de otra persona no se pisa con la copia (las copias nuevas ya no la traen).
+    const { tmdbKey: _tmdbKey, ...settings } = data.settings as Partial<Settings>
+    settingsStore.merge({ ...settingsStore.get(), ...settings })
   }
-  if (data.disabledAddons?.length) data.disabledAddons.forEach((url) => setAddonEnabled(url, false))
-  if (data.catalogPrefs) catalogPrefsStore.set(normalizePrefs(data.catalogPrefs))
-  if (Array.isArray(data.liveTv?.favorites)) {
-    const favorites = data.liveTv.favorites.filter((f) => typeof f === 'string')
+  if (trackPrefs) trackPrefsStore.set((all) => ({ ...all, ...trackPrefs }))
+  if (ratings) ratingsStore.set((all) => ({ ...all, ...ratings }))
+  if (notInterested) notInterestedStore.set((all) => ({ ...all, ...notInterested }))
+  if (diary) diaryStore.set((d) => ({ v: 1, entries: { ...d.entries, ...diary } }))
+  else if (progress) diaryStore.set((d) => ({ v: 1, entries: { ...d.entries, ...missingFromProgress(d.entries, progress) } }))
+  if (isPlain(data.goals)) {
+    const goals = data.goals
+    const byYear = plainRecord<GoalsState['byYear'][string]>(goals.byYear) ?? {}
+    goalsStore.set((g) => ({ byYear: { ...g.byYear, ...byYear }, seen: [...new Set([...g.seen, ...stringList(goals.seen)])] }))
+  }
+  if (Array.isArray(data.recentSearches)) recentSearchesStore.set(stringList(data.recentSearches).slice(0, 10))
+  const installed = new Set(addonsStore.get().map((a) => addonKey(a.transportUrl)))
+  for (const url of stringList(data.addons)) {
+    if (!installed.has(addonKey(url))) await installAddon(url).catch(() => {})
+  }
+  stringList(data.disabledAddons).forEach((url) => setAddonEnabled(url, false))
+  if (isPlain(data.catalogPrefs)) catalogPrefsStore.set(normalizePrefs(data.catalogPrefs as Partial<CatalogPrefs>))
+  if (isPlain(data.liveTv) && Array.isArray(data.liveTv.favorites)) {
+    const favorites = stringList(data.liveTv.favorites)
     liveTvStore.set((s) => ({ ...s, favorites: [...new Set([...s.favorites, ...favorites])] }))
   }
 }

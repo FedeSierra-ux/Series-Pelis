@@ -18,6 +18,8 @@ import {
 import { useTitle } from '../lib/hooks'
 import { typeLabel } from '../lib/i18n'
 import { offlineMessage } from '../lib/online'
+import { useHiddenIds } from '../lib/ratings'
+import { withoutHidden } from '../lib/recommend'
 import { useTmdbKey } from '../lib/tmdb'
 import type { MetaPreview } from '../lib/types'
 import { FilterBar, type CatalogOption } from './discover/FilterBar'
@@ -26,6 +28,8 @@ import { errorText } from '../lib/errors'
 
 /** Con filtros del lado del cliente (catálogos de addons) se mira hasta esta cantidad de páginas. */
 const MAX_CLIENT_PAGES = 20
+/** Tope general de páginas por catálogo: algunos addons dicen paginar y devuelven siempre lo mismo. */
+const MAX_PAGES = 40
 
 const hasExtra = (s: CatalogSource, name: string) => !!s.catalog.extra?.some((e) => e.name === name) || !!s.catalog.extraSupported?.includes(name)
 
@@ -104,6 +108,8 @@ export function Discover() {
   const pages = useRef(0)
   // Cuántos trajo cada catálogo de la fila (las fusionadas paginan cada uno por su lado).
   const progress = useRef<{ skip: number; done: boolean }[]>([])
+  // Ids ya mostrados: una página que no trae ninguno nuevo termina esa fuente (addons que ignoran `skip`).
+  const seenIds = useRef(new Set<string>())
 
   const loadPage = async () => {
     if (!useTmdb && sources.length === 0) return
@@ -140,21 +146,26 @@ export function Discover() {
         const lists = results.map((r, i) => {
           if (state[i].done) return []
           const got = r.status === 'fulfilled' ? r.value : []
-          state[i] = { skip: state[i].skip + got.length, done: r.status === 'rejected' || got.length === 0 || !hasExtra(sources[i], 'skip') }
-          return got
+          // Si la página repite lo que ya vimos, el addon no pagina de verdad: no se le pide más.
+          const repeated = got.length > 0 && got.every((m) => seenIds.current.has(m.id))
+          state[i] = {
+            skip: state[i].skip + got.length,
+            done: r.status === 'rejected' || got.length === 0 || repeated || !hasExtra(sources[i], 'skip'),
+          }
+          return repeated ? [] : got
         })
         const failed = results.find((r): r is PromiseRejectedResult => r.status === 'rejected')
         page = interleaveMetas(lists).map((m) => ({ ...m, type: m.type ?? type }))
         if (failed && page.length === 0 && pages.current === 0) throw failed.reason
-        last = state.every((x) => x.done) || (clientFiltering && pages.current + 1 >= MAX_CLIENT_PAGES)
+        last = state.every((x) => x.done) || pages.current + 1 >= (clientFiltering ? MAX_CLIENT_PAGES : MAX_PAGES)
       }
       if (currentKey.current !== key) return
       pages.current += 1
-      setRaw((prev) => {
-        const seen = new Set(prev.map((m) => m.id))
-        return [...prev, ...page.filter((m) => !seen.has(m.id))]
-      })
-      if ((useTmdb && page.length === 0) || last) setDone(true)
+      const fresh = page.filter((m) => !seenIds.current.has(m.id))
+      fresh.forEach((m) => seenIds.current.add(m.id))
+      if (fresh.length > 0) setRaw((prev) => [...prev, ...fresh])
+      // Una página sin nada nuevo no cambia la grilla: si no se marca el final, se pediría otra vez sin parar.
+      if (page.length === 0 || fresh.length === 0 || last) setDone(true)
     } catch (err) {
       if (currentKey.current === key) setError(errorText(err))
     } finally {
@@ -165,6 +176,7 @@ export function Discover() {
   useEffect(() => {
     currentKey.current = loadKey
     pages.current = 0
+    seenIds.current = new Set()
     setRaw([])
     setDone(false)
     loadPage()
@@ -182,7 +194,12 @@ export function Discover() {
     return () => io.disconnect()
   }, [raw.length, done, loading, loadKey, error, clientKey])
 
-  const items = useMemo(() => (clientFiltering ? applyClientFilters(raw, effective) : raw), [raw, clientFiltering, clientKey])
+  // "Ya no me interesa" se respeta acá igual que en Inicio y Buscar.
+  const hidden = useHiddenIds()
+  const items = useMemo(
+    () => withoutHidden(clientFiltering ? applyClientFilters(raw, effective) : raw, hidden),
+    [raw, clientFiltering, clientKey, hidden],
+  )
 
   const apply = (next: DiscoverFilters) => setParams(filtersToParams(next), { replace: true })
   const emptyAfterFilters = done && !loading && raw.length > 0 && items.length === 0
