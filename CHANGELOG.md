@@ -1,5 +1,20 @@
 # Changelog
 
+## [0.7.0] - 2026-10-13
+
+### Agregado
+- **TV en vivo** (`/tv`), en el menú de los dos temas.
+  - Canales gratis de Argentina de la lista abierta de iptv-org, en cuatro categorías: Aire, Noticias, Deportes y Música.
+  - Se ocultan los canales de cable pago que trae la lista (ESPN, TyC Sports, Disney, AMC…). Tampoco aparecen los que
+    piden cabeceras especiales para verse ni, en la versión publicada (https), los que solo transmiten por `http://`.
+  - Cada canal es un botón que se elige con el control remoto. El reproductor queda fijo a la izquierda mientras
+    se recorre la lista en la PC y la TV.
+  - Zapping con CH+ / CH− (o Re Pág / Av Pág), número de canal directo y ▲ ▼ en pantalla completa.
+  - Favoritos y último canal visto. Se guardan en la copia de seguridad.
+  - Aviso en los canales que no transmiten todo el día o que solo andan en su zona. Si un canal no responde,
+    ofrece probar de nuevo o pasar al siguiente.
+  - Si el navegador no deja arrancar con sonido, el canal empieza silenciado y se activa con un botón.
+
 ## [0.6.0] - 2026-10-13
 
 Addons, TV y apariencia (la última de las tres versiones del cuestionario de funciones), con el **Tema 2** opcional.

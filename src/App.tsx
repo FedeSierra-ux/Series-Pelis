@@ -22,6 +22,7 @@ const Person = lazy(() => import('./pages/Person').then((m) => ({ default: m.Per
 const Together = lazy(() => import('./pages/Together').then((m) => ({ default: m.Together })))
 const ListsIndex = lazy(() => import('./pages/Lists').then((m) => ({ default: m.ListsIndex })))
 const ListPage = lazy(() => import('./pages/Lists').then((m) => ({ default: m.ListPage })))
+const LiveTv = lazy(() => import('./pages/LiveTv').then((m) => ({ default: m.LiveTv })))
 const CatalogManager = lazy(() => import('./pages/CatalogManager').then((m) => ({ default: m.CatalogManager })))
 
 const pageFallback = <div className="page"><div className="spinner" /></div>
@@ -64,6 +65,7 @@ export function App() {
           <Route path="together" element={<Suspense fallback={pageFallback}><Together /></Suspense>} />
           <Route path="lists" element={<Suspense fallback={pageFallback}><ListsIndex /></Suspense>} />
           <Route path="lists/:id" element={<Suspense fallback={pageFallback}><ListPage /></Suspense>} />
+          <Route path="tv" element={<Suspense fallback={pageFallback}><LiveTv /></Suspense>} />
           <Route path="list" element={<MyList />} />
           <Route path="history" element={<History />} />
           <Route path="history/year" element={<Suspense fallback={pageFallback}><YearReview /></Suspense>} />

@@ -19,6 +19,7 @@ const RAIL: Item[] = [
   { to: '/', label: 'Inicio', icon: 'home', end: true },
   { to: '/discover/movie', label: 'Películas', icon: 'movie' },
   { to: '/discover/series', label: 'Series', icon: 'series' },
+  { to: '/tv', label: 'TV en vivo', icon: 'live' },
   { to: '/list', label: 'Mi lista', icon: 'list' },
   { to: '/history', label: 'Historial', icon: 'history' },
   { to: '/calendar', label: 'Calendario', icon: 'calendar' },
@@ -28,6 +29,7 @@ const TABS: Item[] = [
   { to: '/', label: 'Inicio', icon: 'home', end: true },
   { to: '/discover/movie', label: 'Películas', icon: 'movie' },
   { to: '/discover/series', label: 'Series', icon: 'series' },
+  { to: '/tv', label: 'TV', icon: 'live' },
   { to: '/list', label: 'Mi lista', icon: 'list' },
   // "Vos": historial, Tu año y calendario (se llega a los dos últimos desde el historial).
   { to: '/history', label: 'Vos', icon: 'user' },

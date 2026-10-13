@@ -4852,3 +4852,292 @@ input[type='password']:focus-visible {
   border-radius: 5px;
   background: #c4b0ff;
 }
+
+/* ---------- v0.7 TV en vivo ---------- */
+
+/* PC/TV: reproductor fijo a la izquierda y la lista a la derecha, así el canal se sigue viendo
+   mientras se recorre la grilla con el control. En el celular, uno abajo del otro. */
+.ltv-source {
+  margin: 4px 0 0;
+  color: var(--muted);
+  font-size: 0.9rem;
+}
+.ltv-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1.5fr) minmax(0, 1fr);
+  gap: 24px;
+  align-items: start;
+}
+.ltv-stage {
+  position: sticky;
+  top: 16px;
+  display: grid;
+  gap: 12px;
+  min-width: 0;
+}
+.ltv-screen {
+  position: relative;
+  aspect-ratio: 16 / 9;
+  max-width: 100%;
+  background: #000;
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+}
+.ltv-screen:fullscreen {
+  border-radius: 0;
+}
+.ltv-screen video {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  background: #000;
+}
+.ltv-live {
+  position: absolute;
+  top: 12px;
+  left: 12px;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 3px 10px 3px 8px;
+  border-radius: 999px;
+  background: rgba(0, 0, 0, 0.6);
+  color: #fff;
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+}
+.ltv-live i {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #ff5a6e;
+  animation: ltv-pulse 1.6s infinite;
+}
+@keyframes ltv-pulse {
+  50% {
+    opacity: 0.35;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .ltv-live i {
+    animation: none;
+  }
+}
+.ltv-osd {
+  position: absolute;
+  inset: auto 0 0 0;
+  display: flex;
+  align-items: flex-end;
+  gap: 14px;
+  padding: 40px 16px 14px;
+  background: linear-gradient(to top, rgba(0, 0, 0, 0.85), transparent);
+  color: #fff;
+  pointer-events: none;
+}
+.ltv-num {
+  font-family: var(--font-display);
+  font-size: 2rem;
+  font-weight: 700;
+  line-height: 1;
+  color: var(--accent);
+  font-variant-numeric: tabular-nums;
+}
+.ltv-name {
+  display: block;
+  font-family: var(--font-display);
+  font-size: 1.1rem;
+  font-weight: 600;
+}
+.ltv-meta {
+  display: block;
+  font-size: 0.8rem;
+  opacity: 0.85;
+}
+.ltv-error {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-content: center;
+  justify-items: center;
+  gap: 12px;
+  padding: 16px;
+  text-align: center;
+  background: rgba(0, 0, 0, 0.75);
+  color: #fff;
+}
+.ltv-error p {
+  margin: 0;
+}
+.ltv-error-actions,
+.ltv-controls {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.ltv-controls .btn[aria-pressed='true'] {
+  color: var(--accent);
+  border-color: var(--accent);
+}
+.ltv-hint {
+  margin: 0;
+  color: var(--muted);
+  font-size: 0.82rem;
+}
+.ltv-list {
+  display: grid;
+  gap: 12px;
+  min-width: 0;
+}
+.ltv-filters {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.ltv-filter {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 7px 14px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: transparent;
+  color: var(--muted);
+  font-size: 0.88rem;
+  cursor: pointer;
+}
+.ltv-filter:hover,
+.ltv-filter:focus-visible {
+  color: var(--text);
+  border-color: var(--accent);
+}
+.ltv-filter[aria-pressed='true'] {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: var(--on-accent);
+  font-weight: 700;
+}
+.ltv-count {
+  opacity: 0.7;
+  font-variant-numeric: tabular-nums;
+}
+.ltv-channels {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 6px;
+}
+.ltv-row {
+  display: flex;
+  gap: 6px;
+}
+.ltv-ch {
+  flex: 1;
+  min-width: 0;
+  display: grid;
+  grid-template-columns: 36px 44px minmax(0, 1fr);
+  align-items: center;
+  gap: 12px;
+  padding: 8px 12px;
+  border: 2px solid transparent;
+  border-radius: var(--radius);
+  background: var(--bg-2);
+  color: var(--text);
+  text-align: left;
+  cursor: pointer;
+}
+.ltv-ch:hover,
+.ltv-ch:focus-visible {
+  background: var(--bg-3);
+}
+.ltv-ch:focus-visible {
+  outline: var(--focus-ring);
+  outline-offset: 2px;
+}
+.ltv-ch[aria-current='true'] {
+  border-color: var(--accent);
+  background: var(--bg-3);
+}
+.ltv-no {
+  color: var(--muted);
+  font-size: 0.8rem;
+  font-variant-numeric: tabular-nums;
+}
+.ltv-logo {
+  width: 44px;
+  height: 44px;
+  display: grid;
+  place-items: center;
+  border-radius: 10px;
+  overflow: hidden;
+  background: var(--bg-3);
+  color: #fff;
+  font-family: var(--font-display);
+  font-size: 0.8rem;
+  font-weight: 700;
+}
+.ltv-logo img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  padding: 4px;
+  background: #fff;
+}
+.ltv-cat-aire {
+  background: #4b3a7a;
+}
+.ltv-cat-noticias {
+  background: #7a2f3d;
+}
+.ltv-cat-deportes {
+  background: #2b6b4a;
+}
+.ltv-cat-musica {
+  background: #7a5426;
+}
+.ltv-text {
+  min-width: 0;
+  display: grid;
+}
+.ltv-ch-name {
+  font-weight: 600;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.ltv-note {
+  color: var(--muted);
+  font-size: 0.76rem;
+}
+.ltv-note.warn {
+  color: #f0c36a;
+}
+.ltv-fav {
+  flex: none;
+  width: 48px;
+  border: 2px solid transparent;
+  border-radius: var(--radius);
+  background: var(--bg-2);
+  color: var(--muted);
+  font-size: 1.15rem;
+  cursor: pointer;
+}
+.ltv-fav[aria-pressed='true'] {
+  color: var(--accent);
+}
+.ltv-fav:hover,
+.ltv-fav:focus-visible {
+  background: var(--bg-3);
+  color: var(--accent);
+}
+@media (max-width: 960px) {
+  .ltv-layout {
+    grid-template-columns: 1fr;
+  }
+  .ltv-stage {
+    position: static;
+  }
+}
