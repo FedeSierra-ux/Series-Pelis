@@ -9,7 +9,19 @@ import type { InstalledAddon, MetaPreview } from './types'
 
 const idb = createStore('series-pelis-data', 'kv')
 
+const isPlain = (v: unknown): v is Record<string, unknown> => !!v && typeof v === 'object' && !Array.isArray(v)
+
+/** Completa con los valores por defecto, también un nivel adentro (ej. `subtitleStyle`, `sourceRules`). */
+function withDefaults<T>(defaults: T, stored: T): T {
+  if (!isPlain(defaults) || !isPlain(stored)) return stored
+  const out: Record<string, unknown> = { ...defaults, ...stored }
+  for (const [k, v] of Object.entries(defaults)) if (isPlain(v) && isPlain(out[k])) out[k] = { ...v, ...(out[k] as object) }
+  return out as T
+}
+
 class PersistedStore<T> {
+  private initial: T
+
   private value: T
   private listeners = new Set<() => void>()
 
@@ -18,6 +30,12 @@ class PersistedStore<T> {
     initial: T,
   ) {
     this.value = initial
+    this.initial = initial
+  }
+
+  /** Valores por defecto con lo que haya en `stored` encima (para importar copias viejas). */
+  merge(stored: T) {
+    this.set(withDefaults(this.initial, stored))
   }
 
   async hydrate() {
@@ -25,8 +43,7 @@ class PersistedStore<T> {
       const stored = await get<T>(this.key, idb)
       if (stored !== undefined) {
         // En objetos de configuración completamos con los valores por defecto de campos nuevos.
-        const isPlain = (v: unknown) => !!v && typeof v === 'object' && !Array.isArray(v)
-        this.value = isPlain(this.value) && isPlain(stored) ? { ...this.value, ...stored } : stored
+        this.value = withDefaults(this.value, stored)
       }
     } catch {
       // IndexedDB bloqueado (modo privado, por ejemplo): seguimos con los valores por defecto.
@@ -206,6 +223,33 @@ export interface LastSource {
 
 export const lastSourceStore = new PersistedStore<Record<string, LastSource>>('lastSource', {})
 
+// ---------- Audio y subtítulos elegidos por título ----------
+
+export interface TrackPref {
+  /** Idioma del subtítulo elegido (ISO 639-2). */
+  subLang?: string
+  /** Si el elegido era de "forzados" (solo carteles y diálogos en otro idioma). */
+  subForced?: boolean
+  /** Eligió "Sin subtítulos". */
+  subOff?: boolean
+  audioLang?: string
+  at: number
+}
+
+/** Por metaId (serie o peli): le gana a los idiomas generales de Ajustes. */
+export const trackPrefsStore = new PersistedStore<Record<string, TrackPref>>('trackPrefs', {})
+
+export function rememberTracks(metaId: string, patch: Partial<TrackPref>) {
+  trackPrefsStore.set((all) => ({ ...all, [metaId]: { ...all[metaId], ...patch, at: Date.now() } }))
+}
+
+export function forgetTracks(metaId: string) {
+  trackPrefsStore.set((all) => {
+    const { [metaId]: _removed, ...rest } = all
+    return rest
+  })
+}
+
 // ---------- Mi lista ----------
 
 export interface ListItem {
@@ -246,7 +290,12 @@ export function toggleWatchlist(meta: MetaPreview) {
 export interface SubtitleStyle {
   size: 's' | 'm' | 'l' | 'xl'
   color: 'white' | 'yellow'
-  background: 'none' | 'semi' | 'solid'
+  background: 'none' | 'light' | 'semi' | 'solid'
+  /** Contorno negro alrededor de las letras. */
+  outline: boolean
+  font: 'system' | 'rounded' | 'serif' | 'mono'
+  /** Cuánto más arriba del lugar normal, en % del alto del video. */
+  position: 0 | 10 | 20
 }
 
 export interface SourceRules {
@@ -259,6 +308,13 @@ export interface SourceRules {
   preferKeywords: string[]
   /** Palabras que descartan el stream (ej. "cam", "hdts"). */
   excludeKeywords: string[]
+  /** Tamaño máximo en GB (0 = sin límite). */
+  maxSizeGB: number
+  /** Códecs que descartan el stream. */
+  excludeCodecs: ('hevc' | 'av1')[]
+  hdr: 'allow' | 'prefer' | 'exclude'
+  /** Ocultar los repetidos (mismo torrent o enlace, o mismo archivo y tamaño). */
+  dedupe: boolean
 }
 
 export interface Settings {
@@ -271,6 +327,8 @@ export interface Settings {
   /** Idiomas de audio preferidos (ISO 639-2), para elegir pista en streams con varias. */
   audioLangs: string[]
   subtitleStyle: SubtitleStyle
+  /** Ocultar subtítulos para sordos (SDH) y sacar las descripciones de sonidos. */
+  hideSdh: boolean
   autoplayNext: boolean
   /** Saltar intro/resumen/créditos: mostrar botón, saltar solo o nada. */
   skipSegments: 'button' | 'auto' | 'off'
@@ -290,11 +348,18 @@ export const settingsStore = new PersistedStore<Settings>('settings', {
   subtitleLangs: ['spa', 'eng'],
   autoSubtitles: false,
   audioLangs: ['spa', 'eng'],
-  subtitleStyle: { size: 'm', color: 'white', background: 'semi' },
+  subtitleStyle: { size: 'm', color: 'white', background: 'semi', outline: false, font: 'system', position: 0 },
+  hideSdh: false,
   autoplayNext: true,
   skipSegments: 'button',
   stillWatchingAfter: 3,
-  sourceRules: { mode: 'manual', rememberLast: true, preferredQuality: '1080p', preferKeywords: [], excludeKeywords: ['cam', 'hdcam', 'telesync', 'hdts'] },
+  sourceRules: {
+    mode: 'manual', rememberLast: true, preferredQuality: '1080p', preferKeywords: [], excludeKeywords: ['cam', 'hdcam', 'telesync', 'hdts'],
+    maxSizeGB: 0,
+    excludeCodecs: [],
+    hdr: 'allow',
+    dedupe: true,
+  },
   externalPlayer: 'system',
   tmdbKey: '',
   heroTrailer: true,
@@ -311,6 +376,7 @@ export function exportData() {
     progress: progressStore.get(),
     watchlist: watchlistStore.get(),
     settings: settingsStore.get(),
+    trackPrefs: trackPrefsStore.get(),
   }
 }
 
@@ -319,7 +385,8 @@ export async function importData(raw: unknown) {
   if (!data || data.app !== 'series-pelis') throw new Error('El archivo no es una copia de Series-Pelis')
   if (data.progress) progressStore.set((all) => ({ ...all, ...data.progress }))
   if (data.watchlist) watchlistStore.set((all) => ({ ...all, ...data.watchlist }))
-  if (data.settings) settingsStore.set((s) => ({ ...s, ...data.settings }))
+  if (data.settings) settingsStore.merge({ ...settingsStore.get(), ...data.settings })
+  if (data.trackPrefs) trackPrefsStore.set((all) => ({ ...all, ...data.trackPrefs }))
   const installed = new Set(addonsStore.get().map((a) => a.transportUrl))
   for (const url of data.addons ?? []) {
     if (!installed.has(url)) await installAddon(url).catch(() => {})
@@ -335,6 +402,7 @@ export async function hydrateStores() {
     watchlistStore.hydrate(),
     settingsStore.hydrate(),
     lastSourceStore.hydrate(),
+    trackPrefsStore.hydrate(),
   ])
   if (addonsStore.get().length === 0) addonsStore.set([CINEMETA_ADDON])
   // No bloquea el arranque.
