@@ -1,11 +1,19 @@
 import { useState } from 'react'
+import { EmptyState } from '../components/EmptyState'
+import { Picker } from '../components/Picker'
 import { PosterCard } from '../components/PosterCard'
 import { UserStars } from '../components/StarRating'
-import { Empty } from '../components/Status'
 import { useTitle } from '../lib/hooks'
 import { progressStore, ratingsStore, useStore, watchlistStore } from '../lib/store'
 
 type Sort = 'added' | 'rating' | 'name' | 'mine'
+
+const SORT_OPTIONS: { value: Sort; label: string }[] = [
+  { value: 'added', label: 'Agregadas recientemente' },
+  { value: 'rating', label: 'Mejor puntaje IMDb' },
+  { value: 'mine', label: 'Tu puntaje' },
+  { value: 'name', label: 'Nombre' },
+]
 
 export function MyList() {
   useTitle('Mi lista')
@@ -27,16 +35,16 @@ export function MyList() {
       <header className="page-header">
         <h1>Mi lista</h1>
         <div className="filters">
-          <select aria-label="Ordenar" value={sort} onChange={(e) => setSort(e.target.value as Sort)}>
-            <option value="added">Agregadas recientemente</option>
-            <option value="rating">Mejor puntaje IMDb</option>
-            <option value="mine">Tu puntaje</option>
-            <option value="name">Nombre</option>
-          </select>
+          <Picker label="Ordenar" value={sort} options={SORT_OPTIONS} onChange={(v) => setSort(v as Sort)} />
         </div>
       </header>
       {items.length === 0 ? (
-        <Empty>Tu lista está vacía. Usá “+ Mi lista” en cualquier título para guardarlo acá.</Empty>
+        <EmptyState
+          icon="list"
+          title="Tu lista está vacía"
+          text="Usá “+ Mi lista” en cualquier título para guardarlo acá y tenerlo a mano."
+          action={{ label: 'Explorar películas', to: '/discover/movie' }}
+        />
       ) : (
         <div className="grid">
           {items.map((m) => (
