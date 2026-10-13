@@ -1,6 +1,8 @@
 import { useSyncExternalStore } from 'react'
 import { createStore, get, set } from 'idb-keyval'
 import { CINEMETA_ADDON, fetchManifest } from './addons'
+import { crossedFinish, diaryEntryFrom, isDuplicate, missingFromProgress, rebuildFromProgress, withoutLatest, withoutVideos, type DiaryEntry, type DiaryState } from './diary'
+import type { GoalsState } from './goals'
 import type { InstalledAddon, MetaPreview } from './types'
 
 // Datos del usuario guardados en el navegador (IndexedDB). En la v0.2 se van a
@@ -19,7 +21,7 @@ function withDefaults<T>(defaults: T, stored: T): T {
   return out as T
 }
 
-class PersistedStore<T> {
+export class PersistedStore<T> {
   private initial: T
 
   private value: T
@@ -144,6 +146,8 @@ export const progressStore = new PersistedStore<Record<string, WatchEntry>>('pro
 const WATCHED_RATIO = 0.9
 
 export function saveProgress(entry: Omit<WatchEntry, 'watched' | 'updatedAt' | 'firstWatchedAt' | 'hidden'>) {
+  const before = progressStore.get()[entry.videoId]
+  if (crossedFinish(before, entry)) logDiary(entry, 'player')
   progressStore.set((all) => {
     const prev = all[entry.videoId]
     const now = Date.now()
@@ -163,10 +167,12 @@ export function setWatched(
     const prev = all[base.videoId]
     if (!watched) {
       if (!prev) return all
+      diaryStore.set((d) => ({ ...d, entries: withoutLatest(d.entries, base.videoId) }))
       const { [base.videoId]: _removed, ...rest } = all
       return rest
     }
     const now = Date.now()
+    if (!prev?.watched) logDiary({ ...base, duration: prev?.duration }, 'manual')
     return {
       ...all,
       [base.videoId]: {
@@ -182,6 +188,7 @@ export function setWatched(
 }
 
 export function removeHistory(videoIds: string[]) {
+  diaryStore.set((d) => ({ ...d, entries: withoutVideos(d.entries, videoIds) }))
   progressStore.set((all) => {
     const copy = { ...all }
     videoIds.forEach((id) => delete copy[id])
@@ -209,6 +216,30 @@ export function hideFromContinue(metaId: string) {
     return copy
   })
 }
+
+// ---------- Diario y metas (v0.5) ----------
+
+/** Cada vez que se terminó algo (ver `lib/diary.ts`). */
+export const diaryStore = new PersistedStore<DiaryState>('diary', { v: 0, entries: {} })
+
+function logDiary(e: Parameters<typeof diaryEntryFrom>[0], source: DiaryEntry['source']) {
+  const at = Date.now()
+  diaryStore.set((d) => {
+    if (isDuplicate(d.entries, e.videoId, at)) return d
+    const entry = diaryEntryFrom(e, at, source)
+    return { ...d, entries: { ...d.entries, [entry.id]: entry } }
+  })
+}
+
+export function removeDiaryEntry(id: string) {
+  diaryStore.set((d) => {
+    const { [id]: _removed, ...rest } = d.entries
+    return { ...d, entries: rest }
+  })
+}
+
+/** Metas anuales y logros ya vistos (ver `lib/goals.ts`). */
+export const goalsStore = new PersistedStore<GoalsState>('goals', { byYear: {}, seen: [] })
 
 // ---------- Última fuente elegida por título ----------
 
@@ -428,6 +459,8 @@ export function exportData() {
     trackPrefs: trackPrefsStore.get(),
     ratings: ratingsStore.get(),
     notInterested: notInterestedStore.get(),
+    diary: diaryStore.get().entries,
+    goals: goalsStore.get(),
   }
 }
 
@@ -440,6 +473,9 @@ export async function importData(raw: unknown) {
   if (data.trackPrefs) trackPrefsStore.set((all) => ({ ...all, ...data.trackPrefs }))
   if (data.ratings) ratingsStore.set((all) => ({ ...all, ...data.ratings }))
   if (data.notInterested) notInterestedStore.set((all) => ({ ...all, ...data.notInterested }))
+  if (data.diary) diaryStore.set((d) => ({ v: 1, entries: { ...d.entries, ...data.diary } }))
+  else if (data.progress) diaryStore.set((d) => ({ v: 1, entries: { ...d.entries, ...missingFromProgress(d.entries, data.progress) } }))
+  if (data.goals) goalsStore.set((g) => ({ byYear: { ...g.byYear, ...data.goals.byYear }, seen: [...new Set([...g.seen, ...(data.goals.seen ?? [])])] }))
   const installed = new Set(addonsStore.get().map((a) => a.transportUrl))
   for (const url of data.addons ?? []) {
     if (!installed.has(url)) await installAddon(url).catch(() => {})
@@ -458,7 +494,11 @@ export async function hydrateStores() {
     trackPrefsStore.hydrate(),
     ratingsStore.hydrate(),
     notInterestedStore.hydrate(),
+    diaryStore.hydrate(),
+    goalsStore.hydrate(),
   ])
+  // La primera vez el diario se arma con lo que ya estaba marcado como visto.
+  if (diaryStore.get().v === 0) diaryStore.set({ v: 1, entries: rebuildFromProgress(progressStore.get()) })
   if (addonsStore.get().length === 0) addonsStore.set([CINEMETA_ADDON])
   // No bloquea el arranque.
   setTimeout(() => refreshManifests().catch(() => {}), 2000)
