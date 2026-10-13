@@ -85,6 +85,13 @@ export function supportsResource(manifest: Manifest, resource: string, type: str
   })
 }
 
+/** Addons que se consultan: los desactivados quedan instalados pero no se usan. */
+export const isAddonEnabled = (addon: InstalledAddon) => addon.disabled !== true
+
+export function enabledAddons(addons: InstalledAddon[]): InstalledAddon[] {
+  return addons.filter(isAddonEnabled)
+}
+
 export async function fetchManifest(url: string): Promise<Manifest> {
   const manifest = await fetchJson<Manifest>(url)
   if (!manifest || !manifest.id || !Array.isArray(manifest.resources)) {
@@ -115,7 +122,7 @@ export function getCatalog(
 
 /** Catálogos que se pueden pedir sin parámetros obligatorios (los que van en el inicio). */
 export function browsableCatalogs(addons: InstalledAddon[]): { addon: InstalledAddon; catalog: CatalogDef }[] {
-  return addons.flatMap((addon) =>
+  return enabledAddons(addons).flatMap((addon) =>
     addon.manifest.catalogs
       .filter((c) => {
         const required = c.extraRequired ?? c.extra?.filter((e) => e.isRequired).map((e) => e.name) ?? []
@@ -126,7 +133,7 @@ export function browsableCatalogs(addons: InstalledAddon[]): { addon: InstalledA
 }
 
 export function searchableCatalogs(addons: InstalledAddon[]) {
-  return addons.flatMap((addon) =>
+  return enabledAddons(addons).flatMap((addon) =>
     addon.manifest.catalogs
       .filter((c) => c.extra?.some((e) => e.name === 'search') || c.extraSupported?.includes('search'))
       .map((catalog) => ({ addon, catalog })),
@@ -139,7 +146,10 @@ export function getMeta(addons: InstalledAddon[], type: string, id: string): Pro
   return cached(
     metaKey(type, id),
     async () => {
-      const candidates = addons.filter((a) => supportsResource(a.manifest, 'meta', type, id))
+      const all = addons.filter((a) => supportsResource(a.manifest, 'meta', type, id))
+      // Los desactivados solo como último recurso, para que la ficha no se rompa si se apagó Cinemeta.
+      const enabled = enabledAddons(all)
+      const candidates = enabled.length > 0 ? enabled : all
       let lastError: unknown = new Error('Ningún addon instalado da información de este título')
       for (const addon of candidates) {
         try {
@@ -171,7 +181,7 @@ export function getStreams(
   onUpdate: (groups: AddonStreams[]) => void,
 ): () => void {
   let cancelled = false
-  const targets = addons.filter((a) => supportsResource(a.manifest, 'stream', type, videoId))
+  const targets = enabledAddons(addons).filter((a) => supportsResource(a.manifest, 'stream', type, videoId))
   const groups: AddonStreams[] = targets.map((addon) => ({ addon, streams: [], loading: true }))
   onUpdate([...groups])
 
@@ -195,7 +205,7 @@ export function getStreams(
 }
 
 export async function getSubtitles(addons: InstalledAddon[], type: string, videoId: string): Promise<Subtitle[]> {
-  const targets = addons.filter((a) => supportsResource(a.manifest, 'subtitles', type, videoId))
+  const targets = enabledAddons(addons).filter((a) => supportsResource(a.manifest, 'subtitles', type, videoId))
   const results = await Promise.allSettled(
     targets.map((addon) => {
       const url = resourceUrl(addon, 'subtitles', type, videoId)

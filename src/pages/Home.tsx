@@ -3,20 +3,22 @@ import { Link } from 'react-router-dom'
 import { PosterCard } from '../components/PosterCard'
 import { ImdbRating } from '../components/Rating'
 import { Row } from '../components/Row'
-import { browsableCatalogs } from '../lib/addons'
+import { visibleRows } from '../lib/catalogPrefs'
+import { useCatalogRows } from '../lib/catalogRows'
 import { episodeLabel } from '../lib/format'
-import { useAddons, useCatalog, useTitle } from '../lib/hooks'
+import { useCatalog, useTitle } from '../lib/hooks'
 import { catalogLabel, genreLabel } from '../lib/i18n'
 import { continueWatching, hideFromContinue, progressStore, settingsStore, toggleWatchlist, useStore, watchlistStore, type WatchEntry } from '../lib/store'
 import { episodeLink, useUpNext } from '../lib/upNext'
 import type { CatalogDef, InstalledAddon, MetaPreview } from '../lib/types'
 import { useNearViewport } from './home/lazy'
+import { MergedCatalogRow } from './home/MergedCatalogRow'
 import { TmdbHero } from './home/TmdbHero'
 import { BecauseRow, onlyTitles, Top10Row, TrendingWeekRow, useTrending, type Seed } from './home/TmdbRows'
 
 const ROW_LIMIT = 30
 
-function CatalogRow({ addon, catalog, eager }: { addon: InstalledAddon; catalog: CatalogDef; eager: boolean }) {
+function CatalogRow({ addon, catalog, eager, title }: { addon: InstalledAddon; catalog: CatalogDef; eager: boolean; title?: string }) {
   const [ref, visible] = useNearViewport<HTMLDivElement>(eager)
   const { data, loading, error } = useCatalog(visible ? addon : undefined, visible ? catalog : undefined)
   const items = data?.slice(0, ROW_LIMIT) ?? []
@@ -24,7 +26,7 @@ function CatalogRow({ addon, catalog, eager }: { addon: InstalledAddon; catalog:
   return (
     <div ref={ref}>
       <Row
-        title={catalogLabel(catalog.name, catalog.type, addon.manifest.name)}
+        title={title ?? catalogLabel(catalog.name, catalog.type, addon.manifest.name)}
         moreTo={moreTo}
         loading={loading || !visible}
         error={error}
@@ -158,11 +160,11 @@ function recentSeeds(progress: Record<string, WatchEntry>): Seed[] {
 
 export function Home() {
   useTitle(undefined)
-  const addons = useAddons()
   const progress = useStore(progressStore)
-  const catalogs = browsableCatalogs(addons)
+  // Filas con lo elegido en el gestor de catálogos (orden, nombres, ocultas, fusionadas).
+  const catalogs = visibleRows(useCatalogRows())
   const resume = continueWatching(progress)
-  const heroSource = catalogs.find((c) => c.catalog.type === 'movie') ?? catalogs[0]
+  const heroSource = (catalogs.find((c) => c.type === 'movie') ?? catalogs[0])?.sources[0]
   const { undo, hide, restore } = useUndoHide()
   // TMDB es opcional: sin key, Inicio queda igual que siempre.
   const tmdbKey = useStore(settingsStore).tmdbKey.trim()
@@ -209,9 +211,13 @@ export function Home() {
         </>
       )}
 
-      {catalogs.map(({ addon, catalog }, i) => (
-        <CatalogRow key={`${addon.transportUrl}|${catalog.type}|${catalog.id}`} addon={addon} catalog={catalog} eager={i < 3} />
-      ))}
+      {catalogs.map((row, i) =>
+        row.merged ? (
+          <MergedCatalogRow key={row.key} row={row} eager={i < 3} />
+        ) : (
+          <CatalogRow key={row.key} addon={row.sources[0].addon} catalog={row.sources[0].catalog} title={row.name} eager={i < 3} />
+        ),
+      )}
 
       {catalogs.length === 0 && (
         <div className="empty">
