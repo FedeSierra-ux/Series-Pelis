@@ -2691,3 +2691,426 @@ select:focus-visible {
     justify-content: flex-start;
   }
 }
+
+/* ---------- v0.6 tv ---------- */
+
+/* Ajustes: esencial / avanzado. Cualquier elemento con data-advanced se oculta hasta activar el interruptor. */
+.settings:not(.show-advanced) [data-advanced] {
+  display: none !important;
+}
+.adv-group {
+  display: contents;
+}
+.settings-advanced-toggle {
+  max-width: 860px;
+  margin: -8px 0 28px;
+  padding: 12px 16px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: var(--bg-2);
+  font-weight: 600;
+}
+input[type='password'] {
+  font: inherit;
+  color: var(--text);
+  background: var(--bg-2);
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  padding: 10px 14px;
+}
+input[type='password']:focus-visible {
+  outline-offset: 0;
+  border-color: var(--text);
+}
+
+/* Aviso de sin conexión. */
+.offline-banner {
+  position: sticky;
+  top: var(--nav-h);
+  z-index: 15;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 14px;
+  padding: 10px var(--gutter);
+  background: var(--bg-3);
+  border-bottom: 1px solid var(--line);
+  color: var(--text);
+  font-size: 0.9rem;
+  line-height: 1.4;
+}
+.offline-banner strong {
+  color: var(--danger);
+}
+.offline-banner.is-back {
+  border-bottom-color: var(--ok);
+}
+
+/* Teclado en pantalla (control remoto). */
+.osk-wrap {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 10px;
+  margin: -12px 0 20px;
+  max-width: 100%;
+}
+.settings-section .osk-wrap,
+.ob-body .osk-wrap {
+  margin: 0;
+}
+.osk-toggle.active {
+  color: var(--text);
+  border-color: var(--accent);
+}
+.osk {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  width: min(100%, 640px);
+  padding: 10px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: var(--bg-2);
+}
+.osk-row {
+  display: flex;
+  gap: 6px;
+}
+.osk-key {
+  flex: 1 1 0;
+  min-width: 0;
+  height: 46px;
+  padding: 0 4px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: var(--bg-3);
+  color: var(--text);
+  font: inherit;
+  font-size: 1.05rem;
+  font-weight: 600;
+  cursor: pointer;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.osk-key:hover,
+.osk-key:focus-visible {
+  background: var(--accent);
+  border-color: var(--accent);
+}
+.osk-key.active {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+.osk-key.active:focus-visible {
+  color: var(--text);
+}
+.osk-actions .osk-key {
+  font-size: 0.85rem;
+}
+.osk-actions .osk-space {
+  flex-grow: 3;
+}
+.osk-actions .osk-clear,
+.osk-actions .osk-done {
+  flex-grow: 1.6;
+}
+.osk-actions .osk-done {
+  background: var(--accent);
+  border-color: var(--accent);
+}
+@media (max-width: 760px) {
+  .osk {
+    padding: 6px;
+    gap: 4px;
+  }
+  .osk-row {
+    gap: 4px;
+  }
+  .osk-key {
+    height: 40px;
+    font-size: 0.95rem;
+    border-radius: 8px;
+  }
+  .osk-actions .osk-key {
+    font-size: 0.72rem;
+  }
+  .osk-actions .osk-space {
+    flex-grow: 2;
+  }
+}
+
+/* Asistente inicial. */
+.onboarding {
+  position: fixed;
+  inset: 0;
+  z-index: 200;
+  display: grid;
+  place-items: center;
+  padding: 16px;
+  background: color-mix(in srgb, var(--bg) 88%, transparent);
+  backdrop-filter: blur(6px);
+  overflow-y: auto;
+}
+.ob-box {
+  width: min(100%, 680px);
+  max-height: calc(100dvh - 32px);
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+  padding: clamp(18px, 4vw, 32px);
+  border: 1px solid var(--line);
+  border-radius: calc(var(--radius) * 1.5);
+  background: var(--bg-2);
+  box-shadow: 0 30px 80px rgba(0, 0, 0, 0.5);
+}
+.ob-steps {
+  display: flex;
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.ob-steps li {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+  color: var(--muted);
+  font-size: 0.85rem;
+}
+.ob-dot {
+  flex: none;
+  display: grid;
+  place-items: center;
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  border: 1px solid var(--line);
+  background: var(--bg-3);
+  font-size: 0.8rem;
+  font-weight: 700;
+}
+.ob-steps li.active {
+  color: var(--text);
+  font-weight: 700;
+}
+.ob-steps li.active .ob-dot,
+.ob-steps li.done .ob-dot {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: var(--text);
+}
+.ob-step-label {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.ob-body {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.ob-body h2 {
+  font-size: 1.4rem;
+}
+.ob-body h3 {
+  font-size: 1rem;
+  margin-top: 6px;
+}
+.ob-body p {
+  margin: 0;
+  line-height: 1.5;
+}
+.ob-addons,
+.ob-summary {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.ob-addons li {
+  color: var(--ok);
+  font-weight: 600;
+}
+.ob-summary li {
+  line-height: 1.4;
+}
+.ob-howto summary {
+  cursor: pointer;
+  color: var(--accent);
+  font-weight: 600;
+  border-radius: 6px;
+}
+.ob-howto ol {
+  margin: 8px 0 0;
+  padding-left: 22px;
+  line-height: 1.6;
+  color: var(--muted);
+}
+.ob-howto a {
+  color: var(--text);
+  text-decoration: underline;
+}
+.ob-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+  padding-top: 6px;
+  border-top: 1px solid var(--line);
+}
+@media (max-width: 760px) {
+  .ob-steps li {
+    flex: 0 0 auto;
+  }
+  .ob-steps li.active {
+    flex: 1 1 auto;
+  }
+  .ob-step-label {
+    display: none;
+  }
+  .ob-steps li.active .ob-step-label {
+    display: inline;
+  }
+  .ob-actions .btn {
+    padding: 10px 14px;
+  }
+  /* "Saltar" abajo de todo, así Atrás/Siguiente quedan juntos. */
+  .ob-actions .ob-skip {
+    order: 10;
+    flex-basis: 100%;
+    justify-content: center;
+  }
+}
+
+/* Protector de pantalla. */
+.screensaver {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  overflow: hidden;
+  background: #000;
+  color: #fff;
+  cursor: none;
+  animation: ss-in 1.2s ease both;
+}
+.ss-bg {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  max-width: none;
+  object-fit: cover;
+}
+.ss-cur {
+  animation: ss-fade 2s ease both, ss-zoom 14s ease-out both;
+}
+.ss-prev {
+  transform: scale(1.06);
+}
+.ss-shade {
+  position: absolute;
+  inset: 0;
+  background:
+    linear-gradient(to top, rgba(0, 0, 0, 0.75), transparent 45%),
+    linear-gradient(to bottom, rgba(0, 0, 0, 0.55), transparent 30%);
+}
+.ss-title {
+  position: absolute;
+  left: clamp(20px, 5vw, 80px);
+  right: clamp(20px, 5vw, 80px);
+  bottom: clamp(24px, 7vh, 90px);
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  text-shadow: 0 2px 12px rgba(0, 0, 0, 0.8);
+  animation: ss-fade 2.4s ease both;
+}
+.ss-title strong {
+  font-size: clamp(1.6rem, 4vw, 3.2rem);
+  line-height: 1.1;
+}
+.ss-title span {
+  font-size: clamp(1rem, 1.6vw, 1.3rem);
+  opacity: 0.8;
+}
+.ss-clock {
+  position: absolute;
+  top: clamp(20px, 5vh, 60px);
+  right: clamp(20px, 5vw, 80px);
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  text-shadow: 0 2px 12px rgba(0, 0, 0, 0.8);
+}
+.ss-time {
+  font-size: clamp(2.4rem, 6vw, 5rem);
+  font-weight: 300;
+  font-variant-numeric: tabular-nums;
+  line-height: 1;
+}
+.ss-date {
+  font-size: clamp(0.95rem, 1.5vw, 1.3rem);
+  opacity: 0.85;
+}
+.ss-date::first-letter {
+  text-transform: uppercase;
+}
+.ss-hint {
+  position: absolute;
+  top: clamp(20px, 5vh, 60px);
+  left: clamp(20px, 5vw, 80px);
+  margin: 0;
+  font-size: 0.9rem;
+  opacity: 0;
+  animation: ss-hint 6s ease both;
+}
+@keyframes ss-in {
+  from {
+    opacity: 0;
+  }
+}
+@keyframes ss-fade {
+  from {
+    opacity: 0;
+  }
+}
+@keyframes ss-zoom {
+  from {
+    transform: scale(1);
+  }
+  to {
+    transform: scale(1.06);
+  }
+}
+@keyframes ss-hint {
+  0%,
+  100% {
+    opacity: 0;
+  }
+  15%,
+  70% {
+    opacity: 0.8;
+  }
+}
+/* Reducir movimiento: sin zoom ni fundidos, las imágenes cambian de golpe. */
+@media (prefers-reduced-motion: reduce) {
+  .screensaver,
+  .ss-cur,
+  .ss-title {
+    animation: none;
+  }
+  .ss-prev {
+    transform: none;
+  }
+  .ss-hint {
+    animation: none;
+    opacity: 0.8;
+  }
+}

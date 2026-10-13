@@ -1,6 +1,9 @@
 import { useSyncExternalStore } from 'react'
 import { createStore, get, set } from 'idb-keyval'
 import { CINEMETA_ADDON, fetchManifest } from './addons'
+import type { ExternalPlayerId } from './externalPlayers'
+import type { ScreensaverMinutes } from './idle'
+import type { TvModeSetting } from './platform'
 import type { InstalledAddon, MetaPreview } from './types'
 import { DEFAULT_CATALOG_PREFS, normalizePrefs, type CatalogPrefs } from './catalogPrefs'
 
@@ -363,12 +366,20 @@ export interface Settings {
   /** Miniatura del cuadro al pasar el mouse por la barra (se apaga sola con ahorro de datos). */
   seekPreview: boolean
   sourceRules: SourceRules
-  /** Reproductor externo para el botón "Abrir en…". */
-  externalPlayer: 'system' | 'vlc' | 'none'
+  /** Reproductor externo para el botón "Abrir en…" (ver lib/externalPlayers.ts). */
+  externalPlayer: ExternalPlayerId
   /** API key (v3) o Read Access Token (v4) de TMDB. Vacío = solo Cinemeta. */
   tmdbKey: string
   /** Reproducir el tráiler sin sonido en la portada de Inicio (necesita TMDB). */
   heroTrailer: boolean
+  /** Protector de pantalla: minutos sin actividad (0 = apagado). */
+  screensaverMinutes: ScreensaverMinutes
+  /** Modo TV (teclado en pantalla): automático según el dispositivo, o forzado. */
+  tvMode: TvModeSetting
+  /** Ajustes: mostrar también las opciones avanzadas (`data-advanced`). */
+  showAdvanced: boolean
+  /** Ya se mostró (o se salteó) el asistente inicial. */
+  onboardingDone: boolean
 }
 
 export const settingsStore = new PersistedStore<Settings>('settings', {
@@ -392,6 +403,10 @@ export const settingsStore = new PersistedStore<Settings>('settings', {
   externalPlayer: 'system',
   tmdbKey: '',
   heroTrailer: true,
+  screensaverMinutes: 5,
+  tvMode: 'auto',
+  showAdvanced: false,
+  onboardingDone: false,
 })
 
 // ---------- Copia de seguridad ----------

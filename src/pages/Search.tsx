@@ -1,9 +1,12 @@
 import { useEffect, useState } from 'react'
 import { useSearchParams } from 'react-router-dom'
+import { KeyboardToggle } from '../components/OnScreenKeyboard'
 import { PosterCard, PosterSkeleton } from '../components/PosterCard'
 import { getCatalog, searchableCatalogs } from '../lib/addons'
 import { useAddons, useDebounced, useTitle } from '../lib/hooks'
 import { typeLabel } from '../lib/i18n'
+import { useOnline } from '../lib/online'
+import { useTvMode } from '../lib/tv'
 import type { MetaPreview } from '../lib/types'
 
 interface Group {
@@ -20,6 +23,8 @@ export function Search() {
   const [text, setText] = useState(params.get('q') ?? '')
   const query = useDebounced(text.trim(), 350)
   const [groups, setGroups] = useState<Group[]>([])
+  const tv = useTvMode()
+  const online = useOnline()
 
   useEffect(() => {
     setParams(query ? { q: query } : {}, { replace: true })
@@ -62,12 +67,23 @@ export function Search() {
       <input
         className="search-input"
         type="search"
-        autoFocus
+        // En la TV el foco arranca en el teclado en pantalla (así no salta el teclado del sistema).
+        autoFocus={!tv}
         placeholder="Película, serie, actor..."
         value={text}
         onChange={(e) => setText(e.target.value)}
         enterKeyHint="search"
       />
+      <KeyboardToggle
+        value={text}
+        onChange={setText}
+        alwaysToggle
+        openInTv
+        doneLabel="Buscar"
+        label="Teclado para buscar"
+        onDone={() => document.querySelector<HTMLElement>('.search-group a[href]')?.focus()}
+      />
+      {!online && <div className="empty muted">Sin conexión: la búsqueda necesita internet. Mientras tanto tenés Mi lista y el Historial.</div>}
       {groups
         .filter((g) => g.loading || g.items.length > 0)
         .map((g) => (
@@ -80,7 +96,7 @@ export function Search() {
             </div>
           </section>
         ))}
-      {noResults && <div className="empty">No encontramos nada para “{query}”.</div>}
+      {noResults && online && <div className="empty">No encontramos nada para “{query}”.</div>}
       {query.length < 2 && <div className="empty muted">Escribí al menos 2 letras.</div>}
     </div>
   )

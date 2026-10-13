@@ -36,6 +36,8 @@ export default defineConfig({
       },
       workbox: {
         navigateFallback: '/index.html',
+        // Sin conexión, cualquier ruta de la app abre desde la caché; /api/* no es una página.
+        navigateFallbackDenylist: [/^\/api\//],
         runtimeCaching: [
           {
             // Pósters, fondos, logos y miniaturas de episodios: casi nunca cambian.

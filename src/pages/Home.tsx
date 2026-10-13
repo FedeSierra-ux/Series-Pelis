@@ -41,7 +41,7 @@ function CatalogRow({ addon, catalog, eager, title }: { addon: InstalledAddon; c
 }
 
 function Hero({ addon, catalog }: { addon: InstalledAddon; catalog: CatalogDef }) {
-  const { data } = useCatalog(addon, catalog)
+  const { data, error } = useCatalog(addon, catalog)
   const watchlist = useStore(watchlistStore)
   const [index, setIndex] = useState(0)
   const pool = (data ?? []).filter((m) => m.background || m.id.startsWith('tt')).slice(0, 8)
@@ -53,7 +53,8 @@ function Hero({ addon, catalog }: { addon: InstalledAddon; catalog: CatalogDef }
   }, [pool.length])
 
   const meta: MetaPreview | undefined = pool[index]
-  if (!meta) return <div className="hero hero-skeleton skeleton" />
+  // Sin conexión y sin nada guardado: sin portada (no un esqueleto que carga para siempre).
+  if (!meta) return error ? null : <div className="hero hero-skeleton skeleton" />
   const bg = meta.id.startsWith('tt') ? `https://images.metahub.space/background/medium/${meta.id}/img` : meta.background
   const genres = (meta.genre ?? meta.genres ?? []).slice(0, 3).map(genreLabel).join(' · ')
   const type = meta.type ?? catalog.type
