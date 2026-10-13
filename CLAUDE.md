@@ -14,7 +14,7 @@ historial, "Seguir viendo" y "Mi lista". Interfaz en **español latino (es-AR)**
 | Tema | Decisión |
 |---|---|
 | Plataforma | PWA (PC, celular, navegador de la TV). Pensada para llevarla después a Fire TV / Android TV (TWA o Capacitor). |
-| Metadatos | **Solo Cinemeta** (`v3-cinemeta.strem.io`): sin API key, incluye `imdbRating`. Las sinopsis vienen en inglés. |
+| Metadatos | **Cinemeta** (`v3-cinemeta.strem.io`): sin API key, incluye `imdbRating`. Desde v0.3, **TMDB opcional** para español, reparto, sagas y tendencias. |
 | Streams | Protocolo de addons de Stremio. El usuario pega las URLs de manifest de sus addons; el debrid (Real-Debrid / TorBox) va configurado dentro del addon, la app no lo maneja. |
 | Torrents sin debrid | Solo vía servidor local de Stremio (`http://127.0.0.1:11470`, opcional/experimental, solo PC). |
 | Datos del usuario | v0.1: IndexedDB en el navegador + exportar/importar JSON. |
@@ -54,7 +54,12 @@ npm run preview    # sirve dist/ en http://localhost:4173
 
 - v0.2.0 hecha: "tanda 1" del análisis de mercado (reproductor, elección de fuente, biblioteca/calendario/Tu año).
   El usuario no quiere la estadística "la que más volviste a ver".
-- Próximo: TMDB (el usuario está sacando la key; guardarla como secreto de Cloudflare o en Ajustes, nunca en el repo).
+- v0.3.0 hecha: TMDB ("tanda 2"). `src/lib/tmdb.ts` (cliente, es-MX / región AR), `components/TmdbExtras.tsx`,
+  `pages/Person.tsx`, `pages/home/` (portada con tráiler, Top 10, Porque viste, tendencias), `components/PauseCast.tsx`.
+  La key va en Ajustes → TMDB (IndexedDB). **Nunca** commitearla; al publicar en Cloudflare puede ir como secreto.
+  Ids `tmdb:movie:603` / `tmdb:tv:1396` en rutas: la ficha los traduce a IMDb.
+  El usuario NO quiere reconocimiento de caras (X-Ray solo con el reparto del episodio).
+- Pendiente de respuesta: ¿Mi lista / historial deberían guardar el título en español en vez del de Cinemeta?
 - Login con código de vinculación + sincronización en Cloudflare D1 + Worker de caché.
 - Importar addons directo desde la cuenta de Stremio.
 - Empaquetar para Fire TV / Android TV.

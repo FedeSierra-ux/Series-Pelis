@@ -1,5 +1,31 @@
 # Changelog
 
+## [0.3.0] - 2026-10-13
+
+TMDB, opcional: sin key la app sigue igual que antes, solo con Cinemeta.
+
+### Agregado
+- **Key de TMDB en Ajustes**. Acepta la API Key (v3) o el Read Access Token (v4), la prueba antes de guardarla y queda
+  solo en el navegador (no está en el código).
+- **Ficha en español**: título, sinopsis, frase y logo del título. El tráiler viene de TMDB y prioriza el que está en español.
+- **Reparto con fotos** en la ficha y **página de cada actor o actriz** con su biografía y filmografía.
+- **Sagas**: "Parte de la colección…" con todas las películas en orden.
+- **Más como esto**: recomendaciones de TMDB en la ficha.
+- **Dónde ver en Argentina**: plataformas de streaming, alquiler y compra (datos de JustWatch vía TMDB).
+- **Inicio**:
+  - portada con las tendencias del día, el logo y el **tráiler sin sonido** de fondo (se puede apagar en Ajustes;
+    no se reproduce en el celular ni con "reducir movimiento");
+  - **Top 10 de hoy**;
+  - **Porque viste…**, con recomendaciones a partir de lo último que viste;
+  - **Tendencias de la semana**.
+- **Reparto al pausar** (tipo X-Ray): al pausar aparece quién actúa en ese episodio, con los invitados marcados, o en la peli.
+  No usa reconocimiento de caras.
+- Las imágenes de TMDB quedan en la caché del service worker.
+
+### Corregido
+- `npm test` corría también las copias de los tests en `.claude/worktrees`. El PR de la v0.2.0 informó 22 tests,
+  pero son 11.
+
 ## [0.2.0] - 2026-10-13
 
 ### Agregado
