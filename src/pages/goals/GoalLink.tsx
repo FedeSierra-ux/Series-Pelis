@@ -1,5 +1,6 @@
 import { useMemo } from 'react'
 import { Link } from 'react-router-dom'
+import { Theme2Icon } from '../../components/Theme2Icons'
 import { computeAchievements, unseenAchievements } from '../../lib/goals'
 import { diaryStore, goalsStore, useStore } from '../../lib/store'
 import { GoalBars, useYearGoal } from './GoalBars'
@@ -12,7 +13,8 @@ export function GoalLink() {
   const fresh = useMemo(() => unseenAchievements(computeAchievements(Object.values(diary.entries), year), year, seen).length, [diary, seen, year])
   return (
     <Link to="/history/goals" className="btn" aria-label={`Metas y logros${fresh ? `: ${fresh} logro${fresh === 1 ? '' : 's'} nuevo${fresh === 1 ? '' : 's'}` : ''}`}>
-      🏆 Metas y logros
+      <Theme2Icon name="trophy" size={20} />
+      Metas y logros
       {fresh > 0 && (
         <span className="goal-dot" aria-hidden>
           {fresh}

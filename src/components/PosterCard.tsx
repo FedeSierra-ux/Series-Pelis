@@ -59,6 +59,7 @@ export const PosterCard = memo(function PosterCard({ meta, progress, watched, su
     <Link
       to={to ?? `/detail/${meta.type}/${encodeURIComponent(meta.id)}`}
       ref={linkRef}
+      data-focus-id={meta.id}
       className={`poster-card shape-${meta.posterShape ?? 'poster'}`}
       onMouseEnter={onEnter}
       onMouseLeave={(e) => disarmTrailer(e.currentTarget, 'mouse')}

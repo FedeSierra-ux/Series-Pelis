@@ -389,7 +389,7 @@ function DetailPage({ type, id }: { type: string; id: string }) {
                 const selected = v.id === selectedVideoId
                 return [
                   <li key={v.id} className={`episode ${selected ? 'selected' : ''} ${p?.watched ? 'watched' : ''}`}>
-                    <button className="episode-main" data-autofocus={v.id === focusVideoId || undefined} onClick={() => selectVideo(v, { scroll: inlineStreams })}>
+                    <button className="episode-main" data-focus-id={v.id} data-autofocus={v.id === focusVideoId || undefined} onClick={() => selectVideo(v, { scroll: inlineStreams })}>
                       <div className={`episode-thumb${spoil ? ' spoiler-blur' : ''}`}>
                         {v.thumbnail && <img src={v.thumbnail} alt="" loading="lazy" decoding="async" />}
                         {p && p.duration > 0 && !p.watched && (
