@@ -1,5 +1,96 @@
 # Changelog
 
+## [0.9.0] - 2026-10-13
+
+Auditoría completa de la v0.8 (revisión de código, pruebas reales en PC, celular y TV, y auditoría visual): 40 bugs
+arreglados, la TV más cómoda y cuatro funciones nuevas.
+
+### Agregado
+- **Aviso de versión nueva**: la app ya no se recarga sola; abajo aparece "Hay una versión nueva de Series-Pelis"
+  con "Actualizar" y "Después" (se maneja con las flechas y Atrás lo cierra).
+- **Memoria de foco y scroll**: al volver con Atrás, la pantalla aparece donde estaba y el cursor vuelve al póster o
+  episodio del que saliste, en vez de ir al "Ver ahora" de arriba.
+- **Series**: "Continuar" o "Ver ahora" lleva directo al episodio que corresponde, y si ya la empezaste,
+  "Ver desde el principio" arranca el primer episodio desde cero.
+- **Marcar temporada como vista** (y "como no vista" cuando está completa) para los episodios ya estrenados, con una
+  sola anotación en el historial y el diario.
+- Estados vacíos nuevos en Mi lista, Historial, Calendario, Tu año, Buscar, Diario y Metas, con ícono, explicación y un
+  botón para seguir (por ejemplo "Explorar películas").
+- Buscar avisa cuando ningún addon activo permite buscar (por ejemplo con Cinemeta apagado), con un botón a Ajustes.
+- Los streams que necesitan cabeceras especiales (que el navegador no puede mandar) aparecen marcados como no
+  reproducibles, con el aviso de abrirlos en un reproductor externo.
+- La tarjeta de error del reproductor muestra qué título y episodio no pudo cargar; en la TV es más grande y se saca
+  "Copiar enlace".
+- Revisión automática en GitHub (tipos, tests y build) en cada cambio.
+
+### Cambiado
+- TV: el texto es más grande para leerlo a tres metros (pósters, riel, chips, sinopsis y botones).
+- Íconos de línea en el menú del Tema 1, en los botones del Historial y en "Teclado", en lugar de emojis (se ven
+  iguales en cualquier dispositivo).
+- "Ordenar" en Mi lista, "Calidad preferida" y "Tamaño máximo" en Ajustes y "Fusionar con…" en Catálogos usan el
+  selector propio, que anda con el control remoto.
+- En la ficha se dice "Fuentes" en vez de "Streams", y el puntaje de cada episodio usa la insignia de IMDb con un
+  decimal (★ 8.0).
+- Los episodios y videos cortos ya quedan en el historial: desde 1 minuto (episodios) o 2 (películas y otros); antes
+  hacían falta 5.
+- La copia de seguridad ya no incluye la key de TMDB (y si una copia vieja la trae, no pisa la tuya).
+- Los addons se actualizan en segundo plano una vez por día, no en cada arranque; así Buscar, "Tus series" y
+  "Tu año" no repiten pedidos al abrir la app.
+- El servicio de "saltar intro" del sitio solo responde a la app, y la caché de Cinemeta ya no guarda respuestas que
+  no puede leer.
+- Las direcciones que no existen llevan a Inicio y la URL cambia.
+
+### Arreglado
+Reproductor:
+- Si una fuente no cargaba y elegías otra, la nueva arrancaba desde cero y pisaba el punto donde habías quedado.
+  Ahora sigue desde donde estabas.
+- Si salías del reproductor mientras buscaba el siguiente episodio, la app te llevaba igual al episodio.
+- En modo automático, al volver del reproductor después de que pasó solo al siguiente episodio, la ficha ya no vuelve
+  a reproducirlo.
+- Al salir con el botón "atrás" del navegador se perdían los últimos segundos vistos.
+- Al terminar una temporada, si no encontraba fuente para seguir solo, la ficha se abría en la temporada equivocada.
+- "Siguiente episodio" ya no apunta a capítulos que todavía no se estrenaron, y se calcula bien con addons que
+  numeran los episodios de otra forma.
+- Un corte de internet o un tropiezo del decodificador en streams HLS ya no termina en la tarjeta de error: primero se
+  reintenta un par de veces.
+- Dos streams distintos con una etiqueta genérica ("Latino 1080p") y el mismo tamaño ya no se ocultan como "Repetido".
+- Subtítulos .srt con la hora de un solo dígito (0:00:01) no se mostraban, y "Ocultar sonidos" borraba el "NO:",
+  "SÍ:" u "OK:" con que arrancaban algunas frases.
+- Al salir del reproductor el video seguía descargándose en segundo plano.
+- Volver a ver algo que ya habías terminado ahora retoma y aparece en "Seguir viendo"; al terminarlo otra vez,
+  "Tu año" y el diario lo cuentan de nuevo.
+
+TV y control remoto:
+- El póster o episodio enfocado ya no queda cortado contra el borde ni tapado por la barra de arriba: se centra.
+- En los selectores, bajar más allá de la última opción (o subir más allá de la primera) ya no cierra la lista ni
+  deja el foco perdido; al cerrar, el foco vuelve al botón.
+- Un selector nativo enfocado ya no hace que Atrás se vaya de la página.
+- En el asistente inicial, Atrás vuelve un paso (o lo cierra en el primero) en vez de cambiar la página de abajo.
+- El tráiler flotante ya no se queda con Backspace ni con la M mientras escribís en Buscar.
+
+Ficha, Inicio y Descubrir:
+- En el celular, al tocar un episodio las fuentes aparecen justo debajo, a la vista, en vez de quedar fuera de pantalla.
+- Las fechas de estreno de los episodios ya no se muestran un día antes y coinciden con el Calendario.
+- Abrir un título que no existe muestra "No encontramos este título" con un botón para volver, en vez de una ficha vacía.
+- En el reparto, un actor con varios papeles aparece una sola vez con todos sus personajes.
+- "Tu puntaje · Sin puntuar" ya no se parte en dos líneas en el celular.
+- La portada de Inicio ya no queda cargando para siempre si el catálogo vuelve vacío o sin fondos.
+- "Ya no me interesa" también oculta el título en Descubrir, como en Inicio y Buscar.
+- Descubrir ya no pide páginas sin parar con addons que dicen paginar pero devuelven siempre lo mismo.
+- El progreso de las sagas y las listas de Descubrir usan la fecha de acá, no la de Londres: de noche ya no aparecen
+  "estrenos de mañana".
+
+Ajustes, datos y TV en vivo:
+- Se puede tener el mismo addon dos veces con distinta configuración (por ejemplo, Torrentio con TorBox y Torrentio
+  con Real-Debrid): ahora se distinguen por la URL.
+- Importar la misma copia dos veces seguidas vuelve a funcionar, y una copia con datos rotos ya no mete basura.
+- Al pegar algo que no es una dirección al agregar un addon, el aviso dice que la URL no es válida.
+- Sin conexión, los avisos dicen "Sin conexión" en vez de "el servidor puede estar caído", y si falta descargar una
+  parte de la app lo explica con un botón "Probar de nuevo".
+- TV en vivo: "Pantalla completa" funciona en iPhone, y los canales con coma en el nombre ("Canal 9, Buenos Aires")
+  ya no se cortan.
+- La lista "Ganadoras del Oscar" avisa cuando está tardando más de lo normal y ofrece probar de nuevo si falla.
+
 ## [0.8.0] - 2026-10-13
 
 Arreglos de la auditoría visual y de la prueba de addons, y TMDB activado desde el sitio para toda la familia.

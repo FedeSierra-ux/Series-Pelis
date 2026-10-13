@@ -3,8 +3,11 @@
 Tu plataforma personal para ver pelis y series con **tus addons de Stremio**, el **puntaje de IMDb** a la vista
 y un **historial** de todo lo que viste. Funciona en la PC, el celular y el navegador de la TV (se puede instalar como app).
 
-## Qué hace (v0.8.0)
+## Qué hace (v0.9.0)
 
+- **Más sólida en la TV (v0.9)**: texto más grande a tres metros, el foco se centra y se recuerda al volver,
+  selectores que andan con el control remoto, aviso de versión nueva, "Continuar" / "Ver desde el principio" y
+  "Marcar temporada como vista" en las series, y 40 bugs arreglados (reproductor, fechas, Descubrir, copia de seguridad).
 - **TV en vivo (v0.7)**: canales gratis de Argentina (aire, noticias, deportes y música) de la lista abierta de
   [iptv-org](https://github.com/iptv-org/iptv). Zapping con CH+/CH− o con los números del control, favoritos y
   pantalla completa. Se ocultan los canales de cable pago.
