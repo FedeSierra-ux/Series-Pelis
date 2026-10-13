@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { getMeta } from './addons'
 import { useAddons } from './hooks'
 import { continueWatching, progressStore, useStore, watchlistStore, type ListItem, type WatchEntry } from './store'
+import { refreshPosterLabels } from './posterLabels'
 import type { InstalledAddon, Meta, Video } from './types'
 
 // "Próximos episodios": a partir de las series que el usuario sigue (las que vio o tiene en
@@ -199,6 +200,8 @@ export function useUpNext() {
     loadUpNext(addons, progress, watchlist)
       .then((data) => {
         lastResult = data
+        // Las fichas recién cargadas también sirven para las etiquetas de los pósters (v0.5).
+        refreshPosterLabels()
         if (alive) setState({ data, loading: false })
       })
       .catch(() => alive && setState((s) => ({ ...s, loading: false })))

@@ -54,6 +54,8 @@ export interface MetaPreview {
   imdbRating?: string
   genre?: string[]
   genres?: string[]
+  /** Fecha de estreno completa (Cinemeta la manda también en los catálogos). */
+  released?: string
 }
 
 export interface Video {

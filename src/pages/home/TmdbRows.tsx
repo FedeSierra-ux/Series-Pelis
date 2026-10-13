@@ -1,5 +1,6 @@
 import { PosterCard } from '../../components/PosterCard'
 import { Row } from '../../components/Row'
+import { useHiddenIds } from '../../lib/ratings'
 import {
   findByImdb,
   getRecommendations,
@@ -28,7 +29,10 @@ export function useTrending(window: 'day' | 'week', tmdbKey: string, enabled = t
 
 /** "Top 10 de hoy" con el número grande al costado del póster. */
 export function Top10Row({ state }: { state: TmdbState<TmdbPage> }) {
-  const items = onlyTitles(state.data?.results).slice(0, 10)
+  const hidden = useHiddenIds()
+  const items = onlyTitles(state.data?.results)
+    .filter((i) => !hidden.has(`tmdb:${i.media_type}:${i.id}`))
+    .slice(0, 10)
   return (
     <Row title="Top 10 de hoy" loading={state.loading} error={state.failed ? 'error' : undefined} empty={items.length === 0}>
       {items.map((item, i) => (
@@ -46,7 +50,8 @@ export function Top10Row({ state }: { state: TmdbState<TmdbPage> }) {
 export function TrendingWeekRow({ tmdbKey }: { tmdbKey: string }) {
   const [ref, visible] = useNearViewport<HTMLDivElement>(false)
   const state = useTrending('week', tmdbKey, visible)
-  const items = onlyTitles(state.data?.results)
+  const hidden = useHiddenIds()
+  const items = onlyTitles(state.data?.results).filter((i) => !hidden.has(`tmdb:${i.media_type}:${i.id}`))
   return (
     <div ref={ref}>
       <Row title="Tendencias de la semana" loading={state.loading || !visible} error={state.failed ? 'error' : undefined} empty={items.length === 0}>
@@ -75,7 +80,10 @@ export function BecauseRow({ seed, tmdbKey }: { seed: Seed; tmdbKey: string }) {
       return id ? (await getRecommendations(tmdbType, id)).results : []
     },
   )
-  const items = (state.data ?? []).filter((i) => !i.media_type || i.media_type === 'movie' || i.media_type === 'tv').slice(0, 20)
+  const hidden = useHiddenIds()
+  const items = (state.data ?? [])
+    .filter((i) => (!i.media_type || i.media_type === 'movie' || i.media_type === 'tv') && !hidden.has(`tmdb:${i.media_type ?? tmdbType}:${i.id}`))
+    .slice(0, 20)
   return (
     <div ref={ref}>
       <Row

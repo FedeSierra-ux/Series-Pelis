@@ -1,6 +1,8 @@
 import { useSyncExternalStore } from 'react'
 import { createStore, get, set } from 'idb-keyval'
 import { CINEMETA_ADDON, fetchManifest } from './addons'
+import { crossedFinish, diaryEntryFrom, isDuplicate, missingFromProgress, rebuildFromProgress, withoutLatest, withoutVideos, type DiaryEntry, type DiaryState } from './diary'
+import type { GoalsState } from './goals'
 import type { InstalledAddon, MetaPreview } from './types'
 
 // Datos del usuario guardados en el navegador (IndexedDB). En la v0.2 se van a
@@ -19,7 +21,7 @@ function withDefaults<T>(defaults: T, stored: T): T {
   return out as T
 }
 
-class PersistedStore<T> {
+export class PersistedStore<T> {
   private initial: T
 
   private value: T
@@ -57,7 +59,7 @@ class PersistedStore<T> {
     this.listeners.forEach((l) => l())
     // Se escribe enseguida: los cambios son pocos (el progreso se guarda cada 5 s) y así
     // no se pierde nada si se cierra la app justo después.
-    set(this.key, this.value, idb).catch(() => {})
+    set(this.key, this.value, idb).catch((err) => console.warn(`No se pudo guardar "${this.key}"`, err))
   }
 
   subscribe = (listener: () => void) => {
@@ -144,6 +146,8 @@ export const progressStore = new PersistedStore<Record<string, WatchEntry>>('pro
 const WATCHED_RATIO = 0.9
 
 export function saveProgress(entry: Omit<WatchEntry, 'watched' | 'updatedAt' | 'firstWatchedAt' | 'hidden'>) {
+  const before = progressStore.get()[entry.videoId]
+  if (crossedFinish(before, entry)) logDiary(entry, 'player')
   progressStore.set((all) => {
     const prev = all[entry.videoId]
     const now = Date.now()
@@ -163,10 +167,12 @@ export function setWatched(
     const prev = all[base.videoId]
     if (!watched) {
       if (!prev) return all
+      diaryStore.set((d) => ({ ...d, entries: withoutLatest(d.entries, base.videoId) }))
       const { [base.videoId]: _removed, ...rest } = all
       return rest
     }
     const now = Date.now()
+    if (!prev?.watched) logDiary({ ...base, duration: prev?.duration }, 'manual')
     return {
       ...all,
       [base.videoId]: {
@@ -182,6 +188,7 @@ export function setWatched(
 }
 
 export function removeHistory(videoIds: string[]) {
+  diaryStore.set((d) => ({ ...d, entries: withoutVideos(d.entries, videoIds) }))
   progressStore.set((all) => {
     const copy = { ...all }
     videoIds.forEach((id) => delete copy[id])
@@ -209,6 +216,30 @@ export function hideFromContinue(metaId: string) {
     return copy
   })
 }
+
+// ---------- Diario y metas (v0.5) ----------
+
+/** Cada vez que se terminó algo (ver `lib/diary.ts`). */
+export const diaryStore = new PersistedStore<DiaryState>('diary', { v: 0, entries: {} })
+
+function logDiary(e: Parameters<typeof diaryEntryFrom>[0], source: DiaryEntry['source']) {
+  const at = Date.now()
+  diaryStore.set((d) => {
+    if (isDuplicate(d.entries, e.videoId, at)) return d
+    const entry = diaryEntryFrom(e, at, source)
+    return { ...d, entries: { ...d.entries, [entry.id]: entry } }
+  })
+}
+
+export function removeDiaryEntry(id: string) {
+  diaryStore.set((d) => {
+    const { [id]: _removed, ...rest } = d.entries
+    return { ...d, entries: rest }
+  })
+}
+
+/** Metas anuales y logros ya vistos (ver `lib/goals.ts`). */
+export const goalsStore = new PersistedStore<GoalsState>('goals', { byYear: {}, seen: [] })
 
 // ---------- Última fuente elegida por título ----------
 
@@ -285,6 +316,39 @@ export function toggleWatchlist(meta: MetaPreview) {
   })
 }
 
+// ---------- v0.5 gustos: tu puntaje y "Ya no me interesa" ----------
+
+/** Tu puntaje de un título (peli o serie), de 0,5 a 5 estrellas. */
+export interface RatingEntry {
+  stars: number
+  at: number
+  type: string
+  name: string
+  poster?: string
+  /** Id de TMDB, si se conocía al puntuar (para las recomendaciones). */
+  tmdbId?: number
+}
+
+/** Por id del título (`tt…`, o `tmdb:movie:603` si no tiene IMDb). Ver `ratings.ts`. */
+export const ratingsStore = new PersistedStore<Record<string, RatingEntry>>('ratings', {})
+
+/** Títulos que el usuario sacó de las recomendaciones y de las filas de Inicio. */
+export interface NotInterestedEntry {
+  id: string
+  type: string
+  name: string
+  poster?: string
+  tmdbId?: number
+  at: number
+}
+
+export const notInterestedStore = new PersistedStore<Record<string, NotInterestedEntry>>('notInterested', {})
+
+// ---------- v0.5: búsquedas recientes ----------
+
+/** Lo último que buscó el usuario (máx. 10, la más nueva primero). */
+export const recentSearchesStore = new PersistedStore<string[]>('recentSearches', [])
+
 // ---------- Ajustes ----------
 
 export interface SubtitleStyle {
@@ -343,6 +407,20 @@ export interface Settings {
   tmdbKey: string
   /** Reproducir el tráiler sin sonido en la portada de Inicio (necesita TMDB). */
   heroTrailer: boolean
+  /** Modo sin spoilers: difumina miniaturas y oculta sinopsis de los episodios que no viste. */
+  spoilerFree: boolean
+  /** Con el modo sin spoilers, ocultar también la sinopsis de los títulos que no empezaste. */
+  spoilerUnstarted: boolean
+  /** Ofrecer puntuar con estrellas al terminar una peli o el último episodio. */
+  askRatingAtEnd: boolean
+  /** v0.5: puntaje de IMDb sobre el póster, debajo (como antes) o sin puntaje. */
+  posterRating: 'on' | 'below' | 'off'
+  /** v0.5: etiquetas "Episodio nuevo", "Temporada nueva", "Top 10" y "Estreno" en los pósters. */
+  posterLabels: boolean
+  /** v0.5: tráiler en una tarjeta ampliada al quedarse unos segundos sobre un póster (no en celulares). */
+  hoverTrailer: boolean
+  /** v0.5: ids de listas curadas que se muestran como filas en Inicio. */
+  curatedRows: string[]
 }
 
 export const settingsStore = new PersistedStore<Settings>('settings', {
@@ -366,6 +444,13 @@ export const settingsStore = new PersistedStore<Settings>('settings', {
   externalPlayer: 'system',
   tmdbKey: '',
   heroTrailer: true,
+  spoilerFree: false,
+  spoilerUnstarted: false,
+  askRatingAtEnd: true,
+  posterRating: 'on',
+  posterLabels: true,
+  hoverTrailer: true,
+  curatedRows: [],
 })
 
 // ---------- Copia de seguridad ----------
@@ -380,6 +465,11 @@ export function exportData() {
     watchlist: watchlistStore.get(),
     settings: settingsStore.get(),
     trackPrefs: trackPrefsStore.get(),
+    ratings: ratingsStore.get(),
+    notInterested: notInterestedStore.get(),
+    diary: diaryStore.get().entries,
+    goals: goalsStore.get(),
+    recentSearches: recentSearchesStore.get(),
   }
 }
 
@@ -390,6 +480,12 @@ export async function importData(raw: unknown) {
   if (data.watchlist) watchlistStore.set((all) => ({ ...all, ...data.watchlist }))
   if (data.settings) settingsStore.merge({ ...settingsStore.get(), ...data.settings })
   if (data.trackPrefs) trackPrefsStore.set((all) => ({ ...all, ...data.trackPrefs }))
+  if (data.ratings) ratingsStore.set((all) => ({ ...all, ...data.ratings }))
+  if (data.notInterested) notInterestedStore.set((all) => ({ ...all, ...data.notInterested }))
+  if (data.diary) diaryStore.set((d) => ({ v: 1, entries: { ...d.entries, ...data.diary } }))
+  else if (data.progress) diaryStore.set((d) => ({ v: 1, entries: { ...d.entries, ...missingFromProgress(d.entries, data.progress) } }))
+  if (data.goals) goalsStore.set((g) => ({ byYear: { ...g.byYear, ...data.goals.byYear }, seen: [...new Set([...g.seen, ...(data.goals.seen ?? [])])] }))
+  if (Array.isArray(data.recentSearches)) recentSearchesStore.set(data.recentSearches.filter((q) => typeof q === 'string').slice(0, 10))
   const installed = new Set(addonsStore.get().map((a) => a.transportUrl))
   for (const url of data.addons ?? []) {
     if (!installed.has(url)) await installAddon(url).catch(() => {})
@@ -406,7 +502,14 @@ export async function hydrateStores() {
     settingsStore.hydrate(),
     lastSourceStore.hydrate(),
     trackPrefsStore.hydrate(),
+    ratingsStore.hydrate(),
+    notInterestedStore.hydrate(),
+    diaryStore.hydrate(),
+    goalsStore.hydrate(),
+    recentSearchesStore.hydrate(),
   ])
+  // La primera vez el diario se arma con lo que ya estaba marcado como visto.
+  if (diaryStore.get().v === 0) diaryStore.set({ v: 1, entries: rebuildFromProgress(progressStore.get()) })
   if (addonsStore.get().length === 0) addonsStore.set([CINEMETA_ADDON])
   // No bloquea el arranque.
   setTimeout(() => refreshManifests().catch(() => {}), 2000)

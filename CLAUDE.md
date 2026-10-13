@@ -62,9 +62,13 @@ npm run preview    # sirve dist/ en http://localhost:4173
 - v0.4.0 hecha: reproductor, subtítulos y fuentes. `pages/player/` (SeekPreview, SourcesMenu, RecapOffer,
   CreditsNotice, SubtitleMenu, `useSubtitles.ts`), `lib/credits.ts`, `lib/subtitlePrefs.ts`, `lib/dataSaver.ts`.
   Idioma por título en `trackPrefsStore`. Cambiar de fuente = `navigate` con `replace` + `resume` en `location.state`.
+- v0.5.0 hecha: `lib/` searchHistory, discoverFilters, curated, discoverApi, posterLabels, hoverTrailer, wikiTrivia,
+  stars, recommend, spoilers, ratings, diary, goals, yearStory. Páginas Lists, Together, Diary, Goals.
+  Las listas "Top IMDb" son una aproximación (Cinemeta no tiene el Top 250). Wikipedia limita pedidos (429).
+  La caché de imágenes del SW solo guarda respuestas CORS (las opacas llenaban la cuota de Chrome).
 - **Cuestionario de funciones (140)** — decisiones del usuario y plan por versiones:
   - v0.4: 9, 16, 17, 20, 27, 28, 30, 31, 33, 37, 103 (hecha).
-  - v0.5 (descubrir/ficha/biblioteca): 51, 52, 56, 58, 60, 62, 66, 67, 77, 80, 89 (puntaje con **estrellas**),
+  - v0.5 (descubrir/ficha/biblioteca, hecha): 51, 52, 56, 58, 60, 62, 66, 67, 77, 80, 89 (puntaje con **estrellas**),
     92, 97, 101, 106, 107 y la nueva 141 (al pasar por un póster, a los segundos, tráiler con subs en español).
   - v0.6 (addons/apariencia/TV): 41, 43, 44, 47, 125, 130, 131, 134, 137, 139 + rediseño.
     **Antes de implementar 137 (Temas) mostrar preview antes/después.**

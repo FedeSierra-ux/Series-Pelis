@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
+import { TogetherPicker } from '../components/PersonPicker'
 import { PosterCard } from '../components/PosterCard'
 import { Empty, ErrorBox } from '../components/Status'
 import { useTitle } from '../lib/hooks'
@@ -160,6 +161,7 @@ export function Person() {
               {expanded ? 'Leer menos' : 'Leer más'}
             </button>
           )}
+          <TogetherPicker personId={person.id} personName={person.name} />
         </div>
       </div>
 

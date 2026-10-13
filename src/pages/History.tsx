@@ -1,10 +1,12 @@
 import { useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
+import { UserStars } from '../components/StarRating'
 import { Empty } from '../components/Status'
 import { dayLabel, episodeLabel, formatTime, smallPoster } from '../lib/format'
 import { useTitle } from '../lib/hooks'
 import { typeLabel } from '../lib/i18n'
 import { progressStore, removeHistory, useStore, type WatchEntry } from '../lib/store'
+import { GoalLink, HistoryGoal } from './goals/GoalLink'
 
 type Filter = 'all' | 'movie' | 'series' | 'progress' | 'watched'
 
@@ -69,8 +71,13 @@ export function History() {
           <Link to="/calendar" className="btn">
             📅 Calendario
           </Link>
+          <Link to="/history/diary" className="btn">
+            📔 Diario
+          </Link>
+          <GoalLink />
         </div>
       </header>
+      <HistoryGoal />
       <div className="filters">
         {FILTERS.map((f) => (
           <button key={f.id} className={`tab ${filter === f.id ? 'active' : ''}`} onClick={() => setFilter(f.id)}>
@@ -100,7 +107,9 @@ export function History() {
                   <Link to={link} className="history-link">
                     <img src={smallPoster(e.metaId, e.poster)} alt="" loading="lazy" decoding="async" />
                     <div className="history-text">
-                      <strong>{e.name}</strong>
+                      <strong>
+                        {e.name} <UserStars id={e.metaId} />
+                      </strong>
                       <span className="muted small">
                         {typeLabel(e.type, false)}
                         {e.season !== undefined && ` · ${episodeLabel(e.season, e.episode)}`}

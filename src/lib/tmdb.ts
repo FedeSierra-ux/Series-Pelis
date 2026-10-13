@@ -284,6 +284,7 @@ export function tmdbToPreview(item: TmdbListItem, fallbackType?: TmdbType): Meta
     background: tmdbImg(item.backdrop_path, 'w1280'),
     description: item.overview,
     releaseInfo: itemYear(item),
+    released: item.release_date || item.first_air_date || undefined,
   }
 }
 

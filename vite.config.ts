@@ -43,8 +43,11 @@ export default defineConfig({
             handler: 'CacheFirst',
             options: {
               cacheName: 'images',
-              expiration: { maxEntries: 1500, maxAgeSeconds: 60 * 60 * 24 * 30 },
-              cacheableResponse: { statuses: [0, 200] },
+              expiration: { maxEntries: 600, maxAgeSeconds: 60 * 60 * 24 * 30 },
+              // Solo respuestas CORS (200). Las opacas (status 0, las de un <img> común) Chrome las cuenta
+              // como ~7 MB cada una: llenaban la cuota y dejaban de guardarse ajustes y progreso.
+              // Esas quedan en la caché HTTP normal del navegador.
+              cacheableResponse: { statuses: [200] },
             },
           },
           {
