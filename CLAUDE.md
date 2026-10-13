@@ -87,6 +87,12 @@ npm run preview    # sirve dist/ en http://localhost:4173
   prop `errorNotice` de `Row`, parámetro `clear` de `placeCue`, `data-autofocus` para la primera flecha de la TV.
   Quedó afuera la grilla de Buscar del punto 6 (saltos al cargar). El usuario NO quiere títulos en español:
   solo sinopsis y datos; el badge de IMDb va arriba a la derecha.
+- v0.9.1 hecha: pantalla en negro al navegar en Chrome 150+ (`scrollTo` devuelve una promesa; la v0.8 la devolvía
+  como limpieza del efecto). **Un efecto nunca devuelve el resultado de una llamada** (`useEffect(() => algo())`):
+  siempre con llaves, salvo que devuelva la función de limpieza a propósito. `lib/effects.test.ts` lo vigila para las
+  APIs del navegador que dan promesas. El `ErrorBoundary` de afuera (App) va con `keepMounted`: al navegar solo saca
+  el error, no remonta Layout/menú. Los de adentro (alrededor del `Outlet` y del Player) remontan por `pathname`.
+  El usuario NO quiere sumar otro puntaje cuando falta el de IMDb (se deja como está).
 - Debrid: el usuario va a pagar **un TorBox (Standard)** para 3-4 casas cercanas; el resto de las ~10 casas usa su
   propio debrid. Real-Debrid no sirve para compartir (una IP a la vez). Todavía no quiere login/perfiles ni asistente.
 - Función 137 (temas OLED / acento / color del póster): preview en el canvas, **esperando respuesta del usuario**.

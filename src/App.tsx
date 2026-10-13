@@ -69,7 +69,7 @@ export function App() {
     <BrowserRouter>
       <SpatialNav />
       <ScrollMemory />
-      <ErrorBoundary>
+      <ErrorBoundary keepMounted>
         <Screensaver />
         <Onboarding />
         <UpdateToast />
@@ -77,9 +77,11 @@ export function App() {
           <Route
             path="/watch/:type/:id"
             element={
-              <Suspense fallback={<div className="player"><div className="player-spinner" /></div>}>
-                <Player />
-              </Suspense>
+              <ErrorBoundary>
+                <Suspense fallback={<div className="player"><div className="player-spinner" /></div>}>
+                  <Player />
+                </Suspense>
+              </ErrorBoundary>
             }
           />
           <Route element={<Layout />}>
