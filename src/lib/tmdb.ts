@@ -1,5 +1,6 @@
 import { cached, HttpError } from './cache'
 import { settingsStore } from './store'
+import type { MetaPreview } from './types'
 
 // Cliente de TMDB (api.themoviedb.org/3). Es opcional: sin key la app sigue con Cinemeta.
 // Acepta la "API Key" (v3, va como ?api_key=) o el "API Read Access Token" (v4, un JWT que
@@ -270,4 +271,18 @@ export function pickLogo(d: TmdbDetails | undefined): string | undefined {
 
 export function providersFor(d: TmdbDetails | undefined, region = REGION): TmdbProviders | undefined {
   return d?.['watch/providers']?.results?.[region]
+}
+
+/** Ítem de TMDB → tarjeta de la app. El id queda como `tmdb:movie:603`; la ficha lo traduce a IMDb. */
+export function tmdbToPreview(item: TmdbListItem, fallbackType?: TmdbType): MetaPreview {
+  const type = (item.media_type === 'movie' || item.media_type === 'tv' ? item.media_type : fallbackType) ?? 'movie'
+  return {
+    id: `tmdb:${type}:${item.id}`,
+    type: toAppType(type),
+    name: itemTitle(item),
+    poster: tmdbImg(item.poster_path, 'w342'),
+    background: tmdbImg(item.backdrop_path, 'w1280'),
+    description: item.overview,
+    releaseInfo: itemYear(item),
+  }
 }
