@@ -2,13 +2,18 @@ import { Component, useEffect, useState, type ErrorInfo, type ReactNode } from '
 import { useLocation } from 'react-router-dom'
 import { isChunkLoadError, isOffline } from '../lib/errors'
 
-type Props = { children: ReactNode }
-type State = { error: Error | null; stack: string }
+type Props = { children: ReactNode; pathname: string }
+type State = { error: Error | null; stack: string; pathname: string }
 
 // Si una pantalla tira un error al dibujarse, React desmonta todo y queda la pantalla en negro.
 // Esto la reemplaza por un aviso con el error (para poder reportarlo) y botones para salir.
 class Boundary extends Component<Props, State> {
-  state: State = { error: null, stack: '' }
+  state: State = { error: null, stack: '', pathname: this.props.pathname }
+
+  // Al cambiar de página se saca el aviso de error, aunque lo de adentro siga montado.
+  static getDerivedStateFromProps(props: Props, state: State): Partial<State> | null {
+    return props.pathname === state.pathname ? null : { error: null, stack: '', pathname: props.pathname }
+  }
 
   static getDerivedStateFromError(error: unknown): Partial<State> {
     return { error: error instanceof Error ? error : new Error(String(error)) }
@@ -117,8 +122,16 @@ function ErrorScreen({ error, componentStack }: { error: Error; componentStack: 
   )
 }
 
-// Se reinicia al cambiar de página: si falla una pantalla, las demás siguen andando.
-export function ErrorBoundary({ children }: Props) {
+/**
+ * Se reinicia al cambiar de página: si falla una pantalla, las demás siguen andando. Por defecto también remonta lo
+ * de adentro (cada pantalla arranca de cero). Con `keepMounted` solo saca el error: es para el de afuera de todo,
+ * así el menú, el protector de pantalla y los avisos no se rearman en cada click.
+ */
+export function ErrorBoundary({ children, keepMounted }: { children: ReactNode; keepMounted?: boolean }) {
   const { pathname } = useLocation()
-  return <Boundary key={pathname}>{children}</Boundary>
+  return (
+    <Boundary key={keepMounted ? undefined : pathname} pathname={pathname}>
+      {children}
+    </Boundary>
+  )
 }
