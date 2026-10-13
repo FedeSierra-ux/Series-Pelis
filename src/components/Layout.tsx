@@ -5,11 +5,12 @@ import { OfflineBanner } from './OfflineBanner'
 import { useTheme } from '../lib/theme'
 import { Theme2Layout } from './Theme2Layout'
 
-// En el celular entran 7 ítems abajo: "Calendario" se oculta ahí y se llega desde Historial.
+// En el celular entran 8 ítems abajo: "Calendario" se oculta ahí y se llega desde Historial.
 const LINKS: { to: string; label: string; icon: string; end?: boolean; desktopOnly?: boolean }[] = [
   { to: '/', label: 'Inicio', icon: '⌂', end: true },
   { to: '/discover/movie', label: 'Películas', icon: '🎬' },
   { to: '/discover/series', label: 'Series', icon: '📺' },
+  { to: '/tv', label: 'TV', icon: '📡' },
   { to: '/search', label: 'Buscar', icon: '⌕' },
   { to: '/list', label: 'Mi lista', icon: '★' },
   { to: '/history', label: 'Historial', icon: '⟲' },
