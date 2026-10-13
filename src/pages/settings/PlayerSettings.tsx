@@ -1,11 +1,14 @@
+import { Advanced } from '../../components/Advanced'
 import { saveDataOn } from '../../lib/dataSaver'
+import { effectivePlayer, playersFor } from '../../lib/externalPlayers'
 import { langLabel } from '../../lib/i18n'
+import { currentPlatform } from '../../lib/platform'
 import { settingsStore, useStore, type Settings, type SubtitleStyle } from '../../lib/store'
 import { subtitleClasses } from '../../lib/subtitlePrefs'
 
 const LANGS = ['spa', 'eng', 'por']
 
-function Choice<T extends string | number>({
+export function Choice<T extends string | number>({
   label,
   value,
   options,
@@ -28,7 +31,7 @@ function Choice<T extends string | number>({
 }
 
 /** Idiomas en orden de preferencia: el número indica la prioridad. */
-function LangChips({ label, value, onChange }: { label: string; value: string[]; onChange: (v: string[]) => void }) {
+export function LangChips({ label, value, onChange }: { label: string; value: string[]; onChange: (v: string[]) => void }) {
   return (
     <div className="chips" role="group" aria-label={label}>
       {LANGS.map((code) => {
@@ -54,6 +57,7 @@ export function PlayerSettings() {
   const update = (patch: Partial<Settings>) => settingsStore.set((s) => ({ ...s, ...patch }))
   const style = settings.subtitleStyle
   const setStyle = (patch: Partial<SubtitleStyle>) => settingsStore.set((s) => ({ ...s, subtitleStyle: { ...s.subtitleStyle, ...patch } }))
+  const os = currentPlatform().os
 
   return (
     <section className="settings-section">
@@ -78,6 +82,7 @@ export function PlayerSettings() {
         Activarlos solos en el primer idioma preferido que haya
       </label>
       <LangChips label="Idiomas de subtítulos preferidos" value={settings.subtitleLangs} onChange={(subtitleLangs) => update({ subtitleLangs })} />
+      <Advanced>
       <label className="check">
         <input type="checkbox" checked={settings.hideSdh} onChange={(e) => update({ hideSdh: e.target.checked })} />
         Ocultar subtítulos para sordos (SDH) y sacar las descripciones de sonidos ([música], (risas)…)
@@ -87,6 +92,7 @@ export function PlayerSettings() {
         hay subtítulos activos y el audio está en un idioma preferido, se activan solos los “forzados” (carteles y diálogos en
         otro idioma) cuando el addon los ofrece.
       </p>
+      </Advanced>
 
       <h3>Estilo de subtítulos</h3>
       <Choice
@@ -100,6 +106,7 @@ export function PlayerSettings() {
         ]}
         onChange={(size) => setStyle({ size })}
       />
+      <Advanced>
       <Choice
         label="Color"
         value={style.color}
@@ -145,6 +152,7 @@ export function PlayerSettings() {
         ]}
         onChange={(position) => setStyle({ position })}
       />
+      </Advanced>
       <div className={`sub-preview ${subtitleClasses(style)}`} aria-hidden="true">
         <span className="sub-preview-text">Así se van a ver los subtítulos</span>
       </div>
@@ -153,6 +161,7 @@ export function PlayerSettings() {
       <LangChips label="Idiomas de audio preferidos" value={settings.audioLangs} onChange={(audioLangs) => update({ audioLangs })} />
       <p className="muted small">Solo sirve en streams con varias pistas de audio.</p>
 
+      <Advanced>
       <h3>¿Seguís viendo?</h3>
       <Choice
         label="Preguntar si seguís viendo"
@@ -177,20 +186,20 @@ export function PlayerSettings() {
           ? 'El navegador tiene activado el ahorro de datos: la vista previa queda apagada.'
           : 'Usa un poco más de datos. Se apaga sola si el navegador tiene activado el ahorro de datos.'}
       </p>
+      </Advanced>
 
       <h3>Reproductor externo</h3>
       <Choice
         label="Botón Abrir en…"
-        value={settings.externalPlayer}
-        options={[
-          ['system', 'Del sistema'],
-          ['vlc', 'VLC'],
-          ['none', 'Ocultar botón'],
-        ]}
+        value={effectivePlayer(settings.externalPlayer, os).id}
+        options={playersFor(os).map((p) => [p.id, p.label])}
         onChange={(externalPlayer) => update({ externalPlayer })}
       />
       <p className="muted small">
-        En Android “Del sistema” muestra la lista de reproductores instalados; en la PC copia el enlace para pegarlo en VLC.
+        {os === 'android'
+          ? '“Del sistema” muestra la lista de reproductores instalados; los demás abren directo esa app (si no está, Android ofrece instalarla).'
+          : '“Del sistema” copia el enlace para pegarlo en tu reproductor. Los demás lo abren directo si están instalados (y el enlace queda copiado por si no abre).'}{' '}
+        {effectivePlayer(settings.externalPlayer, os).note}
       </p>
     </section>
   )

@@ -11,6 +11,8 @@ export interface DiscoverFilters {
   src?: 'tmdb'
   addon?: string
   catalog?: string
+  /** Fila fusionada del gestor de catálogos (`merge:<id>`), en vez de addon + catálogo. */
+  row?: string
   /** Con addons: el género tal cual lo da el catálogo ("Action"). Con TMDB: el id ("28"). */
   genre?: string
   from?: number
@@ -55,6 +57,7 @@ export function parseFilters(params: URLSearchParams): DiscoverFilters {
     src: params.get('src') === 'tmdb' ? 'tmdb' : undefined,
     addon: params.get('addon') || undefined,
     catalog: params.get('catalog') || undefined,
+    row: params.get('row') || undefined,
     genre: params.get('genre') || undefined,
     from,
     to,
@@ -76,6 +79,7 @@ export function filtersToParams(f: DiscoverFilters): URLSearchParams {
   if (f.src !== 'tmdb') {
     put('addon', f.addon)
     put('catalog', f.catalog)
+    put('row', f.row)
   }
   put('genre', f.genre)
   put('from', f.from)
@@ -102,7 +106,7 @@ export function activeCount(f: DiscoverFilters): number {
 
 /** Saca los filtros avanzados y deja catálogo y género. */
 export function clearAdvanced(f: DiscoverFilters): DiscoverFilters {
-  return { src: f.src, addon: f.addon, catalog: f.catalog, genre: f.genre, sort: 'popularity' }
+  return { src: f.src, addon: f.addon, catalog: f.catalog, row: f.row, genre: f.genre, sort: 'popularity' }
 }
 
 // ---------- Géneros ----------

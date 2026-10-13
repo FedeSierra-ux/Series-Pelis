@@ -1,26 +1,30 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
+import { ContinueCard } from '../components/ContinueCard'
 import { PosterCard } from '../components/PosterCard'
 import { ImdbRating } from '../components/Rating'
 import { Row } from '../components/Row'
-import { browsableCatalogs } from '../lib/addons'
+import { visibleRows } from '../lib/catalogPrefs'
+import { useCatalogRows } from '../lib/catalogRows'
 import { episodeLabel } from '../lib/format'
-import { useAddons, useCatalog, useTitle } from '../lib/hooks'
+import { useCatalog, useTitle } from '../lib/hooks'
 import { catalogLabel, genreLabel } from '../lib/i18n'
 import { useHiddenIds } from '../lib/ratings'
 import { withoutHidden } from '../lib/recommend'
 import { continueWatching, hideFromContinue, progressStore, settingsStore, toggleWatchlist, useStore, watchlistStore, type WatchEntry } from '../lib/store'
+import { useTheme } from '../lib/theme'
 import { episodeLink, useUpNext } from '../lib/upNext'
 import type { CatalogDef, InstalledAddon, MetaPreview } from '../lib/types'
 import { ForYouRow } from './home/ForYouRow'
 import { useNearViewport } from './home/lazy'
+import { MergedCatalogRow } from './home/MergedCatalogRow'
 import { TmdbHero } from './home/TmdbHero'
 import { BecauseRow, onlyTitles, Top10Row, TrendingWeekRow, useTrending, type Seed } from './home/TmdbRows'
 import { CuratedRows } from './lists/CuratedRows'
 
 const ROW_LIMIT = 30
 
-function CatalogRow({ addon, catalog, eager }: { addon: InstalledAddon; catalog: CatalogDef; eager: boolean }) {
+function CatalogRow({ addon, catalog, eager, title }: { addon: InstalledAddon; catalog: CatalogDef; eager: boolean; title?: string }) {
   const [ref, visible] = useNearViewport<HTMLDivElement>(eager)
   const { data, loading, error } = useCatalog(visible ? addon : undefined, visible ? catalog : undefined)
   const hidden = useHiddenIds()
@@ -29,7 +33,7 @@ function CatalogRow({ addon, catalog, eager }: { addon: InstalledAddon; catalog:
   return (
     <div ref={ref}>
       <Row
-        title={catalogLabel(catalog.name, catalog.type, addon.manifest.name)}
+        title={title ?? catalogLabel(catalog.name, catalog.type, addon.manifest.name)}
         moreTo={moreTo}
         loading={loading || !visible}
         error={error}
@@ -44,7 +48,7 @@ function CatalogRow({ addon, catalog, eager }: { addon: InstalledAddon; catalog:
 }
 
 function Hero({ addon, catalog }: { addon: InstalledAddon; catalog: CatalogDef }) {
-  const { data } = useCatalog(addon, catalog)
+  const { data, error } = useCatalog(addon, catalog)
   const watchlist = useStore(watchlistStore)
   const [index, setIndex] = useState(0)
   const hidden = useHiddenIds()
@@ -57,7 +61,8 @@ function Hero({ addon, catalog }: { addon: InstalledAddon; catalog: CatalogDef }
   }, [pool.length])
 
   const meta: MetaPreview | undefined = pool[index]
-  if (!meta) return <div className="hero hero-skeleton skeleton" />
+  // Sin conexión y sin nada guardado: sin portada (no un esqueleto que carga para siempre).
+  if (!meta) return error ? null : <div className="hero hero-skeleton skeleton" />
   const bg = meta.id.startsWith('tt') ? `https://images.metahub.space/background/medium/${meta.id}/img` : meta.background
   const genres = (meta.genre ?? meta.genres ?? []).slice(0, 3).map(genreLabel).join(' · ')
   const type = meta.type ?? catalog.type
@@ -164,12 +169,13 @@ function recentSeeds(progress: Record<string, WatchEntry>): Seed[] {
 
 export function Home() {
   useTitle(undefined)
-  const addons = useAddons()
   const progress = useStore(progressStore)
-  const catalogs = browsableCatalogs(addons)
+  // Filas con lo elegido en el gestor de catálogos (orden, nombres, ocultas, fusionadas).
+  const catalogs = visibleRows(useCatalogRows())
   const resume = continueWatching(progress)
-  const heroSource = catalogs.find((c) => c.catalog.type === 'movie') ?? catalogs[0]
+  const heroSource = (catalogs.find((c) => c.type === 'movie') ?? catalogs[0])?.sources[0]
   const { undo, hide, restore } = useUndoHide()
+  const landscapeResume = useTheme() === '2'
   // TMDB es opcional: sin key, Inicio queda igual que siempre.
   const tmdbKey = useStore(settingsStore).tmdbKey.trim()
   const trendingDay = useTrending('day', tmdbKey)
@@ -193,17 +199,22 @@ export function Home() {
 
       {resume.length > 0 && (
         <Row title="Seguir viendo" moreTo="/history">
-          {resume.map((e) => (
-            <PosterCard
-              key={e.videoId}
-              meta={{ id: e.metaId, type: e.type, name: e.name, poster: e.poster }}
-              progress={e.duration ? e.position / e.duration : 0}
-              subtitle={e.season !== undefined ? episodeLabel(e.season, e.episode) : 'Continuar'}
-              to={`/detail/${e.type}/${encodeURIComponent(e.metaId)}${e.season !== undefined ? `?season=${e.season}&video=${encodeURIComponent(e.videoId)}` : ''}`}
-              onRemove={() => hide(e.metaId, e.name)}
-              removeLabel="Quitar de Seguir viendo"
-            />
-          ))}
+          {resume.map((e) => {
+            const to = `/detail/${e.type}/${encodeURIComponent(e.metaId)}${e.season !== undefined ? `?season=${e.season}&video=${encodeURIComponent(e.videoId)}` : ''}`
+            // Tema 2: tarjetas apaisadas con el tiempo que falta.
+            if (landscapeResume) return <ContinueCard key={e.videoId} entry={e} to={to} onRemove={() => hide(e.metaId, e.name)} />
+            return (
+              <PosterCard
+                key={e.videoId}
+                meta={{ id: e.metaId, type: e.type, name: e.name, poster: e.poster }}
+                progress={e.duration ? e.position / e.duration : 0}
+                subtitle={e.season !== undefined ? episodeLabel(e.season, e.episode) : 'Continuar'}
+                to={to}
+                onRemove={() => hide(e.metaId, e.name)}
+                removeLabel="Quitar de Seguir viendo"
+              />
+            )
+          })}
         </Row>
       )}
 
@@ -222,9 +233,13 @@ export function Home() {
 
       <CuratedRows />
 
-      {catalogs.map(({ addon, catalog }, i) => (
-        <CatalogRow key={`${addon.transportUrl}|${catalog.type}|${catalog.id}`} addon={addon} catalog={catalog} eager={i < 3} />
-      ))}
+      {catalogs.map((row, i) =>
+        row.merged ? (
+          <MergedCatalogRow key={row.key} row={row} eager={i < 3} />
+        ) : (
+          <CatalogRow key={row.key} addon={row.sources[0].addon} catalog={row.sources[0].catalog} title={row.name} eager={i < 3} />
+        ),
+      )}
 
       {catalogs.length === 0 && (
         <div className="empty">

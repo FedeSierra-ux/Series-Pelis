@@ -2,7 +2,9 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import { Link, useParams, useSearchParams } from 'react-router-dom'
 import { PosterCard, PosterSkeleton } from '../components/PosterCard'
 import { ErrorBox } from '../components/Status'
-import { browsableCatalogs, getCatalog } from '../lib/addons'
+import { getCatalog } from '../lib/addons'
+import { interleaveMetas, type CatalogRowDef, type CatalogSource } from '../lib/catalogPrefs'
+import { useCatalogRows } from '../lib/catalogRows'
 import { getKeywordName, tmdbDiscover } from '../lib/discoverApi'
 import {
   applyClientFilters,
@@ -13,35 +15,51 @@ import {
   tmdbToCinemetaGenre,
   type DiscoverFilters,
 } from '../lib/discoverFilters'
-import { useAddons, useTitle } from '../lib/hooks'
+import { useTitle } from '../lib/hooks'
 import { typeLabel } from '../lib/i18n'
+import { offlineMessage } from '../lib/online'
 import { settingsStore, useStore } from '../lib/store'
 import type { MetaPreview } from '../lib/types'
-import { FilterBar } from './discover/FilterBar'
+import { FilterBar, type CatalogOption } from './discover/FilterBar'
 import { CuratedStrip } from './lists/CuratedStrip'
 
 /** Con filtros del lado del cliente (catálogos de addons) se mira hasta esta cantidad de páginas. */
 const MAX_CLIENT_PAGES = 20
 
+const hasExtra = (s: CatalogSource, name: string) => !!s.catalog.extra?.some((e) => e.name === name) || !!s.catalog.extraSupported?.includes(name)
+
+/** Fila del gestor de catálogos → opción del selector. */
+const toOption = (r: CatalogRowDef): CatalogOption => ({
+  addon: r.sources[0].addon,
+  catalog: r.sources[0].catalog,
+  label: r.merged || r.renamed ? r.name : undefined,
+  rowKey: r.merged ? r.key : undefined,
+})
+
 export function Discover() {
   const { type = 'movie' } = useParams()
   const [params, setParams] = useSearchParams()
-  const addons = useAddons()
   const tmdbOn = useStore(settingsStore).tmdbKey.trim().length > 0
   const filters = useMemo(() => parseFilters(params), [params])
   const [kwName, setKwName] = useState<string>()
 
-  const options = useMemo(() => browsableCatalogs(addons).filter((c) => c.catalog.type === type), [addons, type])
+  // Filas del gestor de catálogos: mismo orden, nombres, ocultas y fusiones que en Inicio.
+  const allRows = useCatalogRows()
+  const typeRows = useMemo(() => allRows.filter((r) => r.type === type), [allRows, type])
+  const options = useMemo(() => typeRows.filter((r) => !r.hidden).map(toOption), [typeRows])
   // Idioma, país, plataforma o palabra clave: solo TMDB tiene esos datos.
   const useTmdb = tmdbOn && (filters.src === 'tmdb' || needsTmdb(filters) || options.length === 0)
-  const selected = useTmdb
+  const selectedRow: CatalogRowDef | undefined = useTmdb
     ? undefined
-    : (options.find((o) => o.addon.transportUrl === filters.addon && o.catalog.id === filters.catalog) ?? options[0])
+    : ((filters.row ? typeRows.find((r) => r.key === filters.row) : undefined) ??
+      typeRows.find((r) => !r.merged && r.sources[0].addon.transportUrl === filters.addon && r.sources[0].catalog.id === filters.catalog) ??
+      typeRows.find((r) => !r.hidden))
+  const selected = selectedRow && toOption(selectedRow)
+  const sources = selectedRow?.sources ?? []
   const ignored = !tmdbOn && needsTmdb(filters)
   const effective: DiscoverFilters = useTmdb
     ? filters
     : { ...filters, src: undefined, lang: undefined, country: undefined, provider: undefined, keyword: undefined, kw: undefined }
-  const supportsSkip = !!selected?.catalog.extra?.some((e) => e.name === 'skip') || !!selected?.catalog.extraSupported?.includes('skip')
   const catalogGenre = useTmdb ? undefined : tmdbToCinemetaGenre(effective.genre, type)
   const clientFiltering = !useTmdb && hasClientFilters(effective)
   const keywordLabel = filters.kw ?? kwName
@@ -62,7 +80,7 @@ export function Discover() {
   // Lo que cambia el pedido. Año, puntaje y orden de un catálogo de addon se aplican sobre lo cargado.
   const loadKey = useTmdb
     ? `tmdb|${type}|${filtersToParams({ ...effective, src: 'tmdb' }).toString()}`
-    : `${selected?.addon.transportUrl}|${selected?.catalog.id}|${type}|${catalogGenre ?? ''}`
+    : `${sources.map((x) => `${x.addon.transportUrl}|${x.catalog.id}`).join('+')}|${type}|${catalogGenre ?? ''}`
 
   const [raw, setRaw] = useState<MetaPreview[]>([])
   const [loading, setLoading] = useState(false)
@@ -71,10 +89,11 @@ export function Discover() {
   const sentinel = useRef<HTMLDivElement>(null)
   const currentKey = useRef(loadKey)
   const pages = useRef(0)
-  const fetched = useRef(0)
+  // Cuántos trajo cada catálogo de la fila (las fusionadas paginan cada uno por su lado).
+  const progress = useRef<{ skip: number; done: boolean }[]>([])
 
   const loadPage = async () => {
-    if (!useTmdb && !selected) return
+    if (!useTmdb && sources.length === 0) return
     const key = loadKey
     setLoading(true)
     setError(undefined)
@@ -86,22 +105,37 @@ export function Discover() {
         page = res.items
         last = pages.current + 1 >= res.totalPages
       } else {
-        const skip = fetched.current
-        page = await getCatalog(selected!.addon, selected!.catalog, {
-          genre: catalogGenre || undefined,
-          skip: skip > 0 ? String(skip) : undefined,
+        if (pages.current === 0) progress.current = sources.map((x) => ({ skip: 0, done: !!catalogGenre && !hasExtra(x, 'genre') }))
+        const state = progress.current
+        const results = await Promise.allSettled(
+          sources.map((x, i) =>
+            state[i].done
+              ? Promise.resolve([])
+              : getCatalog(x.addon, x.catalog, {
+                  genre: catalogGenre || undefined,
+                  skip: state[i].skip > 0 ? String(state[i].skip) : undefined,
+                }),
+          ),
+        )
+        if (currentKey.current !== key) return
+        const lists = results.map((r, i) => {
+          if (state[i].done) return []
+          const got = r.status === 'fulfilled' ? r.value : []
+          state[i] = { skip: state[i].skip + got.length, done: r.status === 'rejected' || got.length === 0 || !hasExtra(sources[i], 'skip') }
+          return got
         })
-        page = page.map((m) => ({ ...m, type: m.type ?? type }))
-        last = !supportsSkip || (clientFiltering && pages.current + 1 >= MAX_CLIENT_PAGES)
+        const failed = results.find((r): r is PromiseRejectedResult => r.status === 'rejected')
+        page = interleaveMetas(lists).map((m) => ({ ...m, type: m.type ?? type }))
+        if (failed && page.length === 0 && pages.current === 0) throw failed.reason
+        last = state.every((x) => x.done) || (clientFiltering && pages.current + 1 >= MAX_CLIENT_PAGES)
       }
       if (currentKey.current !== key) return
       pages.current += 1
-      fetched.current += page.length
       setRaw((prev) => {
         const seen = new Set(prev.map((m) => m.id))
         return [...prev, ...page.filter((m) => !seen.has(m.id))]
       })
-      if (page.length === 0 || last) setDone(true)
+      if ((useTmdb && page.length === 0) || last) setDone(true)
     } catch (err) {
       if (currentKey.current === key) setError(err instanceof Error ? err.message : String(err))
     } finally {
@@ -112,7 +146,6 @@ export function Discover() {
   useEffect(() => {
     currentKey.current = loadKey
     pages.current = 0
-    fetched.current = 0
     setRaw([])
     setDone(false)
     loadPage()
@@ -170,7 +203,7 @@ export function Discover() {
 
       <CuratedStrip type={type} tmdbOn={tmdbOn} />
 
-      {error && raw.length === 0 && <ErrorBox message={`No se pudo cargar el catálogo: ${error}`} onRetry={() => loadPage()} />}
+      {error && raw.length === 0 && <ErrorBox message={offlineMessage('este catálogo no está guardado') ?? `No se pudo cargar el catálogo: ${error}`} onRetry={() => loadPage()} />}
 
       <div className="grid">
         {items.map((m, i) => (
@@ -182,12 +215,12 @@ export function Discover() {
       {(emptyAfterFilters || noneAtAll) && (
         <div className="empty">
           No hay títulos con estos filtros.{' '}
-          <button type="button" className="btn btn-small" onClick={() => apply({ src: filters.src, addon: filters.addon, catalog: filters.catalog, sort: 'popularity' })}>
+          <button type="button" className="btn btn-small" onClick={() => apply({ src: filters.src, addon: filters.addon, catalog: filters.catalog, row: filters.row, sort: 'popularity' })}>
             Limpiar filtros
           </button>
         </div>
       )}
-      {!useTmdb && !selected && (
+      {!useTmdb && !selectedRow && (
         <div className="empty">Ningún addon instalado tiene catálogos de {typeLabel(type).toLowerCase()}.</div>
       )}
     </div>

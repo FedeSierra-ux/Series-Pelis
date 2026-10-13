@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { KeyboardToggle } from '../../components/OnScreenKeyboard'
 import { clearCache } from '../../lib/cache'
 import { settingsStore, useStore } from '../../lib/store'
 import { testTmdbKey } from '../../lib/tmdb'
@@ -10,8 +11,8 @@ export function TmdbSettings() {
   const [busy, setBusy] = useState(false)
   const configured = settings.tmdbKey.trim().length > 0
 
-  const save = async (e: React.FormEvent) => {
-    e.preventDefault()
+  const save = async (e?: React.FormEvent) => {
+    e?.preventDefault()
     const key = draft.trim()
     if (!key) return
     setBusy(true)
@@ -65,6 +66,7 @@ export function TmdbSettings() {
           </button>
         </form>
       )}
+      {!configured && <KeyboardToggle value={draft} onChange={setDraft} onDone={() => save()} doneLabel="Guardar" label="Teclado para la key de TMDB" />}
       {msg && <p className={msg.ok ? 'ok' : 'error-text'}>{msg.text}</p>}
       <label className="check">
         <input

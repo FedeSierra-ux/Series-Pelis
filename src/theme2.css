@@ -1,0 +1,1020 @@
+/* ---------- v0.6 tema 2 ---------- */
+
+/* Tema 2 ("Sala oscura" + "Tonal" + "TV"): todo cuelga de <html data-theme="2">, así que con el
+   Tema 1 este archivo no hace nada. Las pantallas nuevas que usen las variables (--bg-2, --accent,
+   --radius, --font-display…) heredan el tema solas. Se carga después de styles.css. */
+
+:root[data-theme='2'] {
+  --bg: #0b0b10;
+  --bg-2: #1c1a22;
+  --bg-3: #2a2732;
+  --line: #36323f;
+  --text: #f2eff7;
+  --muted: #a8a3b3;
+  --accent: #c4b0ff;
+  --accent-2: #a98fff;
+  --on-accent: #1f0f4d;
+  --surface-1: #1c1a22;
+  --surface-2: #2a2732;
+  --tonal: #3a3350;
+  --rail-bg: #121118;
+  --outline: #4a4556;
+  --text-soft: #d9d4e3;
+  --radius: 18px;
+  --radius-lg: 28px;
+  --font-body: 'DM Sans', system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+  --font-display: 'Sora', 'DM Sans', system-ui, sans-serif;
+  --focus-ring: 4px solid var(--accent);
+  --rail-w: 88px;
+  --gutter: clamp(16px, 2.6vw, 40px);
+  --nav-h: 0px;
+  --cont-w: clamp(220px, 21vw, 360px);
+}
+
+[data-theme='2'] body {
+  font-family: var(--font-body);
+}
+[data-theme='2'] h1,
+[data-theme='2'] h2,
+[data-theme='2'] h3,
+[data-theme='2'] .t2-brand,
+[data-theme='2'] .t2-logo {
+  font-family: var(--font-display);
+  letter-spacing: -0.01em;
+}
+[data-theme='2'] h1 {
+  font-weight: 800;
+}
+[data-theme='2'] h2,
+[data-theme='2'] h3 {
+  font-weight: 700;
+}
+[data-theme='2'] input[type='checkbox'],
+[data-theme='2'] input[type='radio'],
+[data-theme='2'] input[type='range'] {
+  accent-color: var(--accent);
+}
+[data-theme='2'] ::selection {
+  background: var(--tonal);
+}
+
+/* Foco para el control remoto: anillo grueso en el color de acento. */
+[data-theme='2'] :focus-visible {
+  outline: var(--focus-ring);
+  outline-offset: 4px;
+}
+
+/* ---------- Botones, campos, pestañas y chips (tonal) ---------- */
+
+[data-theme='2'] .btn {
+  border: 0;
+  padding: 11px 20px;
+  background: var(--surface-2);
+  color: var(--text);
+  font-weight: 700;
+  backdrop-filter: none;
+  transition: background 0.15s, transform 0.15s;
+}
+[data-theme='2'] .btn:hover,
+[data-theme='2'] .btn:focus-visible {
+  background: var(--tonal);
+}
+[data-theme='2'] .btn-primary {
+  background: var(--accent);
+  color: var(--on-accent);
+}
+[data-theme='2'] .btn-primary:hover,
+[data-theme='2'] .btn-primary:focus-visible {
+  background: #d6c8ff;
+}
+[data-theme='2'] .btn-ghost {
+  background: transparent;
+  padding: 8px 12px;
+}
+[data-theme='2'] .btn-ghost:hover,
+[data-theme='2'] .btn-ghost:focus-visible {
+  background: var(--surface-2);
+}
+[data-theme='2'] .btn-small {
+  padding: 7px 14px;
+}
+[data-theme='2'] .btn:focus-visible {
+  transform: scale(1.04);
+}
+
+[data-theme='2'] input[type='search'],
+[data-theme='2'] input[type='url'],
+[data-theme='2'] input[type='text'],
+[data-theme='2'] input[type='password'],
+[data-theme='2'] select {
+  font: inherit;
+  color: var(--text);
+  background-color: var(--bg-2);
+  border: 1px solid transparent;
+  border-radius: 999px;
+  padding: 11px 18px;
+}
+[data-theme='2'] input:focus-visible,
+[data-theme='2'] select:focus-visible {
+  border-color: transparent;
+  outline: 3px solid var(--accent);
+  outline-offset: 2px;
+}
+
+[data-theme='2'] .tab {
+  border: 0;
+  padding: 9px 18px;
+  background: var(--bg-2);
+  color: var(--muted);
+  font-weight: 600;
+}
+[data-theme='2'] .tab:hover {
+  background: var(--bg-3);
+  color: var(--text);
+}
+[data-theme='2'] .tab.active {
+  background: var(--tonal);
+  color: var(--accent);
+  font-weight: 700;
+}
+
+[data-theme='2'] .chip {
+  background: transparent;
+  border: 1px solid var(--outline);
+  border-radius: 8px;
+  padding: 3px 10px;
+}
+[data-theme='2'] .chip.small {
+  padding: 1px 8px;
+}
+
+[data-theme='2'] code {
+  background: var(--bg-3);
+}
+[data-theme='2'] .empty a,
+[data-theme='2'] .streams-empty a {
+  color: var(--accent);
+}
+[data-theme='2'] .error-box {
+  border-radius: var(--radius);
+}
+[data-theme='2'] .spinner {
+  border-top-color: var(--accent);
+}
+
+/* ---------- Estructura: riel (PC/TV), cabecera y pestañas (celular) ---------- */
+
+.t2-rail {
+  position: fixed;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  z-index: 20;
+  width: var(--rail-w);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  padding: 18px 0 14px;
+  background: var(--rail-bg);
+  overflow-y: auto;
+  scrollbar-width: none;
+}
+.t2-rail::-webkit-scrollbar {
+  display: none;
+}
+.t2-logo {
+  flex: none;
+  display: grid;
+  place-items: center;
+  width: 48px;
+  height: 48px;
+  margin-bottom: 10px;
+  border-radius: 16px;
+  background: var(--accent);
+  color: var(--on-accent);
+  font-weight: 800;
+  font-size: 18px;
+  letter-spacing: 0;
+}
+.t2-logo:focus-visible {
+  outline-offset: 3px;
+}
+.t2-logo-sm {
+  width: 36px;
+  height: 36px;
+  margin: 0;
+  border-radius: 12px;
+  font-size: 14px;
+}
+.t2-rail-link {
+  flex: none;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 3px;
+  width: 80px;
+  padding: 4px 0;
+  border-radius: 16px;
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 500;
+}
+.t2-rail-spacer {
+  flex: 1 0 8px;
+}
+.t2-pill {
+  display: grid;
+  place-items: center;
+  width: 56px;
+  height: 32px;
+  border-radius: 16px;
+  transition: background 0.15s, color 0.15s, transform 0.15s;
+}
+.t2-rail-link:hover,
+.t2-rail-link:focus-visible,
+.t2-rail-link.active {
+  color: var(--text);
+}
+.t2-rail-link:hover .t2-pill {
+  background: var(--surface-2);
+}
+.t2-rail-link.active {
+  font-weight: 700;
+}
+.t2-rail-link.active .t2-pill,
+.t2-tab.active .t2-pill {
+  background: var(--tonal);
+  color: var(--accent);
+}
+/* El riel es angosto: el anillo va sobre la píldora del ícono para que no se corte. */
+.t2-rail-link:focus-visible,
+.t2-tab:focus-visible {
+  outline: none;
+}
+.t2-rail-link:focus-visible .t2-pill,
+.t2-tab:focus-visible .t2-pill {
+  outline: 4px solid var(--accent);
+  outline-offset: 3px;
+  transform: scale(1.06);
+}
+
+.t2-main {
+  margin-left: var(--rail-w);
+  min-height: 100vh;
+}
+
+/* Buscador de la portada (PC/TV): lleva a Buscar. */
+.t2-searchbar {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  height: 48px;
+  margin: 22px var(--gutter) 0;
+  padding: 0 20px;
+  border-radius: 24px;
+  background: var(--surface-1);
+  color: var(--muted);
+  font-size: 0.95rem;
+}
+.t2-searchbar:hover {
+  background: var(--surface-2);
+}
+.t2-searchbar:focus-visible {
+  outline-offset: 3px;
+}
+
+.t2-top,
+.t2-tabs {
+  display: none;
+}
+
+/* ---------- Portada (hero) como tarjeta redondeada ---------- */
+
+[data-theme='2'] .hero {
+  margin: 20px var(--gutter) 10px;
+  min-height: clamp(340px, 52vh, 520px);
+  align-items: center;
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+  background-color: var(--surface-1);
+  background-position: right 20%;
+}
+[data-theme='2'] .hero-shade {
+  background: linear-gradient(90deg, var(--bg) 0%, rgba(11, 11, 16, 0.9) 30%, rgba(11, 11, 16, 0) 66%),
+    linear-gradient(0deg, rgba(11, 11, 16, 0.85) 0%, rgba(11, 11, 16, 0) 40%);
+}
+[data-theme='2'] .hero-content {
+  padding: 40px 44px;
+  max-width: 600px;
+  gap: 14px;
+}
+[data-theme='2'] .hero-content h1 {
+  font-size: clamp(1.8rem, 3.6vw, 3rem);
+  font-weight: 800;
+}
+[data-theme='2'] .hero-logo {
+  max-width: min(380px, 80%);
+  max-height: clamp(56px, 11vh, 110px);
+}
+[data-theme='2'] .hero-desc {
+  color: var(--text-soft);
+  font-size: 1rem;
+}
+[data-theme='2'] .hero-actions {
+  gap: 10px;
+}
+[data-theme='2'] .hero .hero-actions .btn {
+  height: 50px;
+  padding: 0 26px;
+  font-size: 1rem;
+}
+[data-theme='2'] .hero-dots {
+  right: 28px;
+  bottom: 24px;
+}
+[data-theme='2'] .hero-dots span {
+  width: 6px;
+  height: 6px;
+  border-radius: 3px;
+}
+[data-theme='2'] .hero-dots span.active {
+  width: 22px;
+  border-radius: 3px;
+}
+
+/* Chips de la portada y la ficha: IMDb amarillo, el resto con borde. */
+[data-theme='2'] .hero-meta {
+  gap: 8px;
+  font-size: 0.85rem;
+  color: var(--text);
+}
+[data-theme='2'] .hero-meta > span {
+  padding: 4px 10px;
+  border-radius: 8px;
+  border: 1px solid var(--outline);
+}
+[data-theme='2'] .hero-meta > .imdb {
+  gap: 5px;
+  border-color: transparent;
+  background: var(--imdb);
+  color: #000;
+}
+[data-theme='2'] .hero-meta > .imdb b {
+  padding: 0;
+  background: none;
+  font-size: inherit;
+}
+
+/* ---------- Filas y pósters ---------- */
+
+[data-theme='2'] .row {
+  margin: 22px 0 6px;
+}
+[data-theme='2'] .row-header h2 {
+  font-size: clamp(1.05rem, 1.5vw, 1.3rem);
+}
+[data-theme='2'] .row-more {
+  color: var(--accent);
+  font-weight: 700;
+  font-size: 0.85rem;
+  padding: 5px 12px;
+  border-radius: 999px;
+}
+[data-theme='2'] .row-more:hover,
+[data-theme='2'] .row-more:focus-visible {
+  color: var(--accent);
+  background: var(--surface-1);
+}
+/* Más aire arriba y abajo: el anillo de foco y la escala no se cortan. */
+[data-theme='2'] .row-scroller {
+  gap: 18px;
+  padding: 14px var(--gutter) 20px;
+}
+[data-theme='2'] .grid {
+  gap: 26px 18px;
+}
+
+[data-theme='2'] .poster-img {
+  border-radius: 20px;
+}
+/* El radio de la tarjeta recorta (content-visibility pinta "contenido"): chico, para no comerse el texto. */
+[data-theme='2'] .poster-card {
+  border-radius: 10px;
+}
+/* Al enfocarla o pasar el mouse se pinta entera: si no, el anillo y la escala quedan recortados. */
+[data-theme='2'] .poster-card:hover,
+[data-theme='2'] .poster-card:focus-visible {
+  content-visibility: visible;
+}
+/* Al moverse con las flechas queda lugar para el anillo y el título de la tarjeta enfocada. */
+[data-theme='2'] .poster-card,
+[data-theme='2'] .cast-card,
+.t2-cont {
+  scroll-margin-block: 40px;
+}
+[data-theme='2'] .poster-card:focus-visible {
+  outline: none;
+}
+[data-theme='2'] .poster-card:hover .poster-img {
+  transform: scale(1.04);
+}
+[data-theme='2'] .poster-card:focus-visible .poster-img {
+  outline: 5px solid var(--accent);
+  outline-offset: 5px;
+  transform: scale(1.05);
+  box-shadow: 0 20px 44px rgba(0, 0, 0, 0.75);
+}
+[data-theme='2'] .poster-title {
+  font-weight: 700;
+}
+/* El anillo (5 px + 5 px de separación) taparía el título: lo corremos un poco al enfocar. */
+[data-theme='2'] .poster-info,
+.t2-cont-title,
+.t2-cont-sub {
+  transition: transform 0.18s ease;
+}
+[data-theme='2'] .poster-card:focus-visible .poster-info,
+.t2-cont:focus-visible .t2-cont-title,
+.t2-cont:focus-visible .t2-cont-sub {
+  transform: translateY(12px);
+}
+[data-theme='2'] .poster-card:focus-visible .poster-title {
+  color: var(--accent);
+}
+[data-theme='2'] .badge-watched {
+  background: var(--accent);
+  color: var(--on-accent);
+}
+[data-theme='2'] .progress-bar {
+  left: 10px;
+  right: 10px;
+  bottom: 9px;
+  height: 5px;
+  border-radius: 3px;
+  background: rgba(255, 255, 255, 0.3);
+}
+[data-theme='2'] .progress-bar > div {
+  border-radius: 3px;
+  background: var(--accent);
+}
+[data-theme='2'] .progress-bar.inline {
+  height: 4px;
+}
+[data-theme='2'] .poster-remove {
+  border: 0;
+  background: rgba(11, 11, 16, 0.8);
+}
+[data-theme='2'] .poster-remove:hover,
+[data-theme='2'] .poster-remove:focus-visible {
+  background: var(--accent);
+  color: var(--on-accent);
+}
+[data-theme='2'] .poster-remove:focus-visible {
+  outline-offset: 2px;
+}
+
+/* Top 10: número con borde en el tono de acento. */
+[data-theme='2'] .top10-rank {
+  font-family: var(--font-display);
+  -webkit-text-stroke-color: rgba(196, 176, 255, 0.7);
+}
+
+/* "Seguir viendo" apaisado (ContinueCard). */
+.t2-cont-wrap {
+  position: relative;
+  flex: 0 0 var(--cont-w);
+  width: var(--cont-w);
+}
+.t2-cont {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  border-radius: 20px;
+}
+.t2-cont-img {
+  position: relative;
+  aspect-ratio: 16 / 9;
+  border-radius: 20px;
+  overflow: hidden;
+  background: var(--surface-1);
+  transition: transform 0.18s ease, box-shadow 0.18s ease;
+}
+.t2-cont-img img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+.t2-cont-img.is-poster img {
+  object-position: center 20%;
+}
+.t2-cont-title,
+.t2-cont-sub {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.t2-cont-title {
+  font-weight: 700;
+  font-size: 0.95rem;
+}
+.t2-cont-sub {
+  margin-top: -4px;
+  color: var(--muted);
+  font-size: 0.82rem;
+}
+.t2-cont:hover .t2-cont-img {
+  transform: scale(1.03);
+}
+.t2-cont:focus-visible {
+  outline: none;
+}
+.t2-cont:focus-visible .t2-cont-img {
+  outline: 5px solid var(--accent);
+  outline-offset: 5px;
+  transform: scale(1.04);
+  box-shadow: 0 20px 44px rgba(0, 0, 0, 0.75);
+}
+.t2-cont:focus-visible .t2-cont-title {
+  color: var(--accent);
+}
+.t2-cont-wrap:hover .poster-remove,
+.t2-cont-wrap:focus-within .poster-remove {
+  opacity: 1;
+}
+
+/* ---------- Páginas ---------- */
+
+[data-theme='2'] .page-header h1 {
+  font-size: clamp(1.5rem, 2.6vw, 2.1rem);
+}
+[data-theme='2'] .search-input {
+  height: 56px;
+  padding: 14px 22px 14px 52px !important;
+  font-size: 1.1rem !important;
+  background: var(--surface-1)
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='20' height='20' viewBox='0 0 24 24' fill='none' stroke='%23a8a3b3' stroke-width='2' stroke-linecap='round'%3E%3Ccircle cx='11' cy='11' r='7'/%3E%3Cpath d='M20 20l-4-4'/%3E%3C/svg%3E")
+    no-repeat 20px center;
+}
+[data-theme='2'] .search-group h2 {
+  font-size: 1.1rem;
+}
+
+/* Historial */
+[data-theme='2'] .stats b {
+  font-family: var(--font-display);
+}
+[data-theme='2'] .history-item {
+  border-radius: var(--radius);
+  background: var(--surface-1);
+}
+[data-theme='2'] .history-link {
+  border-radius: var(--radius);
+}
+[data-theme='2'] .history-link img {
+  border-radius: 10px;
+}
+
+/* Ajustes: cada sección es una tarjeta tonal; adentro todo sube un tono. */
+[data-theme='2'] .settings-section {
+  padding: 22px 24px;
+  margin-bottom: 20px;
+  border-radius: 24px;
+  background: var(--surface-1);
+  --bg-2: #2a2732;
+  --bg-3: #343040;
+  --tonal: #463d63;
+  --line: #45404f;
+}
+[data-theme='2'] .addon-item {
+  border-radius: var(--radius);
+}
+[data-theme='2'] .addon-logo {
+  border-radius: 12px;
+}
+[data-theme='2'] .sub-preview {
+  border-radius: var(--radius);
+}
+[data-theme='2'] .theme-option {
+  border-color: transparent;
+}
+[data-theme='2'] .theme-option.active {
+  border-color: var(--accent);
+  background: var(--tonal);
+}
+
+/* Ficha */
+[data-theme='2'] .detail-hero {
+  margin: 20px var(--gutter) 8px;
+  padding: 44px 44px 36px;
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+}
+[data-theme='2'] .detail-poster {
+  border-radius: 20px;
+}
+[data-theme='2'] .detail-desc,
+[data-theme='2'] .detail-tagline {
+  color: var(--text-soft);
+}
+[data-theme='2'] .season-tabs {
+  padding: 10px 6px 18px;
+}
+[data-theme='2'] .episode {
+  border: 2px solid transparent;
+  border-radius: var(--radius);
+  background: var(--surface-1);
+}
+[data-theme='2'] .episode.selected {
+  border-color: var(--accent);
+  background: var(--surface-2);
+}
+[data-theme='2'] .episode-main {
+  border-radius: 16px;
+}
+[data-theme='2'] .episode-thumb {
+  border-radius: 12px;
+}
+[data-theme='2'] .episode-check {
+  border-color: var(--outline);
+}
+[data-theme='2'] .episode-check.on {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: var(--on-accent);
+}
+[data-theme='2'] .episode-streams {
+  border-radius: 24px;
+  background: var(--surface-1);
+}
+[data-theme='2'] .stream-item {
+  border: 2px solid transparent;
+  border-radius: 16px;
+  background: var(--surface-2);
+}
+[data-theme='2'] .stream-item:hover,
+[data-theme='2'] .stream-item:focus-visible {
+  border-color: var(--accent);
+  background: var(--tonal);
+}
+[data-theme='2'] .stream-item:focus-visible {
+  outline-offset: 2px;
+}
+[data-theme='2'] .stream-item.recommended {
+  border-color: rgba(196, 176, 255, 0.55);
+}
+[data-theme='2'] .stream-title {
+  color: var(--text-soft);
+}
+[data-theme='2'] .stream-badge {
+  background: var(--accent);
+  color: var(--on-accent);
+}
+[data-theme='2'] .auto-play-banner {
+  border-radius: var(--radius);
+  background: rgba(196, 176, 255, 0.12);
+  border-color: rgba(196, 176, 255, 0.5);
+}
+[data-theme='2'] .tmdb-notice {
+  border-radius: var(--radius);
+  border-color: transparent;
+}
+[data-theme='2'] .cast-card:focus-visible .cast-photo {
+  outline: 5px solid var(--accent);
+  outline-offset: 4px;
+}
+[data-theme='2'] .cast-card:focus-visible .cast-name {
+  color: var(--accent);
+}
+[data-theme='2'] .providers-logos img {
+  border-radius: 12px;
+}
+[data-theme='2'] .person-photo {
+  border-radius: 20px;
+}
+
+/* Calendario y Tu año */
+[data-theme='2'] .cal-item {
+  border-radius: var(--radius);
+  background: var(--surface-1);
+}
+[data-theme='2'] .cal-item:hover,
+[data-theme='2'] .cal-item:focus-visible {
+  background: var(--surface-2);
+}
+[data-theme='2'] .cal-thumb {
+  border-radius: 12px;
+}
+[data-theme='2'] .cal-badge {
+  background: var(--tonal);
+  color: var(--accent);
+}
+[data-theme='2'] .year-hero {
+  border: 0;
+  border-radius: var(--radius-lg);
+  background: radial-gradient(120% 140% at 0% 0%, rgba(196, 176, 255, 0.32), transparent 55%),
+    radial-gradient(120% 140% at 100% 100%, rgba(58, 51, 80, 0.9), transparent 60%), var(--surface-1);
+}
+[data-theme='2'] .year-big,
+[data-theme='2'] .year-num,
+[data-theme='2'] .year-kpis dd {
+  font-family: var(--font-display);
+  font-weight: 800;
+}
+[data-theme='2'] .year-card {
+  border: 0;
+  border-radius: 24px;
+  background: var(--surface-1);
+}
+[data-theme='2'] .year-bar {
+  background: var(--surface-2);
+}
+[data-theme='2'] .hm-l0 {
+  fill: var(--surface-2);
+}
+[data-theme='2'] .hm-l1 {
+  fill: rgba(196, 176, 255, 0.28);
+}
+[data-theme='2'] .hm-l2 {
+  fill: rgba(196, 176, 255, 0.55);
+}
+[data-theme='2'] .hm-l3 {
+  fill: #c4b0ff;
+}
+[data-theme='2'] .hm-l4 {
+  fill: #ece5ff;
+}
+
+[data-theme='2'] .undo-toast {
+  border: 0;
+  background: var(--surface-2);
+}
+
+/* ---------- Reproductor ---------- */
+
+[data-theme='2'] .player-title strong,
+[data-theme='2'] .player-dim h2 {
+  font-family: var(--font-display);
+}
+[data-theme='2'] .controls-row button {
+  border-radius: 999px;
+}
+[data-theme='2'] .controls-row button:hover,
+[data-theme='2'] .controls-row button:focus-visible {
+  background: rgba(255, 255, 255, 0.14);
+  outline: none;
+}
+[data-theme='2'] .controls-row button:focus-visible {
+  outline: 4px solid var(--accent);
+  outline-offset: 2px;
+}
+[data-theme='2'] .controls-row .play-btn {
+  min-width: 52px;
+  height: 52px;
+  padding: 0 16px;
+  background: var(--accent);
+  color: var(--on-accent);
+}
+[data-theme='2'] .controls-row .play-btn:hover,
+[data-theme='2'] .controls-row .play-btn:focus-visible {
+  background: #d6c8ff;
+}
+[data-theme='2'] .controls-row button.active {
+  color: var(--accent);
+}
+[data-theme='2'] .seekbar {
+  background: linear-gradient(to right, var(--accent) var(--pct), rgba(255, 255, 255, 0.25) var(--pct));
+}
+[data-theme='2'] .seekbar::-webkit-slider-thumb {
+  width: 18px;
+  height: 18px;
+  background: var(--accent);
+  box-shadow: 0 0 0 4px rgba(196, 176, 255, 0.3);
+}
+[data-theme='2'] .seekbar::-moz-range-thumb {
+  width: 18px;
+  height: 18px;
+  background: var(--accent);
+}
+[data-theme='2'] .seekbar:focus-visible {
+  outline-offset: 6px;
+}
+[data-theme='2'] .player-menu {
+  padding: 8px;
+  border-radius: 22px;
+  background: rgba(28, 26, 34, 0.97);
+  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.6);
+}
+[data-theme='2'] .player-menu button {
+  border-radius: 14px;
+}
+[data-theme='2'] .player-menu button:hover,
+[data-theme='2'] .player-menu button:focus-visible {
+  background: var(--tonal);
+  outline: 3px solid var(--accent);
+  outline-offset: -3px;
+}
+[data-theme='2'] .player-menu button:hover:not(:focus-visible) {
+  outline: none;
+}
+[data-theme='2'] .player-menu button.active {
+  color: var(--accent);
+}
+[data-theme='2'] .player-toast,
+[data-theme='2'] .next-card,
+[data-theme='2'] .seek-preview,
+[data-theme='2'] .player-rate,
+[data-theme='2'] .player-chip {
+  border: 0;
+  background: rgba(28, 26, 34, 0.95);
+}
+[data-theme='2'] .next-card {
+  border-radius: 22px;
+}
+[data-theme='2'] .player-toast.player-note {
+  border-radius: 18px;
+}
+[data-theme='2'] .seek-preview {
+  border-radius: 14px;
+}
+[data-theme='2'] .seek-preview-video {
+  border-radius: 10px;
+}
+[data-theme='2'] .btn.skip-btn {
+  background: rgba(28, 26, 34, 0.92);
+  box-shadow: inset 0 0 0 2px rgba(255, 255, 255, 0.45);
+}
+[data-theme='2'] .btn.skip-btn:hover,
+[data-theme='2'] .btn.skip-btn:focus-visible {
+  background: var(--accent);
+  color: var(--on-accent);
+  box-shadow: none;
+}
+[data-theme='2'] .player-float .btn:focus,
+[data-theme='2'] .player-float .btn:focus-visible {
+  outline: 4px solid var(--accent);
+  outline-offset: 3px;
+}
+[data-theme='2'] .player-spinner {
+  border-top-color: var(--accent);
+}
+[data-theme='2'] .player-drop {
+  border-radius: var(--radius-lg);
+}
+
+/* ---------- Celular ---------- */
+
+@media (max-width: 760px) {
+  :root[data-theme='2'] {
+    --rail-w: 0px;
+    --nav-h: 0px;
+    --gutter: 16px;
+    --poster-w: 116px;
+    --cont-w: 220px;
+  }
+  .t2-rail,
+  .t2-searchbar {
+    display: none;
+  }
+  .t2-top {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 14px 16px 6px;
+  }
+  .t2-brand {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-right: auto;
+    font-weight: 800;
+    font-size: 18px;
+  }
+  .t2-round {
+    display: grid;
+    place-items: center;
+    width: 44px;
+    height: 44px;
+    border-radius: 22px;
+    background: var(--surface-1);
+    color: var(--text);
+  }
+  .t2-round.active {
+    background: var(--tonal);
+    color: var(--accent);
+  }
+  .t2-round:focus-visible {
+    outline-offset: 2px;
+  }
+  .t2-tabs {
+    position: fixed;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    z-index: 30;
+    display: flex;
+    justify-content: space-around;
+    align-items: center;
+    height: calc(72px + env(safe-area-inset-bottom));
+    padding: 0 4px env(safe-area-inset-bottom);
+    background: var(--rail-bg);
+  }
+  .t2-tab {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 3px;
+    color: var(--muted);
+    font-size: 11px;
+    font-weight: 500;
+  }
+  .t2-tab .t2-pill {
+    height: 30px;
+    border-radius: 15px;
+  }
+  .t2-tab.active {
+    color: var(--text);
+    font-weight: 700;
+  }
+  .t2-app .t2-main {
+    padding-bottom: calc(84px + env(safe-area-inset-bottom));
+  }
+  [data-theme='2'] .undo-toast {
+    bottom: calc(86px + env(safe-area-inset-bottom));
+  }
+
+  /* Portada: imagen arriba y el texto abajo, dentro de la tarjeta. */
+  [data-theme='2'] .hero {
+    margin: 4px 16px 6px;
+    min-height: 470px;
+    align-items: flex-end;
+    background-size: max(100%, 534px) auto;
+    background-position: center top;
+    background-repeat: no-repeat;
+  }
+  [data-theme='2'] .hero-shade {
+    background: linear-gradient(to bottom, rgba(28, 26, 34, 0) 110px, var(--surface-1) 290px);
+  }
+  [data-theme='2'] .hero-content {
+    padding: 0 20px 20px;
+    gap: 12px;
+    width: 100%;
+  }
+  [data-theme='2'] .hero-content h1 {
+    font-size: 1.7rem;
+  }
+  [data-theme='2'] .hero-logo {
+    max-height: 56px;
+    max-width: 75%;
+  }
+  [data-theme='2'] .hero-meta {
+    font-size: 0.78rem;
+    gap: 6px;
+  }
+  [data-theme='2'] .hero-meta > span {
+    padding: 3px 8px;
+  }
+  [data-theme='2'] .hero-desc {
+    font-size: 0.9rem;
+  }
+  [data-theme='2'] .hero .hero-actions {
+    flex-wrap: nowrap;
+  }
+  [data-theme='2'] .hero .hero-actions .btn {
+    height: 48px;
+    padding: 0 18px;
+    font-size: 0.95rem;
+  }
+  [data-theme='2'] .hero .hero-actions .btn-primary {
+    flex: 1;
+    justify-content: center;
+  }
+
+  [data-theme='2'] .poster-img {
+    border-radius: 16px;
+  }
+  [data-theme='2'] .t2-cont-img,
+  [data-theme='2'] .t2-cont {
+    border-radius: 18px;
+  }
+  [data-theme='2'] .row-scroller {
+    gap: 12px;
+  }
+  [data-theme='2'] .row {
+    margin-top: 18px;
+  }
+
+  [data-theme='2'] .detail-hero {
+    margin: 4px 16px 8px;
+    padding: 110px 18px 22px;
+  }
+  [data-theme='2'] .settings-section {
+    padding: 18px 16px;
+  }
+  [data-theme='2'] .controls-row .play-btn {
+    min-width: 46px;
+    height: 46px;
+  }
+}
