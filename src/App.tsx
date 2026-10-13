@@ -1,9 +1,11 @@
-import { lazy, Suspense, useEffect } from 'react'
-import { BrowserRouter, Route, Routes, useLocation, useNavigate } from 'react-router-dom'
+import { lazy, Suspense, useEffect, useLayoutEffect, useRef } from 'react'
+import { BrowserRouter, Navigate, Route, Routes, useLocation, useNavigate, useNavigationType } from 'react-router-dom'
 import { ErrorBoundary } from './components/ErrorBoundary'
 import { Layout } from './components/Layout'
 import { Onboarding } from './components/Onboarding'
 import { Screensaver } from './components/Screensaver'
+import { UpdateToast } from './components/UpdateToast'
+import { resetFocus, restoreFocus, saveFocus, trackFocus } from './lib/focusMemory'
 import { initSpatialNav } from './lib/spatialNav'
 import { Detail } from './pages/Detail'
 import { Discover } from './pages/Discover'
@@ -35,9 +37,30 @@ function SpatialNav() {
   return null
 }
 
-function ScrollToTop() {
-  const { pathname } = useLocation()
-  useEffect(() => window.scrollTo(0, 0), [pathname])
+/**
+ * Scroll y foco al cambiar de pantalla. Al entrar a una nueva (PUSH) se arranca arriba, como siempre;
+ * al volver (POP, "Atrás") se restaura el scroll y el foco guardados de esa pantalla, así en la TV el
+ * cursor vuelve al póster o episodio del que saliste. Lo que se guarda es de la pantalla que se deja.
+ */
+function ScrollMemory() {
+  const location = useLocation()
+  const type = useNavigationType()
+  const prev = useRef<{ key: string; pathname: string } | undefined>(undefined)
+  useEffect(trackFocus, [])
+  // Con useLayoutEffect: antes de que la pantalla nueva enfoque algo (un autoFocus), así lo
+  // que se guarda es el foco de la pantalla que se deja.
+  useLayoutEffect(() => {
+    const before = prev.current
+    prev.current = { key: location.key, pathname: location.pathname }
+    if (before && before.key !== location.key) saveFocus(before.key)
+    if (type === 'POP') {
+      if (!restoreFocus(location.key)) window.scrollTo(0, 0)
+      return
+    }
+    resetFocus()
+    // REPLACE en la misma pantalla (ej. la búsqueda que actualiza "?q=") no mueve nada.
+    if (type === 'PUSH' || before?.pathname !== location.pathname) window.scrollTo(0, 0)
+  }, [location.key])
   return null
 }
 
@@ -45,10 +68,11 @@ export function App() {
   return (
     <BrowserRouter>
       <SpatialNav />
-      <ScrollToTop />
+      <ScrollMemory />
       <ErrorBoundary>
         <Screensaver />
         <Onboarding />
+        <UpdateToast />
         <Routes>
           <Route
             path="/watch/:type/:id"
@@ -76,7 +100,7 @@ export function App() {
             <Route path="calendar" element={<Suspense fallback={pageFallback}><Calendar /></Suspense>} />
             <Route path="settings" element={<Settings />} />
             <Route path="settings/catalogs" element={<Suspense fallback={pageFallback}><CatalogManager /></Suspense>} />
-            <Route path="*" element={<Home />} />
+            <Route path="*" element={<Navigate to="/" replace />} />
           </Route>
         </Routes>
       </ErrorBoundary>
