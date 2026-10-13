@@ -66,11 +66,19 @@ npm run preview    # sirve dist/ en http://localhost:4173
   stars, recommend, spoilers, ratings, diary, goals, yearStory. Páginas Lists, Together, Diary, Goals.
   Las listas "Top IMDb" son una aproximación (Cinemeta no tiene el Top 250). Wikipedia limita pedidos (429).
   La caché de imágenes del SW solo guarda respuestas CORS (las opacas llenaban la cuota de Chrome).
+- v0.6.0 hecha: Tema 1 / Tema 2 (`lib/theme.ts`, `theme2.css`, `components/Theme2Layout.tsx`; `data-theme="2"`
+  en `<html>`, espejo en localStorage `sp-theme`). Lo nuevo tiene que usar las variables CSS (`--bg-2`, `--accent`,
+  `--on-accent`, `--radius`…) para heredar el Tema 2; ítems de menú nuevos van también en `RAIL`/`TABS`.
+  Addons: `catalogPrefs`/`catalogRows` (Inicio y Descubrir usan `useCatalogRows`), `stremioApi` (api.strem.io con CORS).
+  TV: `platform`, `externalPlayers`, `idle`, `screensaver`, `osk`, `online`; en Ajustes `data-advanced` / `<Advanced>`
+  marca lo avanzado. El asistente inicial tapa la pantalla en un perfil nuevo: los tests de Playwright lo saltean
+  con `.ob-skip`.
+- Función 137 (temas OLED / acento / color del póster): preview en el canvas, **esperando respuesta del usuario**.
 - **Cuestionario de funciones (140)** — decisiones del usuario y plan por versiones:
   - v0.4: 9, 16, 17, 20, 27, 28, 30, 31, 33, 37, 103 (hecha).
   - v0.5 (descubrir/ficha/biblioteca, hecha): 51, 52, 56, 58, 60, 62, 66, 67, 77, 80, 89 (puntaje con **estrellas**),
     92, 97, 101, 106, 107 y la nueva 141 (al pasar por un póster, a los segundos, tráiler con subs en español).
-  - v0.6 (addons/apariencia/TV): 41, 43, 44, 47, 125, 130, 131, 134, 137, 139 + rediseño.
+  - v0.6 (addons/apariencia/TV, hecha): 41, 43, 44, 47, 125, 130, 131, 134, 137, 139 + rediseño.
     **Antes de implementar 137 (Temas) mostrar preview antes/después.**
   - Más adelante: 109 perfiles (con el login/D1), 25 subtítulos online y 57 más puntajes (cuando exista el Worker
     para las keys), 128 modo TV automático.

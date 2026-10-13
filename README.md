@@ -3,8 +3,14 @@
 Tu plataforma personal para ver pelis y series con **tus addons de Stremio**, el **puntaje de IMDb** a la vista
 y un **historial** de todo lo que viste. Funciona en la PC, el celular y el navegador de la TV (se puede instalar como app).
 
-## Qué hace (v0.5.0)
+## Qué hace (v0.6.0)
 
+- **Dos temas (v0.6)**: el clásico y el **Tema 2** (riel lateral, tarjetas redondeadas, barra abajo en el celular),
+  en Ajustes → Apariencia.
+- **Addons (v0.6)**: explorar los oficiales, activar o desactivar, gestor de catálogos (renombrar, ocultar,
+  ordenar, fusionar) e **importar desde tu cuenta de Stremio**.
+- **TV (v0.6)**: protector de pantalla, teclado en pantalla, más reproductores externos, modo sin conexión,
+  asistente inicial y Ajustes esencial/avanzado.
 - **Descubrir (v0.5)**: búsqueda al escribir, búsquedas recientes, personas y "juntos", filtros y orden,
   listas curadas (Oscar, mejor puntaje IMDb, sagas) y etiquetas clickeables en la ficha.
 - **Pósters (v0.5)**: puntaje sobre el póster, etiquetas (episodio nuevo, Top 10…) y tráiler al pasar por encima.
@@ -83,7 +89,7 @@ En Fire TV podés abrirla desde el navegador Silk mientras tanto; el empaquetado
 
 ## Roadmap
 
-- **v0.6**: addons, apariencia, temas y TV, con el rediseño (mezcla de los estilos Sala oscura, Tonal y TV).
+- **Pendiente de confirmar**: variantes del Tema 2 (negro OLED, acento a elección, color del póster).
 - **Próximo**: cuenta con código de vinculación (como Netflix) y sincronización del historial en Cloudflare (Workers + D1).
 - Importar addons desde la cuenta de Stremio.
 - App para Fire TV / Android TV.
