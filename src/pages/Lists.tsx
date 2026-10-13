@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
 import { PosterCard, PosterSkeleton } from '../components/PosterCard'
-import { Empty, ErrorBox } from '../components/Status'
+import { Empty } from '../components/Status'
 import { CURATED, curatedById, curatedPath, type CuratedDef } from '../lib/curated'
 import { curatedItemPath, loadCurated, type CuratedResult } from '../lib/discoverApi'
 import { useTitle } from '../lib/hooks'
@@ -11,6 +11,9 @@ import { useTmdbKey } from '../lib/tmdb'
 import { errorText } from '../lib/errors'
 
 // Listas curadas (v0.5): índice en /lists y cada lista en /lists/:id.
+
+/** A partir de cuánto se avisa que la lista está tardando. */
+const SLOW_AFTER_MS = 8000
 
 function toggleHomeRow(id: string) {
   settingsStore.set((s) => {
@@ -72,19 +75,26 @@ export function ListPage() {
   const [state, setState] = useState<{ id: string; data?: CuratedResult; error?: string }>()
   const blocked = !!def?.needsTmdb && !tmdbOn
   const [attempt, setAttempt] = useState(0)
+  // Pasados unos segundos sin respuesta (Wikidata, para los Oscar, puede tardar mucho) se avisa.
+  const [slow, setSlow] = useState(false)
 
   useEffect(() => {
     if (!def || blocked) return
     let alive = true
+    setSlow(false)
+    const timer = setTimeout(() => alive && setSlow(true), SLOW_AFTER_MS)
     loadCurated(id)
       .then((data) => alive && setState({ id, data }))
       .catch((err: unknown) => alive && setState({ id, error: errorText(err) }))
+      .finally(() => clearTimeout(timer))
     return () => {
       alive = false
+      clearTimeout(timer)
     }
   }, [id, blocked, attempt])
 
   const current = state?.id === id ? state : undefined
+  const pending = !!def && !blocked && !current
   const title = current?.data?.title ?? def?.title
   useTitle(title)
 
@@ -114,10 +124,24 @@ export function ListPage() {
         <HomeToggle id={id} />
       </header>
       {current?.error && (
-        <ErrorBox message={`No se pudo cargar la lista: ${current.error}`} onRetry={() => {
-          setState(undefined)
-          setAttempt((n) => n + 1)
-        }} />
+        <div className="error-box" role="alert">
+          <p>No se pudo cargar la lista: {current.error}</p>
+          <button
+            type="button"
+            className="btn"
+            onClick={() => {
+              setState(undefined)
+              setAttempt((n) => n + 1)
+            }}
+          >
+            Probar de nuevo
+          </button>
+        </div>
+      )}
+      {pending && slow && (
+        <p className="muted small" role="status">
+          Está tardando más de lo normal… Esta lista se arma con datos de internet que a veces responden lento.
+        </p>
       )}
       <div className="grid">
         {items
@@ -130,7 +154,7 @@ export function ListPage() {
                 subtitle={ranked ? [`#${i + 1}`, m.releaseInfo].filter(Boolean).join(' · ') : undefined}
               />
             ))
-          : !current?.error && Array.from({ length: 18 }, (_, i) => <PosterSkeleton key={i} />)}
+          : pending && Array.from({ length: 18 }, (_, i) => <PosterSkeleton key={i} />)}
       </div>
       {items && items.length === 0 && <Empty>La lista está vacía por ahora.</Empty>}
     </div>
