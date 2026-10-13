@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import { useParams, useSearchParams } from 'react-router-dom'
 import { PosterCard, PosterSkeleton } from '../components/PosterCard'
 import { ErrorBox } from '../components/Status'
+import { offlineMessage } from '../lib/online'
 import { browsableCatalogs, getCatalog } from '../lib/addons'
 import { useAddons, useTitle } from '../lib/hooks'
 import { catalogLabel, genreLabel, typeLabel } from '../lib/i18n'
@@ -111,7 +112,7 @@ export function Discover() {
         </div>
       </header>
 
-      {error && items.length === 0 && <ErrorBox message={`No se pudo cargar el catálogo: ${error}`} onRetry={() => loadPage(0)} />}
+      {error && items.length === 0 && <ErrorBox message={offlineMessage('este catálogo no está guardado') ?? `No se pudo cargar el catálogo: ${error}`} onRetry={() => loadPage(0)} />}
 
       <div className="grid">
         {items.map((m, i) => (

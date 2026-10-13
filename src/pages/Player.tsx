@@ -4,10 +4,12 @@ import { Navigate, useLocation, useNavigate } from 'react-router-dom'
 import { PauseCast } from '../components/PauseCast'
 import { creditsPlan } from '../lib/credits'
 import { saveDataOn } from '../lib/dataSaver'
+import { androidIntent, externalLaunch } from '../lib/externalPlayers'
 import { episodeLabel, formatTime, isHls } from '../lib/format'
 import { useTitle } from '../lib/hooks'
 import { langLabel } from '../lib/i18n'
 import { findNextStream, prefetchNextStreams } from '../lib/nextEpisode'
+import { currentPlatform } from '../lib/platform'
 import { getSegments, imdbIdOf, type Segment, type Segments } from '../lib/segments'
 import { progressStore, rememberTracks, saveProgress, settingsStore, trackPrefsStore, useStore } from '../lib/store'
 import { audioPrefs, guessAudioLang, lang3, langRank, subtitleClasses } from '../lib/subtitlePrefs'
@@ -53,12 +55,6 @@ const readAutoCount = () => Number(sessionGet(AUTONEXT_KEY)) || 0
 
 const isAndroid = () => /android/i.test(navigator.userAgent)
 const isIOS = () => /iphone|ipad|ipod/i.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1)
-
-function androidIntent(url: string, pkg?: string) {
-  const noScheme = url.replace(/^https?:\/\//, '')
-  const scheme = url.startsWith('https') ? 'https' : 'http'
-  return `intent://${noScheme}#Intent;scheme=${scheme};type=video/*;${pkg ? `package=${pkg};` : ''}end`
-}
 
 function externalPlayerUrl(url: string) {
   // En Android/Fire TV abre el selector de reproductores (VLC, MX Player, Just Player...).
@@ -491,19 +487,18 @@ function PlayerView({ state, resume }: { state: PlayState; resume?: Resume }) {
     const url = state.playUrl
     videoRef.current?.pause()
     persist()
-    if (settings.externalPlayer === 'vlc') {
-      // Se copia igual por si VLC no está instalado o el navegador bloquea el esquema.
-      const copying = copyText(url)
-      launchUrl(isAndroid() ? androidIntent(url, 'org.videolan.vlc') : `vlc://${url}`)
-      copying.then((ok) => flash(ok ? 'Abriendo VLC… Si no abre, el enlace ya está copiado: pegalo en VLC' : 'Abriendo VLC…'))
+    // Cada reproductor arma su enlace o intent según el sistema (lib/externalPlayers.ts).
+    const launch = externalLaunch(settings.externalPlayer, url, currentPlatform().os, state.meta.name)
+    if (!launch.href) {
+      copyText(url).then((ok) => flash(ok ? 'Enlace copiado: pegalo en tu reproductor' : 'No se pudo copiar el enlace'))
       return
     }
-    const intent = externalPlayerUrl(url)
-    if (intent) {
-      window.location.href = intent
-      return
-    }
-    copyText(url).then((ok) => flash(ok ? 'Enlace copiado: pegalo en VLC' : 'No se pudo copiar el enlace'))
+    // Se copia igual por si la app no está instalada o el navegador bloquea el esquema.
+    const copying = launch.copy ? copyText(url) : Promise.resolve(false)
+    launchUrl(launch.href)
+    copying.then((ok) =>
+      flash(ok ? `Abriendo ${launch.label}… Si no abre, el enlace ya está copiado: pegalo en tu reproductor` : `Abriendo ${launch.label}…`),
+    )
   }
 
   // ---------- Cambiar de fuente ----------
@@ -906,7 +901,7 @@ function PlayerView({ state, resume }: { state: PlayState; resume?: Resume }) {
             ☾{sleep.kind === 'time' ? ` ${sleepMinutesLeft} min` : sleep.kind === 'episode' ? ' Fin' : ''}
           </button>
           {settings.externalPlayer !== 'none' && (
-            <button onClick={openExternal} aria-label={settings.externalPlayer === 'vlc' ? 'Abrir en VLC' : 'Abrir en otro reproductor'}>
+            <button onClick={openExternal} aria-label={`Abrir en ${externalLaunch(settings.externalPlayer, state.playUrl, currentPlatform().os).label}`}>
               Abrir en…
             </button>
           )}

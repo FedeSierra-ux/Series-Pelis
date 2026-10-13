@@ -1,4 +1,6 @@
 import { useRef, useState } from 'react'
+import { Advanced } from '../components/Advanced'
+import { KeyboardToggle } from '../components/OnScreenKeyboard'
 import { CINEMETA_URL, normalizeManifestUrl } from '../lib/addons'
 import { clearCache } from '../lib/cache'
 import { useAddons, useTitle } from '../lib/hooks'
@@ -14,6 +16,7 @@ import {
 import { PlayerSettings } from './settings/PlayerSettings'
 import { SourceSettings } from './settings/SourceSettings'
 import { TmdbSettings } from './settings/TmdbSettings'
+import { TvSettings } from './settings/TvSettings'
 
 const DEFAULT_SERVER = 'http://127.0.0.1:11470'
 
@@ -23,8 +26,8 @@ function AddonsSection() {
   const [busy, setBusy] = useState(false)
   const [msg, setMsg] = useState<{ ok: boolean; text: string }>()
 
-  const add = async (e: React.FormEvent) => {
-    e.preventDefault()
+  const add = async (e?: React.FormEvent) => {
+    e?.preventDefault()
     if (!url.trim()) return
     setBusy(true)
     setMsg(undefined)
@@ -59,6 +62,7 @@ function AddonsSection() {
           {busy ? 'Agregando…' : 'Agregar'}
         </button>
       </form>
+      <KeyboardToggle value={url} onChange={setUrl} onDone={() => add()} doneLabel="Agregar" label="Teclado para la URL del addon" />
       {msg && <p className={msg.ok ? 'ok' : 'error-text'}>{msg.text}</p>}
 
       <ul className="addon-list">
@@ -143,6 +147,7 @@ function PlaybackSection() {
       </label>
 
 
+      <Advanced>
       <h3>Servidor de streaming de Stremio (opcional, experimental)</h3>
       <p className="muted">
         Solo en la PC: si tenés Stremio abierto, la app puede usar su servidor local para reproducir torrents sin debrid.
@@ -161,6 +166,7 @@ function PlaybackSection() {
         </button>
       </div>
       {test && <p className="muted">{test}</p>}
+      </Advanced>
     </section>
   )
 }
@@ -203,6 +209,7 @@ function DataSection() {
         </button>
         <button
           className="btn"
+          data-advanced
           onClick={async () => {
             await clearCache()
             setMsg('✓ Caché de catálogos borrada')
@@ -225,17 +232,23 @@ function DataSection() {
 
 export function Settings() {
   useTitle('Ajustes')
+  const { showAdvanced } = useStore(settingsStore)
   return (
-    <div className="page settings">
+    <div className={`page settings${showAdvanced ? ' show-advanced' : ''}`}>
       <header className="page-header">
         <h1>Ajustes</h1>
         <span className="muted small">Versión {__APP_VERSION__}</span>
       </header>
+      <label className="check settings-advanced-toggle">
+        <input type="checkbox" checked={showAdvanced} onChange={(e) => settingsStore.set((s) => ({ ...s, showAdvanced: e.target.checked }))} />
+        Mostrar opciones avanzadas
+      </label>
       <AddonsSection />
       <TmdbSettings />
       <PlaybackSection />
       <PlayerSettings />
       <SourceSettings />
+      <TvSettings />
       <DataSection />
     </div>
   )

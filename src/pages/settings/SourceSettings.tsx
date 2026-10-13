@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { Advanced } from '../../components/Advanced'
 import { settingsStore, useStore, type SourceRules } from '../../lib/store'
 
 const QUALITY_OPTIONS: { value: SourceRules['preferredQuality']; label: string }[] = [
@@ -102,6 +103,7 @@ export function SourceSettings() {
         </select>
       </label>
 
+      <Advanced>
       <KeywordsField
         label="Palabras que prefiero (separadas por coma)"
         placeholder="latino, dual, castellano"
@@ -155,6 +157,7 @@ export function SourceSettings() {
         <input type="checkbox" checked={rules.dedupe} onChange={(e) => setRules({ dedupe: e.target.checked })} />
         Ocultar repetidos (el mismo archivo en varios addons)
       </label>
+      </Advanced>
     </section>
   )
 }

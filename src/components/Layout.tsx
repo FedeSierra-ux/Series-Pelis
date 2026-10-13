@@ -1,4 +1,5 @@
 import { NavLink, Outlet } from 'react-router-dom'
+import { OfflineBanner } from './OfflineBanner'
 
 // En el celular entran 7 ítems abajo: "Calendario" se oculta ahí y se llega desde Historial.
 const LINKS: { to: string; label: string; icon: string; end?: boolean; desktopOnly?: boolean }[] = [
@@ -32,6 +33,7 @@ export function Layout() {
         </div>
       </nav>
       <main className="main">
+        <OfflineBanner />
         <Outlet />
       </main>
     </div>

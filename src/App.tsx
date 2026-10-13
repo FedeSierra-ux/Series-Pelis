@@ -1,6 +1,8 @@
 import { lazy, Suspense, useEffect } from 'react'
 import { BrowserRouter, Route, Routes, useLocation, useNavigate } from 'react-router-dom'
 import { Layout } from './components/Layout'
+import { Onboarding } from './components/Onboarding'
+import { Screensaver } from './components/Screensaver'
 import { initSpatialNav } from './lib/spatialNav'
 import { Detail } from './pages/Detail'
 import { Discover } from './pages/Discover'
@@ -36,6 +38,8 @@ export function App() {
     <BrowserRouter>
       <SpatialNav />
       <ScrollToTop />
+      <Screensaver />
+      <Onboarding />
       <Routes>
         <Route
           path="/watch/:type/:id"
