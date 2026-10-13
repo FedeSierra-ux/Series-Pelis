@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState, type FormEvent, type MouseEvent } from 'react'
 import { Link, useSearchParams } from 'react-router-dom'
+import { EmptyState } from '../components/EmptyState'
 import { KeyboardToggle } from '../components/OnScreenKeyboard'
 import { PosterCard, PosterSkeleton } from '../components/PosterCard'
 import { PeopleRow, PersonAvatar } from '../components/PeopleRow'
@@ -89,6 +90,8 @@ export function Search() {
 
   const people = usePeople(query, tmdbOn)
   const together = useTogether(query, tmdbOn)
+  // Sin ningún catálogo con búsqueda (ej. Cinemeta apagado) no hay dónde buscar: se avisa en vez de "no encontramos nada".
+  const canSearch = useMemo(() => searchableCatalogs(addons).length > 0, [addons])
 
   useEffect(() => {
     setParams(query ? { q: query } : {}, { replace: true })
@@ -270,8 +273,20 @@ export function Search() {
             </section>
           ))}
       </div>
-      {noResults && online && <div className="empty">No encontramos nada para “{query}”.</div>}
-      {showRecents && recents.length === 0 && <div className="empty muted">Escribí al menos 2 letras.</div>}
+      {!canSearch && (
+        <EmptyState
+          icon="search"
+          title="Ningún addon activo permite buscar"
+          text="Activá Cinemeta u otro addon con búsqueda en Ajustes."
+          action={{ label: 'Ir a Ajustes', to: '/settings' }}
+        />
+      )}
+      {canSearch && noResults && online && (
+        <EmptyState icon="search" title={`No encontramos nada para “${query}”`} text="Probá con otro nombre o con menos palabras." />
+      )}
+      {canSearch && showRecents && recents.length === 0 && (
+        <EmptyState icon="search" title="Escribí al menos 2 letras" text="Buscá por película, serie o persona." />
+      )}
     </div>
   )
 }

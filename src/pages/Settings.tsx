@@ -217,7 +217,12 @@ function DataSection() {
           type="file"
           accept="application/json"
           hidden
-          onChange={(e) => e.target.files?.[0] && upload(e.target.files[0])}
+          onChange={(e) => {
+            const file = e.target.files?.[0]
+            // Se vacía para que elegir el mismo archivo dos veces seguidas vuelva a importar.
+            e.target.value = ''
+            if (file) upload(file)
+          }}
         />
       </div>
       {msg && <p className="muted">{msg}</p>}

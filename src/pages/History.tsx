@@ -1,7 +1,8 @@
 import { useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { UserStars } from '../components/StarRating'
-import { Empty } from '../components/Status'
+import { EmptyState } from '../components/EmptyState'
+import { Theme2Icon } from '../components/Theme2Icons'
 import { dayLabel, episodeLabel, formatTime, smallPoster } from '../lib/format'
 import { useTitle } from '../lib/hooks'
 import { typeLabel } from '../lib/i18n'
@@ -66,13 +67,16 @@ export function History() {
         </div>
         <div className="history-actions">
           <Link to="/history/year" className="btn btn-primary">
-            ✨ Tu año {new Date().getFullYear()}
+            <Theme2Icon name="sparkles" size={20} />
+            Tu año {new Date().getFullYear()}
           </Link>
           <Link to="/calendar" className="btn">
-            📅 Calendario
+            <Theme2Icon name="calendar" size={20} />
+            Calendario
           </Link>
           <Link to="/history/diary" className="btn">
-            📔 Diario
+            <Theme2Icon name="book" size={20} />
+            Diario
           </Link>
           <GoalLink />
         </div>
@@ -87,11 +91,17 @@ export function History() {
         <input className="filter-input" type="search" placeholder="Filtrar…" value={query} onChange={(e) => setQuery(e.target.value)} />
       </div>
 
-      {entries.length === 0 && (
-        <Empty>
-          {all.length === 0 ? 'Todavía no viste nada. Lo que reproduzcas aparece acá.' : 'No hay nada con ese filtro.'}
-        </Empty>
-      )}
+      {entries.length === 0 &&
+        (all.length === 0 ? (
+          <EmptyState
+            icon="history"
+            title="Todavía no viste nada"
+            text="Lo que reproduzcas aparece acá, con el punto en el que lo dejaste."
+            action={{ label: 'Ir a Inicio', to: '/' }}
+          />
+        ) : (
+          <EmptyState icon="history" title="No hay nada con ese filtro" text="Probá con otro filtro o borrá lo que escribiste." />
+        ))}
 
       {byDay.map((g) => (
         <section key={g.day} className="history-day">

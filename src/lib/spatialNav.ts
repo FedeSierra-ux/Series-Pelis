@@ -1,6 +1,8 @@
 // Navegación con las flechas del control remoto (Fire TV, Android TV, navegador de la TV).
 // Busca el elemento enfocable más cercano en la dirección pedida y le pasa el foco.
 
+import { restoredElement } from './focusMemory'
+
 type Dir = 'up' | 'down' | 'left' | 'right'
 
 const KEYS: Record<string, Dir> = {
@@ -34,6 +36,9 @@ function initialTarget(els: HTMLElement[]): HTMLElement | undefined {
   if (document.querySelector('[data-nav-scope]')) return els[0]
   const main = document.querySelector('main')
   if (!main) return els[0]
+  // Al volver con "Atrás", el póster o episodio del que saliste tiene prioridad.
+  const restored = restoredElement()
+  if (restored && els.includes(restored)) return restored
   const marked = Array.from(main.querySelectorAll<HTMLElement>('[data-autofocus]')).find(isVisible)
   return marked ?? els.find((el) => main.contains(el)) ?? els[0]
 }
@@ -97,7 +102,9 @@ export function initSpatialNav(onBack: () => void) {
     const active = document.activeElement
     if (BACK_KEYS.has(e.key)) {
       if (e.key === 'Backspace' && isTextInput(active)) return
-      if (e.key === 'Escape' && isTextInput(active)) {
+      // Un <select> nativo o un campo de texto: "Atrás" lo suelta, no se va de la página.
+      if (active instanceof HTMLSelectElement || (e.key === 'Escape' && isTextInput(active))) {
+        e.preventDefault()
         ;(active as HTMLElement).blur()
         return
       }
@@ -110,6 +117,8 @@ export function initSpatialNav(onBack: () => void) {
     if (!dir) return
     if ((dir === 'left' || dir === 'right') && isTextInput(active) && !caretAtEdge(active as HTMLInputElement, dir)) return
     if (active instanceof HTMLSelectElement) return
+    // Dentro de una lista desplegada (el Picker) las flechas las maneja la lista.
+    if (active?.closest('[role="listbox"]')) return
 
     const els = candidates()
     const from =
@@ -118,7 +127,8 @@ export function initSpatialNav(onBack: () => void) {
     if (next) {
       e.preventDefault()
       next.focus({ preventScroll: true })
-      next.scrollIntoView({ block: 'nearest', inline: 'nearest', behavior: 'smooth' })
+      // Centrado: el póster del borde no queda cortado ni tapado por la barra de arriba.
+      next.scrollIntoView({ block: 'center', inline: 'center', behavior: 'smooth' })
     }
   }
   window.addEventListener('keydown', handler)

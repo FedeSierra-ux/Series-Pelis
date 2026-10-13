@@ -5,7 +5,9 @@ import {
   filterReason,
   hasKeyword,
   isHdr,
+  looksLikeFilename,
   nameKey,
+  needsProxyHeaders,
   parseCodec,
   parseQuality,
   parseSize,
@@ -72,6 +74,33 @@ describe('playable', () => {
     expect(playable({ infoHash: 'abc' }, '').url).toBeUndefined()
     expect(playable({ infoHash: 'abc', fileIdx: 2 }, 'http://127.0.0.1:11470/').url).toBe('http://127.0.0.1:11470/abc/2')
     expect(playable({ ytId: 'xyz' }, '').external).toContain('xyz')
+  })
+
+  it('los streams que piden cabeceras especiales no se reproducen en la app', () => {
+    const p = playable({ url: 'https://cdn.example/v.mp4', behaviorHints: { proxyHeaders: { request: { Referer: 'https://x' } } } }, '')
+    expect(p.url).toBeUndefined()
+    expect(p.external).toBeUndefined()
+    expect(p.reason).toContain('reproductor externo')
+    // Un mapa vacío no cuenta.
+    expect(playable({ url: 'https://cdn.example/v.mp4', behaviorHints: { proxyHeaders: { request: {} } } }, '').url).toBe('https://cdn.example/v.mp4')
+    expect(needsProxyHeaders({ url: 'x', behaviorHints: { proxyHeaders: { response: { 'content-type': 'video/mp4' } } } })).toBe(true)
+  })
+
+  it('con cabeceras especiales el stream va al grupo de no reproducibles', () => {
+    const groups = [group(A, [s('1080p', { behaviorHints: { proxyHeaders: { request: { Origin: 'https://x' } } } }), s('720p')])]
+    expect(rankStreams(groups, rules(), undefined, '').map((r) => r.stream.name)).toEqual(['720p'])
+  })
+})
+
+describe('looksLikeFilename', () => {
+  it('distingue nombres de archivo de etiquetas genéricas', () => {
+    expect(looksLikeFilename('Peli.2020.1080p.WEB-DL.x264.mkv')).toBe(true)
+    expect(looksLikeFilename('Peli.2020.1080p.WEB')).toBe(true)
+    expect(looksLikeFilename('Una peli con nombre largo - 1080p WEB-DL')).toBe(true)
+    expect(looksLikeFilename('Latino 1080p')).toBe(false)
+    expect(looksLikeFilename('Español Latino')).toBe(false)
+    expect(looksLikeFilename('1080p · Dual')).toBe(false)
+    expect(looksLikeFilename('')).toBe(false)
   })
 })
 
@@ -201,6 +230,21 @@ describe('filtros avanzados', () => {
     expect(hidden.get(streamKey(1, 0))).toBe('Repetido')
     // Sin la opción, quedan todos.
     expect(analyzeStreams(groups, rules({ dedupe: false }), undefined, '').hidden.size).toBe(0)
+  })
+
+  it('dos archivos distintos con etiqueta genérica y el mismo tamaño no son repetidos', () => {
+    const groups = [
+      group(A, [{ name: 'Uno 1080p', title: 'Latino 1080p\n💾 2 GB', url: 'https://a.example/1' }]),
+      group(B, [
+        { name: 'Dos 1080p', title: 'Latino 1080p\n💾 2 GB', url: 'https://b.example/2' },
+        // Con nombre de archivo del addon sí se reconoce el repetido.
+        { name: 'Dos 1080p', title: 'Latino 1080p\n💾 2 GB', url: 'https://b.example/3', behaviorHints: { filename: 'Peli.2020.1080p.mkv' } },
+        { name: 'Dos 1080p', title: 'Latino 1080p\n💾 2 GB', url: 'https://b.example/4', behaviorHints: { filename: 'Peli.2020.1080p.mkv' } },
+      ]),
+    ]
+    const { ranked, hidden } = analyzeStreams(groups, rules(), undefined, '')
+    expect(ranked.map((x) => x.stream.url)).toEqual(['https://a.example/1', 'https://b.example/2', 'https://b.example/3'])
+    expect([...hidden.keys()]).toEqual([streamKey(1, 2)])
   })
 
   it('entre dos repetidos queda el que se reproduce mejor', () => {

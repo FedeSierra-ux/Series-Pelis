@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { Advanced } from '../../components/Advanced'
+import { Picker } from '../../components/Picker'
 import { settingsStore, useStore, type SourceRules } from '../../lib/store'
 
 const QUALITY_OPTIONS: { value: SourceRules['preferredQuality']; label: string }[] = [
@@ -89,19 +90,14 @@ export function SourceSettings() {
         Recordar la última fuente de cada título y volver a usarla
       </label>
 
-      <label className="source-field">
-        <span>Calidad preferida</span>
-        <select
+      <div className="source-field">
+        <Picker
+          label="Calidad preferida"
           value={rules.preferredQuality}
-          onChange={(e) => setRules({ preferredQuality: e.target.value as SourceRules['preferredQuality'] })}
-        >
-          {QUALITY_OPTIONS.map((o) => (
-            <option key={o.value} value={o.value}>
-              {o.label}
-            </option>
-          ))}
-        </select>
-      </label>
+          options={QUALITY_OPTIONS}
+          onChange={(v) => setRules({ preferredQuality: v as SourceRules['preferredQuality'] })}
+        />
+      </div>
 
       <Advanced>
       <KeywordsField
@@ -122,16 +118,14 @@ export function SourceSettings() {
         Los streams que no pasan estos filtros no se eligen solos y en la ficha quedan aparte, en “Ocultos por tus filtros”
         (los podés ver y reproducir igual).
       </p>
-      <label className="source-field">
-        <span>Tamaño máximo</span>
-        <select value={rules.maxSizeGB} onChange={(e) => setRules({ maxSizeGB: Number(e.target.value) })}>
-          {SIZE_OPTIONS.map((gb) => (
-            <option key={gb} value={gb}>
-              {gb ? `${gb} GB` : 'Sin límite'}
-            </option>
-          ))}
-        </select>
-      </label>
+      <div className="source-field">
+        <Picker
+          label="Tamaño máximo"
+          value={String(rules.maxSizeGB)}
+          options={SIZE_OPTIONS.map((gb) => ({ value: String(gb), label: gb ? `${gb} GB` : 'Sin límite' }))}
+          onChange={(v) => setRules({ maxSizeGB: Number(v) })}
+        />
+      </div>
       {CODECS.map((c) => (
         <label key={c.value} className="check">
           <input

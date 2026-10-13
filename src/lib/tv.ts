@@ -11,3 +11,19 @@ export function useTvMode(): boolean {
 export function useShowAdvanced(): boolean {
   return useStore(settingsStore).showAdvanced
 }
+
+/**
+ * Marca `<html data-tv>` cuando la interfaz es para TV (ajuste manual o detección) y la mantiene
+ * al día cuando cambia el ajuste. El CSS agranda letras y controles bajo `html[data-tv]`
+ * (se mira a 3 metros). Devuelve la función para dejar de escuchar.
+ */
+export function syncTvAttr(): () => void {
+  const apply = () => {
+    const tv = resolveTvMode(settingsStore.get().tvMode, currentPlatform().tv)
+    const root = document.documentElement
+    if (tv) root.dataset.tv = ''
+    else delete root.dataset.tv
+  }
+  apply()
+  return settingsStore.subscribe(apply)
+}

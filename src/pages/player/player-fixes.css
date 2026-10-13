@@ -1,0 +1,35 @@
+/* Arreglos del reproductor (v0.9): tarjeta de error con contexto y versión para la TV. */
+
+/* Título y episodio arriba del mensaje, para saber qué era lo que no cargó. */
+.player-error-heading {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  max-width: 100%;
+  font-family: var(--font-display, inherit);
+}
+.player-error-heading strong {
+  font-size: 1.25em;
+  line-height: 1.25;
+  overflow-wrap: anywhere;
+}
+.player-error-heading span {
+  color: var(--muted, rgba(255, 255, 255, 0.72));
+  font-size: 0.95em;
+}
+
+/* En la TV se mira de lejos: tarjeta más grande y letra más legible. */
+.player-error-tv .player-error-card {
+  width: min(720px, 100%);
+  max-width: 720px;
+  padding: 34px 32px;
+  gap: 18px;
+  font-size: 1.2rem;
+}
+.player-error.player-error-tv p {
+  font-size: 1.2rem;
+}
+.player-error-tv .player-error-icon {
+  width: 80px;
+  height: 80px;
+}

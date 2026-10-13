@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { normalizeManifestUrl } from '../lib/addons'
-import { errorText } from '../lib/errors'
+import { addonUrlProblem, errorText } from '../lib/errors'
 import { installAddon, setAddonEnabled } from '../lib/store'
 import { KeyboardToggle } from './OnScreenKeyboard'
 
@@ -28,6 +28,11 @@ export function AddonUrlForm({ disableEmpty }: { disableEmpty?: boolean }) {
     setMsg(undefined)
     try {
       const transportUrl = normalizeManifestUrl(url)
+      const problem = addonUrlProblem(transportUrl)
+      if (problem) {
+        setMsg({ ok: false, text: problem })
+        return
+      }
       const { manifest, status } = await installAddon(transportUrl)
       if (status === 'disabled') {
         setMsg({ ok: true, text: `“${manifest.name}” ya estaba instalado y está apagado, así que sigue apagado.`, enableUrl: transportUrl })

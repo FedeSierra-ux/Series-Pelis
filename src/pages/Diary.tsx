@@ -1,7 +1,8 @@
 import { useMemo, useState, type ReactNode } from 'react'
 import { Link } from 'react-router-dom'
 import { UserStars } from '../components/StarRating'
-import { Empty } from '../components/Status'
+import { EmptyState } from '../components/EmptyState'
+import { Theme2Icon } from '../components/Theme2Icons'
 import { smallPoster } from '../lib/format'
 import { episodesLabel, groupDiary, type DiaryFilter, type DiaryItem } from '../lib/diary'
 import { yearCounts } from '../lib/goals'
@@ -124,17 +125,22 @@ export function Diary({ renderRating = (i) => <UserStars id={i.metaId} /> }: Dia
           </button>
         ))}
         <Link to="/history/goals" className="btn btn-small">
-          🏆 Metas y logros
+          <Theme2Icon name="trophy" size={20} />
+          Metas y logros
         </Link>
       </div>
 
-      {months.length === 0 && (
-        <Empty>
-          {all.length === 0
-            ? 'Tu diario está vacío. Cada vez que termines una peli o un episodio se anota acá, con la fecha.'
-            : 'No hay nada con ese filtro.'}
-        </Empty>
-      )}
+      {months.length === 0 &&
+        (all.length === 0 ? (
+          <EmptyState
+            icon="book"
+            title="Tu diario está vacío"
+            text="Cada vez que termines una peli o un episodio se anota acá, con la fecha."
+            action={{ label: 'Ir al historial', to: '/history' }}
+          />
+        ) : (
+          <EmptyState icon="book" title="No hay nada con ese filtro" text="Probá con “Todo” para ver el diario completo." />
+        ))}
 
       {months.slice(0, shown).map((m) => {
         const label = new Date(m.year, m.month, 1).toLocaleDateString('es-AR', { month: 'long', year: 'numeric' })

@@ -1,5 +1,6 @@
 import { useMemo, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
+import { Picker } from '../components/Picker'
 import { DEFAULT_CATALOG_PREFS, mergeRows, moveRow, renameRow, setRowHidden, splitMerge, type CatalogRowDef } from '../lib/catalogPrefs'
 import { defaultCatalogLabel, updateCatalogPrefs, useCatalogRows } from '../lib/catalogRows'
 import { useTitle } from '../lib/hooks'
@@ -107,7 +108,7 @@ function CatalogItem({
   const [editing, setEditing] = useState(false)
   const [draft, setDraft] = useState(row.name)
   const [merging, setMerging] = useState(false)
-  const [target, setTarget] = useState('')
+  const actionsRef = useRef<HTMLDivElement>(null)
 
   const save = (e: React.FormEvent) => {
     e.preventDefault()
@@ -116,11 +117,10 @@ function CatalogItem({
     onStatus('Nombre guardado')
   }
 
-  const merge = () => {
+  const merge = (target: string) => {
     if (!target) return
     updateCatalogPrefs((p) => mergeRows(p, rows, row.key, target).prefs)
     setMerging(false)
-    setTarget('')
     onStatus('Catálogos fusionados')
   }
 
@@ -158,7 +158,7 @@ function CatalogItem({
             </span>
           )}
         </div>
-        <div className="catalog-item-actions">
+        <div ref={actionsRef} className="catalog-item-actions">
           <button className="btn btn-ghost" data-move="up" disabled={first} onClick={() => onMove(-1)} aria-label={`Subir “${row.name}”`}>
             ↑
           </button>
@@ -192,13 +192,13 @@ function CatalogItem({
             </button>
           )}
           {row.merged ? (
-            <button className="btn btn-ghost" onClick={() => updateCatalogPrefs((p) => splitMerge(p, rows, row.key))}>
+            <button className="btn btn-ghost" data-merge-btn onClick={() => updateCatalogPrefs((p) => splitMerge(p, rows, row.key))}>
               Separar
             </button>
           ) : (
             candidates.length > 0 &&
             !merging && (
-              <button className="btn btn-ghost" onClick={() => setMerging(true)}>
+              <button className="btn btn-ghost" data-merge-btn onClick={() => setMerging(true)}>
                 Fusionar…
               </button>
             )
@@ -207,17 +207,26 @@ function CatalogItem({
       </div>
       {merging && (
         <div className="inline-form catalog-merge">
-          <select value={target} onChange={(e) => setTarget(e.target.value)} aria-label={`Fusionar “${row.name}” con`} autoFocus>
-            <option value="">Fusionar con…</option>
-            {candidates.map((c) => (
-              <option key={c.key} value={c.key}>
-                {c.name} ({[...new Set(c.sources.map((s) => s.addon.manifest.name))].join(', ')})
-              </option>
-            ))}
-          </select>
-          <button className="btn btn-primary btn-small" disabled={!target} onClick={merge}>
-            Fusionar
-          </button>
+          {/* Se abre solo: elegir una fila ya fusiona (se deshace con "Separar"); Atrás cancela. */}
+          <Picker
+            label={`Fusionar “${row.name}” con`}
+            value=""
+            placeholder="Elegí una fila…"
+            autoOpen
+            options={candidates.map((c) => ({
+              value: c.key,
+              label: `${c.name} (${[...new Set(c.sources.map((s) => s.addon.manifest.name))].join(', ')})`,
+            }))}
+            onChange={merge}
+            onClose={() => {
+              setMerging(false)
+              // El foco vuelve a los botones de la fila (el Picker ya no existe para recibirlo).
+              requestAnimationFrame(() => {
+                const a = actionsRef.current
+                ;(a?.querySelector<HTMLButtonElement>('[data-merge-btn]') ?? a?.querySelector<HTMLButtonElement>('button:not([disabled])'))?.focus({ preventScroll: true })
+              })
+            }}
+          />
           <button className="btn btn-small" onClick={() => setMerging(false)}>
             Cancelar
           </button>

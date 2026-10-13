@@ -1,13 +1,19 @@
-import { Component, type ErrorInfo, type ReactNode } from 'react'
+import { Component, useEffect, useState, type ErrorInfo, type ReactNode } from 'react'
 import { useLocation } from 'react-router-dom'
+import { isChunkLoadError, isOffline } from '../lib/errors'
 
-type Props = { children: ReactNode }
-type State = { error: Error | null; stack: string }
+type Props = { children: ReactNode; pathname: string }
+type State = { error: Error | null; stack: string; pathname: string }
 
 // Si una pantalla tira un error al dibujarse, React desmonta todo y queda la pantalla en negro.
 // Esto la reemplaza por un aviso con el error (para poder reportarlo) y botones para salir.
 class Boundary extends Component<Props, State> {
-  state: State = { error: null, stack: '' }
+  state: State = { error: null, stack: '', pathname: this.props.pathname }
+
+  // Al cambiar de página se saca el aviso de error, aunque lo de adentro siga montado.
+  static getDerivedStateFromProps(props: Props, state: State): Partial<State> | null {
+    return props.pathname === state.pathname ? null : { error: null, stack: '', pathname: props.pathname }
+  }
 
   static getDerivedStateFromError(error: unknown): Partial<State> {
     return { error: error instanceof Error ? error : new Error(String(error)) }
@@ -21,6 +27,7 @@ class Boundary extends Component<Props, State> {
   render() {
     const { error, stack } = this.state
     if (!error) return this.props.children
+    if (isChunkLoadError(error)) return <ChunkErrorScreen />
     return <ErrorScreen error={error} componentStack={stack} />
   }
 }
@@ -35,6 +42,59 @@ export function errorDetail(error: Error, componentStack = ''): string {
   ]
     .filter(Boolean)
     .join('\n')
+}
+
+/** Sigue si hay conexión o no (para cambiar el aviso sin recargar). */
+function useOnline() {
+  const [online, setOnline] = useState(() => !isOffline())
+  useEffect(() => {
+    const update = () => setOnline(!isOffline())
+    window.addEventListener('online', update)
+    window.addEventListener('offline', update)
+    return () => {
+      window.removeEventListener('online', update)
+      window.removeEventListener('offline', update)
+    }
+  }, [])
+  return online
+}
+
+/**
+ * Una parte de la app (una pantalla que se baja aparte) no se pudo descargar. Sin conexión no es un error
+ * de la app: falta bajarla. Con conexión suele ser una versión nueva publicada: recargar la trae.
+ */
+function ChunkErrorScreen() {
+  const online = useOnline()
+  const [stillOffline, setStillOffline] = useState(false)
+  const retry = () => {
+    if (isOffline()) setStillOffline(true)
+    else location.reload()
+  }
+  return (
+    <div className="page error-screen" role="alert">
+      <h1>{online ? 'Falta una parte de la app' : 'Sin conexión'}</h1>
+      <p className="muted">
+        {online
+          ? 'Esta parte de la app no se pudo descargar. Recargá para traerla de nuevo.'
+          : 'Esta parte de la app todavía no se descargó. Conectate y probá de nuevo.'}
+      </p>
+      {!online && stillOffline && <p className="muted small">Todavía no hay conexión.</p>}
+      <div className="error-actions">
+        <button className="btn" onClick={() => history.back()}>
+          ← Volver
+        </button>
+        {online ? (
+          <button className="btn btn-primary" onClick={() => location.reload()}>
+            Recargar
+          </button>
+        ) : (
+          <button className="btn btn-primary" onClick={retry}>
+            Probar de nuevo
+          </button>
+        )}
+      </div>
+    </div>
+  )
 }
 
 function ErrorScreen({ error, componentStack }: { error: Error; componentStack: string }) {
@@ -62,8 +122,16 @@ function ErrorScreen({ error, componentStack }: { error: Error; componentStack: 
   )
 }
 
-// Se reinicia al cambiar de página: si falla una pantalla, las demás siguen andando.
-export function ErrorBoundary({ children }: Props) {
+/**
+ * Se reinicia al cambiar de página: si falla una pantalla, las demás siguen andando. Por defecto también remonta lo
+ * de adentro (cada pantalla arranca de cero). Con `keepMounted` solo saca el error: es para el de afuera de todo,
+ * así el menú, el protector de pantalla y los avisos no se rearman en cada click.
+ */
+export function ErrorBoundary({ children, keepMounted }: { children: ReactNode; keepMounted?: boolean }) {
   const { pathname } = useLocation()
-  return <Boundary key={pathname}>{children}</Boundary>
+  return (
+    <Boundary key={keepMounted ? undefined : pathname} pathname={pathname}>
+      {children}
+    </Boundary>
+  )
 }

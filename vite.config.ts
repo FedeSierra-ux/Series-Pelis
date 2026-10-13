@@ -1,4 +1,4 @@
-import { defineConfig } from 'vite'
+import { defineConfig, type Connect, type Plugin } from 'vite'
 import react from '@vitejs/plugin-react'
 import { VitePWA } from 'vite-plugin-pwa'
 import pkg from './package.json' with { type: 'json' }
@@ -11,12 +11,30 @@ const segmentsProxy = {
   },
 }
 
+// En local no existe la Pages Function de TMDB (functions/api/tmdb): `probeServerTmdb()` pregunta
+// /api/tmdb/_status al arrancar y recibía un 404 en cada carga. Acá se contesta "no está activado".
+const tmdbStatusStub: Plugin = {
+  name: 'tmdb-status-stub',
+  configureServer: (server) => {
+    server.middlewares.use('/api/tmdb/_status', tmdbStatus)
+  },
+  configurePreviewServer: (server) => {
+    server.middlewares.use('/api/tmdb/_status', tmdbStatus)
+  },
+}
+const tmdbStatus: Connect.SimpleHandleFunction = (_req, res) => {
+  res.setHeader('Content-Type', 'application/json; charset=utf-8')
+  res.setHeader('Cache-Control', 'no-store')
+  res.end(JSON.stringify({ enabled: false }))
+}
+
 export default defineConfig({
   define: { __APP_VERSION__: JSON.stringify(pkg.version) },
   plugins: [
     react(),
+    tmdbStatusStub,
     VitePWA({
-      registerType: 'autoUpdate',
+      registerType: 'prompt',
       includeAssets: ['favicon.svg', 'icon-192.png', 'icon-512.png'],
       manifest: {
         name: 'Series-Pelis',
@@ -68,7 +86,8 @@ export default defineConfig({
             options: {
               cacheName: 'cinemeta',
               expiration: { maxEntries: 500, maxAgeSeconds: 60 * 60 * 24 * 7 },
-              cacheableResponse: { statuses: [0, 200] },
+              // Solo respuestas CORS (200): una opaca (status 0) no se puede leer y ocupa muchísimo lugar.
+              cacheableResponse: { statuses: [200] },
             },
           },
         ],

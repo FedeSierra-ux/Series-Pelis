@@ -15,6 +15,13 @@ import { ImdbRating } from './Rating'
 
 const YT_ORIGIN = 'https://www.youtube-nocookie.com'
 const BACK_KEYS = new Set(['Escape', 'GoBack', 'BrowserBack', 'Backspace'])
+
+function isTyping() {
+  const el = document.activeElement
+  if (!(el instanceof HTMLElement)) return false
+  if (el instanceof HTMLTextAreaElement || el.isContentEditable) return true
+  return el instanceof HTMLInputElement && !['checkbox', 'radio', 'range', 'button', 'submit'].includes(el.type)
+}
 /** Capa única para el tráiler al pasar por un póster (va una sola vez, en el Layout). */
 export function HoverTrailerLayer() {
   const open = useOpenTrailer()
@@ -53,6 +60,8 @@ function HoverTrailerCard({ t }: { t: OpenTrailer }) {
     const close = () => closeTrailer()
     const onVis = () => document.visibilityState === 'hidden' && closeTrailer()
     const onKey = (e: KeyboardEvent) => {
+      // Mientras se escribe (el campo de Buscar), Backspace y la M son del campo: solo Escape cierra.
+      if (isTyping() && e.key !== 'Escape') return
       if (BACK_KEYS.has(e.key)) {
         // "Atrás" primero cierra la vista previa (y no vuelve de página).
         e.preventDefault()

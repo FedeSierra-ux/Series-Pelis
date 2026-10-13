@@ -6,10 +6,14 @@
   --text: #f4f4f7;
   --muted: #9a9aae;
   --accent: #8b5cf6;
+  /* Relleno sólido con texto blanco encima (botón primario, etiquetas): más oscuro que --accent
+     para llegar a 4,5:1 (AA). --accent queda para texto, bordes y foco sobre fondo oscuro. */
+  --accent-fill: #7c3aed;
   --accent-2: #e11d48;
   --imdb: #f5c518;
   --ok: #22c55e;
   --danger: #f87171;
+  --radius-sm: 8px;
   --radius: 12px;
   --gutter: clamp(16px, 4vw, 56px);
   --poster-w: clamp(120px, 13vw, 190px);
@@ -79,7 +83,7 @@ code {
 :focus-visible {
   outline: 3px solid #fff;
   outline-offset: 3px;
-  border-radius: 10px;
+  border-radius: var(--radius-sm);
 }
 
 /* ---------- Botones y formularios ---------- */
@@ -108,13 +112,15 @@ code {
   opacity: 0.4;
   cursor: default;
 }
+/* Texto blanco sobre el degradé: de 5,7:1 a 4,7:1 en todo el recorrido (AA). */
 .btn-primary {
-  background: linear-gradient(135deg, var(--accent), var(--accent-2));
+  background: linear-gradient(135deg, var(--accent-fill), var(--accent-2));
   border-color: transparent;
 }
 .btn-primary:hover,
 .btn-primary:focus-visible {
-  background: linear-gradient(135deg, #9d74ff, #f43f5e);
+  background: linear-gradient(135deg, #6d3ff0, #d11a44);
+  box-shadow: 0 6px 18px rgba(124, 58, 237, 0.35);
 }
 .btn-ghost {
   background: transparent;
@@ -137,13 +143,29 @@ select {
   color: var(--text);
   background: var(--bg-2);
   border: 1px solid var(--line);
-  border-radius: 10px;
+  border-radius: var(--radius-sm);
   padding: 10px 14px;
 }
 input:focus-visible,
 select:focus-visible {
   outline-offset: 0;
   border-color: #fff;
+}
+/* <select> con la flecha propia (la del sistema no respeta el tema). El SVG va con el color fijo:
+   dentro de un data URI `currentColor` no hereda. */
+select {
+  appearance: none;
+  -webkit-appearance: none;
+  padding-right: 40px;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='14' height='14' viewBox='0 0 24 24' fill='none' stroke='%23d4d4dc' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E");
+  background-position: right 14px center;
+  background-repeat: no-repeat;
+  background-size: 14px 14px;
+  cursor: pointer;
+}
+select option {
+  color: var(--text);
+  background: var(--bg-2);
 }
 
 .tab {
@@ -341,6 +363,9 @@ select:focus-visible {
 }
 .hero-skeleton {
   min-height: clamp(360px, 62vh, 640px);
+  /* Brillo de .skeleton: `.hero` pisa el tamaño del fondo con "cover" y el degradé no se movía. */
+  background-image: linear-gradient(90deg, var(--bg-2) 0%, var(--bg-3) 50%, var(--bg-2) 100%);
+  background-size: 200% 100%;
 }
 .hero-shade {
   position: absolute;
@@ -726,7 +751,7 @@ select:focus-visible {
   position: relative;
   flex: 0 0 clamp(110px, 14vw, 180px);
   aspect-ratio: 16 / 9;
-  border-radius: 8px;
+  border-radius: var(--radius-sm);
   overflow: hidden;
   background: var(--bg-3);
 }
@@ -984,7 +1009,7 @@ select:focus-visible {
 .addon-logo {
   width: 44px;
   height: 44px;
-  border-radius: 10px;
+  border-radius: var(--radius-sm);
   object-fit: contain;
   background: var(--bg-3);
   flex-shrink: 0;
@@ -1276,6 +1301,166 @@ select:focus-visible {
   html {
     font-size: 18px;
   }
+  /* Leve: en una PC grande el texto de las tarjetas también se lee mejor un poco más grande. */
+  .poster-title {
+    font-size: 0.95rem;
+  }
+  .poster-sub {
+    font-size: 0.82rem;
+  }
+}
+
+/* Modo TV: `data-tv` en <html> (ajuste "Interfaz para TV" o televisor detectado; lo pone
+   syncTvAttr en src/lib/tv.ts). Se mira a 3 metros: cuerpo de 22 px, títulos de 32 px o más y
+   controles más grandes. Todo en rem para que cuelgue del tamaño base. */
+html[data-tv] {
+  font-size: 22px;
+  --poster-w: 240px;
+}
+html[data-tv] .poster-title {
+  font-size: 1rem;
+}
+html[data-tv] .poster-sub,
+html[data-tv] .imdb-sm {
+  font-size: 0.9rem;
+}
+html[data-tv] .row-header h2 {
+  font-size: 1.5rem;
+}
+html[data-tv] .row-more {
+  font-size: 1rem;
+  padding: 6px 12px;
+}
+html[data-tv] .page-header h1 {
+  font-size: 2rem;
+}
+html[data-tv] .small {
+  font-size: 0.9rem;
+}
+html[data-tv] .chip {
+  font-size: 0.85rem;
+  padding: 4px 12px;
+}
+html[data-tv] .chip.small {
+  font-size: 0.8rem;
+  padding: 3px 10px;
+}
+/* Pestañas y chips de filtros: se eligen con el control remoto, tienen que verse y enfocarse bien. */
+html[data-tv] .tab,
+html[data-tv] .chip-removable,
+html[data-tv] .ltv-filter,
+html[data-tv] .goal-presets .tab {
+  font-size: 1rem;
+  padding: 12px 20px;
+}
+html[data-tv] .btn {
+  font-size: 1.1rem;
+  padding: 12px 24px;
+}
+html[data-tv] .btn-small {
+  font-size: 1rem;
+  padding: 10px 18px;
+}
+html[data-tv] .btn-ghost {
+  padding: 10px 14px;
+}
+html[data-tv] .episode-desc {
+  font-size: 1rem;
+}
+html[data-tv] .episode-thumb {
+  flex-basis: clamp(140px, 12vw, 220px);
+}
+html[data-tv] .hero-desc {
+  font-size: 1.05rem;
+}
+html[data-tv] .episode-check {
+  width: 44px;
+  height: 44px;
+}
+/* El nombre del canal hereda el tamaño por defecto de <button> (13 px): en la TV no se lee. */
+html[data-tv] .ltv-ch {
+  font-size: 1rem;
+}
+html[data-tv] input[type='search'],
+html[data-tv] input[type='url'],
+html[data-tv] input[type='text'],
+html[data-tv] select {
+  padding: 12px 18px;
+}
+html[data-tv] select {
+  padding-right: 48px;
+}
+/* Tarjeta de error del reproductor: más ancha y con letra y botones grandes. */
+html[data-tv] .player-error p {
+  max-width: 720px;
+  font-size: 1.2rem;
+}
+html[data-tv] .player-error-card {
+  width: min(760px, 100%);
+  padding: 32px 28px;
+  gap: 18px;
+}
+html[data-tv] .player-error .btn {
+  font-size: 1.15rem;
+  padding: 14px 28px;
+}
+html[data-tv] .player-error-sources button {
+  padding: 12px 16px;
+}
+
+/* ---------- Objetivos táctiles (celular): mínimo 44 px ---------- */
+
+/* Pantalla táctil o ventana angosta (algunos navegadores no declaran `pointer: coarse`). */
+@media (pointer: coarse), (max-width: 760px) {
+  .episode-check {
+    width: 44px;
+    height: 44px;
+  }
+  .ltv-filter,
+  .chip-removable,
+  .filters-toggle,
+  .btn-small,
+  .tab {
+    min-height: 44px;
+  }
+  .goal-stepper .btn {
+    min-width: 44px;
+  }
+}
+
+/* ---------- TV en vivo: la lista de canales con su propio scroll (PC/TV) ---------- */
+
+/* Sin esto la página medía miles de píxeles y el reproductor fijo quedaba solo arriba. La lista
+   se desplaza adentro; con las flechas, spatialNav hace scrollIntoView del canal enfocado. */
+@media (min-width: 961px) {
+  .ltv-list {
+    /* 96 px: el título de la página arriba y un respiro abajo. */
+    max-height: calc(100vh - var(--nav-h) - 96px);
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    scrollbar-width: thin;
+    /* Lugar para el anillo de foco: con overflow se recortaría en los bordes. */
+    padding: 4px 6px 4px 4px;
+    margin: -4px 0 -4px -4px;
+    scroll-padding: 12px 0;
+  }
+}
+
+/* ---------- Portada en celular: "Ver ahora" y "+ Mi lista" del mismo ancho ---------- */
+
+@media (max-width: 480px) {
+  .hero .hero-actions {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+  }
+  .hero .hero-actions .btn {
+    width: 100%;
+    min-width: 0;
+    justify-content: center;
+    padding-left: 12px;
+    padding-right: 12px;
+  }
 }
 
 /* ---------- v0.2 fuentes ---------- */
@@ -1310,7 +1495,7 @@ select:focus-visible {
   padding: 2px 8px;
   border-radius: 999px;
   color: #fff;
-  background: linear-gradient(135deg, var(--accent), var(--accent-2));
+  background: linear-gradient(135deg, var(--accent-fill), var(--accent-2));
 }
 .source-field {
   display: flex;
@@ -2848,7 +3033,7 @@ select:focus-visible {
   color: var(--bg);
 }
 .poster-label-premiere {
-  background: var(--accent);
+  background: var(--accent-fill);
 }
 /* En la fila "Top 10 de hoy" la etiqueta sobra: ya está el número. */
 .top10-item .poster-label-top10 {
@@ -2918,7 +3103,7 @@ select:focus-visible {
   user-select: none;
 }
 .ht-sound:hover {
-  background: var(--accent);
+  background: var(--accent-fill);
 }
 .ht-info {
   display: grid;
@@ -3115,7 +3300,7 @@ select:focus-visible {
 .diary-badge {
   padding: 1px 8px;
   border-radius: 999px;
-  background: var(--accent);
+  background: var(--accent-fill);
   color: #fff;
   font-size: 0.72rem;
   font-weight: 700;
@@ -3321,7 +3506,7 @@ select:focus-visible {
   margin-left: 8px;
   padding: 1px 8px;
   border-radius: 999px;
-  background: var(--accent);
+  background: var(--accent-fill);
   color: var(--on-accent);
   font-size: 0.7rem;
   vertical-align: middle;
@@ -4457,7 +4642,7 @@ input[type='password']:focus-visible {
   height: 46px;
   padding: 0 4px;
   border: 1px solid var(--line);
-  border-radius: 10px;
+  border-radius: var(--radius-sm);
   background: var(--bg-3);
   color: var(--text);
   font: inherit;
@@ -4470,8 +4655,8 @@ input[type='password']:focus-visible {
 }
 .osk-key:hover,
 .osk-key:focus-visible {
-  background: var(--accent);
-  border-color: var(--accent);
+  background: var(--accent-fill);
+  border-color: var(--accent-fill);
   color: var(--on-accent);
 }
 .osk-key.active {
@@ -4492,8 +4677,8 @@ input[type='password']:focus-visible {
   flex-grow: 1.6;
 }
 .osk-actions .osk-done {
-  background: var(--accent);
-  border-color: var(--accent);
+  background: var(--accent-fill);
+  border-color: var(--accent-fill);
   color: var(--on-accent);
 }
 @media (max-width: 760px) {
@@ -4507,7 +4692,7 @@ input[type='password']:focus-visible {
   .osk-key {
     height: 40px;
     font-size: 0.95rem;
-    border-radius: 8px;
+    border-radius: var(--radius-sm);
   }
   .osk-actions .osk-key {
     font-size: 0.72rem;
@@ -5091,8 +5276,8 @@ input[type='password']:focus-visible {
   border-color: var(--accent);
 }
 .ltv-filter[aria-pressed='true'] {
-  background: var(--accent);
-  border-color: var(--accent);
+  background: var(--accent-fill);
+  border-color: var(--accent-fill);
   color: var(--on-accent);
   font-weight: 700;
 }

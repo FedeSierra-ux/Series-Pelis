@@ -4,7 +4,8 @@ export function srtToVtt(srt: string): string {
   const body = srt
     .replace(/^﻿/, '')
     .replace(/\r\n?/g, '\n')
-    .replace(/(\d{2}:\d{2}:\d{2}),(\d{3})/g, '$1.$2')
+    // Algunos SRT traen la hora con un solo dígito ("0:00:01,000"): VTT exige dos.
+    .replace(/(\d{1,2}):(\d{2}):(\d{2}),(\d{3})/g, (_m, h: string, m: string, s: string, ms: string) => `${h.padStart(2, '0')}:${m}:${s}.${ms}`)
     .trim()
   return 'WEBVTT\n\n' + body + '\n'
 }
@@ -71,12 +72,20 @@ export function toVtt(text: string, name = ''): string {
 
 // Descripciones de sonidos de los subtítulos para sordos: [música], (risas), ♪ letra ♪, "HOMBRE: hola".
 const SOUND_RE = /\[[^\]\n]*\]|\([^)\n]*\)|[♪♫][^♪♫\n]*[♪♫]?|[♪♫]+/g
-const SPEAKER_RE = /^(-\s*)?[A-ZÁÉÍÓÚÑÜ][A-ZÁÉÍÓÚÑÜ0-9 .'#-]+:\s*/
+const SPEAKER_RE = /^(-\s*)?([A-ZÁÉÍÓÚÑÜ][A-ZÁÉÍÓÚÑÜ0-9 .'#-]*):\s*/
+// "NO:", "SÍ:", "OK:" al principio de una frase no son nombres de quien habla.
+const INTERJECTIONS = new Set(['NO', 'SI', 'SÍ', 'OK', 'AH', 'EH', 'OH', 'AY', 'UY'])
+
+/** Un nombre de hablante tiene al menos 3 letras y no es una interjección común. */
+function isSpeakerName(name: string): boolean {
+  const letters = name.match(/\p{L}/gu)?.length ?? 0
+  return letters >= 3 && !INTERJECTIONS.has(name.trim())
+}
 
 function cleanSdhLine(line: string): string {
   return line
     .replace(SOUND_RE, '')
-    .replace(SPEAKER_RE, '$1')
+    .replace(SPEAKER_RE, (whole: string, dash: string | undefined, name: string) => (isSpeakerName(name) ? (dash ?? '') : whole))
     .replace(/<([a-z]+)[^>]*>\s*<\/\1>/gi, '')
     .replace(/\s{2,}/g, ' ')
     .trim()

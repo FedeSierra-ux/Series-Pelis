@@ -1,4 +1,5 @@
-// Íconos de línea del Tema 2 (mismo trazo que el boceto). Heredan el color del texto.
+// Íconos de línea (mismo trazo que el boceto del Tema 2). Heredan el color del texto, así que
+// sirven también en el menú del Tema 1 y en los estados vacíos.
 
 const PATHS = {
   search: (
@@ -43,6 +44,36 @@ const PATHS = {
     <>
       <circle cx="12" cy="8" r="4" />
       <path d="M4 21c1.5-4 4.5-6 8-6s6.5 2 8 6" />
+    </>
+  ),
+  antenna: (
+    <>
+      <circle cx="12" cy="12" r="2" />
+      <path d="M16.2 7.8a6 6 0 0 1 0 8.4M7.8 16.2a6 6 0 0 1 0-8.4M19 5a10 10 0 0 1 0 14M5 19A10 10 0 0 1 5 5M12 14v7" />
+    </>
+  ),
+  sparkles: (
+    <>
+      <path d="M12 3l1.8 5.2L19 10l-5.2 1.8L12 17l-1.8-5.2L5 10l5.2-1.8z" />
+      <path d="M19 16l.8 2.2L22 19l-2.2.8L19 22l-.8-2.2L16 19l2.2-.8zM5 2l.6 1.6L7 4l-1.4.6L5 6l-.6-1.4L3 4l1.4-.4z" />
+    </>
+  ),
+  book: (
+    <>
+      <path d="M4 4.5A2.5 2.5 0 0 1 6.5 2H20v18H6.5A2.5 2.5 0 0 0 4 22z" />
+      <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20M8 7h8" />
+    </>
+  ),
+  trophy: (
+    <>
+      <path d="M8 3h8v6a4 4 0 0 1-8 0z" />
+      <path d="M8 5H5a3 3 0 0 0 3 5M16 5h3a3 3 0 0 1-3 5M12 13v4M8 21h8M9 21l1-4h4l1 4" />
+    </>
+  ),
+  keyboard: (
+    <>
+      <rect x="2" y="6" width="20" height="12" rx="2" />
+      <path d="M6 10h.01M10 10h.01M14 10h.01M18 10h.01M6 14h.01M18 14h.01M9 14h6" />
     </>
   ),
   settings: (
