@@ -1,4 +1,5 @@
 import { NavLink, Outlet } from 'react-router-dom'
+import { ErrorBoundary } from './ErrorBoundary'
 import { HoverTrailerLayer } from './HoverTrailer'
 import { OfflineBanner } from './OfflineBanner'
 import { useTheme } from '../lib/theme'
@@ -39,7 +40,9 @@ export function Layout() {
       </nav>
       <main className="main">
         <OfflineBanner />
-        <Outlet />
+        <ErrorBoundary>
+          <Outlet />
+        </ErrorBoundary>
       </main>
       <HoverTrailerLayer />
     </div>

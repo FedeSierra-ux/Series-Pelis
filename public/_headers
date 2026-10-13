@@ -1,0 +1,12 @@
+# Cloudflare Pages. Los archivos de /assets llevan un hash en el nombre: se pueden guardar para siempre.
+/assets/*
+  Cache-Control: public, max-age=31536000, immutable
+
+# El service worker y el manifiesto se revisan en cada visita, así las actualizaciones llegan enseguida.
+/sw.js
+  Cache-Control: no-cache
+/manifest.webmanifest
+  Cache-Control: no-cache
+
+/*
+  X-Content-Type-Options: nosniff

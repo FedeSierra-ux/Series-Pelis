@@ -1,4 +1,5 @@
 import { NavLink, Link, Outlet, useLocation } from 'react-router-dom'
+import { ErrorBoundary } from './ErrorBoundary'
 import { HoverTrailerLayer } from './HoverTrailer'
 import { OfflineBanner } from './OfflineBanner'
 import { Theme2Icon, type Theme2IconName } from './Theme2Icons'
@@ -85,7 +86,9 @@ export function Theme2Layout() {
             <span>Buscar pelis, series y personas</span>
           </Link>
         )}
-        <Outlet />
+        <ErrorBoundary>
+          <Outlet />
+        </ErrorBoundary>
       </main>
       <HoverTrailerLayer />
 

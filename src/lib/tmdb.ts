@@ -1,5 +1,6 @@
+import { useSyncExternalStore } from 'react'
 import { cached, HttpError, peekMemory } from './cache'
-import { settingsStore } from './store'
+import { settingsStore, useStore } from './store'
 import type { MetaPreview } from './types'
 
 // Cliente de TMDB (api.themoviedb.org/3). Es opcional: sin key la app sigue con Cinemeta.
@@ -16,8 +17,79 @@ export type TmdbType = 'movie' | 'tv'
 export const toTmdbType = (type: string): TmdbType => (type === 'movie' ? 'movie' : 'tv')
 export const toAppType = (type: TmdbType | string): 'movie' | 'series' => (type === 'movie' ? 'movie' : 'series')
 
+// ---------- Key del sitio ----------
+// Publicada en Cloudflare, la key va como secreto (TMDB_KEY) y los pedidos pasan por /api/tmdb
+// (functions/api/tmdb/[[path]].ts): así la familia no tiene que configurar nada. Una key propia
+// cargada en Ajustes tiene prioridad.
+
+/** Valor de `tmdbKey()` cuando se usa la key del sitio. */
+export const SERVER_KEY = 'server'
+const SERVER_FLAG = 'sp-tmdb-server'
+const SERVER_PROXY = '/api/tmdb'
+
+function readServerFlag(): boolean {
+  try {
+    return localStorage.getItem(SERVER_FLAG) === '1'
+  } catch {
+    return false
+  }
+}
+
+// Arranca con lo de la última vez (guardado en localStorage) para no esperar al servidor al abrir.
+let serverTmdb = readServerFlag()
+const serverListeners = new Set<() => void>()
+
+function setServerTmdb(enabled: boolean) {
+  try {
+    if (enabled) localStorage.setItem(SERVER_FLAG, '1')
+    else localStorage.removeItem(SERVER_FLAG)
+  } catch {
+    // Sin localStorage: solo vale para esta sesión.
+  }
+  if (enabled === serverTmdb) return
+  serverTmdb = enabled
+  serverListeners.forEach((l) => l())
+}
+
+/** ¿El sitio tiene TMDB activado? Se pregunta una vez al abrir la app. Sin red se queda con lo anterior. */
+export async function probeServerTmdb(): Promise<boolean> {
+  try {
+    const res = await fetch(`${SERVER_PROXY}/_status`, { headers: { Accept: 'application/json' } })
+    // En local (Vite) no existe la función y vuelve el index.html: eso cuenta como "no".
+    const body = res.ok && (res.headers.get('Content-Type') ?? '').includes('json') ? ((await res.json()) as { enabled?: unknown }) : undefined
+    setServerTmdb(body?.enabled === true)
+  } catch {
+    // Sin conexión: no cambiamos nada.
+  }
+  return serverTmdb
+}
+
+export function hasServerTmdb(): boolean {
+  return serverTmdb
+}
+
+const subscribeServer = (listener: () => void) => {
+  serverListeners.add(listener)
+  return () => serverListeners.delete(listener)
+}
+
+/** Avisa cuando cambia si el sitio tiene TMDB. Devuelve la función para dejar de escuchar. */
+export const onServerTmdbChange = subscribeServer
+
+export function useServerTmdb(): boolean {
+  return useSyncExternalStore(subscribeServer, hasServerTmdb, hasServerTmdb)
+}
+
+/** La key propia de Ajustes; si no hay, la del sitio (`SERVER_KEY`); si tampoco, ''. */
 export function tmdbKey(): string {
-  return settingsStore.get().tmdbKey.trim()
+  return settingsStore.get().tmdbKey.trim() || (serverTmdb ? SERVER_KEY : '')
+}
+
+/** Igual que `tmdbKey()`, pero se actualiza al cambiar la key o al responder el sitio. */
+export function useTmdbKey(): string {
+  const own = useStore(settingsStore).tmdbKey.trim()
+  const server = useServerTmdb()
+  return own || (server ? SERVER_KEY : '')
 }
 
 export function hasTmdb(): boolean {
@@ -26,10 +98,11 @@ export function hasTmdb(): boolean {
 
 export async function tmdbFetch<T>(path: string, params: Record<string, string | number | undefined> = {}, key = tmdbKey()): Promise<T> {
   if (!key) throw new Error('Falta la API key de TMDB')
-  const url = new URL(API + path)
+  const viaServer = key === SERVER_KEY
+  const url = viaServer ? new URL(SERVER_PROXY + path, location.origin) : new URL(API + path)
   for (const [k, v] of Object.entries(params)) if (v !== undefined && v !== '') url.searchParams.set(k, String(v))
-  const bearer = key.startsWith('eyJ')
-  if (!bearer) url.searchParams.set('api_key', key)
+  const bearer = !viaServer && key.startsWith('eyJ')
+  if (!viaServer && !bearer) url.searchParams.set('api_key', key)
   const ctrl = new AbortController()
   const timer = setTimeout(() => ctrl.abort(), 15000)
   try {
@@ -37,7 +110,7 @@ export async function tmdbFetch<T>(path: string, params: Record<string, string |
       signal: ctrl.signal,
       headers: bearer ? { Authorization: `Bearer ${key}`, Accept: 'application/json' } : { Accept: 'application/json' },
     })
-    if (!res.ok) throw new HttpError(res.status, API + path)
+    if (!res.ok) throw new HttpError(res.status, (viaServer ? SERVER_PROXY : API) + path)
     return (await res.json()) as T
   } finally {
     clearTimeout(timer)

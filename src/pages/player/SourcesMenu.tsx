@@ -83,7 +83,7 @@ export function SourcesMenu({ state, onPick }: { state: PlayState; onPick: (pick
   // Si los streams llegaron después de abrir el menú, el foco va a la fuente actual.
   const count = items.length
   useEffect(() => {
-    const menu = ref.current?.closest('.player-menu')
+    const menu = ref.current?.closest('.player-menu, .player-error-sources')
     if (!count || !menu || menu.contains(document.activeElement)) return
     ;(menu.querySelector<HTMLElement>('button.active') ?? menu.querySelector<HTMLElement>('button'))?.focus()
   }, [count])

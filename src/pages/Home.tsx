@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
-import { ContinueCard } from '../components/ContinueCard'
+import { backdropFor, ContinueCard, LandscapeCard } from '../components/ContinueCard'
 import { PosterCard } from '../components/PosterCard'
 import { ImdbRating } from '../components/Rating'
 import { Row } from '../components/Row'
@@ -11,8 +11,9 @@ import { useCatalog, useTitle } from '../lib/hooks'
 import { catalogLabel, genreLabel } from '../lib/i18n'
 import { useHiddenIds } from '../lib/ratings'
 import { withoutHidden } from '../lib/recommend'
-import { continueWatching, hideFromContinue, progressStore, settingsStore, toggleWatchlist, useStore, watchlistStore, type WatchEntry } from '../lib/store'
+import { continueWatching, hideFromContinue, progressStore, toggleWatchlist, useStore, watchlistStore, type WatchEntry } from '../lib/store'
 import { useTheme } from '../lib/theme'
+import { useTmdbKey } from '../lib/tmdb'
 import { episodeLink, useUpNext } from '../lib/upNext'
 import type { CatalogDef, InstalledAddon, MetaPreview } from '../lib/types'
 import { ForYouRow } from './home/ForYouRow'
@@ -37,6 +38,7 @@ function CatalogRow({ addon, catalog, eager, title }: { addon: InstalledAddon; c
         moreTo={moreTo}
         loading={loading || !visible}
         error={error}
+        errorNotice={`${addon.manifest.name} no responde ahora. Probá de nuevo en un rato.`}
         empty={items.length === 0}
       >
         {items.map((m, i) => (
@@ -78,7 +80,7 @@ function Hero({ addon, catalog }: { addon: InstalledAddon; catalog: CatalogDef }
         </div>
         {meta.description && <p className="hero-desc">{meta.description}</p>}
         <div className="hero-actions">
-          <Link className="btn btn-primary" to={`/detail/${type}/${encodeURIComponent(meta.id)}`}>
+          <Link className="btn btn-primary" to={`/detail/${type}/${encodeURIComponent(meta.id)}`} data-autofocus>
             ▶ Ver ahora
           </Link>
           <button className="btn" onClick={() => toggleWatchlist({ ...meta, type })}>
@@ -136,19 +138,35 @@ function useUndoHide() {
 
 function UpNextRow() {
   const { data } = useUpNext()
+  // En el Tema 2 usa las mismas tarjetas apaisadas que "Seguir viendo".
+  const landscape = useTheme() === '2'
   const items = data?.next ?? []
   if (items.length === 0) return null
   return (
     <Row title="Tus series: siguiente episodio">
-      {items.map((it) => (
-        <PosterCard
-          key={it.videoId}
-          meta={{ id: it.metaId, type: 'series', name: it.seriesName, poster: it.poster }}
-          progress={it.progress}
-          subtitle={episodeLabel(it.season, it.episode) || 'Siguiente'}
-          to={episodeLink(it.metaId, it.season, it.videoId)}
-        />
-      ))}
+      {items.map((it) =>
+        landscape ? (
+          <LandscapeCard
+            key={it.videoId}
+            metaId={it.metaId}
+            type="series"
+            name={it.seriesName}
+            subtitle={[episodeLabel(it.season, it.episode) || 'Siguiente', it.title].filter(Boolean).join(' · ')}
+            backdrop={it.thumbnail ?? backdropFor(it.metaId)}
+            poster={it.poster}
+            progress={it.progress}
+            to={episodeLink(it.metaId, it.season, it.videoId)}
+          />
+        ) : (
+          <PosterCard
+            key={it.videoId}
+            meta={{ id: it.metaId, type: 'series', name: it.seriesName, poster: it.poster }}
+            progress={it.progress}
+            subtitle={episodeLabel(it.season, it.episode) || 'Siguiente'}
+            to={episodeLink(it.metaId, it.season, it.videoId)}
+          />
+        ),
+      )}
     </Row>
   )
 }
@@ -177,7 +195,7 @@ export function Home() {
   const { undo, hide, restore } = useUndoHide()
   const landscapeResume = useTheme() === '2'
   // TMDB es opcional: sin key, Inicio queda igual que siempre.
-  const tmdbKey = useStore(settingsStore).tmdbKey.trim()
+  const tmdbKey = useTmdbKey()
   const trendingDay = useTrending('day', tmdbKey)
   const hidden = useHiddenIds()
   const heroItems = useMemo(

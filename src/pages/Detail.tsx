@@ -14,6 +14,7 @@ import { episodeLabel, formatTime, relativeDate } from '../lib/format'
 import { useAddons, useMeta, useTitle, useTmdbDetails } from '../lib/hooks'
 import { typeLabel } from '../lib/i18n'
 import { useRating } from '../lib/ratings'
+import { takeReturnVideo } from '../lib/returnVideo'
 import { hideTitleSynopsis } from '../lib/spoilers'
 import { lastSourceStore, progressStore, setWatched, settingsStore, toggleWatchlist, useStore, watchlistStore } from '../lib/store'
 import { analyzeStreams, playable, streamKey, type RankedStream } from '../lib/streamPicker'
@@ -31,6 +32,7 @@ import {
   type TmdbType,
 } from '../lib/tmdb'
 import type { AddonStreams, InstalledAddon, Meta, Stream, Video } from '../lib/types'
+import { errorText } from '../lib/errors'
 
 export interface PlayState {
   stream: Stream
@@ -87,6 +89,7 @@ function StreamList({
   const [graceFor, setGraceFor] = useState<string>()
   const [countdown, setCountdown] = useState<{ key: string; pick: RankedStream; left: number }>()
   const [showHidden, setShowHidden] = useState(false)
+  const [openTorrents, setOpenTorrents] = useState<Set<string>>(() => new Set())
   const listRef = useRef<HTMLDivElement>(null)
   const cancelRef = useRef<HTMLButtonElement>(null)
 
@@ -210,13 +213,13 @@ function StreamList({
     const cls = `stream-item${recommended ? ' recommended' : ''}`
     if (p.url)
       return (
-        <button key={key} className={cls} onClick={() => play(s, p.url!, addon)}>
+        <button key={key} className={cls} data-autofocus={recommended || undefined} onClick={() => play(s, p.url!, addon)}>
           {content}
         </button>
       )
     if (p.external)
       return (
-        <a key={key} className={cls} href={p.external} target="_blank" rel="noreferrer">
+        <a key={key} className={cls} data-autofocus={recommended || undefined} href={p.external} target="_blank" rel="noreferrer">
           {content}
         </a>
       )
@@ -253,6 +256,21 @@ function StreamList({
         // El recomendado va primero dentro de su addon; los que esconden los filtros van aparte.
         const items = g.streams.map((s, i) => ({ s, i })).filter(({ i }) => !hidden.has(streamKey(addonIndex, i)))
         if (bestIndex >= 0) items.sort((a, b) => Number(b.i === bestIndex) - Number(a.i === bestIndex))
+        // Los torrents que no se pueden abrir (sin debrid ni servidor de Stremio) van plegados, así no tapan los que sí andan.
+        const isDeadTorrent = (s: Stream) => {
+          const p = playable(s, settings.streamingServerUrl)
+          return !p.url && !p.external && !!s.infoHash
+        }
+        const usable = items.filter(({ s }) => !isDeadTorrent(s))
+        const torrents = items.filter(({ s }) => isDeadTorrent(s))
+        const torrentsOpen = openTorrents.has(g.addon.transportUrl)
+        const toggleTorrents = () =>
+          setOpenTorrents((prev) => {
+            const next = new Set(prev)
+            if (next.has(g.addon.transportUrl)) next.delete(g.addon.transportUrl)
+            else next.add(g.addon.transportUrl)
+            return next
+          })
         return (
           <section key={g.addon.transportUrl} className="stream-group">
             <h3>
@@ -262,7 +280,16 @@ function StreamList({
             {g.error && <p className="muted small">{isOnline() ? `No respondió: ${g.error}` : 'Sin conexión: no se pueden buscar streams.'}</p>}
             {!g.loading && !g.error && g.streams.length === 0 && <p className="muted small">Sin resultados.</p>}
             {!g.loading && g.streams.length > 0 && items.length === 0 && <p className="muted small">Todos ocultos por tus filtros.</p>}
-            <div className="stream-items">{items.map(({ s, i }) => renderItem(s, i, g.addon, i === bestIndex))}</div>
+            {usable.length > 0 && <div className="stream-items">{usable.map(({ s, i }) => renderItem(s, i, g.addon, i === bestIndex))}</div>}
+            {torrents.length > 0 && (
+              <>
+                <button className="stream-hidden-toggle stream-torrents-toggle" aria-expanded={torrentsOpen} onClick={toggleTorrents}>
+                  {torrentsOpen ? '▾' : '▸'} {torrents.length === 1 ? '1 torrent sin debrid' : `${torrents.length} torrents sin debrid`} (necesitan
+                  el servidor de Stremio)
+                </button>
+                {torrentsOpen && <div className="stream-items">{torrents.map(({ s, i }) => renderItem(s, i, g.addon, false))}</div>}
+              </>
+            )}
           </section>
         )
       })}
@@ -312,7 +339,7 @@ function TmdbResolver({ type, tmdbType, tmdbId }: { type: string; tmdbType: Tmdb
         const details = await getDetails(tmdbType, tmdbId)
         if (alive) setState({ details })
       })
-      .catch((err: unknown) => alive && setState({ error: err instanceof Error ? err.message : String(err) }))
+      .catch((err: unknown) => alive && setState({ error: errorText(err) }))
     return () => {
       alive = false
     }
@@ -391,6 +418,16 @@ function DetailPage({ type, id }: { type: string; id: string }) {
   useTitle(title)
 
   const videos = useMemo(() => sortVideos(meta?.videos ?? []), [meta?.videos])
+
+  // Al volver del reproductor, marca el último episodio que se vio (puede haber pasado solo al siguiente).
+  useEffect(() => {
+    const back = takeReturnVideo(id)
+    if (!back || params.get('video') === back.videoId) return
+    const next = new URLSearchParams(params)
+    if (back.season !== undefined) next.set('season', String(back.season))
+    next.set('video', back.videoId)
+    setParams(next, { replace: true })
+  }, [id])
   const isSeries = type === 'series' || videos.length > 1
   const seasons = useMemo(() => {
     const set = new Set(videos.map((v) => v.season ?? 0))
@@ -428,6 +465,9 @@ function DetailPage({ type, id }: { type: string; id: string }) {
     pickTrailer(tmdb?.videos?.results)?.key ??
     meta.trailerStreams?.[0]?.ytId ??
     meta.trailers?.find((t) => t.type === 'Trailer')?.source
+  // Con el control remoto, la primera flecha va al episodio elegido o al primero sin ver de la temporada.
+  const seasonVideos = videos.filter((v) => (v.season ?? 0) === season)
+  const focusVideoId = selectedVideoId ?? (seasonVideos.find((v) => !progress[v.id]?.watched) ?? seasonVideos[0])?.id
   // Si hay fila de reparto con fotos, el elenco en texto sobra.
   const hasTmdbCast = !!(type === 'movie' ? tmdb?.credits?.cast : tmdb?.aggregate_credits?.cast)?.length
 
@@ -525,51 +565,49 @@ function DetailPage({ type, id }: { type: string; id: string }) {
           </div>
           <div className="episodes-layout">
             <ol className="episodes">
-              {videos
-                .filter((v) => (v.season ?? 0) === season)
-                .map((v) => {
-                  const p = progress[v.id]
-                  const released = v.released ?? v.firstAired
-                  const upcoming = released ? new Date(released).getTime() > Date.now() : false
-                  // Sin spoilers: lo que no viste va difuminado hasta que lo elegís.
-                  const spoil = v.id !== selectedVideoId && hideEpisodeSpoiler({ metaId: id, videoId: v.id, season: v.season, episode: episodeNumber(v) })
-                  return (
-                    <li key={v.id} className={`episode ${v.id === selectedVideoId ? 'selected' : ''} ${p?.watched ? 'watched' : ''}`}>
-                      <button className="episode-main" onClick={() => selectVideo(v)}>
-                        <div className={`episode-thumb${spoil ? ' spoiler-blur' : ''}`}>
-                          {v.thumbnail && <img src={v.thumbnail} alt="" loading="lazy" decoding="async" />}
-                          {p && p.duration > 0 && !p.watched && (
-                            <div className="progress-bar"><div style={{ width: `${(p.position / p.duration) * 100}%` }} /></div>
-                          )}
-                        </div>
-                        <div className="episode-text">
-                          <span className="episode-title">
-                            {episodeNumber(v)}. {v.title ?? v.name ?? `Episodio ${episodeNumber(v)}`}
-                          </span>
-                          <span className="muted small">
-                            {released && new Date(released).toLocaleDateString('es-AR', { day: 'numeric', month: 'short', year: 'numeric' })}
-                            {upcoming && ' · Próximamente'}
-                            {v.rating && ` · ★ ${v.rating}`}
-                          </span>
-                          {(v.overview ?? v.description) &&
-                            (spoil ? (
-                              <span className="episode-desc spoiler-hidden">Sinopsis oculta · elegilo para verla</span>
-                            ) : (
-                              <span className="episode-desc">{v.overview ?? v.description}</span>
-                            ))}
-                        </div>
-                      </button>
-                      <button
-                        className={`episode-check ${p?.watched ? 'on' : ''}`}
-                        title={p?.watched ? 'Marcar como no vista' : 'Marcar como vista'}
-                        aria-label={p?.watched ? 'Marcar como no vista' : 'Marcar como vista'}
-                        onClick={() => setWatched(watchBase(v), !p?.watched)}
-                      >
-                        ✓
-                      </button>
-                    </li>
-                  )
-                })}
+              {seasonVideos.map((v) => {
+                const p = progress[v.id]
+                const released = v.released ?? v.firstAired
+                const upcoming = released ? new Date(released).getTime() > Date.now() : false
+                // Sin spoilers: lo que no viste va difuminado hasta que lo elegís.
+                const spoil = v.id !== selectedVideoId && hideEpisodeSpoiler({ metaId: id, videoId: v.id, season: v.season, episode: episodeNumber(v) })
+                return (
+                  <li key={v.id} className={`episode ${v.id === selectedVideoId ? 'selected' : ''} ${p?.watched ? 'watched' : ''}`}>
+                    <button className="episode-main" data-autofocus={v.id === focusVideoId || undefined} onClick={() => selectVideo(v)}>
+                      <div className={`episode-thumb${spoil ? ' spoiler-blur' : ''}`}>
+                        {v.thumbnail && <img src={v.thumbnail} alt="" loading="lazy" decoding="async" />}
+                        {p && p.duration > 0 && !p.watched && (
+                          <div className="progress-bar"><div style={{ width: `${(p.position / p.duration) * 100}%` }} /></div>
+                        )}
+                      </div>
+                      <div className="episode-text">
+                        <span className="episode-title">
+                          {episodeNumber(v)}. {v.title ?? v.name ?? `Episodio ${episodeNumber(v)}`}
+                        </span>
+                        <span className="muted small">
+                          {released && new Date(released).toLocaleDateString('es-AR', { day: 'numeric', month: 'short', year: 'numeric' })}
+                          {upcoming && ' · Próximamente'}
+                          {v.rating && ` · ★ ${v.rating}`}
+                        </span>
+                        {(v.overview ?? v.description) &&
+                          (spoil ? (
+                            <span className="episode-desc spoiler-hidden">Sinopsis oculta · elegilo para verla</span>
+                          ) : (
+                            <span className="episode-desc">{v.overview ?? v.description}</span>
+                          ))}
+                      </div>
+                    </button>
+                    <button
+                      className={`episode-check ${p?.watched ? 'on' : ''}`}
+                      title={p?.watched ? 'Marcar como no vista' : 'Marcar como vista'}
+                      aria-label={p?.watched ? 'Marcar como no vista' : 'Marcar como vista'}
+                      onClick={() => setWatched(watchBase(v), !p?.watched)}
+                    >
+                      ✓
+                    </button>
+                  </li>
+                )
+              })}
             </ol>
             <aside className="episode-streams">
               {selectedVideo ? (

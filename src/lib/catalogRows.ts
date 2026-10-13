@@ -6,6 +6,7 @@ import { useAddons } from './hooks'
 import { catalogLabel } from './i18n'
 import { catalogPrefsStore, useStore } from './store'
 import type { MetaPreview } from './types'
+import { errorText } from './errors'
 
 // Filas de catálogos de Inicio y Descubrir, con las preferencias del gestor aplicadas.
 
@@ -55,7 +56,7 @@ export function useMergedCatalog(sources: CatalogSource[] | undefined): { data?:
     // Solo en memoria: cada catálogo ya queda en la caché persistente por su cuenta.
     cached(key, () => getMergedCatalog(sources), 10 * 60 * 1000, false)
       .then((data) => alive && setState({ data, loading: false }))
-      .catch((err: unknown) => alive && setState((s) => ({ ...s, loading: false, error: err instanceof Error ? err.message : String(err) })))
+      .catch((err: unknown) => alive && setState((s) => ({ ...s, loading: false, error: errorText(err) })))
     return () => {
       alive = false
     }

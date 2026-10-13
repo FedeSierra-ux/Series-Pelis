@@ -1,5 +1,6 @@
 import { cached, fetchJson, load } from './cache'
 import type { AddonStreams, CatalogDef, InstalledAddon, Manifest, Meta, MetaPreview, ResourceDef, Stream, Subtitle } from './types'
+import { errorText } from './errors'
 
 // Cliente del protocolo de addons de Stremio. Un addon es un servidor HTTP que expone
 // /manifest.json y recursos con la forma /{recurso}/{tipo}/{id}[/{extras}].json.
@@ -44,9 +45,13 @@ export const CINEMETA_ADDON: InstalledAddon = {
 
 /** Acepta `stremio://`, URLs sin `/manifest.json` y espacios sobrantes. */
 export function normalizeManifestUrl(input: string): string {
-  let url = input.trim()
-  if (url.startsWith('stremio://')) url = 'https://' + url.slice('stremio://'.length)
+  // Al copiar de un chat o de un PDF suelen venir espacios o saltos de línea en el medio.
+  let url = input.replace(/\s+/g, '')
+  if (/^stremio:\/\//i.test(url)) url = 'https://' + url.slice('stremio://'.length)
   if (!/^https?:\/\//i.test(url)) url = 'https://' + url
+  url = url.replace(/#.*$/, '')
+  // La página de configuración del addon (…/configure) no es el manifest: el manifest está al lado.
+  url = url.replace(/\/configure\/?(\?.*)?$/i, '')
   if (!/manifest\.json(\?.*)?$/.test(url)) url = url.replace(/\/+$/, '') + '/manifest.json'
   return url
 }
@@ -192,7 +197,7 @@ export function getStreams(
         groups[i] = { addon, streams, loading: false }
       })
       .catch((err: unknown) => {
-        groups[i] = { addon, streams: [], loading: false, error: err instanceof Error ? err.message : String(err) }
+        groups[i] = { addon, streams: [], loading: false, error: errorText(err) }
       })
       .finally(() => {
         if (!cancelled) onUpdate([...groups])

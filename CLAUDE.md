@@ -77,6 +77,16 @@ npm run preview    # sirve dist/ en http://localhost:4173
   `iptv-org` de Argentina; el usuario eligió solo Aire, Noticias, Deportes y Música, con canales como botones
   seleccionables en la TV. Se filtran los de cable pago (`PAY_TV`), los que piden `http-referrer` (no falseamos
   cabeceras) y los `http://` cuando la app corre en https.
+- v0.8.0 hecha: arreglos de la auditoría visual (10) y de la prueba de addons (11), y **TMDB desde el sitio**:
+  `functions/api/tmdb/[[path]].ts` usa el secreto de Cloudflare `TMDB_KEY` (lista blanca de rutas, solo mismo
+  sitio, `_status` dice si está activo). En el cliente `probeServerTmdb()` (en `main.tsx`) prende la marca
+  `sp-tmdb-server`; `tmdbKey()` / `useTmdbKey()` devuelven la key propia o `SERVER_KEY` → `tmdbFetch` va por
+  `/api/tmdb`. **No leer `settingsStore.tmdbKey` directo**: usar `useTmdbKey()` / `hasTmdb()`.
+  Nuevos: `lib/errors.ts` (`errorText`: errores en español), `lib/returnVideo.ts` ("Volver" tras el autoplay deja la
+  ficha en el último episodio visto), `components/AddonUrlForm.tsx`, `pages/player/PlayerIcons.tsx`, `LandscapeCard` (en `ContinueCard`),
+  prop `errorNotice` de `Row`, parámetro `clear` de `placeCue`, `data-autofocus` para la primera flecha de la TV.
+  Quedó afuera la grilla de Buscar del punto 6 (saltos al cargar). El usuario NO quiere títulos en español:
+  solo sinopsis y datos; el badge de IMDb va arriba a la derecha.
 - Debrid: el usuario va a pagar **un TorBox (Standard)** para 3-4 casas cercanas; el resto de las ~10 casas usa su
   propio debrid. Real-Debrid no sirve para compartir (una IP a la vez). Todavía no quiere login/perfiles ni asistente.
 - Función 137 (temas OLED / acento / color del póster): preview en el canvas, **esperando respuesta del usuario**.
@@ -92,7 +102,6 @@ npm run preview    # sirve dist/ en http://localhost:4173
 - **Diseño**: el usuario eligió mezclar los estilos 1 (Sala oscura), 8 (Tonal) y 9 (TV): riel lateral, portada
   redondeada con logo, tarjetas apaisadas, acento `#c4b0ff`, Sora + DM Sans. Preview antes/después en el canvas
   "Mezcla elegida"; se implementa en v0.6.
-- Pendiente de respuesta: ¿Mi lista / historial deberían guardar el título en español en vez del de Cinemeta?
 - Login con código de vinculación + sincronización en Cloudflare D1 + Worker de caché.
 - Importar addons directo desde la cuenta de Stremio.
 - Empaquetar para Fire TV / Android TV.

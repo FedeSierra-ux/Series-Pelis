@@ -2,7 +2,7 @@ import { useSyncExternalStore } from 'react'
 import { metaKey } from './addons'
 import { peek } from './cache'
 import { progressStore, settingsStore, watchlistStore, type ListItem, type WatchEntry } from './store'
-import { getTrending, hasTmdb, imdbFromTmdb, peekTmdb, LANG, type TmdbPage } from './tmdb'
+import { getTrending, hasTmdb, imdbFromTmdb, onServerTmdbChange, peekTmdb, LANG, type TmdbPage } from './tmdb'
 import type { Meta, MetaPreview, Video } from './types'
 import { episodeNumber, mapLimit, releaseDate } from './upNext'
 
@@ -190,6 +190,8 @@ function start() {
     if (s.posterLabels !== prev.posterLabels || s.tmdbKey !== prev.tmdbKey) schedule(0)
     prev = s
   })
+  // También cuando el sitio responde que tiene TMDB.
+  onServerTmdbChange(() => schedule(0))
   schedule(0)
 }
 

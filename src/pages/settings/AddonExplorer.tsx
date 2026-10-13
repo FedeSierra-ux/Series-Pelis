@@ -5,6 +5,7 @@ import { typeLabel } from '../../lib/i18n'
 import { officialAddons } from '../../lib/stremioApi'
 import { isImportableAddon, toInstalledAddon, type StremioAddonDescriptor } from '../../lib/stremioLibrary'
 import { addInstalledAddons, installAddon } from '../../lib/store'
+import { errorText } from '../../lib/errors'
 
 const RESOURCE_LABEL: Record<string, string> = {
   catalog: 'catálogos',
@@ -50,7 +51,7 @@ export function AddonExplorer() {
       // Con el manifest al día; si el addon no responde ahora, usamos el que vino en la colección.
       await installAddon(d.transportUrl).catch(() => addInstalledAddons([toInstalledAddon(d)]))
     } catch (err) {
-      setFailed((f) => ({ ...f, [d.transportUrl]: err instanceof Error ? err.message : String(err) }))
+      setFailed((f) => ({ ...f, [d.transportUrl]: errorText(err) }))
     } finally {
       setBusy(undefined)
     }

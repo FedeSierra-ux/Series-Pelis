@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react'
 import { stremioAddonCollection, stremioLibrary, stremioLogin, stremioLogout } from '../../lib/stremioApi'
 import { mergeProgress, mergeWatchlist, parseStremioJson, planImport, type ImportPlan, type StremioData } from '../../lib/stremioLibrary'
 import { addInstalledAddons, addonsStore, progressStore, watchlistStore } from '../../lib/store'
+import { errorText } from '../../lib/errors'
 
 type Mode = 'login' | 'authKey' | 'json'
 
@@ -83,7 +84,7 @@ export function StremioImport() {
       setPlan(planImport(next, currentData()))
     } catch (err) {
       closeSession()
-      setError(err instanceof Error ? err.message : String(err))
+      setError(errorText(err))
     } finally {
       setBusy(false)
     }

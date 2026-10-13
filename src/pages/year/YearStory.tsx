@@ -5,6 +5,7 @@ import { formatDuration, type TitleStat, type YearStats } from '../../lib/stats'
 import { buildStory, MONTH_NAMES, type StorySlide } from '../../lib/yearStory'
 import { GoalBars } from '../goals/GoalBars'
 import { bigNumber, renderShareCard, shareFacts, shareOrDownload, topTitles } from './shareCard'
+import { errorText } from '../../lib/errors'
 
 // "Tu año" en modo historia (tipo Wrapped): pantallas que avanzan solas o con ←/→/toque.
 // Con "reducir movimiento" no hay animaciones y no avanza solo (se puede activar con ▶).
@@ -290,7 +291,7 @@ export function YearStory({ stats, goal, onClose }: { stats: YearStats; goal?: G
       const r = await shareOrDownload(blob, stats.year, `Mi ${stats.year}: ${hours} horas, ${stats.movies} pelis y ${stats.episodes} episodios.`)
       setMsg(r === 'downloaded' ? '✓ Imagen descargada' : r === 'shared' ? '✓ Compartido' : undefined)
     } catch (err) {
-      setMsg(`No se pudo generar la imagen: ${err instanceof Error ? err.message : String(err)}`)
+      setMsg(`No se pudo generar la imagen: ${errorText(err)}`)
     } finally {
       setSharing(false)
     }

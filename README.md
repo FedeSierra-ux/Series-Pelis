@@ -3,7 +3,7 @@
 Tu plataforma personal para ver pelis y series con **tus addons de Stremio**, el **puntaje de IMDb** a la vista
 y un **historial** de todo lo que viste. Funciona en la PC, el celular y el navegador de la TV (se puede instalar como app).
 
-## Qué hace (v0.7.0)
+## Qué hace (v0.8.0)
 
 - **TV en vivo (v0.7)**: canales gratis de Argentina (aire, noticias, deportes y música) de la lista abierta de
   [iptv-org](https://github.com/iptv-org/iptv). Zapping con CH+/CH− o con los números del control, favoritos y
@@ -69,18 +69,56 @@ enlace `stremio://`).
 Para tener todo en español y las filas de tendencias, sacá una key gratis en
 [themoviedb.org → Ajustes → API](https://www.themoviedb.org/settings/api) y pegala en **Ajustes → TMDB**
 (sirve la "API Key" o el "API Read Access Token"). Queda guardada solo en tu navegador.
+Si el sitio publicado tiene el secreto `TMDB_KEY` (ver abajo), no hace falta: TMDB ya viene activado para todos.
 
 ## Publicarla en Cloudflare Pages (gratis)
 
-1. Creá una cuenta en Cloudflare.
-2. `npx wrangler login`
-3. `npm run build && npx wrangler pages deploy dist --project-name series-pelis`
-4. Abrí la URL `https://series-pelis.pages.dev` en la PC, el celular y la TV. En el celular: menú del navegador →
-   *Instalar app* / *Agregar a pantalla de inicio*.
+El repo ya trae todo lo que necesita Cloudflare:
 
-`wrangler pages deploy` también sube la carpeta `functions/` (el proxy `/api/segments` para saltar intros).
+- `wrangler.toml`: nombre del proyecto (`series-pelis`) y carpeta del build (`dist`).
+- `functions/api/segments.ts`: el proxy `/api/segments` para saltar intros (se publica solo).
+- `functions/api/tmdb/[[path]].ts`: `/api/tmdb/*` pide a TMDB con la key del secreto `TMDB_KEY`, así nadie tiene
+  que cargar su propia key. Solo responde a la app (mismo sitio) y a las rutas que usa.
+- `public/_headers`: los archivos de `/assets` (con hash en el nombre) se guardan un año; el service worker y el
+  manifiesto se revisan en cada visita, así las actualizaciones llegan enseguida.
+- `.node-version`: Node 22 para el build.
+- Las rutas de la app (`/detail/...`, `/settings`…) abren bien aunque entres directo: sin `404.html`, Pages sirve
+  `index.html` (modo SPA).
+
+### Opción A — conectada a GitHub (se actualiza sola)
+
+1. Creá una cuenta en Cloudflare → **Workers & Pages** → **Create** → **Pages** → **Connect to Git**.
+2. Elegí el repo `Series-Pelis` y la rama `main`.
+3. Framework preset: **None** (o *Vite*). Build command: `npm run build`. Build output directory: `dist`.
+4. **Save and Deploy**. Cada push a `main` publica una versión nueva y cada PR tiene su propia URL de prueba.
+
+### TMDB para todos (secreto `TMDB_KEY`)
+
+1. En Cloudflare: **Workers & Pages** → `series-pelis` → **Settings** → **Variables and Secrets** → **Add**.
+2. Tipo **Secret**, nombre `TMDB_KEY`, valor: la "API Key" o el "API Read Access Token" de TMDB.
+   Cargalo en **Production** (y en **Preview** si querés que las URLs de prueba de los PR también lo tengan).
+3. Volvé a publicar (**Deployments** → **Retry deployment**, o un push nuevo) para que la función lo tome.
+
+Desde la PC también se puede con `npx wrangler pages secret put TMDB_KEY` (te pide el valor; no queda en ningún archivo).
+
+La key nunca va en el repo ni llega al navegador. Si alguien carga su propia key en **Ajustes → TMDB**, se usa la suya.
+
+### Opción B — a mano desde la PC
+
+```bash
+npx wrangler login
+npm run build && npx wrangler pages deploy
+```
+
+### Después
+
+Abrí `https://series-pelis.pages.dev` en la PC, el celular y la TV. En el celular: menú del navegador →
+*Instalar app* / *Agregar a pantalla de inicio*. Tus addons, tu key de TMDB (si cargaste una) y el historial quedan en cada navegador
+(hasta que llegue la cuenta con código de vinculación).
 
 En Fire TV podés abrirla desde el navegador Silk mientras tanto; el empaquetado como app nativa queda para más adelante.
+
+Para probar localmente igual que en Cloudflare (con la función y los headers): `npm run build && npx wrangler pages dev`.
 
 ## Herramientas para Claude Code
 

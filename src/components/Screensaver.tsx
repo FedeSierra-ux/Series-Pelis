@@ -5,7 +5,7 @@ import { IdleTimer } from '../lib/idle'
 import { isOnline } from '../lib/online'
 import { buildSlides, type Slide, type SlideSource } from '../lib/screensaver'
 import { addonsStore, progressStore, settingsStore, useStore, watchlistStore } from '../lib/store'
-import { itemTitle, itemYear, LANG, peekTmdb, tmdbImg, type TmdbPage } from '../lib/tmdb'
+import { hasTmdb, itemTitle, itemYear, LANG, peekTmdb, tmdbImg, type TmdbPage } from '../lib/tmdb'
 
 const SLIDE_MS = 12_000
 /** Después de cerrarlo, se ignoran los clics/teclas que siguen al que lo cerró (no ejecutan nada). */
@@ -28,7 +28,7 @@ async function collectSlides(): Promise<Slide[]> {
     .map<SlideSource>((e) => ({ id: e.metaId, name: e.name, background: e.background }))
   const list = Object.values(watchlistStore.get()).map<SlideSource>((i) => ({ id: i.id, name: i.name, year: i.year }))
   const groups: SlideSource[][] = [progress, list]
-  if (settingsStore.get().tmdbKey.trim()) {
+  if (hasTmdb()) {
     const trending = peekTmdb<TmdbPage>('/trending/all/day', { language: LANG })
     groups.push(
       (trending?.results ?? [])

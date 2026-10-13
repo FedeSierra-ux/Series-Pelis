@@ -1,10 +1,11 @@
 import { useEffect, useRef, useState } from 'react'
 import { useLocation } from 'react-router-dom'
-import { CINEMETA_URL, normalizeManifestUrl } from '../lib/addons'
+import { CINEMETA_URL } from '../lib/addons'
 import { useAddons } from '../lib/hooks'
-import { addonsStore, installAddon, progressStore, settingsStore, useStore, watchlistStore, type Settings } from '../lib/store'
-import { testTmdbKey } from '../lib/tmdb'
+import { addonsStore, progressStore, settingsStore, useStore, watchlistStore, type Settings } from '../lib/store'
+import { testTmdbKey, useServerTmdb, useTmdbKey } from '../lib/tmdb'
 import { LangChips } from '../pages/settings/PlayerSettings'
+import { AddonUrlForm } from './AddonUrlForm'
 import { KeyboardToggle } from './OnScreenKeyboard'
 
 const OPEN_EVENT = 'sp-open-onboarding'
@@ -46,26 +47,6 @@ function LanguagesStep() {
 
 function AddonStep() {
   const addons = useAddons().filter((a) => a.transportUrl !== CINEMETA_URL)
-  const [url, setUrl] = useState('')
-  const [busy, setBusy] = useState(false)
-  const [msg, setMsg] = useState<{ ok: boolean; text: string }>()
-
-  const add = async (e?: React.FormEvent) => {
-    e?.preventDefault()
-    if (!url.trim() || busy) return
-    setBusy(true)
-    setMsg(undefined)
-    try {
-      const manifest = await installAddon(normalizeManifestUrl(url))
-      setMsg({ ok: true, text: `Listo: se agregó “${manifest.name}”.` })
-      setUrl('')
-    } catch (err) {
-      setMsg({ ok: false, text: `No se pudo agregar: ${err instanceof Error ? err.message : String(err)}` })
-    } finally {
-      setBusy(false)
-    }
-  }
-
   return (
     <>
       <h2 id="ob-title">Agregá tus addons de Stremio</h2>
@@ -74,21 +55,7 @@ function AddonStep() {
         streams. Pegá la URL del manifest (termina en <code>/manifest.json</code>; también sirve el enlace <code>stremio://</code>).
         Si el addon usa Real-Debrid o TorBox, esa configuración ya viene en la URL.
       </p>
-      <form className="inline-form" onSubmit={add}>
-        <input
-          type="url"
-          inputMode="url"
-          placeholder="https://…/manifest.json"
-          value={url}
-          onChange={(e) => setUrl(e.target.value)}
-          aria-label="URL del manifest"
-        />
-        <button className="btn btn-primary" disabled={busy || !url.trim()}>
-          {busy ? 'Agregando…' : 'Agregar'}
-        </button>
-      </form>
-      <KeyboardToggle value={url} onChange={setUrl} onDone={() => add()} doneLabel="Agregar" label="Teclado para la URL del addon" />
-      {msg && <p className={msg.ok ? 'ok' : 'error-text'}>{msg.text}</p>}
+      <AddonUrlForm disableEmpty />
       {addons.length > 0 && (
         <ul className="ob-addons">
           {addons.map((a) => (
@@ -102,6 +69,7 @@ function AddonStep() {
 
 function TmdbStep() {
   const configured = useStore(settingsStore).tmdbKey.trim().length > 0
+  const fromSite = useServerTmdb()
   const [draft, setDraft] = useState('')
   const [busy, setBusy] = useState(false)
   const [msg, setMsg] = useState<{ ok: boolean; text: string }>()
@@ -118,6 +86,17 @@ function TmdbStep() {
     settingsStore.set((s) => ({ ...s, tmdbKey: key }))
     setDraft('')
     setMsg({ ok: true, text: '✓ Key guardada.' })
+  }
+
+  // Con la key del sitio (secreto en Cloudflare) no hay nada que configurar.
+  if (fromSite && !configured) {
+    return (
+      <>
+        <h2 id="ob-title">TMDB</h2>
+        <p className="ok">✓ Ya viene activado: las fichas se ven en español, con reparto, sagas, tendencias y tráileres.</p>
+        <p className="muted">No hace falta hacer nada. Seguí con “Siguiente”.</p>
+      </>
+    )
   }
 
   return (
@@ -173,14 +152,14 @@ function TmdbStep() {
 }
 
 function DoneStep() {
-  const settings = useStore(settingsStore)
+  const tmdbOn = useTmdbKey().length > 0
   const addons = useAddons().filter((a) => a.transportUrl !== CINEMETA_URL)
   return (
     <>
       <h2 id="ob-title">¡Listo!</h2>
       <ul className="ob-summary">
         <li>{addons.length > 0 ? `✓ ${addons.length === 1 ? '1 addon' : `${addons.length} addons`} de streams` : '• Sin addons de streams todavía (los agregás en Ajustes)'}</li>
-        <li>{settings.tmdbKey.trim() ? '✓ TMDB activado: fichas en español' : '• Sin TMDB (opcional)'}</li>
+        <li>{tmdbOn ? '✓ TMDB activado: fichas en español' : '• Sin TMDB (opcional)'}</li>
         <li>✓ Navegación con el control remoto: flechas, Enter y Atrás</li>
       </ul>
       <p className="muted">Todo esto se cambia en Ajustes. Ahí también podés ver las opciones avanzadas.</p>
