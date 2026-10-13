@@ -1,0 +1,285 @@
+import { useEffect, useMemo, useRef, useState } from 'react'
+import { Link, useLocation, useNavigate } from 'react-router-dom'
+import { getStreams } from '../../lib/addons'
+import { useAddons } from '../../lib/hooks'
+import { isOnline } from '../../lib/online'
+import { lastSourceStore, settingsStore, useStore } from '../../lib/store'
+import { analyzeStreams, playable, streamKey, type RankedStream } from '../../lib/streamPicker'
+import type { AddonStreams, InstalledAddon, Meta, Stream, Video } from '../../lib/types'
+import { createRecentSet } from './autoPlayed'
+import { episodeNumber } from './episodes'
+
+export interface PlayState {
+  stream: Stream
+  playUrl: string
+  meta: Pick<Meta, 'id' | 'type' | 'name' | 'poster' | 'background' | 'logo'>
+  video?: Pick<Video, 'id' | 'season' | 'episode' | 'title' | 'name'>
+  /** Siguiente episodio, para el botón del reproductor. */
+  nextVideoId?: string
+  addonName: string
+  /** transportUrl del addon (para recordar la fuente y buscar la misma en el siguiente episodio). */
+  addonUrl?: string
+}
+
+/** Lo que la ficha deja en `location.state` al elegir un episodio. */
+export interface DetailLocationState {
+  /** Al volver del reproductor: no arrancar sola la cuenta regresiva del modo automático. */
+  noAuto?: boolean
+  /** "Ver desde el principio": el reproductor arranca en 0 aunque haya progreso guardado. */
+  fromStart?: boolean
+}
+
+export function streamLabel(s: Stream) {
+  const lines = (s.title ?? s.description ?? '').split('\n').filter(Boolean)
+  return { name: (s.name ?? '').replace(/\n/g, ' '), lines }
+}
+
+/** Espera a los addons lentos una vez que ya hay algo reproducible, antes de recomendar o reproducir solo. */
+const GRACE_MS = 4000
+const COUNTDOWN = 3
+/**
+ * Entradas del historial (location.key + video) que ya se reprodujeron solas: al volver atrás
+ * desde el reproductor no arranca sola de nuevo, así nadie queda atrapado. Con tope, por sesión.
+ */
+const autoPlayed = createRecentSet(50)
+
+export function StreamList({ meta, video, nextVideoId }: { meta: Meta; video?: Video; nextVideoId?: string }) {
+  const addons = useAddons()
+  const settings = useStore(settingsStore)
+  const lastSources = useStore(lastSourceStore)
+  const navigate = useNavigate()
+  const location = useLocation()
+  const { noAuto, fromStart } = (location.state ?? {}) as DetailLocationState
+  const videoId = video?.id ?? meta.id
+  const fetchKey = `${meta.type}|${videoId}`
+  // Los resultados van con su video, para no mezclar los de otro episodio mientras llegan los nuevos.
+  const [result, setResult] = useState<{ key: string; groups: AddonStreams[] }>()
+  const [graceFor, setGraceFor] = useState<string>()
+  const [countdown, setCountdown] = useState<{ key: string; pick: RankedStream; left: number }>()
+  const [showHidden, setShowHidden] = useState(false)
+  const [openTorrents, setOpenTorrents] = useState<Set<string>>(() => new Set())
+  const listRef = useRef<HTMLDivElement>(null)
+  const cancelRef = useRef<HTMLButtonElement>(null)
+
+  useEffect(
+    () => getStreams(addons, meta.type, videoId, (groups) => setResult({ key: fetchKey, groups })),
+    [addons, meta.type, videoId, fetchKey],
+  )
+
+  const fetched = result?.key === fetchKey
+  const groups = useMemo(() => (fetched && result ? result.groups : []), [fetched, result])
+  const rules = settings.sourceRules
+  const last = rules.rememberLast ? lastSources[meta.id] : undefined
+  const { ranked, hidden } = useMemo(
+    () => analyzeStreams(groups, rules, last, settings.streamingServerUrl),
+    [groups, rules, last, settings.streamingServerUrl],
+  )
+  const loading = !fetched || groups.some((g) => g.loading)
+  const hasPlayable = ranked.length > 0
+
+  useEffect(() => {
+    if (!hasPlayable) return
+    const t = setTimeout(() => setGraceFor(fetchKey), GRACE_MS)
+    return () => clearTimeout(t)
+  }, [hasPlayable, fetchKey])
+
+  // Se recomienda recién cuando respondieron todos (o pasó la espera), así la lista no salta.
+  const settled = fetched && (!loading || graceFor === fetchKey)
+  const best = settled ? ranked[0] : undefined
+  const autoKey = `${location.key}|${fetchKey}`
+  const pending = countdown?.key === autoKey ? countdown : undefined
+
+  const play = (s: Stream, url: string, addon: InstalledAddon) => {
+    if (rules.rememberLast) {
+      lastSourceStore.set((all) => ({
+        ...all,
+        [meta.id]: { addonUrl: addon.transportUrl, bingeGroup: s.behaviorHints?.bingeGroup, streamName: s.name, at: Date.now() },
+      }))
+    }
+    const state: PlayState & { resume?: { at: number } } = {
+      stream: s,
+      playUrl: url,
+      meta: { id: meta.id, type: meta.type, name: meta.name, poster: meta.poster, background: meta.background, logo: meta.logo },
+      video: video && { id: video.id, season: video.season, episode: episodeNumber(video), title: video.title, name: video.name },
+      nextVideoId,
+      addonName: addon.manifest.name,
+      addonUrl: addon.transportUrl,
+    }
+    // "Ver desde el principio": `resume` manda sobre el progreso guardado (ver `Player.tsx`).
+    if (fromStart) state.resume = { at: 0 }
+    navigate(`/watch/${meta.type}/${encodeURIComponent(videoId)}`, { state })
+  }
+
+  // Modo automático: una sola vez por entrada del historial, con cuenta regresiva cancelable.
+  // Al volver del reproductor (`noAuto`) no arranca: el episodio recién visto no se repite solo.
+  useEffect(() => {
+    if (rules.mode !== 'auto' || noAuto || !best || autoPlayed.has(autoKey)) return
+    autoPlayed.add(autoKey)
+    setCountdown({ key: autoKey, pick: best, left: COUNTDOWN })
+  }, [rules.mode, noAuto, best, autoKey])
+
+  const pendingLeft = pending?.left
+  useEffect(() => {
+    if (!pending || pendingLeft === undefined) return
+    if (pendingLeft <= 0) {
+      setCountdown(undefined)
+      play(pending.pick.stream, pending.pick.url, pending.pick.addon)
+      return
+    }
+    const t = setTimeout(() => setCountdown((c) => c && { ...c, left: c.left - 1 }), 1000)
+    return () => clearTimeout(t)
+  }, [pendingLeft])
+
+  // Con el control remoto: el foco va a "Elegir otro", así se cancela con un solo OK.
+  const hasPending = !!pending
+  useEffect(() => {
+    if (hasPending) cancelRef.current?.focus()
+  }, [hasPending])
+
+  const cancelAuto = () => {
+    setCountdown(undefined)
+    requestAnimationFrame(() => {
+      const list = listRef.current
+      ;(list?.querySelector<HTMLElement>('.stream-item.recommended') ?? list?.querySelector<HTMLElement>('button.stream-item, a.stream-item'))?.focus()
+    })
+  }
+
+  if (!fetched) return <div className="streams-status muted">Buscando fuentes…</div>
+
+  if (groups.length === 0) {
+    return (
+      <div className="streams-empty">
+        <p>Ningún addon instalado ofrece fuentes para este título.</p>
+        <p className="muted">
+          Agregá tus addons de Stremio (por ejemplo uno configurado con tu Real-Debrid o TorBox) en{' '}
+          <Link to="/settings">Ajustes</Link>.
+        </p>
+      </div>
+    )
+  }
+
+  const total = groups.reduce((n, g) => n + g.streams.length, 0)
+  const totalLabel = total === 1 ? '1 fuente' : `${total} fuentes`
+
+  /** `hiddenReason`: está en "Ocultos por tus filtros" (se puede reproducir igual). */
+  const renderItem = (s: Stream, i: number, addon: InstalledAddon, recommended: boolean, hiddenReason?: string, key: string | number = i) => {
+    const { name, lines } = streamLabel(s)
+    const p = playable(s, settings.streamingServerUrl)
+    const content = (
+      <>
+        {recommended && <span className="stream-badge">Recomendado</span>}
+        <span className="stream-name">
+          {name || addon.manifest.name}
+          {hiddenReason && <span className="muted small"> · {addon.manifest.name}</span>}
+        </span>
+        <span className="stream-title">
+          {lines.map((l, j) => (
+            <span key={j}>{l}</span>
+          ))}
+        </span>
+        {hiddenReason && <span className="stream-hidden-reason">{hiddenReason}</span>}
+        {p.reason && <span className="stream-warn">{p.reason}</span>}
+        {s.behaviorHints?.notWebReady && p.url && <span className="stream-warn">Puede no reproducirse en el navegador (formato MKV/HEVC)</span>}
+      </>
+    )
+    const cls = `stream-item${recommended ? ' recommended' : ''}`
+    if (p.url)
+      return (
+        <button key={key} className={cls} data-autofocus={recommended || undefined} onClick={() => play(s, p.url!, addon)}>
+          {content}
+        </button>
+      )
+    if (p.external)
+      return (
+        <a key={key} className={cls} data-autofocus={recommended || undefined} href={p.external} target="_blank" rel="noreferrer">
+          {content}
+        </a>
+      )
+    return (
+      <div key={key} className="stream-item disabled" tabIndex={-1}>
+        {content}
+      </div>
+    )
+  }
+
+  return (
+    <div className="streams" ref={listRef}>
+      {pending && (
+        <div className="auto-play-banner" role="status" aria-live="polite">
+          <span>
+            Reproduciendo «{streamLabel(pending.pick.stream).name || pending.pick.addon.manifest.name}» de{' '}
+            {pending.pick.addon.manifest.name} en {pending.left}…
+          </span>
+          <div className="auto-play-actions">
+            <button ref={cancelRef} className="btn btn-small" onClick={cancelAuto}>
+              Elegir otro
+            </button>
+            <button className="btn btn-small btn-primary" onClick={() => setCountdown((c) => c && { ...c, left: 0 })}>
+              Reproducir ya
+            </button>
+          </div>
+        </div>
+      )}
+      <div className="streams-status muted">{loading ? `Buscando fuentes… (${totalLabel} hasta ahora)` : `${totalLabel} encontrada${total === 1 ? '' : 's'}`}</div>
+      {groups.map((g, addonIndex) => {
+        const bestIndex = best?.addon.transportUrl === g.addon.transportUrl ? best.streamIndex : -1
+        // El recomendado va primero dentro de su addon; los que esconden los filtros van aparte.
+        const items = g.streams.map((s, i) => ({ s, i })).filter(({ i }) => !hidden.has(streamKey(addonIndex, i)))
+        if (bestIndex >= 0) items.sort((a, b) => Number(b.i === bestIndex) - Number(a.i === bestIndex))
+        // Los torrents que no se pueden abrir (sin debrid ni servidor de Stremio) van plegados, así no tapan los que sí andan.
+        const isDeadTorrent = (s: Stream) => {
+          const p = playable(s, settings.streamingServerUrl)
+          return !p.url && !p.external && !!s.infoHash
+        }
+        const usable = items.filter(({ s }) => !isDeadTorrent(s))
+        const torrents = items.filter(({ s }) => isDeadTorrent(s))
+        const torrentsOpen = openTorrents.has(g.addon.transportUrl)
+        const toggleTorrents = () =>
+          setOpenTorrents((prev) => {
+            const next = new Set(prev)
+            if (next.has(g.addon.transportUrl)) next.delete(g.addon.transportUrl)
+            else next.add(g.addon.transportUrl)
+            return next
+          })
+        return (
+          <section key={g.addon.transportUrl} className="stream-group">
+            <h3>
+              {g.addon.manifest.name}
+              {g.loading && <span className="spinner" aria-label="Cargando" />}
+            </h3>
+            {g.error && <p className="muted small">{isOnline() ? `No respondió: ${g.error}` : 'Sin conexión: no se pueden buscar fuentes.'}</p>}
+            {!g.loading && !g.error && g.streams.length === 0 && <p className="muted small">Sin resultados.</p>}
+            {!g.loading && g.streams.length > 0 && items.length === 0 && <p className="muted small">Todos ocultos por tus filtros.</p>}
+            {usable.length > 0 && <div className="stream-items">{usable.map(({ s, i }) => renderItem(s, i, g.addon, i === bestIndex))}</div>}
+            {torrents.length > 0 && (
+              <>
+                <button className="stream-hidden-toggle stream-torrents-toggle" aria-expanded={torrentsOpen} onClick={toggleTorrents}>
+                  {torrentsOpen ? '▾' : '▸'} {torrents.length === 1 ? '1 torrent sin debrid' : `${torrents.length} torrents sin debrid`} (necesitan
+                  el servidor de Stremio)
+                </button>
+                {torrentsOpen && <div className="stream-items">{torrents.map(({ s, i }) => renderItem(s, i, g.addon, false))}</div>}
+              </>
+            )}
+          </section>
+        )
+      })}
+      {hidden.size > 0 && (
+        <section className="stream-group stream-hidden">
+          <button className="stream-hidden-toggle" aria-expanded={showHidden} onClick={() => setShowHidden((v) => !v)}>
+            {showHidden ? '▾' : '▸'} Ocultos por tus filtros ({hidden.size})
+          </button>
+          {showHidden && (
+            <div className="stream-items">
+              {groups.flatMap((g, addonIndex) =>
+                g.streams.map((s, i) => {
+                  const reason = hidden.get(streamKey(addonIndex, i))
+                  return reason ? renderItem(s, i, g.addon, false, reason, `${addonIndex}:${i}`) : null
+                }),
+              )}
+            </div>
+          )}
+        </section>
+      )}
+    </div>
+  )
+}

@@ -1,0 +1,54 @@
+/* Arreglos de la ficha: barra de temporada, fuentes debajo del episodio en celular y "Tu puntaje" en una línea. */
+
+/* Pestañas de temporadas + "Marcar temporada como vista" en la misma fila. */
+.season-bar {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0 12px;
+}
+.season-bar .season-tabs {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+.season-bar .season-mark {
+  flex: 0 0 auto;
+  margin: 0 0 10px;
+  white-space: nowrap;
+}
+
+/* Celular: el panel de fuentes va dentro de la lista, justo debajo del episodio elegido. */
+.episode-streams-inline {
+  position: static;
+  max-height: none;
+  margin: -2px 0 6px;
+  border-top-left-radius: 0;
+  border-top-right-radius: 0;
+}
+.episode-streams-inline .streams-status:first-child {
+  margin-top: 0;
+}
+
+/* Puntaje del episodio ("★ 7.7") al lado de la fecha. */
+.episode-text .imdb-sm {
+  vertical-align: baseline;
+  margin-left: 2px;
+}
+
+/* "Tu puntaje · Sin puntuar": que no se parta en dos líneas en celular. */
+.detail-info .star-rating-label,
+.detail-info .star-rating-hint {
+  white-space: nowrap;
+}
+@media (max-width: 480px) {
+  .detail-info .star-rating-label + .star-rating-hint:not(:empty)::before {
+    content: none;
+  }
+}
+
+/* Estado de error de la ficha (título inexistente o sin cargar): botón para volver. */
+.detail-error-actions {
+  display: flex;
+  gap: 10px;
+  padding: 0 var(--gutter) 16px;
+}

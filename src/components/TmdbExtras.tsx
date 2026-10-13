@@ -13,6 +13,8 @@ import {
   type TmdbProvider,
   type TmdbType,
 } from '../lib/tmdb'
+import { localToday } from '../pages/detail/episodes'
+import { mergeCast } from '../pages/detail/castPeople'
 import { PosterCard } from './PosterCard'
 import { Row } from './Row'
 
@@ -23,15 +25,11 @@ const MAX_CAST = 15
 const MAX_RECS = 20
 
 export function CastRow({ details, type }: { details: TmdbDetails; type: TmdbType }) {
-  // En series el reparto "agregado" junta todas las temporadas; el personaje es el primer rol.
+  // En series el reparto "agregado" junta todas las temporadas. Una tarjeta por persona aunque haga
+  // varios papeles ("Rol 1 / Rol 2"), así no se repiten (ni chocan las keys).
   const people = useMemo(() => {
     const cast = type === 'tv' ? details.aggregate_credits?.cast : details.credits?.cast
-    return (cast ?? []).slice(0, MAX_CAST).map((c) => ({
-      id: c.id,
-      name: c.name,
-      character: type === 'tv' ? c.roles?.[0]?.character : c.character,
-      photo: tmdbImg(c.profile_path, 'w185'),
-    }))
+    return mergeCast(cast ?? [], MAX_CAST).map((c) => ({ ...c, photo: tmdbImg(c.profile_path, 'w185') }))
   }, [details, type])
 
   return (
@@ -69,7 +67,8 @@ export function MoreLikeThis({ details, type }: { details: TmdbDetails; type: Tm
   )
 }
 
-const today = () => new Date().toISOString().slice(0, 10)
+// Fecha local: con `toISOString` en Argentina el día cambiaba a las 21:00.
+const today = () => localToday()
 
 /** Saga de una peli: partes en orden de estreno y cuántas viste. */
 export function SagaBlock({ details }: { details: TmdbDetails }) {

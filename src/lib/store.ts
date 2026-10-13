@@ -219,6 +219,55 @@ export function setWatched(
   })
 }
 
+/**
+ * Marca (o desmarca) varios videos de una vez, por ejemplo una temporada entera: una sola escritura
+ * del progreso y una del diario. Misma lógica que `setWatched`; lo que ya estaba como se pide no se toca.
+ */
+export function setWatchedMany(
+  bases: Array<Pick<WatchEntry, 'videoId' | 'metaId' | 'type' | 'name' | 'poster' | 'season' | 'episode' | 'episodeTitle'>>,
+  watched: boolean,
+) {
+  progressStore.set((all) => {
+    const now = Date.now()
+    const next = { ...all }
+    const changed: typeof bases = []
+    for (const base of bases) {
+      const prev = all[base.videoId]
+      if (!watched) {
+        if (!prev) continue
+        delete next[base.videoId]
+        changed.push(base)
+        continue
+      }
+      if (prev?.watched) continue
+      changed.push(base)
+      next[base.videoId] = {
+        ...base,
+        position: prev?.position ?? 0,
+        duration: prev?.duration ?? 0,
+        watched: true,
+        updatedAt: now,
+        firstWatchedAt: prev?.firstWatchedAt ?? now,
+      }
+    }
+    if (changed.length === 0) return all
+    diaryStore.set((d) => {
+      let entries = d.entries
+      for (const base of changed) {
+        if (!watched) {
+          entries = withoutLatest(entries, base.videoId)
+          continue
+        }
+        if (isDuplicate(entries, base.videoId, now)) continue
+        const entry = diaryEntryFrom({ ...base, duration: all[base.videoId]?.duration }, now, 'manual')
+        entries = { ...entries, [entry.id]: entry }
+      }
+      return entries === d.entries ? d : { ...d, entries }
+    })
+    return next
+  })
+}
+
 export function removeHistory(videoIds: string[]) {
   diaryStore.set((d) => ({ ...d, entries: withoutVideos(d.entries, videoIds) }))
   progressStore.set((all) => {
