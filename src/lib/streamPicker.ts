@@ -7,6 +7,9 @@ import type { AddonStreams, InstalledAddon, Stream } from './types'
 
 /** Cómo se va a reproducir este stream en la app, o por qué no se puede. */
 export function playable(s: Stream, server: string): { url?: string; external?: string; reason?: string } {
+  // El navegador no puede mandar cabeceras propias (Referer, Origin, cookies…): eso solo lo hace
+  // el servidor de Stremio o un reproductor externo.
+  if (needsProxyHeaders(s)) return { reason: 'Necesita cabeceras especiales: abrilo en un reproductor externo' }
   if (s.url) return { url: s.url }
   if (s.ytId) return { external: `https://www.youtube.com/watch?v=${s.ytId}` }
   if (s.externalUrl) return { external: s.externalUrl }
@@ -15,6 +18,12 @@ export function playable(s: Stream, server: string): { url?: string; external?: 
     return url ? { url } : { reason: 'Torrent: necesita el servidor de Stremio (ver Ajustes) o un addon con debrid' }
   }
   return { reason: 'Formato no soportado' }
+}
+
+/** ¿El addon pide cabeceras especiales para pedir el stream (`behaviorHints.proxyHeaders`)? */
+export function needsProxyHeaders(s: Stream): boolean {
+  const h = s.behaviorHints?.proxyHeaders
+  return !!h && (Object.keys(h.request ?? {}).length > 0 || Object.keys(h.response ?? {}).length > 0)
 }
 
 export type Quality = 2160 | 1080 | 720 | 480
@@ -143,13 +152,31 @@ export function filterReason(s: Stream, rules: SourceRules): string | undefined 
 
 const normalize = (t: string) => t.toLowerCase().replace(/[^\p{L}\p{N}]+/gu, ' ').trim()
 
+const VIDEO_EXT_RE = /\.(mkv|mp4|m4v|avi|mov|wmv|webm|ts|m2ts|mpg|mpeg|flv|iso)$/i
+
+/**
+ * ¿La línea parece un nombre de archivo ("Peli.2020.1080p.WEB-DL.x264.mkv") y no una etiqueta
+ * genérica ("Latino 1080p")? Solo los nombres de archivo sirven para detectar repetidos.
+ */
+export function looksLikeFilename(line: string): boolean {
+  const t = line.trim()
+  if (!t) return false
+  if (VIDEO_EXT_RE.test(t)) return true
+  const separators = (t.match(/[.\-_]/g) ?? []).length
+  // Nombre de release: largo y con puntos o guiones, o estilo "scene" (sin espacios, varios puntos).
+  return (t.length >= 20 && separators > 0) || (separators >= 2 && !/\s/.test(t) && t.length >= 12)
+}
+
 /** Claves que identifican el mismo archivo: torrent, enlace o nombre de archivo + tamaño. */
 function duplicateKeys(s: Stream): string[] {
   const keys: string[] = []
   if (s.infoHash) keys.push(`h:${s.infoHash.toLowerCase()}:${s.fileIdx ?? ''}`)
   if (s.url) keys.push(`u:${s.url}`)
   const size = parseSize(s)
-  const file = s.behaviorHints?.filename ?? (s.title ?? s.description ?? '').split('\n')[0]
+  // Sin nombre de archivo, la primera línea del título solo cuenta si parece uno: dos archivos distintos
+  // con la etiqueta "Latino 1080p" y el mismo tamaño no son el mismo.
+  const firstLine = (s.title ?? s.description ?? '').split('\n')[0]
+  const file = s.behaviorHints?.filename ?? (looksLikeFilename(firstLine) ? firstLine : '')
   if (size && normalize(file).length >= 6) keys.push(`n:${normalize(file)}:${Math.round(size / 1e6)}`)
   return keys
 }

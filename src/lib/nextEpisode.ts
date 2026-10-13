@@ -2,7 +2,8 @@ import type { PlayState } from '../pages/Detail'
 import { getMeta, getStreams, prefetchMeta } from './addons'
 import { addonsStore, lastSourceStore, settingsStore, type LastSource } from './store'
 import { rankStreams, type RankedStream } from './streamPicker'
-import type { AddonStreams, InstalledAddon, Meta } from './types'
+import type { AddonStreams, InstalledAddon, Meta, Video } from './types'
+import { episodeNumber } from './upNext'
 
 /** Cuánto esperar a los addons lentos una vez que ya hay algo reproducible. */
 const GRACE_MS = 4000
@@ -15,6 +16,35 @@ function referenceSource(state: PlayState, addons: InstalledAddon[]): LastSource
   return lastSourceStore.get()[state.meta.id]
 }
 
+export interface NextEpisode {
+  /** El siguiente episodio, con `episode` ya resuelto (algunos addons solo mandan `number`). */
+  video: NonNullable<PlayState['video']>
+  /** El que viene después de ese, para que el reproductor siga ofreciendo "Siguiente". */
+  afterNextId?: string
+}
+
+/**
+ * Ubica el siguiente episodio en la lista de videos de la ficha, en orden de temporada y número
+ * (`episode` o `number`, según lo que mande el addon), y el que le sigue a ese.
+ */
+export function locateNextEpisode(videos: Video[] | undefined, nextVideoId: string): NextEpisode | undefined {
+  const nextVideo = videos?.find((v) => v.id === nextVideoId)
+  if (!nextVideo) return undefined
+  const sorted = [...(videos ?? [])].sort((a, b) => (a.season ?? 0) - (b.season ?? 0) || (episodeNumber(a) ?? 0) - (episodeNumber(b) ?? 0))
+  const afterNext = sorted[sorted.findIndex((v) => v.id === nextVideo.id) + 1]
+  return {
+    video: { id: nextVideo.id, season: nextVideo.season, episode: episodeNumber(nextVideo), title: nextVideo.title, name: nextVideo.name },
+    afterNextId: afterNext?.id,
+  }
+}
+
+/** Temporada del siguiente episodio (puede ser otra que la actual), para volver a la ficha en la temporada correcta. */
+export async function nextEpisodeSeason(state: PlayState): Promise<number | undefined> {
+  if (!state.nextVideoId) return undefined
+  const meta: Meta = await getMeta(addonsStore.get(), state.meta.type, state.meta.id)
+  return locateNextEpisode(meta.videos, state.nextVideoId)?.video.season
+}
+
 /**
  * Busca en el siguiente episodio la misma fuente (mismo bingeGroup, o mismo addon y nombre si el
  * addon no da bingeGroup). En modo manual solo acepta streams del mismo addon; en automático, el mejor.
@@ -24,10 +54,9 @@ export async function findNextStream(state: PlayState): Promise<PlayState | unde
   const addons = addonsStore.get()
   const { sourceRules: rules, streamingServerUrl: server } = settingsStore.get()
   const meta: Meta = await getMeta(addons, state.meta.type, state.meta.id)
-  const nextVideo = meta.videos?.find((v) => v.id === state.nextVideoId)
-  if (!nextVideo) return undefined
-  const sorted = [...(meta.videos ?? [])].sort((a, b) => (a.season ?? 0) - (b.season ?? 0) || (a.episode ?? 0) - (b.episode ?? 0))
-  const afterNext = sorted[sorted.findIndex((v) => v.id === nextVideo.id) + 1]
+  const next = locateNextEpisode(meta.videos, state.nextVideoId)
+  if (!next) return undefined
+  const nextVideo = next.video
   const ref = referenceSource(state, addons)
 
   const best = await new Promise<RankedStream | undefined>((resolve) => {
@@ -67,8 +96,8 @@ export async function findNextStream(state: PlayState): Promise<PlayState | unde
     playUrl: best.url,
     addonName: best.addon.manifest.name,
     addonUrl: best.addon.transportUrl,
-    video: { id: nextVideo.id, season: nextVideo.season, episode: nextVideo.episode, title: nextVideo.title, name: nextVideo.name },
-    nextVideoId: afterNext?.id,
+    video: nextVideo,
+    nextVideoId: next.afterNextId,
   }
 }
 
