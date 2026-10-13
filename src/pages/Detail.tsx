@@ -6,6 +6,7 @@ import { ImdbRating } from '../components/Rating'
 import { SpoilerText, useEpisodeSpoilers } from '../components/Spoiler'
 import { StarRatingInput } from '../components/StarRating'
 import { ErrorBox } from '../components/Status'
+import { isOnline, offlineMessage } from '../lib/online'
 import { TmdbSections } from '../components/TmdbExtras'
 import { WikiTrivia } from '../components/WikiTrivia'
 import { getStreams } from '../lib/addons'
@@ -258,7 +259,7 @@ function StreamList({
               {g.addon.manifest.name}
               {g.loading && <span className="spinner" aria-label="Cargando" />}
             </h3>
-            {g.error && <p className="muted small">No respondió: {g.error}</p>}
+            {g.error && <p className="muted small">{isOnline() ? `No respondió: ${g.error}` : 'Sin conexión: no se pueden buscar streams.'}</p>}
             {!g.loading && !g.error && g.streams.length === 0 && <p className="muted small">Sin resultados.</p>}
             {!g.loading && g.streams.length > 0 && items.length === 0 && <p className="muted small">Todos ocultos por tus filtros.</p>}
             <div className="stream-items">{items.map(({ s, i }) => renderItem(s, i, g.addon, i === bestIndex))}</div>
@@ -320,7 +321,7 @@ function TmdbResolver({ type, tmdbType, tmdbId }: { type: string; tmdbType: Tmdb
   if (state?.error)
     return (
       <div className="page">
-        <ErrorBox message={`No se pudo abrir este título de TMDB: ${state.error}`} />
+        <ErrorBox message={offlineMessage('esta ficha no está guardada') ?? `No se pudo abrir este título de TMDB: ${state.error}`} />
         <p className="muted">
           Revisá la key de TMDB en <Link to="/settings">Ajustes</Link>.
         </p>
@@ -413,7 +414,7 @@ function DetailPage({ type, id }: { type: string; id: string }) {
   const nextVideo = selectedVideo ? videos[videos.indexOf(selectedVideo) + 1] : undefined
 
   if (loading && !meta) return detailSkeleton
-  if (error && !meta) return <div className="page"><ErrorBox message={`No se pudo cargar: ${error}`} /></div>
+  if (error && !meta) return <div className="page"><ErrorBox message={offlineMessage('esta ficha no está guardada') ?? `No se pudo cargar: ${error}`} /></div>
   if (!meta) return null
 
   const fullMeta: Meta = { ...meta, type }

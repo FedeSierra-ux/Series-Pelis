@@ -1,4 +1,7 @@
 import { useRef, useState } from 'react'
+import { Link } from 'react-router-dom'
+import { Advanced } from '../components/Advanced'
+import { KeyboardToggle } from '../components/OnScreenKeyboard'
 import { CINEMETA_URL, normalizeManifestUrl } from '../lib/addons'
 import { clearCache } from '../lib/cache'
 import { useAddons, useTitle } from '../lib/hooks'
@@ -8,14 +11,19 @@ import {
   installAddon,
   moveAddon,
   removeAddon,
+  setAddonEnabled,
   settingsStore,
   useStore,
 } from '../lib/store'
+import { AddonExplorer } from './settings/AddonExplorer'
+import { AppearanceSettings } from './settings/AppearanceSettings'
 import { PlayerSettings } from './settings/PlayerSettings'
 import { PosterSettings } from './settings/PosterSettings'
 import { SourceSettings } from './settings/SourceSettings'
 import { TasteSettings } from './settings/TasteSettings'
+import { StremioImport } from './settings/StremioImport'
 import { TmdbSettings } from './settings/TmdbSettings'
+import { TvSettings } from './settings/TvSettings'
 
 const DEFAULT_SERVER = 'http://127.0.0.1:11470'
 
@@ -25,8 +33,8 @@ function AddonsSection() {
   const [busy, setBusy] = useState(false)
   const [msg, setMsg] = useState<{ ok: boolean; text: string }>()
 
-  const add = async (e: React.FormEvent) => {
-    e.preventDefault()
+  const add = async (e?: React.FormEvent) => {
+    e?.preventDefault()
     if (!url.trim()) return
     setBusy(true)
     setMsg(undefined)
@@ -61,6 +69,7 @@ function AddonsSection() {
           {busy ? 'Agregando…' : 'Agregar'}
         </button>
       </form>
+      <KeyboardToggle value={url} onChange={setUrl} onDone={() => add()} doneLabel="Agregar" label="Teclado para la URL del addon" />
       {msg && <p className={msg.ok ? 'ok' : 'error-text'}>{msg.text}</p>}
 
       <ul className="addon-list">
@@ -69,11 +78,12 @@ function AddonsSection() {
           const resources = m.resources.map((r) => (typeof r === 'string' ? r : r.name))
           const configurable = m.behaviorHints?.configurable
           return (
-            <li key={a.transportUrl} className="addon-item">
+            <li key={a.transportUrl} className={`addon-item${a.disabled ? ' addon-off' : ''}`}>
               {m.logo ? <img src={m.logo} alt="" className="addon-logo" /> : <div className="addon-logo placeholder">{m.name[0]}</div>}
               <div className="addon-text">
                 <strong>
                   {m.name} <span className="muted small">v{m.version}</span>
+                  {a.disabled && <span className="chip small">Desactivado</span>}
                 </strong>
                 {m.description && <span className="muted small addon-desc">{m.description}</span>}
                 <span className="chips">
@@ -85,6 +95,17 @@ function AddonsSection() {
                 </span>
               </div>
               <div className="addon-actions">
+                <button
+                  className={`btn btn-ghost addon-switch${a.disabled ? '' : ' on'}`}
+                  role="switch"
+                  aria-checked={!a.disabled}
+                  aria-label={`${a.disabled ? 'Activar' : 'Desactivar'} ${m.name}`}
+                  title={a.disabled ? 'Desactivado: no se consulta' : 'Activo'}
+                  onClick={() => setAddonEnabled(a.transportUrl, !!a.disabled)}
+                >
+                  <span className="addon-switch-track" aria-hidden />
+                  {a.disabled ? 'Apagado' : 'Activo'}
+                </button>
                 <button className="btn btn-ghost" disabled={i === 0} onClick={() => moveAddon(a.transportUrl, -1)} aria-label="Subir">
                   ↑
                 </button>
@@ -110,7 +131,17 @@ function AddonsSection() {
           )
         })}
       </ul>
-      <p className="muted small">El orden importa: los catálogos y los streams se muestran en este orden.</p>
+      <p className="muted small">
+        El orden importa: los catálogos y los streams se muestran en este orden. Un addon apagado sigue instalado pero no
+        se consulta para catálogos, streams ni subtítulos.
+      </p>
+      <div className="hero-actions">
+        <Link className="btn addon-catalogs-link" to="/settings/catalogs">
+          Gestionar catálogos
+        </Link>
+        <span className="muted small">Renombrar, ocultar, ordenar o juntar las filas de Inicio.</span>
+      </div>
+      <AddonExplorer />
     </section>
   )
 }
@@ -145,6 +176,7 @@ function PlaybackSection() {
       </label>
 
 
+      <Advanced>
       <h3>Servidor de streaming de Stremio (opcional, experimental)</h3>
       <p className="muted">
         Solo en la PC: si tenés Stremio abierto, la app puede usar su servidor local para reproducir torrents sin debrid.
@@ -163,6 +195,7 @@ function PlaybackSection() {
         </button>
       </div>
       {test && <p className="muted">{test}</p>}
+      </Advanced>
     </section>
   )
 }
@@ -205,6 +238,7 @@ function DataSection() {
         </button>
         <button
           className="btn"
+          data-advanced
           onClick={async () => {
             await clearCache()
             setMsg('✓ Caché de catálogos borrada')
@@ -227,19 +261,27 @@ function DataSection() {
 
 export function Settings() {
   useTitle('Ajustes')
+  const { showAdvanced } = useStore(settingsStore)
   return (
-    <div className="page settings">
+    <div className={`page settings${showAdvanced ? ' show-advanced' : ''}`}>
       <header className="page-header">
         <h1>Ajustes</h1>
         <span className="muted small">Versión {__APP_VERSION__}</span>
       </header>
+      <label className="check settings-advanced-toggle">
+        <input type="checkbox" checked={showAdvanced} onChange={(e) => settingsStore.set((s) => ({ ...s, showAdvanced: e.target.checked }))} />
+        Mostrar opciones avanzadas
+      </label>
       <AddonsSection />
+      <StremioImport />
       <TmdbSettings />
       <PosterSettings />
+      <AppearanceSettings />
       <PlaybackSection />
       <PlayerSettings />
       <SourceSettings />
       <TasteSettings />
+      <TvSettings />
       <DataSection />
     </div>
   )

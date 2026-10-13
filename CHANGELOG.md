@@ -1,5 +1,33 @@
 # Changelog
 
+## [0.6.0] - 2026-10-13
+
+Addons, TV y apariencia (la última de las tres versiones del cuestionario de funciones), con el **Tema 2** opcional.
+
+### Agregado
+- **Tema 2 (nuevo)**, en Ajustes → Apariencia. El Tema 1 (por defecto) queda exactamente como antes.
+  - Riel lateral en PC y TV, y barra de navegación abajo en el celular.
+  - Portada y ficha en tarjetas redondeadas, "Seguir viendo" con tarjetas apaisadas y acento lila.
+  - Letras Sora y DM Sans, incluidas en la app (andan sin conexión y solo se bajan con el Tema 2).
+  - Anillo de foco grueso para el control remoto. Se aplica al instante y sin parpadeo al abrir.
+- **Explorar addons**: la colección oficial de Stremio, para instalar con un toque.
+- **Activar o desactivar addons** sin desinstalarlos.
+- **Gestor de catálogos** (`/settings/catalogs`): renombrar, ocultar, reordenar y fusionar filas. Se aplica en
+  Inicio y en Descubrir.
+- **Importar desde Stremio**: addons, biblioteca (a Mi lista) e historial con progreso. Se puede entrar con email
+  y contraseña, con la clave de sesión o pegando un JSON. La contraseña y la sesión no se guardan.
+- **Protector de pantalla**: fondos de pelis con reloj después de 5 min sin actividad (configurable o apagado).
+- **Teclado en pantalla** para escribir con el control remoto (Buscar, Ajustes y el asistente). Modo TV
+  automático o manual.
+- **Más reproductores externos**: VLC, mpv, IINA, PotPlayer, Infuse, Outplayer, nPlayer, Just Player, MX Player…
+  Solo se ofrecen los de tu sistema.
+- **Modo sin conexión**: la app abre igual con Seguir viendo, Mi lista, Historial y las fichas visitadas, con un
+  aviso arriba.
+- **Asistente inicial** (idiomas, primer addon y key de TMDB) y **Ajustes esencial/avanzado**.
+
+### Corregido
+- Descubrir: en una fila fusionada el filtro de género usa los géneros de todos sus catálogos.
+
 ## [0.5.0] - 2026-10-13
 
 Descubrir, ficha y biblioteca (segunda de las tres versiones del cuestionario de funciones).
@@ -26,6 +54,7 @@ Descubrir, ficha y biblioteca (segunda de las tres versiones del cuestionario de
 - **Metas y logros** (`/history/goals`): meta anual de pelis, episodios u horas y 11 logros.
 
 ### Corregido
+- Selector de Descubrir: al abrirlo con el mouse, Escape/Atrás volvía a la página anterior en vez de cerrarlo.
 - La caché de imágenes del service worker guardaba respuestas opacas, que Chrome cuenta como ~7 MB cada una:
   podía llenar la cuota del navegador y entonces dejaban de guardarse ajustes, progreso y Mi lista sin avisar.
 

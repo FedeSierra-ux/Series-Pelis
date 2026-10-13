@@ -22,11 +22,20 @@ import type { CatalogDef, InstalledAddon } from '../../lib/types'
 // Barra de filtros de Descubrir. Todo cambio va a la URL (Discover lo lee de ahí), así que
 // al volver atrás desde una ficha los filtros siguen puestos.
 
+/** Un catálogo para elegir. Las filas fusionadas del gestor traen `rowKey` y su primer catálogo. */
+export interface CatalogOption {
+  addon: InstalledAddon
+  catalog: CatalogDef
+  /** Nombre propio (renombrado o fila fusionada). */
+  label?: string
+  rowKey?: string
+}
+
 interface Props {
   type: string
   filters: DiscoverFilters
-  options: { addon: InstalledAddon; catalog: CatalogDef }[]
-  selected?: { addon: InstalledAddon; catalog: CatalogDef }
+  options: CatalogOption[]
+  selected?: CatalogOption
   useTmdb: boolean
   tmdbOn: boolean
   keywordLabel?: string
@@ -34,7 +43,7 @@ interface Props {
 }
 
 const TMDB_VALUE = 'tmdb'
-const catalogValue = (o: { addon: InstalledAddon; catalog: CatalogDef }) => `${o.addon.transportUrl}|${o.catalog.id}`
+const catalogValue = (o: CatalogOption) => o.rowKey ?? `${o.addon.transportUrl}|${o.catalog.id}`
 
 export function FilterBar({ type, filters, options, selected, useTmdb, tmdbOn, keywordLabel, onChange }: Props) {
   const count = activeCount(useTmdb ? filters : { ...filters, lang: undefined, country: undefined, provider: undefined, keyword: undefined })
@@ -58,6 +67,7 @@ export function FilterBar({ type, filters, options, selected, useTmdb, tmdbOn, k
     src: 'tmdb',
     addon: undefined,
     catalog: undefined,
+    row: undefined,
     genre: cinemetaToTmdbGenre(filters.genre, type),
     ...patch,
   })
@@ -67,6 +77,7 @@ export function FilterBar({ type, filters, options, selected, useTmdb, tmdbOn, k
     ...options.map((o) => ({
       value: catalogValue(o),
       label:
+        o.label ??
         catalogLabel(o.catalog.name, o.catalog.type, o.addon.manifest.name).split(' · ')[0] +
         (new Set(options.map((x) => x.addon.transportUrl)).size > 1 ? ` (${o.addon.manifest.name})` : ''),
     })),
@@ -82,8 +93,9 @@ export function FilterBar({ type, filters, options, selected, useTmdb, tmdbOn, k
     onChange({
       ...filters,
       src: undefined,
-      addon: o.addon.transportUrl,
-      catalog: o.catalog.id,
+      addon: o.rowKey ? undefined : o.addon.transportUrl,
+      catalog: o.rowKey ? undefined : o.catalog.id,
+      row: o.rowKey,
       genre: genre && genres.includes(genre) ? genre : undefined,
       lang: undefined,
       country: undefined,

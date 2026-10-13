@@ -1,8 +1,12 @@
 import { useSyncExternalStore } from 'react'
 import { createStore, get, set } from 'idb-keyval'
 import { CINEMETA_ADDON, fetchManifest } from './addons'
+import { DEFAULT_CATALOG_PREFS, normalizePrefs, type CatalogPrefs } from './catalogPrefs'
 import { crossedFinish, diaryEntryFrom, isDuplicate, missingFromProgress, rebuildFromProgress, withoutLatest, withoutVideos, type DiaryEntry, type DiaryState } from './diary'
 import type { GoalsState } from './goals'
+import type { ExternalPlayerId } from './externalPlayers'
+import type { ScreensaverMinutes } from './idle'
+import type { TvModeSetting } from './platform'
 import type { InstalledAddon, MetaPreview } from './types'
 
 // Datos del usuario guardados en el navegador (IndexedDB). En la v0.2 se van a
@@ -89,6 +93,27 @@ export async function installAddon(manifestUrl: string) {
 
 export function removeAddon(transportUrl: string) {
   addonsStore.set((list) => list.filter((a) => a.transportUrl !== transportUrl))
+}
+
+/** Activa o desactiva un addon sin desinstalarlo. */
+export function setAddonEnabled(transportUrl: string, enabled: boolean) {
+  addonsStore.set((list) =>
+    list.map((a) => {
+      if (a.transportUrl !== transportUrl) return a
+      const { disabled: _old, ...rest } = a
+      return enabled ? rest : { ...rest, disabled: true }
+    }),
+  )
+}
+
+/** Agrega addons de los que ya tenemos el manifest (por ejemplo, importados de Stremio). */
+export function addInstalledAddons(entries: InstalledAddon[]) {
+  addonsStore.set((list) => {
+    const urls = new Set(list.map((a) => a.transportUrl))
+    const ids = new Set(list.map((a) => a.manifest.id))
+    const fresh = entries.filter((e) => !urls.has(e.transportUrl) && !ids.has(e.manifest.id))
+    return fresh.length ? [...list, ...fresh] : list
+  })
 }
 
 export function moveAddon(transportUrl: string, delta: -1 | 1) {
@@ -348,6 +373,9 @@ export const notInterestedStore = new PersistedStore<Record<string, NotIntereste
 
 /** Lo último que buscó el usuario (máx. 10, la más nueva primero). */
 export const recentSearchesStore = new PersistedStore<string[]>('recentSearches', [])
+// ---------- Catálogos (gestor: renombrar, ocultar, reordenar, fusionar) ----------
+
+export const catalogPrefsStore = new PersistedStore<CatalogPrefs>('catalogPrefs', DEFAULT_CATALOG_PREFS)
 
 // ---------- Ajustes ----------
 
@@ -401,8 +429,8 @@ export interface Settings {
   /** Miniatura del cuadro al pasar el mouse por la barra (se apaga sola con ahorro de datos). */
   seekPreview: boolean
   sourceRules: SourceRules
-  /** Reproductor externo para el botón "Abrir en…". */
-  externalPlayer: 'system' | 'vlc' | 'none'
+  /** Reproductor externo para el botón "Abrir en…" (ver lib/externalPlayers.ts). */
+  externalPlayer: ExternalPlayerId
   /** API key (v3) o Read Access Token (v4) de TMDB. Vacío = solo Cinemeta. */
   tmdbKey: string
   /** Reproducir el tráiler sin sonido en la portada de Inicio (necesita TMDB). */
@@ -421,6 +449,16 @@ export interface Settings {
   hoverTrailer: boolean
   /** v0.5: ids de listas curadas que se muestran como filas en Inicio. */
   curatedRows: string[]
+  /** Protector de pantalla: minutos sin actividad (0 = apagado). */
+  screensaverMinutes: ScreensaverMinutes
+  /** Modo TV (teclado en pantalla): automático según el dispositivo, o forzado. */
+  tvMode: TvModeSetting
+  /** Ajustes: mostrar también las opciones avanzadas (`data-advanced`). */
+  showAdvanced: boolean
+  /** Ya se mostró (o se salteó) el asistente inicial. */
+  onboardingDone: boolean
+  /** Apariencia: '1' clásico (por defecto) o '2' nuevo (riel lateral, tonos violáceos, Sora/DM Sans). */
+  theme: '1' | '2'
 }
 
 export const settingsStore = new PersistedStore<Settings>('settings', {
@@ -451,6 +489,11 @@ export const settingsStore = new PersistedStore<Settings>('settings', {
   posterLabels: true,
   hoverTrailer: true,
   curatedRows: [],
+  screensaverMinutes: 5,
+  tvMode: 'auto',
+  showAdvanced: false,
+  onboardingDone: false,
+  theme: '1',
 })
 
 // ---------- Copia de seguridad ----------
@@ -470,6 +513,8 @@ export function exportData() {
     diary: diaryStore.get().entries,
     goals: goalsStore.get(),
     recentSearches: recentSearchesStore.get(),
+    disabledAddons: addonsStore.get().filter((a) => a.disabled).map((a) => a.transportUrl),
+    catalogPrefs: catalogPrefsStore.get(),
   }
 }
 
@@ -490,6 +535,8 @@ export async function importData(raw: unknown) {
   for (const url of data.addons ?? []) {
     if (!installed.has(url)) await installAddon(url).catch(() => {})
   }
+  if (data.disabledAddons?.length) data.disabledAddons.forEach((url) => setAddonEnabled(url, false))
+  if (data.catalogPrefs) catalogPrefsStore.set(normalizePrefs(data.catalogPrefs))
 }
 
 // ---------- Arranque ----------
@@ -507,6 +554,7 @@ export async function hydrateStores() {
     diaryStore.hydrate(),
     goalsStore.hydrate(),
     recentSearchesStore.hydrate(),
+    catalogPrefsStore.hydrate(),
   ])
   // La primera vez el diario se arma con lo que ya estaba marcado como visto.
   if (diaryStore.get().v === 0) diaryStore.set({ v: 1, entries: rebuildFromProgress(progressStore.get()) })

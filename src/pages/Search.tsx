@@ -1,13 +1,16 @@
 import { useEffect, useMemo, useRef, useState, type FormEvent, type MouseEvent } from 'react'
 import { Link, useSearchParams } from 'react-router-dom'
+import { KeyboardToggle } from '../components/OnScreenKeyboard'
 import { PosterCard, PosterSkeleton } from '../components/PosterCard'
 import { PeopleRow, PersonAvatar } from '../components/PeopleRow'
 import { searchableCatalogs } from '../lib/addons'
 import { findPerson, getTogether, searchCatalog, searchPeople, type TmdbPersonResult } from '../lib/discoverApi'
 import { useAddons, useTitle } from '../lib/hooks'
 import { typeLabel } from '../lib/i18n'
+import { useOnline } from '../lib/online'
 import { debounce, MIN_QUERY, normalizeQuery, parseTogether, pushRecent, removeRecent } from '../lib/searchHistory'
 import { recentSearchesStore, settingsStore, useStore } from '../lib/store'
+import { useTvMode } from '../lib/tv'
 import type { MetaPreview } from '../lib/types'
 
 interface Group {
@@ -77,6 +80,8 @@ export function Search() {
   const [query, setQuery] = useState(() => normalizeQuery(params.get('q') ?? ''))
   const [groups, setGroups] = useState<Group[]>([])
   const input = useRef<HTMLInputElement>(null)
+  const tv = useTvMode()
+  const online = useOnline()
   // Resultados mientras escribís: se busca cuando dejás de tipear 300 ms (o ya, con Enter).
   const schedule = useMemo(() => debounce((v: string) => setQuery(normalizeQuery(v)), DEBOUNCE_MS), [])
   useEffect(() => () => schedule.cancel(), [schedule])
@@ -155,7 +160,8 @@ export function Search() {
           ref={input}
           className="search-input"
           type="search"
-          autoFocus
+          // En la TV el foco arranca en el teclado en pantalla (así no salta el teclado del sistema).
+          autoFocus={!tv}
           placeholder={tmdbOn ? 'Película, serie, actor… o “Darín y Francella”' : 'Película, serie, actor...'}
           aria-label="Buscar"
           value={text}
@@ -175,6 +181,21 @@ export function Search() {
           enterKeyHint="search"
         />
       </form>
+      <KeyboardToggle
+        value={text}
+        onChange={change}
+        alwaysToggle
+        openInTv
+        doneLabel="Buscar"
+        label="Teclado para buscar"
+        onDone={() => {
+          schedule.flush()
+          const q = normalizeQuery(text)
+          if (q.length >= MIN_QUERY) saveRecent(q)
+          document.querySelector<HTMLElement>('.search-people a.cast-card, .search-group a.poster-card')?.focus()
+        }}
+      />
+      {!online && <div className="empty muted">Sin conexión: la búsqueda necesita internet. Mientras tanto tenés Mi lista y el Historial.</div>}
 
       {showRecents && recents.length > 0 && (
         <section className="recent-searches" aria-label="Búsquedas recientes">
@@ -248,7 +269,7 @@ export function Search() {
             </section>
           ))}
       </div>
-      {noResults && <div className="empty">No encontramos nada para “{query}”.</div>}
+      {noResults && online && <div className="empty">No encontramos nada para “{query}”.</div>}
       {showRecents && recents.length === 0 && <div className="empty muted">Escribí al menos 2 letras.</div>}
     </div>
   )

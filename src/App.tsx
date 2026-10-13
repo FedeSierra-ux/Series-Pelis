@@ -1,6 +1,8 @@
 import { lazy, Suspense, useEffect } from 'react'
 import { BrowserRouter, Route, Routes, useLocation, useNavigate } from 'react-router-dom'
 import { Layout } from './components/Layout'
+import { Onboarding } from './components/Onboarding'
+import { Screensaver } from './components/Screensaver'
 import { initSpatialNav } from './lib/spatialNav'
 import { Detail } from './pages/Detail'
 import { Discover } from './pages/Discover'
@@ -20,6 +22,7 @@ const Person = lazy(() => import('./pages/Person').then((m) => ({ default: m.Per
 const Together = lazy(() => import('./pages/Together').then((m) => ({ default: m.Together })))
 const ListsIndex = lazy(() => import('./pages/Lists').then((m) => ({ default: m.ListsIndex })))
 const ListPage = lazy(() => import('./pages/Lists').then((m) => ({ default: m.ListPage })))
+const CatalogManager = lazy(() => import('./pages/CatalogManager').then((m) => ({ default: m.CatalogManager })))
 
 const pageFallback = <div className="page"><div className="spinner" /></div>
 
@@ -41,6 +44,8 @@ export function App() {
     <BrowserRouter>
       <SpatialNav />
       <ScrollToTop />
+      <Screensaver />
+      <Onboarding />
       <Routes>
         <Route
           path="/watch/:type/:id"
@@ -66,6 +71,7 @@ export function App() {
           <Route path="history/goals" element={<Suspense fallback={pageFallback}><Goals /></Suspense>} />
           <Route path="calendar" element={<Suspense fallback={pageFallback}><Calendar /></Suspense>} />
           <Route path="settings" element={<Settings />} />
+          <Route path="settings/catalogs" element={<Suspense fallback={pageFallback}><CatalogManager /></Suspense>} />
           <Route path="*" element={<Home />} />
         </Route>
       </Routes>
