@@ -3,8 +3,11 @@
 Tu plataforma personal para ver pelis y series con **tus addons de Stremio**, el **puntaje de IMDb** a la vista
 y un **historial** de todo lo que viste. Funciona en la PC, el celular y el navegador de la TV (se puede instalar como app).
 
-## Qué hace (v0.2.0)
+## Qué hace (v0.3.0)
 
+- **TMDB (opcional)**: ficha en español con logo, reparto y páginas de actores, sagas, "Más como esto" y
+  dónde verla en Argentina. En Inicio: portada con tráiler sin sonido, Top 10 de hoy, "Porque viste…" y tendencias.
+  Al pausar muestra quién actúa en el episodio.
 - **Catálogo** de Cinemeta (populares, nuevas y mejor puntuadas) y de cualquier addon que agregues.
 - **Puntaje de IMDb** en pósters, portada y ficha.
 - **Addons de Stremio**: pegás la URL del manifest y listo. Si tu addon (por ejemplo Torrentio) está configurado
@@ -44,6 +47,10 @@ npm run preview   # probar el build en http://localhost:4173
 En **Ajustes → Addons de Stremio** pegá la URL de cada addon que uses (termina en `/manifest.json`; también sirve el
 enlace `stremio://`).
 
+Para tener todo en español y las filas de tendencias, sacá una key gratis en
+[themoviedb.org → Ajustes → API](https://www.themoviedb.org/settings/api) y pegala en **Ajustes → TMDB**
+(sirve la "API Key" o el "API Read Access Token"). Queda guardada solo en tu navegador.
+
 ## Publicarla en Cloudflare Pages (gratis)
 
 1. Creá una cuenta en Cloudflare.
@@ -66,7 +73,6 @@ En Fire TV podés abrirla desde el navegador Silk mientras tanto; el empaquetado
 
 ## Roadmap
 
-- **Próximo**: metadatos de TMDB (sinopsis en español, reparto, colecciones).
-- Cuenta con código de vinculación (como Netflix) y sincronización del historial en Cloudflare (Workers + D1).
+- **Próximo**: cuenta con código de vinculación (como Netflix) y sincronización del historial en Cloudflare (Workers + D1).
 - Importar addons desde la cuenta de Stremio.
 - App para Fire TV / Android TV.

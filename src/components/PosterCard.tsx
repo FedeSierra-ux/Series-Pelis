@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom'
 import { prefetchMeta } from '../lib/addons'
 import { smallPoster } from '../lib/format'
 import { addonsStore } from '../lib/store'
+import { imdbFromTmdb, parseTmdbId } from '../lib/tmdb'
 import type { MetaPreview } from '../lib/types'
 import { ImdbRating } from './Rating'
 
@@ -24,7 +25,10 @@ export const PosterCard = memo(function PosterCard({ meta, progress, watched, su
   const prefetch = () => {
     if (prefetched.current) return
     prefetched.current = true
-    prefetchMeta(addonsStore.get(), meta.type, meta.id)
+    // Ítems de TMDB: primero averiguamos el id de IMDb, que es lo que usan Cinemeta y los addons.
+    const tmdb = parseTmdbId(meta.id)
+    if (tmdb) imdbFromTmdb(tmdb.id, tmdb.type).then((tt) => tt && prefetchMeta(addonsStore.get(), meta.type, tt)).catch(() => {})
+    else prefetchMeta(addonsStore.get(), meta.type, meta.id)
   }
   const src = smallPoster(meta.id, meta.poster)
 

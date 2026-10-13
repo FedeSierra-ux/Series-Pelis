@@ -2,12 +2,26 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import { Link, useLocation, useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import { ImdbRating } from '../components/Rating'
 import { ErrorBox } from '../components/Status'
+import { TmdbSections } from '../components/TmdbExtras'
 import { getStreams } from '../lib/addons'
 import { episodeLabel, formatTime, relativeDate } from '../lib/format'
-import { useAddons, useMeta, useTitle } from '../lib/hooks'
+import { useAddons, useMeta, useTitle, useTmdbDetails } from '../lib/hooks'
 import { genreLabel, typeLabel } from '../lib/i18n'
 import { lastSourceStore, progressStore, setWatched, settingsStore, toggleWatchlist, useStore, watchlistStore } from '../lib/store'
 import { playable, rankStreams, type RankedStream } from '../lib/streamPicker'
+import {
+  getDetails,
+  imdbFromTmdb,
+  itemTitle,
+  itemYear,
+  parseTmdbId,
+  pickLogo,
+  pickTrailer,
+  tmdbImg,
+  toTmdbType,
+  type TmdbDetails,
+  type TmdbType,
+} from '../lib/tmdb'
 import type { AddonStreams, InstalledAddon, Meta, Stream, Video } from '../lib/types'
 
 export interface PlayState {
@@ -244,14 +258,102 @@ function StreamList({
   )
 }
 
+const detailSkeleton = <div className="page detail-skeleton"><div className="hero skeleton" /></div>
+
 export function Detail() {
   const { type = 'movie', id: rawId = '' } = useParams()
   const id = decodeURIComponent(rawId)
+  const tmdb = parseTmdbId(id)
+  // Los ítems de TMDB (`tmdb:movie:603`) se traducen a IMDb, que es lo que usan Cinemeta y los addons.
+  if (tmdb) return <TmdbResolver key={id} type={type} tmdbType={tmdb.type} tmdbId={tmdb.id} />
+  return <DetailPage type={type} id={id} />
+}
+
+function TmdbResolver({ type, tmdbType, tmdbId }: { type: string; tmdbType: TmdbType; tmdbId: number }) {
+  const navigate = useNavigate()
+  const location = useLocation()
+  const [state, setState] = useState<{ details?: TmdbDetails; error?: string }>()
+
+  useEffect(() => {
+    let alive = true
+    imdbFromTmdb(tmdbId, tmdbType)
+      .then(async (tt) => {
+        if (!alive) return
+        if (tt) return navigate(`/detail/${type}/${tt}${location.search}`, { replace: true })
+        const details = await getDetails(tmdbType, tmdbId)
+        if (alive) setState({ details })
+      })
+      .catch((err: unknown) => alive && setState({ error: err instanceof Error ? err.message : String(err) }))
+    return () => {
+      alive = false
+    }
+  }, [tmdbType, tmdbId])
+
+  if (state?.error)
+    return (
+      <div className="page">
+        <ErrorBox message={`No se pudo abrir este título de TMDB: ${state.error}`} />
+        <p className="muted">
+          Revisá la key de TMDB en <Link to="/settings">Ajustes</Link>.
+        </p>
+      </div>
+    )
+  if (!state?.details) return detailSkeleton
+  return <TmdbOnlyDetail details={state.details} type={type} tmdbType={tmdbType} />
+}
+
+/** Ficha armada solo con TMDB, para títulos que no tienen id de IMDb. */
+function TmdbOnlyDetail({ details: d, type, tmdbType }: { details: TmdbDetails; type: string; tmdbType: TmdbType }) {
+  const title = itemTitle(d)
+  const logo = tmdbImg(pickLogo(d), 'w500')
+  const poster = tmdbImg(d.poster_path, 'w342')
+  const bg = tmdbImg(d.backdrop_path, 'w1280')
+  const year = itemYear(d)
+  const trailer = pickTrailer(d.videos?.results)
+  useTitle(title)
+
+  return (
+    <div className="page detail">
+      <section className="detail-hero" style={{ backgroundImage: bg ? `url(${bg})` : undefined }}>
+        <div className="hero-shade" />
+        <div className="detail-head">
+          {poster && <img className="detail-poster" src={poster} alt="" />}
+          <div className="detail-info">
+            {logo ? <img className="detail-logo" src={logo} alt={title} /> : <h1>{title}</h1>}
+            {d.tagline && <p className="detail-tagline">{d.tagline}</p>}
+            <div className="hero-meta">
+              <span>{typeLabel(type, false)}</span>
+              {year && <span>{year}</span>}
+            </div>
+            {d.genres?.length ? <div className="chips">{d.genres.map((g) => <span key={g.id} className="chip">{g.name}</span>)}</div> : null}
+            {d.overview && <p className="detail-desc">{d.overview}</p>}
+            {trailer && (
+              <div className="hero-actions">
+                <a className="btn" href={`https://www.youtube.com/watch?v=${trailer.key}`} target="_blank" rel="noreferrer">
+                  Tráiler
+                </a>
+              </div>
+            )}
+          </div>
+        </div>
+      </section>
+      <section className="movie-streams">
+        <p className="tmdb-notice">Este título no está en Cinemeta, así que no podemos buscar streams.</p>
+      </section>
+      <TmdbSections details={d} type={tmdbType} />
+    </div>
+  )
+}
+
+function DetailPage({ type, id }: { type: string; id: string }) {
   const [params, setParams] = useSearchParams()
   const { data: meta, loading, error } = useMeta(type, id)
+  const { data: tmdb } = useTmdbDetails(type, id)
   const progress = useStore(progressStore)
   const watchlist = useStore(watchlistStore)
-  useTitle(meta?.name)
+  // Con TMDB, título, sinopsis, frase y géneros en español; el puntaje sigue siendo el de IMDb (Cinemeta).
+  const title = (tmdb && itemTitle(tmdb)) || meta?.name
+  useTitle(title)
 
   const videos = useMemo(() => sortVideos(meta?.videos ?? []), [meta?.videos])
   const isSeries = type === 'series' || videos.length > 1
@@ -276,15 +378,23 @@ export function Detail() {
   const selectedVideo = videos.find((v) => v.id === selectedVideoId)
   const nextVideo = selectedVideo ? videos[videos.indexOf(selectedVideo) + 1] : undefined
 
-  if (loading && !meta) return <div className="page detail-skeleton"><div className="hero skeleton" /></div>
+  if (loading && !meta) return detailSkeleton
   if (error && !meta) return <div className="page"><ErrorBox message={`No se pudo cargar: ${error}`} /></div>
   if (!meta) return null
 
   const fullMeta: Meta = { ...meta, type }
   const bg = meta.background ?? (id.startsWith('tt') ? `https://images.metahub.space/background/medium/${id}/img` : undefined)
-  const genres = (meta.genre ?? meta.genres ?? []).map(genreLabel)
+  const genres = tmdb?.genres?.length ? tmdb.genres.map((g) => g.name) : (meta.genre ?? meta.genres ?? []).map(genreLabel)
+  const description = tmdb?.overview || meta.description
+  const tmdbLogo = tmdbImg(pickLogo(tmdb), 'w500')
+  const logo = tmdbLogo ?? meta.logo
   const movieProgress = progress[id]
-  const trailer = meta.trailerStreams?.[0]?.ytId ?? meta.trailers?.find((t) => t.type === 'Trailer')?.source
+  const trailer =
+    pickTrailer(tmdb?.videos?.results)?.key ??
+    meta.trailerStreams?.[0]?.ytId ??
+    meta.trailers?.find((t) => t.type === 'Trailer')?.source
+  // Si hay fila de reparto con fotos, el elenco en texto sobra.
+  const hasTmdbCast = !!(type === 'movie' ? tmdb?.credits?.cast : tmdb?.aggregate_credits?.cast)?.length
 
   const selectVideo = (v: Video) => {
     const next = new URLSearchParams(params)
@@ -311,7 +421,8 @@ export function Detail() {
         <div className="detail-head">
           {meta.poster && <img className="detail-poster" src={meta.poster} alt="" />}
           <div className="detail-info">
-            {meta.logo ? <img className="detail-logo" src={meta.logo} alt={meta.name} /> : <h1>{meta.name}</h1>}
+            {logo ? <img className="detail-logo" src={logo} alt={title} /> : <h1>{title}</h1>}
+            {tmdb?.tagline && <p className="detail-tagline">{tmdb.tagline}</p>}
             <div className="hero-meta">
               <ImdbRating value={meta.imdbRating} />
               <span>{typeLabel(type, false)}</span>
@@ -319,10 +430,10 @@ export function Detail() {
               {meta.runtime && <span>{meta.runtime}</span>}
             </div>
             {genres.length > 0 && <div className="chips">{genres.map((g) => <span key={g} className="chip">{g}</span>)}</div>}
-            {meta.description && <p className="detail-desc">{meta.description}</p>}
+            {description && <p className="detail-desc">{description}</p>}
             <dl className="credits">
               {meta.director?.length ? (<><dt>Dirección</dt><dd>{meta.director.join(', ')}</dd></>) : null}
-              {meta.cast?.length ? (<><dt>Elenco</dt><dd>{meta.cast.slice(0, 6).join(', ')}</dd></>) : null}
+              {meta.cast?.length && !hasTmdbCast ? (<><dt>Elenco</dt><dd>{meta.cast.slice(0, 6).join(', ')}</dd></>) : null}
               {meta.awards ? (<><dt>Premios</dt><dd>{meta.awards}</dd></>) : null}
             </dl>
             <div className="hero-actions">
@@ -432,6 +543,8 @@ export function Detail() {
           <StreamList meta={fullMeta} />
         </section>
       )}
+
+      {tmdb && <TmdbSections details={tmdb} type={toTmdbType(type)} />}
     </div>
   )
 }

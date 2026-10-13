@@ -13,6 +13,7 @@ import {
 } from '../lib/store'
 import { PlayerSettings } from './settings/PlayerSettings'
 import { SourceSettings } from './settings/SourceSettings'
+import { TmdbSettings } from './settings/TmdbSettings'
 
 const DEFAULT_SERVER = 'http://127.0.0.1:11470'
 
@@ -231,6 +232,7 @@ export function Settings() {
         <span className="muted small">Versión {__APP_VERSION__}</span>
       </header>
       <AddonsSection />
+      <TmdbSettings />
       <PlaybackSection />
       <PlayerSettings />
       <SourceSettings />

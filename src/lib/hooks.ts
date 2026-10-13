@@ -1,7 +1,8 @@
 import { useEffect, useState } from 'react'
 import { getCatalog, getMeta, metaKey, resourceUrl } from './addons'
-import { peekMemory } from './cache'
-import { addonsStore, useStore } from './store'
+import { cached, peekMemory } from './cache'
+import { addonsStore, settingsStore, useStore } from './store'
+import { getDetailsByImdb, type TmdbDetails } from './tmdb'
 import type { CatalogDef, InstalledAddon, Meta, MetaPreview } from './types'
 
 export interface AsyncState<T> {
@@ -67,4 +68,18 @@ export function useTitle(title: string | undefined) {
   useEffect(() => {
     document.title = title ? `${title} · Series-Pelis` : 'Series-Pelis'
   }, [title])
+}
+
+/** Datos de TMDB de un título de IMDb. Sin key de TMDB devuelve `undefined` y no pide nada. */
+export function useTmdbDetails(type: string | undefined, imdbId: string | undefined): AsyncState<TmdbDetails | undefined> {
+  const key = useStore(settingsStore).tmdbKey.trim()
+  const enabled = !!(key && type && imdbId?.startsWith('tt'))
+  // Clave solo en memoria: al volver a una ficha ya vista arranca en español, sin pasar por el inglés.
+  const cacheKey = enabled ? `tmdb-imdb:${type}:${imdbId}` : undefined
+  const state = useAsync(
+    cacheKey,
+    enabled ? () => cached(cacheKey!, () => getDetailsByImdb(imdbId!, type!), 24 * 60 * 60 * 1000, false) : undefined,
+    [type, imdbId, key],
+  )
+  return enabled ? state : { loading: false }
 }

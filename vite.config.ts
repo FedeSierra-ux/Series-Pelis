@@ -39,7 +39,7 @@ export default defineConfig({
         runtimeCaching: [
           {
             // Pósters, fondos, logos y miniaturas de episodios: casi nunca cambian.
-            urlPattern: ({ url }) => /(^|\.)metahub\.space$/.test(url.hostname),
+            urlPattern: ({ url }) => /(^|\.)metahub\.space$/.test(url.hostname) || url.hostname === 'image.tmdb.org',
             handler: 'CacheFirst',
             options: {
               cacheName: 'images',

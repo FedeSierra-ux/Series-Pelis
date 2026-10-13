@@ -1,7 +1,7 @@
 {
   "name": "series-pelis",
   "private": true,
-  "version": "0.2.0",
+  "version": "0.3.0",
   "description": "Plataforma personal para ver pelis y series con addons de Stremio, puntaje de IMDb e historial.",
   "type": "module",
   "scripts": {
@@ -9,7 +9,7 @@
     "build": "tsc --noEmit && vite build",
     "preview": "vite preview",
     "typecheck": "tsc --noEmit",
-    "test": "vitest run"
+    "test": "vitest run --dir src"
   },
   "dependencies": {
     "hls.js": "^1.7.3",
