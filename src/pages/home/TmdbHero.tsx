@@ -1,6 +1,8 @@
 import { useEffect, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
-import { settingsStore, toggleWatchlist, useStore, watchlistStore } from '../../lib/store'
+import { ImdbRating } from '../../components/Rating'
+import { getMeta } from '../../lib/addons'
+import { addonsStore, settingsStore, toggleWatchlist, useStore, watchlistStore } from '../../lib/store'
 import {
   getDetails,
   imdbFromTmdb,
@@ -65,6 +67,7 @@ export function TmdbHero({ items }: { items: TmdbListItem[] }) {
   const [resolving, setResolving] = useState(false)
   const [resolved, setResolved] = useState<{ key: string; imdb?: string }>()
   const [brokenLogo, setBrokenLogo] = useState<string>()
+  const [rating, setRating] = useState<{ key: string; value?: string }>()
 
   const item = items[index % items.length]
   const type = (item.media_type === 'tv' ? 'tv' : 'movie') as TmdbType
@@ -116,6 +119,19 @@ export function TmdbHero({ items }: { items: TmdbListItem[] }) {
   const year = itemYear(item)
   const imdbId = d?.external_ids?.imdb_id || d?.imdb_id || (resolved?.key === itemKey ? resolved.imdb : undefined)
   const inList = !!(imdbId && watchlist[imdbId])
+  const imdbRating = rating?.key === itemKey ? rating.value : undefined
+
+  // Puntaje de IMDb desde la ficha de Cinemeta (queda en caché y de paso precarga la ficha).
+  useEffect(() => {
+    if (!imdbId) return
+    let alive = true
+    getMeta(addonsStore.get(), toAppType(type), imdbId)
+      .then((m) => alive && setRating({ key: itemKey, value: m.imdbRating }))
+      .catch(() => {})
+    return () => {
+      alive = false
+    }
+  }, [itemKey, imdbId])
   const notFound = resolved?.key === itemKey && !resolved.imdb
 
   // "Mi lista" guarda por id de IMDb: si los detalles todavía no lo trajeron, lo pedimos al tocar.
@@ -151,6 +167,7 @@ export function TmdbHero({ items }: { items: TmdbListItem[] }) {
       <div className="hero-content">
         <h1 className={logo ? 'hero-logo-title' : undefined}>{logo ? <img className="hero-logo" src={logo} alt={title} onError={() => setBrokenLogo(logo)} /> : title}</h1>
         <div className="hero-meta">
+          <ImdbRating value={imdbRating} />
           {year && <span>{year}</span>}
           <span>{type === 'movie' ? 'Película' : 'Serie'}</span>
           {genres && <span>{genres}</span>}
