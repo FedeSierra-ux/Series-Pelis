@@ -5,9 +5,9 @@ import { ErrorBox } from '../components/Status'
 import { getCatalog } from '../lib/addons'
 import { interleaveMetas, type CatalogRowDef, type CatalogSource } from '../lib/catalogPrefs'
 import { useCatalogRows } from '../lib/catalogRows'
-import { offlineMessage } from '../lib/online'
 import { useAddons, useTitle } from '../lib/hooks'
 import { catalogLabel, genreLabel, typeLabel } from '../lib/i18n'
+import { offlineMessage } from '../lib/online'
 import type { MetaPreview } from '../lib/types'
 
 const genreOptions = (s: CatalogSource) => s.catalog.genres ?? s.catalog.extra?.find((e) => e.name === 'genre')?.options ?? []
