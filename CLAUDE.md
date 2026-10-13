@@ -42,13 +42,20 @@ npm run preview    # sirve dist/ en http://localhost:4173
 - `src/lib/cache.ts` — caché stale-while-revalidate en memoria + IndexedDB (lo que hace que cargue rápido).
 - `src/lib/store.ts` — addons instalados, progreso/historial, mi lista, ajustes. Todo pasa por acá (en v0.2 se sincroniza con D1).
 - `src/lib/spatialNav.ts` — navegación con flechas del control remoto.
-- `src/pages/` — Inicio, Descubrir, Buscar, Detalle, Reproductor, Historial, Mi lista, Ajustes.
+- `src/lib/streamPicker.ts` — puntaje de streams y elección automática. `src/lib/nextEpisode.ts` — siguiente episodio y precarga.
+- `src/lib/segments.ts` + `functions/api/segments.ts` — saltar intro (IntroDB vía Pages Function; en dev, proxy de Vite).
+- `src/lib/upNext.ts`, `src/lib/stats.ts` — siguiente episodio de tus series / calendario, y estadísticas de "Tu año".
+- `src/pages/` — Inicio, Descubrir, Buscar, Detalle, Reproductor, Historial, Tu año, Calendario, Mi lista, Ajustes
+  (`settings/PlayerSettings.tsx`, `settings/SourceSettings.tsx`).
 - `vite.config.ts` — PWA (Workbox): pósters CacheFirst, Cinemeta StaleWhileRevalidate.
 - `.claude/agents/` — agentes de agency-agents útiles para este proyecto. `.claude/skills/` + `.mcp.json` — rea.
 
 ## Pendiente / ideas
 
-- v0.2: login con código de vinculación + sincronización en Cloudflare D1 + Worker de caché.
+- v0.2.0 hecha: "tanda 1" del análisis de mercado (reproductor, elección de fuente, biblioteca/calendario/Tu año).
+  El usuario no quiere la estadística "la que más volviste a ver".
+- Próximo: TMDB (el usuario está sacando la key; guardarla como secreto de Cloudflare o en Ajustes, nunca en el repo).
+- Login con código de vinculación + sincronización en Cloudflare D1 + Worker de caché.
 - Importar addons directo desde la cuenta de Stremio.
 - Empaquetar para Fire TV / Android TV.
 - Integración opcional con Trakt.

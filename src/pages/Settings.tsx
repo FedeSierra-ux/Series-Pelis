@@ -2,7 +2,6 @@ import { useRef, useState } from 'react'
 import { CINEMETA_URL, normalizeManifestUrl } from '../lib/addons'
 import { clearCache } from '../lib/cache'
 import { useAddons, useTitle } from '../lib/hooks'
-import { langLabel } from '../lib/i18n'
 import {
   exportData,
   importData,
@@ -12,6 +11,8 @@ import {
   settingsStore,
   useStore,
 } from '../lib/store'
+import { PlayerSettings } from './settings/PlayerSettings'
+import { SourceSettings } from './settings/SourceSettings'
 
 const DEFAULT_SERVER = 'http://127.0.0.1:11470'
 
@@ -127,11 +128,6 @@ function PlaybackSection() {
     }
   }
 
-  const toggleLang = (code: string) =>
-    settingsStore.set((s) => ({
-      ...s,
-      subtitleLangs: s.subtitleLangs.includes(code) ? s.subtitleLangs.filter((c) => c !== code) : [...s.subtitleLangs, code],
-    }))
 
   return (
     <section className="settings-section">
@@ -145,14 +141,6 @@ function PlaybackSection() {
         Pasar solo al siguiente episodio (usa la misma fuente si el addon lo permite)
       </label>
 
-      <h3>Subtítulos preferidos</h3>
-      <div className="chips">
-        {['spa', 'eng', 'por'].map((code) => (
-          <button key={code} className={`tab ${settings.subtitleLangs.includes(code) ? 'active' : ''}`} onClick={() => toggleLang(code)}>
-            {langLabel(code)}
-          </button>
-        ))}
-      </div>
 
       <h3>Servidor de streaming de Stremio (opcional, experimental)</h3>
       <p className="muted">
@@ -244,6 +232,8 @@ export function Settings() {
       </header>
       <AddonsSection />
       <PlaybackSection />
+      <PlayerSettings />
+      <SourceSettings />
       <DataSection />
     </div>
   )
