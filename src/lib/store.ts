@@ -285,6 +285,11 @@ export function toggleWatchlist(meta: MetaPreview) {
   })
 }
 
+// ---------- v0.5: búsquedas recientes ----------
+
+/** Lo último que buscó el usuario (máx. 10, la más nueva primero). */
+export const recentSearchesStore = new PersistedStore<string[]>('recentSearches', [])
+
 // ---------- Ajustes ----------
 
 export interface SubtitleStyle {
@@ -343,6 +348,8 @@ export interface Settings {
   tmdbKey: string
   /** Reproducir el tráiler sin sonido en la portada de Inicio (necesita TMDB). */
   heroTrailer: boolean
+  /** v0.5: ids de listas curadas que se muestran como filas en Inicio. */
+  curatedRows: string[]
 }
 
 export const settingsStore = new PersistedStore<Settings>('settings', {
@@ -366,6 +373,7 @@ export const settingsStore = new PersistedStore<Settings>('settings', {
   externalPlayer: 'system',
   tmdbKey: '',
   heroTrailer: true,
+  curatedRows: [],
 })
 
 // ---------- Copia de seguridad ----------
@@ -380,6 +388,7 @@ export function exportData() {
     watchlist: watchlistStore.get(),
     settings: settingsStore.get(),
     trackPrefs: trackPrefsStore.get(),
+    recentSearches: recentSearchesStore.get(),
   }
 }
 
@@ -390,6 +399,7 @@ export async function importData(raw: unknown) {
   if (data.watchlist) watchlistStore.set((all) => ({ ...all, ...data.watchlist }))
   if (data.settings) settingsStore.merge({ ...settingsStore.get(), ...data.settings })
   if (data.trackPrefs) trackPrefsStore.set((all) => ({ ...all, ...data.trackPrefs }))
+  if (Array.isArray(data.recentSearches)) recentSearchesStore.set(data.recentSearches.filter((q) => typeof q === 'string').slice(0, 10))
   const installed = new Set(addonsStore.get().map((a) => a.transportUrl))
   for (const url of data.addons ?? []) {
     if (!installed.has(url)) await installAddon(url).catch(() => {})
@@ -406,6 +416,7 @@ export async function hydrateStores() {
     settingsStore.hydrate(),
     lastSourceStore.hydrate(),
     trackPrefsStore.hydrate(),
+    recentSearchesStore.hydrate(),
   ])
   if (addonsStore.get().length === 0) addonsStore.set([CINEMETA_ADDON])
   // No bloquea el arranque.
