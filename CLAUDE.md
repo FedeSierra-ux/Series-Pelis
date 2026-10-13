@@ -73,6 +73,12 @@ npm run preview    # sirve dist/ en http://localhost:4173
   TV: `platform`, `externalPlayers`, `idle`, `screensaver`, `osk`, `online`; en Ajustes `data-advanced` / `<Advanced>`
   marca lo avanzado. El asistente inicial tapa la pantalla en un perfil nuevo: los tests de Playwright lo saltean
   con `.ob-skip`.
+- v0.7.0 hecha: **TV en vivo** (`lib/liveTv.ts`, `pages/LiveTv.tsx`, `liveTvStore` en store). Lista
+  `iptv-org` de Argentina; el usuario eligió solo Aire, Noticias, Deportes y Música, con canales como botones
+  seleccionables en la TV. Se filtran los de cable pago (`PAY_TV`), los que piden `http-referrer` (no falseamos
+  cabeceras) y los `http://` cuando la app corre en https.
+- Debrid: el usuario va a pagar **un TorBox (Standard)** para 3-4 casas cercanas; el resto de las ~10 casas usa su
+  propio debrid. Real-Debrid no sirve para compartir (una IP a la vez). Todavía no quiere login/perfiles ni asistente.
 - Función 137 (temas OLED / acento / color del póster): preview en el canvas, **esperando respuesta del usuario**.
 - **Cuestionario de funciones (140)** — decisiones del usuario y plan por versiones:
   - v0.4: 9, 16, 17, 20, 27, 28, 30, 31, 33, 37, 103 (hecha).
