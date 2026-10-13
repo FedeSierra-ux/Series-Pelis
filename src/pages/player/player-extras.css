@@ -1,0 +1,58 @@
+/* Reproductor v0.10: velocidad, picture-in-picture y aviso de conexión lenta. Hereda el Tema 2 por las variables. */
+
+/* Botón "1×" de velocidad: ancho fijo para que la fila no salte al cambiar de 1× a 1,25×. */
+.controls-row .speed-btn {
+  min-width: 64px;
+  font-variant-numeric: tabular-nums;
+}
+.controls-row .speed-btn.active {
+  color: var(--accent);
+}
+
+/* Aviso chico y temporal: "Conexión lenta: se eligió 720p" (arriba a la izquierda, debajo del título). */
+.player-net-note {
+  position: absolute;
+  top: 84px;
+  left: var(--gutter);
+  z-index: 2;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  max-width: calc(100% - 2 * var(--gutter));
+  padding: 8px 14px;
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: var(--text, #fff);
+  background: var(--bg-2, rgba(20, 20, 28, 0.88));
+  border: 1px solid rgba(255, 255, 255, 0.25);
+  border-radius: 999px;
+  pointer-events: none;
+  animation: net-note-in 0.25s ease-out;
+}
+.player-net-note::before {
+  content: '';
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--accent);
+  flex-shrink: 0;
+}
+[data-theme='2'] .player-net-note {
+  border: 0;
+  background: rgba(28, 26, 34, 0.95);
+}
+@keyframes net-note-in {
+  from {
+    opacity: 0;
+    transform: translateY(-6px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .player-net-note {
+    animation: none;
+  }
+}
