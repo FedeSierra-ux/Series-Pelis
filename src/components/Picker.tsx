@@ -53,7 +53,9 @@ export function Picker({ label, value, options, onChange, placeholder, disabled,
   }, [open])
 
   useEffect(() => {
-    if (!open) return
+    // Recién con la posición calculada: antes la lista está oculta y el foco no entra
+    // (y Escape le llegaba a la navegación general, que volvía de página).
+    if (!open || !pos) return
     // Foco en la opción elegida, así ↑/↓ arranca desde ahí.
     const el = list.current?.querySelector<HTMLElement>('[aria-selected="true"]') ?? list.current?.querySelector<HTMLElement>('button')
     el?.focus({ preventScroll: true })
@@ -65,7 +67,7 @@ export function Picker({ label, value, options, onChange, placeholder, disabled,
       window.removeEventListener('scroll', onScroll)
       window.removeEventListener('resize', onScroll)
     }
-  }, [open])
+  }, [open, pos])
 
   const onKeyDown = (e: KeyboardEvent) => {
     if (CLOSE_KEYS.has(e.key)) {
