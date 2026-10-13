@@ -6,6 +6,8 @@ import { useAddons, useTitle } from '../lib/hooks'
 import { availableYears, computeYearStats, entriesOfYear, formatDuration, loadYearMetas, type DayCell, type TitleStat } from '../lib/stats'
 import { progressStore, useStore, type WatchEntry } from '../lib/store'
 import type { Meta } from '../lib/types'
+import { GoalBars, useYearGoal } from './goals/GoalBars'
+import { YearStory } from './year/YearStory'
 
 const MONTHS = ['ene', 'feb', 'mar', 'abr', 'may', 'jun', 'jul', 'ago', 'sep', 'oct', 'nov', 'dic']
 const CELL = 12
@@ -140,6 +142,8 @@ export function YearReview() {
   const hours = s.seconds / 3600
   const empty = s.seconds === 0 && s.activeDays === 0
   const maxGenre = s.genres[0]?.seconds ?? 1
+  const goalLines = useYearGoal(year, s.seconds)
+  const [story, setStory] = useState(false)
 
   return (
     <div className="page year-page">
@@ -150,6 +154,11 @@ export function YearReview() {
           </Link>
           <h1>Tu año</h1>
         </div>
+        {!empty && (
+          <button className="btn btn-primary year-story-btn" onClick={() => setStory(true)}>
+            ▶ Ver como historia
+          </button>
+        )}
         <div className="filters" role="tablist" aria-label="Año">
           {years.map((y) => (
             <button key={y} role="tab" aria-selected={y === year} className={`tab ${y === year ? 'active' : ''}`} onClick={() => setYear(y)}>
@@ -208,6 +217,15 @@ export function YearReview() {
           </section>
 
           <div className="year-grid">
+            {goalLines.length > 0 && (
+              <section className="year-card">
+                <h2>
+                  Tu meta <Link to="/history/goals" className="year-goal-link">Editar</Link>
+                </h2>
+                <GoalBars lines={goalLines} year={year} />
+              </section>
+            )}
+
             <section className="year-card">
               <h2>Géneros favoritos</h2>
               {s.genres.length === 0 ? (
@@ -291,6 +309,7 @@ export function YearReview() {
           </div>
         </>
       )}
+      {story && !empty && <YearStory stats={s} goal={goalLines} onClose={() => setStory(false)} />}
     </div>
   )
 }

@@ -14,6 +14,8 @@ import { Settings } from './pages/Settings'
 const Player = lazy(() => import('./pages/Player').then((m) => ({ default: m.Player })))
 const Calendar = lazy(() => import('./pages/Calendar').then((m) => ({ default: m.Calendar })))
 const YearReview = lazy(() => import('./pages/YearReview').then((m) => ({ default: m.YearReview })))
+const Diary = lazy(() => import('./pages/Diary').then((m) => ({ default: m.Diary })))
+const Goals = lazy(() => import('./pages/Goals').then((m) => ({ default: m.Goals })))
 const Person = lazy(() => import('./pages/Person').then((m) => ({ default: m.Person })))
 
 const pageFallback = <div className="page"><div className="spinner" /></div>
@@ -54,6 +56,8 @@ export function App() {
           <Route path="list" element={<MyList />} />
           <Route path="history" element={<History />} />
           <Route path="history/year" element={<Suspense fallback={pageFallback}><YearReview /></Suspense>} />
+          <Route path="history/diary" element={<Suspense fallback={pageFallback}><Diary /></Suspense>} />
+          <Route path="history/goals" element={<Suspense fallback={pageFallback}><Goals /></Suspense>} />
           <Route path="calendar" element={<Suspense fallback={pageFallback}><Calendar /></Suspense>} />
           <Route path="settings" element={<Settings />} />
           <Route path="*" element={<Home />} />

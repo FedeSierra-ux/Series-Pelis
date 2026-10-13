@@ -5,6 +5,7 @@ import { dayLabel, episodeLabel, formatTime, smallPoster } from '../lib/format'
 import { useTitle } from '../lib/hooks'
 import { typeLabel } from '../lib/i18n'
 import { progressStore, removeHistory, useStore, type WatchEntry } from '../lib/store'
+import { GoalLink, HistoryGoal } from './goals/GoalLink'
 
 type Filter = 'all' | 'movie' | 'series' | 'progress' | 'watched'
 
@@ -69,8 +70,13 @@ export function History() {
           <Link to="/calendar" className="btn">
             📅 Calendario
           </Link>
+          <Link to="/history/diary" className="btn">
+            📔 Diario
+          </Link>
+          <GoalLink />
         </div>
       </header>
+      <HistoryGoal />
       <div className="filters">
         {FILTERS.map((f) => (
           <button key={f.id} className={`tab ${filter === f.id ? 'active' : ''}`} onClick={() => setFilter(f.id)}>
