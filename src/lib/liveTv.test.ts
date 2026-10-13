@@ -51,6 +51,23 @@ describe('parseLiveChannels', () => {
     expect(secure[4]).toMatchObject({ no: 5, notAlways: true, geoBlocked: false })
     expect(secure[5]).toMatchObject({ geoBlocked: true, url: 'https://example.com/rosario.m3u8' })
   })
+
+  it('un título con coma no se corta, y sin atributos también anda', () => {
+    const m3u = `#EXTM3U
+#EXTINF:-1 tvg-id="x" group-title="Noticias",Canal 9, Buenos Aires
+https://example.com/c9.m3u8
+#EXTINF:-1 tvg-id="y" tvg-name="A, B" group-title="News",Noticias Ya (720p)
+https://example.com/ny.m3u8
+#EXTINF:-1,Canal sin atributos, con coma
+https://example.com/sin.m3u8
+`
+    // "Noticias" no es un grupo de iptv-org (es "News"): el primero no entra, pero parsea bien el título.
+    const list = parseLiveChannels(m3u.replace('group-title="Noticias"', 'group-title="News"'), { secure: true })
+    expect(list.map((c) => c.name)).toEqual(['Canal 9, Buenos Aires', 'Noticias Ya'])
+    expect(list[1]).toMatchObject({ id: 'y', quality: '720p' })
+    const plain = parseLiveChannels(m3u.replace('#EXTINF:-1,Canal', '#EXTINF:-1 group-title="General",Canal'), { secure: true })
+    expect(plain.some((c) => c.name === 'Canal sin atributos, con coma')).toBe(true)
+  })
 })
 
 describe('stepChannel', () => {
