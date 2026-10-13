@@ -343,6 +343,8 @@ export interface Settings {
   tmdbKey: string
   /** Reproducir el tráiler sin sonido en la portada de Inicio (necesita TMDB). */
   heroTrailer: boolean
+  /** Apariencia: '1' clásico (por defecto) o '2' nuevo (riel lateral, tonos violáceos, Sora/DM Sans). */
+  theme: '1' | '2'
 }
 
 export const settingsStore = new PersistedStore<Settings>('settings', {
@@ -366,6 +368,7 @@ export const settingsStore = new PersistedStore<Settings>('settings', {
   externalPlayer: 'system',
   tmdbKey: '',
   heroTrailer: true,
+  theme: '1',
 })
 
 // ---------- Copia de seguridad ----------

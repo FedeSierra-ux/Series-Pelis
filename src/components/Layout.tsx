@@ -1,4 +1,6 @@
 import { NavLink, Outlet } from 'react-router-dom'
+import { useTheme } from '../lib/theme'
+import { Theme2Layout } from './Theme2Layout'
 
 // En el celular entran 7 ítems abajo: "Calendario" se oculta ahí y se llega desde Historial.
 const LINKS: { to: string; label: string; icon: string; end?: boolean; desktopOnly?: boolean }[] = [
@@ -13,6 +15,7 @@ const LINKS: { to: string; label: string; icon: string; end?: boolean; desktopOn
 ]
 
 export function Layout() {
+  if (useTheme() === '2') return <Theme2Layout />
   return (
     <div className="app">
       <nav className="nav" aria-label="Principal">

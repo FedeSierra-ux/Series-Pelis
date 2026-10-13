@@ -11,6 +11,7 @@ import {
   settingsStore,
   useStore,
 } from '../lib/store'
+import { AppearanceSettings } from './settings/AppearanceSettings'
 import { PlayerSettings } from './settings/PlayerSettings'
 import { SourceSettings } from './settings/SourceSettings'
 import { TmdbSettings } from './settings/TmdbSettings'
@@ -233,6 +234,7 @@ export function Settings() {
       </header>
       <AddonsSection />
       <TmdbSettings />
+      <AppearanceSettings />
       <PlaybackSection />
       <PlayerSettings />
       <SourceSettings />
