@@ -28,13 +28,25 @@ const MAX_CLIENT_PAGES = 20
 
 const hasExtra = (s: CatalogSource, name: string) => !!s.catalog.extra?.some((e) => e.name === name) || !!s.catalog.extraSupported?.includes(name)
 
-/** Fila del gestor de catálogos → opción del selector. */
-const toOption = (r: CatalogRowDef): CatalogOption => ({
-  addon: r.sources[0].addon,
-  catalog: r.sources[0].catalog,
-  label: r.merged || r.renamed ? r.name : undefined,
-  rowKey: r.merged ? r.key : undefined,
-})
+const genresOf = (s: CatalogSource) => s.catalog.genres ?? s.catalog.extra?.find((e) => e.name === 'genre')?.options ?? []
+
+/**
+ * Fila del gestor de catálogos → opción del selector. En una fila fusionada el "catálogo" de la
+ * opción junta los géneros de todas sus fuentes (la barra de filtros los saca de ahí).
+ */
+function toOption(r: CatalogRowDef): CatalogOption {
+  const first = r.sources[0]
+  const withGenre = r.sources.filter((x) => hasExtra(x, 'genre'))
+  const catalog =
+    r.merged && withGenre.length > 0
+      ? {
+          ...first.catalog,
+          genres: [...new Set(withGenre.flatMap(genresOf))],
+          extraSupported: [...new Set([...(first.catalog.extraSupported ?? []), 'genre'])],
+        }
+      : first.catalog
+  return { addon: first.addon, catalog, label: r.merged || r.renamed ? r.name : undefined, rowKey: r.merged ? r.key : undefined }
+}
 
 export function Discover() {
   const { type = 'movie' } = useParams()
@@ -105,7 +117,13 @@ export function Discover() {
         page = res.items
         last = pages.current + 1 >= res.totalPages
       } else {
-        if (pages.current === 0) progress.current = sources.map((x) => ({ skip: 0, done: !!catalogGenre && !hasExtra(x, 'genre') }))
+        // Con un género elegido, en una fila fusionada solo se piden los catálogos que lo tienen.
+        if (pages.current === 0) {
+          progress.current = sources.map((x) => ({
+            skip: 0,
+            done: !!catalogGenre && (!hasExtra(x, 'genre') || (genresOf(x).length > 0 && !genresOf(x).includes(catalogGenre))),
+          }))
+        }
         const state = progress.current
         const results = await Promise.allSettled(
           sources.map((x, i) =>
