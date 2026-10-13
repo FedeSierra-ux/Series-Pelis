@@ -276,6 +276,8 @@ export interface Settings {
   skipSegments: 'button' | 'auto' | 'off'
   /** Preguntar "¿Seguís viendo?" después de N episodios seguidos sin tocar nada (0 = nunca). */
   stillWatchingAfter: number
+  /** Miniatura del cuadro al pasar el mouse por la barra (se apaga sola con ahorro de datos). */
+  seekPreview: boolean
   sourceRules: SourceRules
   /** Reproductor externo para el botón "Abrir en…". */
   externalPlayer: 'system' | 'vlc' | 'none'
@@ -294,6 +296,7 @@ export const settingsStore = new PersistedStore<Settings>('settings', {
   autoplayNext: true,
   skipSegments: 'button',
   stillWatchingAfter: 3,
+  seekPreview: true,
   sourceRules: { mode: 'manual', rememberLast: true, preferredQuality: '1080p', preferKeywords: [], excludeKeywords: ['cam', 'hdcam', 'telesync', 'hdts'] },
   externalPlayer: 'system',
   tmdbKey: '',

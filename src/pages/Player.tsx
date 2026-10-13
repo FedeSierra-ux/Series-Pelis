@@ -3,6 +3,8 @@ import { useCallback, useEffect, useRef, useState, type MouseEvent } from 'react
 import { Navigate, useLocation, useNavigate } from 'react-router-dom'
 import { PauseCast } from '../components/PauseCast'
 import { getSubtitles } from '../lib/addons'
+import { creditsPlan } from '../lib/credits'
+import { saveDataOn } from '../lib/dataSaver'
 import { episodeLabel, formatTime, isHls } from '../lib/format'
 import { useAddons, useTitle } from '../lib/hooks'
 import { langLabel } from '../lib/i18n'
@@ -12,6 +14,10 @@ import { progressStore, saveProgress, settingsStore, useStore } from '../lib/sto
 import { loadSubtitle } from '../lib/subtitles'
 import type { Subtitle } from '../lib/types'
 import type { PlayState } from './Detail'
+import { CreditsNotice } from './player/CreditsNotice'
+import { daysAway, RECAP_AFTER_DAYS, RecapOffer } from './player/RecapOffer'
+import { SeekPreview } from './player/SeekPreview'
+import { SourcesMenu, useSwitchSource, type Resume, type SwitchState } from './player/SourcesMenu'
 
 const SAVE_EVERY_MS = 5000
 const HIDE_CONTROLS_MS = 3500
@@ -24,7 +30,7 @@ const SUB_DELAY_STEP = 0.5
 const AUTONEXT_KEY = 'sp-autonext-count'
 const SLEEP_KEY = 'sp-sleep-at'
 
-type Menu = 'subs' | 'audio' | 'sleep'
+type Menu = 'subs' | 'audio' | 'sleep' | 'sources'
 type Sleep = { kind: 'off' } | { kind: 'time'; at: number } | { kind: 'episode' }
 
 // sessionStorage puede estar bloqueado (modo privado en algunos navegadores de TV).
@@ -114,13 +120,13 @@ const formatDelay = (d: number) => `${d > 0 ? '+' : d < 0 ? '−' : ''}${Math.ab
 
 export function Player() {
   const location = useLocation()
-  const state = location.state as PlayState | undefined
-  if (!state?.playUrl) return <Navigate to="/" replace />
-  // La key reinicia el reproductor completo al pasar al siguiente episodio.
-  return <PlayerView key={state.playUrl} state={state} />
+  const { resume, ...state } = (location.state ?? {}) as SwitchState
+  if (!state.playUrl) return <Navigate to="/" replace />
+  // La key reinicia el reproductor completo al pasar al siguiente episodio (o al cambiar de fuente).
+  return <PlayerView key={state.playUrl} state={state} resume={resume} />
 }
 
-function PlayerView({ state }: { state: PlayState }) {
+function PlayerView({ state, resume }: { state: PlayState; resume?: Resume }) {
   const navigate = useNavigate()
   const addons = useAddons()
   const settings = useStore(settingsStore)
@@ -139,6 +145,8 @@ function PlayerView({ state }: { state: PlayState }) {
   const subDelayRef = useRef(0)
   const cueOrigin = useRef(new WeakMap<TextTrackCue, [number, number]>())
   const autoSkipped = useRef(new Set<string>())
+  const seekbarRef = useRef<HTMLInputElement>(null)
+  const switchSource = useSwitchSource(state)
 
   const [playing, setPlaying] = useState(false)
   const [buffering, setBuffering] = useState(true)
@@ -206,7 +214,8 @@ function PlayerView({ state }: { state: PlayState }) {
           setAudioTracks(data.audioTracks.map((t, i) => ({ id: i, name: t.name || langLabel(t.lang ?? '') || `Pista ${i + 1}` })))
           // Primera pista en el idioma de audio preferido.
           if (!userPickedAudio.current) {
-            const prefs = settingsStore.get().audioLangs ?? []
+            // Al cambiar de fuente, primero el idioma que se estaba escuchando.
+            const prefs = [...(resume?.audioLang ? [resume.audioLang] : []), ...(settingsStore.get().audioLangs ?? [])]
             let pick = -1
             let best = 99
             data.audioTracks.forEach((t, i) => {
@@ -325,7 +334,8 @@ function PlayerView({ state }: { state: PlayState }) {
     if (!el) return
     setDuration(el.duration)
     const saved = progressStore.get()[videoId]
-    if (saved && !saved.watched && saved.position > 30 && saved.position < el.duration - 30) {
+    if (resume) el.currentTime = Math.min(resume.at, Math.max(0, el.duration - 1))
+    else if (saved && !saved.watched && saved.position > 30 && saved.position < el.duration - 30) {
       el.currentTime = saved.position
       setResumedFrom(saved.position)
       setTimeout(() => setResumedFrom(undefined), 8000)
@@ -468,6 +478,17 @@ function PlayerView({ state }: { state: PlayState }) {
     }
   }, [subs, settings.autoSubtitles, settings.subtitleLangs])
 
+  // Al cambiar de fuente se vuelve a poner el subtítulo (y el retraso) que estaba activo.
+  useEffect(() => {
+    if (!resume) return
+    flash(`Fuente: ${state.addonName}`)
+    if (resume.sub === undefined) return
+    userPickedSub.current = true
+    subDelayRef.current = resume.subDelay ?? 0
+    setSubDelay(subDelayRef.current)
+    if (resume.sub) selectSub(resume.sub, true)
+  }, [])
+
   const selectAudio = (id: number) => {
     userPickedAudio.current = true
     if (hlsRef.current) hlsRef.current.audioTrack = id
@@ -479,7 +500,9 @@ function PlayerView({ state }: { state: PlayState }) {
   const inside = (s?: Segment) => !!s && duration > 0 && time >= s.start && time < Math.min(s.end, duration) - 0.5
   const skipKind: 'intro' | 'recap' | undefined =
     settings.skipSegments === 'off' || !segments ? undefined : inside(segments.recap) ? 'recap' : inside(segments.intro) ? 'intro' : undefined
-  const inCredits = settings.skipSegments === 'button' && !state.nextVideoId && inside(segments?.outro)
+  // Créditos y escena post-créditos: con escena, la tarjeta del siguiente sale al terminar los créditos.
+  const plan = creditsPlan(segments, duration, !!state.nextVideoId, NEXT_FALLBACK_S)
+  const inCredits = settings.skipSegments === 'button' && (!state.nextVideoId || plan.afterCredits) && inside(plan.credits)
 
   const skipTo = (seg?: Segment) => {
     const el = videoRef.current
@@ -487,20 +510,24 @@ function PlayerView({ state }: { state: PlayState }) {
     el.currentTime = Math.min(seg.end, el.duration || seg.end)
   }
 
+  // Si hace mucho que no ve la serie, el resumen no se saltea solo: se ofrece verlo.
+  const [awayDays] = useState(() => (video ? daysAway(meta.id) : undefined))
+  const [recapChoice, setRecapChoice] = useState<'ask' | 'done'>('ask')
+  const longAway = awayDays !== undefined && awayDays >= RECAP_AFTER_DAYS
+  const offerRecap = skipKind === 'recap' && longAway && recapChoice === 'ask'
+
   // Modo "saltar solo": una vez por segmento (si vuelve para atrás, lo respeta).
   useEffect(() => {
     if (!skipKind || settings.skipSegments !== 'auto' || autoSkipped.current.has(skipKind)) return
+    if (skipKind === 'recap' && longAway) return
     autoSkipped.current.add(skipKind)
     skipTo(segments?.[skipKind])
     flash(skipKind === 'intro' ? 'Se saltó la intro' : 'Se saltó el resumen')
   }, [skipKind, settings.skipSegments])
 
-  // Tarjeta del siguiente episodio: al empezar los créditos o, sin datos, 30 s antes del final.
-  const outroStart = segments?.outro && segments.outro.start < duration - 1 ? segments.outro.start : undefined
-  const nextAt =
-    state.nextVideoId && duration > 0
-      ? (outroStart ?? (duration > NEXT_FALLBACK_S * 4 ? duration - NEXT_FALLBACK_S : undefined))
-      : undefined
+  // Tarjeta del siguiente episodio: al empezar los créditos (al terminar, si hay escena después) o,
+  // sin datos, 30 s antes del final.
+  const nextAt = plan.nextAt
   const nextDue = nextAt !== undefined && time >= nextAt
 
   useEffect(() => {
@@ -513,13 +540,13 @@ function PlayerView({ state }: { state: PlayState }) {
   const showNextCard = nextDue && !nextDismissed && !sleepFired && !askStill && sleep.kind !== 'episode'
 
   useEffect(() => {
-    if (!showNextCard || !settings.autoplayNext) return
+    if (!showNextCard || !settings.autoplayNext || plan.afterCredits) return
     const t = setInterval(() => {
       // En pausa la cuenta regresiva también se frena.
       if (videoRef.current && !videoRef.current.paused) setCountdown((c) => c - 1)
     }, 1000)
     return () => clearInterval(t)
-  }, [showNextCard, settings.autoplayNext])
+  }, [showNextCard, settings.autoplayNext, plan.afterCredits])
 
   useEffect(() => {
     if (showNextCard && settings.autoplayNext && countdown <= 0) goNext(true)
@@ -586,6 +613,21 @@ function PlayerView({ state }: { state: PlayState }) {
       return
     }
     copyText(url).then((ok) => flash(ok ? 'Enlace copiado: pegalo en VLC' : 'No se pudo copiar el enlace'))
+  }
+
+  // ---------- Cambiar de fuente ----------
+  const changeSource = (pick: Parameters<typeof switchSource>[0]) => {
+    setMenu(null)
+    const el = videoRef.current
+    if (!el || pick.url === state.playUrl) return
+    persist()
+    const hls = hlsRef.current
+    switchSource(pick, {
+      at: el.currentTime,
+      sub: activeSub,
+      subDelay: subDelayRef.current,
+      audioLang: hls && audioTrack >= 0 ? hls.audioTracks[audioTrack]?.lang : undefined,
+    })
   }
 
   // ---------- Foco ----------
@@ -700,8 +742,8 @@ function PlayerView({ state }: { state: PlayState }) {
   const sortedSubs = [...subs].sort((a, b) => langRank(a.lang, settings.subtitleLangs) - langRank(b.lang, settings.subtitleLangs))
   const external = externalPlayerUrl(state.playUrl)
   const subStyle = settings.subtitleStyle
-  const showSkip = !!skipKind && settings.skipSegments === 'button'
-  const showCorner = !menu && !error && !askStill && !sleepFired && (showNextCard || showSkip || inCredits)
+  const showSkip = !!skipKind && settings.skipSegments === 'button' && !(skipKind === 'recap' && longAway)
+  const showCorner = !menu && !error && !askStill && !sleepFired && (showNextCard || offerRecap || showSkip || inCredits)
 
   return (
     <div
@@ -753,10 +795,13 @@ function PlayerView({ state }: { state: PlayState }) {
         type={meta.type}
         season={video?.season}
         episode={video?.episode}
+        videoId={video?.id}
         visible={!playing && !buffering && time > 0 && !error && !menu && !askStill && !sleepFired}
       />
 
       {buffering && !error && !askStill && !sleepFired && <div className="player-spinner" aria-label="Cargando" />}
+
+      {!error && !askStill && !sleepFired && <CreditsNotice imdbId={meta.id} type={meta.type} plan={plan} time={time} duration={duration} />}
 
       {resumedFrom !== undefined && (
         <div className="player-toast">
@@ -832,13 +877,22 @@ function PlayerView({ state }: { state: PlayState }) {
 
       {showCorner && (
         <div className="player-corner player-float">
-          {showNextCard ? (
+          {offerRecap && !showNextCard ? (
+            <RecapOffer
+              days={awayDays!}
+              onWatch={() => setRecapChoice('done')}
+              onSkip={() => {
+                setRecapChoice('done')
+                skipTo(segments?.recap)
+              }}
+            />
+          ) : showNextCard ? (
             <div className="next-card" role="status">
               <strong>
                 {nextLoading
                   ? 'Cargando el siguiente episodio…'
                   : settings.autoplayNext
-                    ? `Siguiente episodio en ${Math.max(0, countdown)} s`
+                    ? `Siguiente episodio en ${Math.max(0, plan.afterCredits ? Math.ceil(duration - time) : countdown)} s`
                     : 'Siguiente episodio'}
               </strong>
               <div className="next-card-actions">
@@ -855,7 +909,7 @@ function PlayerView({ state }: { state: PlayState }) {
               key={skipKind ?? 'credits'}
               className="btn skip-btn"
               autoFocus
-              onClick={() => skipTo(skipKind ? segments?.[skipKind] : segments?.outro)}
+              onClick={() => skipTo(skipKind ? segments?.[skipKind] : plan.credits)}
             >
               {skipKind === 'intro' ? 'Saltar intro' : skipKind === 'recap' ? 'Saltar resumen' : 'Saltar créditos'}
             </button>
@@ -879,7 +933,7 @@ function PlayerView({ state }: { state: PlayState }) {
       </div>
 
       {menu && (
-        <div className="player-menu" role="menu">
+        <div className={`player-menu ${menu === 'sources' ? 'player-menu-wide' : ''}`} role="menu">
           {menu === 'subs' && (
             <>
               {activeSub && (
@@ -913,6 +967,7 @@ function PlayerView({ state }: { state: PlayState }) {
                 {t.name}
               </button>
             ))}
+          {menu === 'sources' && <SourcesMenu state={state} onPick={changeSource} />}
           {menu === 'sleep' && (
             <>
               <span className="player-menu-title muted small">Temporizador</span>
@@ -934,6 +989,7 @@ function PlayerView({ state }: { state: PlayState }) {
 
       <div className="player-controls">
         <input
+          ref={seekbarRef}
           className="seekbar"
           type="range"
           min={0}
@@ -948,6 +1004,7 @@ function PlayerView({ state }: { state: PlayState }) {
           }}
           style={{ ['--pct' as string]: duration ? `${(time / duration) * 100}%` : '0%' }}
         />
+        <SeekPreview bar={seekbarRef} url={state.playUrl} duration={duration} enabled={settings.seekPreview && !saveDataOn()} />
         <div className="controls-row">
           <button onClick={() => seek(-SEEK_STEP)} aria-label="Retroceder 10 segundos">
             ⟲10
@@ -972,6 +1029,9 @@ function PlayerView({ state }: { state: PlayState }) {
               Audio
             </button>
           )}
+          <button onClick={(e) => toggleMenu('sources', e)} aria-label="Fuentes" aria-expanded={menu === 'sources'}>
+            Fuentes
+          </button>
           <button
             onClick={(e) => toggleMenu('sleep', e)}
             aria-label="Temporizador para dormir"

@@ -300,3 +300,30 @@ export function peekTmdb<T>(path: string, params: Record<string, string | number
   const key = `tmdb:${path}?${new URLSearchParams(Object.entries(params).filter(([, v]) => v !== undefined) as [string, string][]).toString()}`
   return peekMemory<T>(key)?.data
 }
+
+// ---------- v0.4: reproductor ----------
+
+export interface TmdbEpisode {
+  name?: string
+  overview?: string
+  still_path?: string | null
+  air_date?: string
+}
+
+/** Título y sinopsis de un episodio en español (para la pausa). */
+export function getEpisodeInfo(tvId: number, season: number, episode: number): Promise<TmdbEpisode> {
+  return tmdbCached<TmdbEpisode>(`/tv/${tvId}/season/${season}/episode/${episode}`, { language: LANG })
+}
+
+export type CreditsStinger = 'after' | 'during'
+
+// Palabras clave de TMDB (verificadas contra /keyword/{id}); por las dudas también se compara el nombre.
+const STINGER_IDS: Record<number, CreditsStinger> = { 179430: 'after', 179431: 'during' }
+const STINGER_NAMES: Record<string, CreditsStinger> = { aftercreditsstinger: 'after', duringcreditsstinger: 'during' }
+
+/** Si la peli tiene escena después (o durante) los créditos, según las palabras clave de TMDB. */
+export async function getCreditsStinger(movieId: number): Promise<CreditsStinger | undefined> {
+  const res = await tmdbCached<{ keywords?: { id: number; name: string }[] }>(`/movie/${movieId}/keywords`, {}, 30 * DAY)
+  const kinds = (res.keywords ?? []).map((k) => STINGER_IDS[k.id] ?? STINGER_NAMES[k.name.toLowerCase().replace(/[\s-]/g, '')])
+  return kinds.includes('after') ? 'after' : kinds.includes('during') ? 'during' : undefined
+}

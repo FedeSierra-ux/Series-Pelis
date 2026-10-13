@@ -1,3 +1,4 @@
+import { saveDataOn } from '../../lib/dataSaver'
 import { langLabel } from '../../lib/i18n'
 import { settingsStore, useStore, type Settings, type SubtitleStyle } from '../../lib/store'
 
@@ -129,6 +130,17 @@ export function PlayerSettings() {
         onChange={(stillWatchingAfter) => update({ stillWatchingAfter })}
       />
       <p className="muted small">Pausa y pregunta después de esa cantidad de episodios seguidos sin tocar nada.</p>
+
+      <h3>Vista previa al adelantar</h3>
+      <label className="check">
+        <input type="checkbox" checked={settings.seekPreview} onChange={(e) => update({ seekPreview: e.target.checked })} />
+        Mostrar el cuadro de ese momento al pasar el mouse por la barra
+      </label>
+      <p className="muted small">
+        {saveDataOn()
+          ? 'El navegador tiene activado el ahorro de datos: la vista previa queda apagada.'
+          : 'Usa un poco más de datos. Se apaga sola si el navegador tiene activado el ahorro de datos.'}
+      </p>
 
       <h3>Reproductor externo</h3>
       <Choice
