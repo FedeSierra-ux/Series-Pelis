@@ -3,7 +3,7 @@
 Tu plataforma personal para ver pelis y series con **tus addons de Stremio**, el **puntaje de IMDb** a la vista
 y un **historial** de todo lo que viste. Funciona en la PC, el celular y el navegador de la TV (se puede instalar como app).
 
-## Qué hace (v0.1.0)
+## Qué hace (v0.2.0)
 
 - **Catálogo** de Cinemeta (populares, nuevas y mejor puntuadas) y de cualquier addon que agregues.
 - **Puntaje de IMDb** en pósters, portada y ficha.
@@ -11,7 +11,12 @@ y un **historial** de todo lo que viste. Funciona en la PC, el celular y el nave
   con Real-Debrid o TorBox, los streams llegan como enlaces directos y arrancan rápido.
 - **Reproductor** propio: MP4/WebM directos y HLS (`hls.js`, se descarga solo si hace falta), subtítulos de los
   addons (convierte SRT a VTT), pistas de audio, siguiente episodio automático con la misma fuente.
-- **Seguir viendo** y **reanudar** donde quedaste.
+- **Saltar intro / resumen / créditos** (tiempos de IntroDB), **siguiente episodio con cuenta regresiva**,
+  "¿Seguís viendo?" y **temporizador para dormir**.
+- **Subtítulos y audio** en tu idioma preferido, con estilo y retraso ajustables. Botón **Abrir en VLC**.
+- **Elección automática de fuente** según calidad y palabras clave, y recuerda la fuente que usaste en cada serie.
+- **Seguir viendo** (con opción de quitar) y **reanudar** donde quedaste. Fila con el siguiente episodio de tus series.
+- **Calendario** de estrenos de tus series y resumen **Tu año**.
 - **Historial** por día, con filtros y estadísticas. Marcar episodios o pelis como vistas.
 - **Mi lista** para guardar lo que querés ver.
 - **Control remoto**: se navega con las flechas, Enter y Atrás (Fire TV / Android TV / navegador de la TV).
@@ -47,6 +52,8 @@ enlace `stremio://`).
 4. Abrí la URL `https://series-pelis.pages.dev` en la PC, el celular y la TV. En el celular: menú del navegador →
    *Instalar app* / *Agregar a pantalla de inicio*.
 
+`wrangler pages deploy` también sube la carpeta `functions/` (el proxy `/api/segments` para saltar intros).
+
 En Fire TV podés abrirla desde el navegador Silk mientras tanto; el empaquetado como app nativa queda para más adelante.
 
 ## Herramientas para Claude Code
@@ -59,6 +66,7 @@ En Fire TV podés abrirla desde el navegador Silk mientras tanto; el empaquetado
 
 ## Roadmap
 
-- **v0.2**: cuenta con código de vinculación (como Netflix) y sincronización del historial en Cloudflare (Workers + D1).
+- **Próximo**: metadatos de TMDB (sinopsis en español, reparto, colecciones).
+- Cuenta con código de vinculación (como Netflix) y sincronización del historial en Cloudflare (Workers + D1).
 - Importar addons desde la cuenta de Stremio.
 - App para Fire TV / Android TV.

@@ -5,7 +5,7 @@ import { getSubtitles } from '../lib/addons'
 import { episodeLabel, formatTime, isHls } from '../lib/format'
 import { useAddons, useTitle } from '../lib/hooks'
 import { langLabel } from '../lib/i18n'
-import { findNextStream } from '../lib/nextEpisode'
+import { findNextStream, prefetchNextStreams } from '../lib/nextEpisode'
 import { getSegments, imdbIdOf, type Segment, type Segments } from '../lib/segments'
 import { progressStore, saveProgress, settingsStore, useStore } from '../lib/store'
 import { loadSubtitle } from '../lib/subtitles'
@@ -273,6 +273,17 @@ function PlayerView({ state }: { state: PlayState }) {
       window.removeEventListener('touchstart', reset)
     }
   }, [])
+
+  // Al pasar el 70% se buscan de antemano los streams del siguiente episodio.
+  const prefetched = useRef(false)
+  useEffect(() => {
+    prefetched.current = false
+  }, [videoId])
+  useEffect(() => {
+    if (prefetched.current || !state.nextVideoId || duration <= 0 || time / duration < 0.7) return
+    prefetched.current = true
+    prefetchNextStreams(state)
+  }, [time, duration, state])
 
   // ---------- Progreso ----------
   const persist = useCallback(() => {

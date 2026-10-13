@@ -1,5 +1,30 @@
 # Changelog
 
+## [0.2.0] - 2026-10-13
+
+### Agregado
+- **Saltar intro, resumen y créditos** con los tiempos de IntroDB (botón o automático). Se consultan a través de
+  una Pages Function (`/api/segments`) porque IntroDB no permite llamadas desde otros sitios.
+- **Siguiente episodio con cuenta regresiva** al empezar los créditos (o 30 s antes del final), con "Ver ahora" y "Cancelar".
+- **¿Seguís viendo?** después de N episodios seguidos sin tocar nada, y **temporizador para dormir**
+  (15/30/60 min o fin del episodio).
+- **Subtítulos**: se activan solos en el idioma preferido, estilo configurable (tamaño, color, fondo) y ajuste de retraso ±0,5 s.
+- **Audio**: elige sola la pista en el idioma preferido (HLS).
+- **Abrir en otro reproductor** (VLC o el selector de Android); en PC copia el enlace.
+- **Elección automática de fuente**: modo "Elegir yo" o "Automático" con calidad preferida y palabras a preferir o
+  excluir (por defecto se excluyen CAM, TS, etc.). Aviso de 3 s con "Elegir otro" antes de reproducir.
+- **Recordar la última fuente** de cada serie y usarla en el siguiente episodio. Badge "Recomendado" en la lista de streams.
+- **Precarga** de los streams del siguiente episodio al pasar el 70 %.
+- **Quitar de "Seguir viendo"** con ✕ y opción de deshacer.
+- Fila **"Tus series: siguiente episodio"** en Inicio.
+- **Calendario** de estrenos de tus series (próximos 60 días y última semana).
+- **Tu año**: horas vistas, géneros favoritos, series más vistas, rachas, día favorito y mapa de actividad.
+- Ajustes nuevos: "Reproductor" y "Elección de fuente".
+
+### Cambiado
+- Mientras se buscan streams se muestra "Buscando streams…" y ya no se mezclan los del episodio anterior.
+- Con el control remoto: ↑/↓ recorren los menús del reproductor y Enter funciona en los botones del cartel de error.
+
 ## [0.1.0] - 2026-10-13
 
 Primera versión.

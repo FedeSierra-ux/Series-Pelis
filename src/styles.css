@@ -1709,6 +1709,8 @@ select:focus-visible {
   .heatmap {
     width: 100%;
     height: auto;
+  }
+}
 
 /* ---------- v0.2 reproductor ---------- */
 
