@@ -2381,3 +2381,91 @@ select:focus-visible {
     max-height: calc(100% - 270px);
   }
 }
+
+/* ---------- v0.4 subtítulos y fuentes ---------- */
+
+/* Más estilo de subtítulos (clases de subtitleClasses en .player y en la vista previa). */
+.player.sub-bg-light .player-video::cue {
+  background: rgba(0, 0, 0, 0.3);
+}
+.sub-preview.sub-bg-light .sub-preview-text {
+  background: rgba(0, 0, 0, 0.3);
+}
+.player.sub-outline .player-video::cue {
+  text-shadow: -1px -1px 0 #000, 1px -1px 0 #000, -1px 1px 0 #000, 1px 1px 0 #000, 0 0 4px #000;
+}
+.sub-preview.sub-outline .sub-preview-text {
+  text-shadow: -1px -1px 0 #000, 1px -1px 0 #000, -1px 1px 0 #000, 1px 1px 0 #000, 0 0 4px #000;
+}
+.player.sub-font-rounded .player-video::cue,
+.sub-preview.sub-font-rounded .sub-preview-text {
+  font-family: ui-rounded, 'SF Pro Rounded', 'Arial Rounded MT Bold', 'Varela Round', 'Nunito', system-ui, sans-serif;
+}
+.player.sub-font-serif .player-video::cue,
+.sub-preview.sub-font-serif .sub-preview-text {
+  font-family: ui-serif, Georgia, 'Times New Roman', serif;
+}
+.player.sub-font-mono .player-video::cue,
+.sub-preview.sub-font-mono .sub-preview-text {
+  font-family: ui-monospace, 'SFMono-Regular', Menlo, Consolas, 'Liberation Mono', monospace;
+}
+/* En el video la altura se cambia en cada cue (placeCue); acá solo la vista previa. */
+.sub-preview.sub-pos-10 {
+  padding-bottom: 30px;
+}
+.sub-preview.sub-pos-20 {
+  padding-bottom: 44px;
+}
+
+/* Cargar archivo… / Olvidar idiomas: separados de la lista de subtítulos. */
+.player-menu .sub-menu-extra {
+  color: var(--muted);
+}
+.player-menu button:not(.sub-menu-extra) + .sub-menu-extra {
+  margin-top: 4px;
+  border-top: 1px solid var(--line);
+}
+.player-drop {
+  position: absolute;
+  inset: 16px;
+  z-index: 4;
+  display: grid;
+  place-items: center;
+  padding: 16px;
+  border: 3px dashed var(--accent);
+  border-radius: var(--radius);
+  background: rgba(0, 0, 0, 0.7);
+  font-size: 1.2rem;
+  font-weight: 700;
+  text-align: center;
+  pointer-events: none;
+}
+
+/* Fuentes ocultas por los filtros avanzados. */
+.stream-hidden-toggle {
+  padding: 8px 0;
+  border: none;
+  background: none;
+  color: var(--muted);
+  font: inherit;
+  font-size: 0.95rem;
+  font-weight: 700;
+  text-align: left;
+  cursor: pointer;
+}
+.stream-hidden-toggle:hover,
+.stream-hidden-toggle:focus-visible {
+  color: var(--text);
+}
+.stream-hidden .stream-item {
+  opacity: 0.75;
+}
+.stream-hidden-reason {
+  grid-column: 1 / -1;
+  font-size: 0.75rem;
+  color: var(--muted);
+}
+.source-label {
+  font-size: 0.9rem;
+  color: var(--muted);
+}

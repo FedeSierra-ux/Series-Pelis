@@ -8,6 +8,19 @@ const QUALITY_OPTIONS: { value: SourceRules['preferredQuality']; label: string }
   { value: '720p', label: 'HD (720p)' },
 ]
 
+const SIZE_OPTIONS = [0, 2, 5, 10, 20, 40]
+
+const CODECS: { value: SourceRules['excludeCodecs'][number]; label: string }[] = [
+  { value: 'hevc', label: 'Descartar HEVC (x265 / H.265)' },
+  { value: 'av1', label: 'Descartar AV1' },
+]
+
+const HDR_OPTIONS: [SourceRules['hdr'], string][] = [
+  ['allow', 'Permitir'],
+  ['prefer', 'Preferir'],
+  ['exclude', 'Excluir'],
+]
+
 const toList = (text: string) =>
   text
     .split(',')
@@ -101,6 +114,47 @@ export function SourceSettings() {
         value={rules.excludeKeywords}
         onSave={(excludeKeywords) => setRules({ excludeKeywords })}
       />
+
+      <h3>Filtros avanzados</h3>
+      <p className="muted small">
+        Los streams que no pasan estos filtros no se eligen solos y en la ficha quedan aparte, en “Ocultos por tus filtros”
+        (los podés ver y reproducir igual).
+      </p>
+      <label className="source-field">
+        <span>Tamaño máximo</span>
+        <select value={rules.maxSizeGB} onChange={(e) => setRules({ maxSizeGB: Number(e.target.value) })}>
+          {SIZE_OPTIONS.map((gb) => (
+            <option key={gb} value={gb}>
+              {gb ? `${gb} GB` : 'Sin límite'}
+            </option>
+          ))}
+        </select>
+      </label>
+      {CODECS.map((c) => (
+        <label key={c.value} className="check">
+          <input
+            type="checkbox"
+            checked={rules.excludeCodecs.includes(c.value)}
+            onChange={(e) =>
+              setRules({ excludeCodecs: e.target.checked ? [...rules.excludeCodecs, c.value] : rules.excludeCodecs.filter((v) => v !== c.value) })
+            }
+          />
+          {c.label}
+        </label>
+      ))}
+      <p className="muted small">HEVC y AV1 pesan menos, pero muchos televisores y navegadores no los reproducen.</p>
+      <span className="source-label">HDR / Dolby Vision</span>
+      <div className="chips" role="radiogroup" aria-label="HDR / Dolby Vision">
+        {HDR_OPTIONS.map(([value, label]) => (
+          <button key={value} role="radio" aria-checked={rules.hdr === value} className={`tab ${rules.hdr === value ? 'active' : ''}`} onClick={() => setRules({ hdr: value })}>
+            {label}
+          </button>
+        ))}
+      </div>
+      <label className="check">
+        <input type="checkbox" checked={rules.dedupe} onChange={(e) => setRules({ dedupe: e.target.checked })} />
+        Ocultar repetidos (el mismo archivo en varios addons)
+      </label>
     </section>
   )
 }

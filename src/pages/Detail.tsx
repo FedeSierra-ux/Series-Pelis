@@ -8,7 +8,7 @@ import { episodeLabel, formatTime, relativeDate } from '../lib/format'
 import { useAddons, useMeta, useTitle, useTmdbDetails } from '../lib/hooks'
 import { genreLabel, typeLabel } from '../lib/i18n'
 import { lastSourceStore, progressStore, setWatched, settingsStore, toggleWatchlist, useStore, watchlistStore } from '../lib/store'
-import { playable, rankStreams, type RankedStream } from '../lib/streamPicker'
+import { analyzeStreams, playable, streamKey, type RankedStream } from '../lib/streamPicker'
 import {
   getDetails,
   imdbFromTmdb,
@@ -78,6 +78,7 @@ function StreamList({
   const [result, setResult] = useState<{ key: string; groups: AddonStreams[] }>()
   const [graceFor, setGraceFor] = useState<string>()
   const [countdown, setCountdown] = useState<{ key: string; pick: RankedStream; left: number }>()
+  const [showHidden, setShowHidden] = useState(false)
   const listRef = useRef<HTMLDivElement>(null)
   const cancelRef = useRef<HTMLButtonElement>(null)
 
@@ -90,8 +91,8 @@ function StreamList({
   const groups = useMemo(() => (fetched && result ? result.groups : []), [fetched, result])
   const rules = settings.sourceRules
   const last = rules.rememberLast ? lastSources[meta.id] : undefined
-  const ranked = useMemo(
-    () => rankStreams(groups, rules, last, settings.streamingServerUrl),
+  const { ranked, hidden } = useMemo(
+    () => analyzeStreams(groups, rules, last, settings.streamingServerUrl),
     [groups, rules, last, settings.streamingServerUrl],
   )
   const loading = !fetched || groups.some((g) => g.loading)
@@ -177,6 +178,47 @@ function StreamList({
 
   const total = groups.reduce((n, g) => n + g.streams.length, 0)
 
+  /** `hiddenReason`: está en "Ocultos por tus filtros" (se puede reproducir igual). */
+  const renderItem = (s: Stream, i: number, addon: InstalledAddon, recommended: boolean, hiddenReason?: string, key: string | number = i) => {
+    const { name, lines } = streamLabel(s)
+    const p = playable(s, settings.streamingServerUrl)
+    const content = (
+      <>
+        {recommended && <span className="stream-badge">Recomendado</span>}
+        <span className="stream-name">
+          {name || addon.manifest.name}
+          {hiddenReason && <span className="muted small"> · {addon.manifest.name}</span>}
+        </span>
+        <span className="stream-title">
+          {lines.map((l, j) => (
+            <span key={j}>{l}</span>
+          ))}
+        </span>
+        {hiddenReason && <span className="stream-hidden-reason">{hiddenReason}</span>}
+        {p.reason && <span className="stream-warn">{p.reason}</span>}
+        {s.behaviorHints?.notWebReady && p.url && <span className="stream-warn">Puede no reproducirse en el navegador (formato MKV/HEVC)</span>}
+      </>
+    )
+    const cls = `stream-item${recommended ? ' recommended' : ''}`
+    if (p.url)
+      return (
+        <button key={key} className={cls} onClick={() => play(s, p.url!, addon)}>
+          {content}
+        </button>
+      )
+    if (p.external)
+      return (
+        <a key={key} className={cls} href={p.external} target="_blank" rel="noreferrer">
+          {content}
+        </a>
+      )
+    return (
+      <div key={key} className="stream-item disabled" tabIndex={-1}>
+        {content}
+      </div>
+    )
+  }
+
   return (
     <div className="streams" ref={listRef}>
       {pending && (
@@ -198,10 +240,10 @@ function StreamList({
       <div className="streams-status muted">
         {loading ? `Buscando streams… (${total} hasta ahora)` : `${total} streams encontrados`}
       </div>
-      {groups.map((g) => {
+      {groups.map((g, addonIndex) => {
         const bestIndex = best?.addon.transportUrl === g.addon.transportUrl ? best.streamIndex : -1
-        // El recomendado va primero dentro de su addon.
-        const items = g.streams.map((s, i) => ({ s, i }))
+        // El recomendado va primero dentro de su addon; los que esconden los filtros van aparte.
+        const items = g.streams.map((s, i) => ({ s, i })).filter(({ i }) => !hidden.has(streamKey(addonIndex, i)))
         if (bestIndex >= 0) items.sort((a, b) => Number(b.i === bestIndex) - Number(a.i === bestIndex))
         return (
           <section key={g.addon.transportUrl} className="stream-group">
@@ -211,49 +253,28 @@ function StreamList({
             </h3>
             {g.error && <p className="muted small">No respondió: {g.error}</p>}
             {!g.loading && !g.error && g.streams.length === 0 && <p className="muted small">Sin resultados.</p>}
-            <div className="stream-items">
-              {items.map(({ s, i }) => {
-                const { name, lines } = streamLabel(s)
-                const p = playable(s, settings.streamingServerUrl)
-                const recommended = i === bestIndex
-                const content = (
-                  <>
-                    {recommended && <span className="stream-badge">Recomendado</span>}
-                    <span className="stream-name">{name || g.addon.manifest.name}</span>
-                    <span className="stream-title">
-                      {lines.map((l, j) => (
-                        <span key={j}>{l}</span>
-                      ))}
-                    </span>
-                    {p.reason && <span className="stream-warn">{p.reason}</span>}
-                    {s.behaviorHints?.notWebReady && p.url && (
-                      <span className="stream-warn">Puede no reproducirse en el navegador (formato MKV/HEVC)</span>
-                    )}
-                  </>
-                )
-                const cls = `stream-item${recommended ? ' recommended' : ''}`
-                if (p.url)
-                  return (
-                    <button key={i} className={cls} onClick={() => play(s, p.url!, g.addon)}>
-                      {content}
-                    </button>
-                  )
-                if (p.external)
-                  return (
-                    <a key={i} className={cls} href={p.external} target="_blank" rel="noreferrer">
-                      {content}
-                    </a>
-                  )
-                return (
-                  <div key={i} className="stream-item disabled" tabIndex={-1}>
-                    {content}
-                  </div>
-                )
-              })}
-            </div>
+            {!g.loading && g.streams.length > 0 && items.length === 0 && <p className="muted small">Todos ocultos por tus filtros.</p>}
+            <div className="stream-items">{items.map(({ s, i }) => renderItem(s, i, g.addon, i === bestIndex))}</div>
           </section>
         )
       })}
+      {hidden.size > 0 && (
+        <section className="stream-group stream-hidden">
+          <button className="stream-hidden-toggle" aria-expanded={showHidden} onClick={() => setShowHidden((v) => !v)}>
+            {showHidden ? '▾' : '▸'} Ocultos por tus filtros ({hidden.size})
+          </button>
+          {showHidden && (
+            <div className="stream-items">
+              {groups.flatMap((g, addonIndex) =>
+                g.streams.map((s, i) => {
+                  const reason = hidden.get(streamKey(addonIndex, i))
+                  return reason ? renderItem(s, i, g.addon, false, reason, `${addonIndex}:${i}`) : null
+                }),
+              )}
+            </div>
+          )}
+        </section>
+      )}
     </div>
   )
 }
