@@ -1,0 +1,56 @@
+import { lazy, Suspense, useEffect } from 'react'
+import { BrowserRouter, Route, Routes, useLocation, useNavigate } from 'react-router-dom'
+import { Layout } from './components/Layout'
+import { initSpatialNav } from './lib/spatialNav'
+import { Detail } from './pages/Detail'
+import { Discover } from './pages/Discover'
+import { History } from './pages/History'
+import { Home } from './pages/Home'
+import { MyList } from './pages/MyList'
+import { Search } from './pages/Search'
+import { Settings } from './pages/Settings'
+
+// El reproductor (con hls.js) se descarga recién al dar play: la portada carga más liviana.
+const Player = lazy(() => import('./pages/Player').then((m) => ({ default: m.Player })))
+
+function SpatialNav() {
+  const navigate = useNavigate()
+  const location = useLocation()
+  useEffect(() => initSpatialNav(() => location.pathname !== '/' && navigate(-1)), [navigate, location.pathname])
+  return null
+}
+
+function ScrollToTop() {
+  const { pathname } = useLocation()
+  useEffect(() => window.scrollTo(0, 0), [pathname])
+  return null
+}
+
+export function App() {
+  return (
+    <BrowserRouter>
+      <SpatialNav />
+      <ScrollToTop />
+      <Routes>
+        <Route
+          path="/watch/:type/:id"
+          element={
+            <Suspense fallback={<div className="player"><div className="player-spinner" /></div>}>
+              <Player />
+            </Suspense>
+          }
+        />
+        <Route element={<Layout />}>
+          <Route index element={<Home />} />
+          <Route path="discover/:type" element={<Discover />} />
+          <Route path="search" element={<Search />} />
+          <Route path="detail/:type/:id" element={<Detail />} />
+          <Route path="list" element={<MyList />} />
+          <Route path="history" element={<History />} />
+          <Route path="settings" element={<Settings />} />
+          <Route path="*" element={<Home />} />
+        </Route>
+      </Routes>
+    </BrowserRouter>
+  )
+}

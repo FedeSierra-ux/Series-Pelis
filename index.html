@@ -1,0 +1,21 @@
+<!doctype html>
+<html lang="es-AR">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+    <meta name="theme-color" content="#0b0b10" />
+    <meta name="description" content="Tus pelis y series con tus addons de Stremio, puntaje de IMDb e historial." />
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <link rel="apple-touch-icon" href="/icon-192.png" />
+    <!-- Abrimos las conexiones antes de que la app las pida: ahorra el handshake TLS en la primera carga. -->
+    <link rel="preconnect" href="https://v3-cinemeta.strem.io" crossorigin />
+    <link rel="preconnect" href="https://cinemeta-catalogs.strem.io" crossorigin />
+    <link rel="preconnect" href="https://images.metahub.space" />
+    <link rel="dns-prefetch" href="https://episodes.metahub.space" />
+    <title>Series-Pelis</title>
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/src/main.tsx"></script>
+  </body>
+</html>
