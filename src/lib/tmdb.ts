@@ -286,3 +286,11 @@ export function tmdbToPreview(item: TmdbListItem, fallbackType?: TmdbType): Meta
     releaseInfo: itemYear(item),
   }
 }
+
+/** Reparto de un episodio: los fijos de la serie y los invitados de ese capítulo. */
+export async function getEpisodeCast(tvId: number, season: number, episode: number): Promise<{ cast: TmdbCast[]; guests: TmdbCast[] }> {
+  const res = await tmdbCached<{ cast?: TmdbCast[]; guest_stars?: TmdbCast[] }>(`/tv/${tvId}/season/${season}/episode/${episode}/credits`, {
+    language: LANG,
+  })
+  return { cast: res.cast ?? [], guests: res.guest_stars ?? [] }
+}

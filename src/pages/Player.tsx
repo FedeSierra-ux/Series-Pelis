@@ -1,6 +1,7 @@
 import type Hls from 'hls.js'
 import { useCallback, useEffect, useRef, useState, type MouseEvent } from 'react'
 import { Navigate, useLocation, useNavigate } from 'react-router-dom'
+import { PauseCast } from '../components/PauseCast'
 import { getSubtitles } from '../lib/addons'
 import { episodeLabel, formatTime, isHls } from '../lib/format'
 import { useAddons, useTitle } from '../lib/hooks'
@@ -745,6 +746,14 @@ function PlayerView({ state }: { state: PlayState }) {
               : 'No se pudo reproducir este stream. Puede haber expirado o no ser compatible con el navegador.',
           )
         }
+      />
+
+      <PauseCast
+        imdbId={meta.id}
+        type={meta.type}
+        season={video?.season}
+        episode={video?.episode}
+        visible={!playing && !buffering && time > 0 && !error && !menu && !askStill && !sleepFired}
       />
 
       {buffering && !error && !askStill && !sleepFired && <div className="player-spinner" aria-label="Cargando" />}

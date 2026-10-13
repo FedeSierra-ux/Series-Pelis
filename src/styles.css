@@ -2080,3 +2080,86 @@ select:focus-visible {
     height: 80px;
   }
 }
+
+/* ---------- v0.3 reparto al pausar ---------- */
+.pause-cast {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 0;
+  z-index: 2;
+  width: min(380px, 42vw);
+  padding: 96px var(--gutter) 150px;
+  background: linear-gradient(90deg, rgba(0, 0, 0, 0.85) 0%, rgba(0, 0, 0, 0.6) 70%, transparent 100%);
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 0.35s;
+  overflow: hidden;
+}
+.pause-cast.visible {
+  opacity: 1;
+}
+.pause-cast h2 {
+  margin: 0 0 12px;
+  font-size: 0.85rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--muted);
+}
+.pause-cast ul {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.pause-cast li {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.pause-cast img,
+.pause-cast-ph {
+  width: 44px;
+  height: 44px;
+  flex: none;
+  border-radius: 50%;
+  object-fit: cover;
+  background: rgba(255, 255, 255, 0.12);
+}
+.pause-cast-ph {
+  display: grid;
+  place-items: center;
+  font-weight: 700;
+}
+.pause-cast-text {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  font-size: 0.85rem;
+  line-height: 1.25;
+}
+.pause-cast-text strong,
+.pause-cast-text span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.pause-cast-text span {
+  color: var(--muted);
+}
+.pause-cast-text em {
+  font-style: normal;
+  font-size: 0.7rem;
+  color: var(--accent, #c084fc);
+}
+@media (max-width: 760px) {
+  .pause-cast {
+    width: 70vw;
+    padding-top: 72px;
+  }
+  .pause-cast li:nth-child(n + 5) {
+    display: none;
+  }
+}
