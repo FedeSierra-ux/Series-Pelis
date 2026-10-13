@@ -59,7 +59,7 @@ export class PersistedStore<T> {
     this.listeners.forEach((l) => l())
     // Se escribe enseguida: los cambios son pocos (el progreso se guarda cada 5 s) y así
     // no se pierde nada si se cierra la app justo después.
-    set(this.key, this.value, idb).catch(() => {})
+    set(this.key, this.value, idb).catch((err) => console.warn(`No se pudo guardar "${this.key}"`, err))
   }
 
   subscribe = (listener: () => void) => {
