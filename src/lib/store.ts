@@ -23,7 +23,11 @@ class PersistedStore<T> {
   async hydrate() {
     try {
       const stored = await get<T>(this.key, idb)
-      if (stored !== undefined) this.value = stored
+      if (stored !== undefined) {
+        // En objetos de configuración completamos con los valores por defecto de campos nuevos.
+        const isPlain = (v: unknown) => !!v && typeof v === 'object' && !Array.isArray(v)
+        this.value = isPlain(this.value) && isPlain(stored) ? { ...this.value, ...stored } : stored
+      }
     } catch {
       // IndexedDB bloqueado (modo privado, por ejemplo): seguimos con los valores por defecto.
     }
@@ -114,13 +118,15 @@ export interface WatchEntry {
   watched: boolean
   updatedAt: number
   firstWatchedAt: number
+  /** Oculto de "Seguir viendo" por el usuario (se vuelve a mostrar si lo reproduce de nuevo). */
+  hidden?: boolean
 }
 
 export const progressStore = new PersistedStore<Record<string, WatchEntry>>('progress', {})
 
 const WATCHED_RATIO = 0.9
 
-export function saveProgress(entry: Omit<WatchEntry, 'watched' | 'updatedAt' | 'firstWatchedAt'>) {
+export function saveProgress(entry: Omit<WatchEntry, 'watched' | 'updatedAt' | 'firstWatchedAt' | 'hidden'>) {
   progressStore.set((all) => {
     const prev = all[entry.videoId]
     const now = Date.now()
@@ -174,9 +180,31 @@ export function continueWatching(all: Record<string, WatchEntry>): WatchEntry[] 
     if (!cur || e.updatedAt > cur.updatedAt) byMeta.set(e.metaId, e)
   }
   return [...byMeta.values()]
-    .filter((e) => !e.watched && e.duration > 0 && e.position > 30)
+    .filter((e) => !e.hidden && !e.watched && e.duration > 0 && e.position > 30)
     .sort((a, b) => b.updatedAt - a.updatedAt)
 }
+
+/** Saca un título de "Seguir viendo" sin borrar su progreso ni su historial. */
+export function hideFromContinue(metaId: string) {
+  progressStore.set((all) => {
+    const copy = { ...all }
+    for (const [id, e] of Object.entries(copy)) if (e.metaId === metaId) copy[id] = { ...e, hidden: true }
+    return copy
+  })
+}
+
+// ---------- Última fuente elegida por título ----------
+
+export interface LastSource {
+  /** transportUrl del addon */
+  addonUrl: string
+  bingeGroup?: string
+  /** `name` del stream, para reconocerlo si no hay bingeGroup */
+  streamName?: string
+  at: number
+}
+
+export const lastSourceStore = new PersistedStore<Record<string, LastSource>>('lastSource', {})
 
 // ---------- Mi lista ----------
 
@@ -215,18 +243,55 @@ export function toggleWatchlist(meta: MetaPreview) {
 
 // ---------- Ajustes ----------
 
+export interface SubtitleStyle {
+  size: 's' | 'm' | 'l' | 'xl'
+  color: 'white' | 'yellow'
+  background: 'none' | 'semi' | 'solid'
+}
+
+export interface SourceRules {
+  /** manual: el usuario elige siempre. auto: se reproduce el mejor stream según las reglas. */
+  mode: 'manual' | 'auto'
+  /** Volver a usar el mismo addon/fuente que la última vez en ese título. */
+  rememberLast: boolean
+  preferredQuality: 'any' | '2160p' | '1080p' | '720p'
+  /** Palabras que suman puntos (ej. "latino", "dual"). */
+  preferKeywords: string[]
+  /** Palabras que descartan el stream (ej. "cam", "hdts"). */
+  excludeKeywords: string[]
+}
+
 export interface Settings {
   /** Servidor de streaming de Stremio (solo PC con Stremio abierto). Vacío = desactivado. */
   streamingServerUrl: string
   /** Idiomas de subtítulos preferidos, en códigos ISO 639-2 (spa, eng...). */
   subtitleLangs: string[]
+  /** Activar solo el primer subtítulo disponible de `subtitleLangs`. */
+  autoSubtitles: boolean
+  /** Idiomas de audio preferidos (ISO 639-2), para elegir pista en streams con varias. */
+  audioLangs: string[]
+  subtitleStyle: SubtitleStyle
   autoplayNext: boolean
+  /** Saltar intro/resumen/créditos: mostrar botón, saltar solo o nada. */
+  skipSegments: 'button' | 'auto' | 'off'
+  /** Preguntar "¿Seguís viendo?" después de N episodios seguidos sin tocar nada (0 = nunca). */
+  stillWatchingAfter: number
+  sourceRules: SourceRules
+  /** Reproductor externo para el botón "Abrir en…". */
+  externalPlayer: 'system' | 'vlc' | 'none'
 }
 
 export const settingsStore = new PersistedStore<Settings>('settings', {
   streamingServerUrl: '',
   subtitleLangs: ['spa', 'eng'],
+  autoSubtitles: false,
+  audioLangs: ['spa', 'eng'],
+  subtitleStyle: { size: 'm', color: 'white', background: 'semi' },
   autoplayNext: true,
+  skipSegments: 'button',
+  stillWatchingAfter: 3,
+  sourceRules: { mode: 'manual', rememberLast: true, preferredQuality: '1080p', preferKeywords: [], excludeKeywords: ['cam', 'hdcam', 'telesync', 'hdts'] },
+  externalPlayer: 'system',
 })
 
 // ---------- Copia de seguridad ----------
@@ -258,7 +323,13 @@ export async function importData(raw: unknown) {
 // ---------- Arranque ----------
 
 export async function hydrateStores() {
-  await Promise.all([addonsStore.hydrate(), progressStore.hydrate(), watchlistStore.hydrate(), settingsStore.hydrate()])
+  await Promise.all([
+    addonsStore.hydrate(),
+    progressStore.hydrate(),
+    watchlistStore.hydrate(),
+    settingsStore.hydrate(),
+    lastSourceStore.hydrate(),
+  ])
   if (addonsStore.get().length === 0) addonsStore.set([CINEMETA_ADDON])
   // No bloquea el arranque.
   setTimeout(() => refreshManifests().catch(() => {}), 2000)

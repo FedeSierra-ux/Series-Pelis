@@ -1,59 +1,19 @@
 import type Hls from 'hls.js'
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { Navigate, useLocation, useNavigate } from 'react-router-dom'
-import { getMeta, getStreams, getSubtitles } from '../lib/addons'
+import { getSubtitles } from '../lib/addons'
 import { episodeLabel, formatTime, isHls } from '../lib/format'
 import { useAddons, useTitle } from '../lib/hooks'
 import { langLabel } from '../lib/i18n'
-import { addonsStore, progressStore, saveProgress, settingsStore, useStore } from '../lib/store'
+import { findNextStream } from '../lib/nextEpisode'
+import { progressStore, saveProgress, settingsStore, useStore } from '../lib/store'
 import { loadSubtitle } from '../lib/subtitles'
-import type { Meta, Subtitle } from '../lib/types'
+import type { Subtitle } from '../lib/types'
 import type { PlayState } from './Detail'
 
 const SAVE_EVERY_MS = 5000
 const HIDE_CONTROLS_MS = 3500
 const SEEK_STEP = 10
-
-/** Busca en el siguiente episodio un stream del mismo addon y "bingeGroup" (misma calidad/fuente). */
-async function findNextStream(state: PlayState): Promise<PlayState | undefined> {
-  if (!state.nextVideoId || !state.video) return undefined
-  const group = state.stream.behaviorHints?.bingeGroup
-  if (!group) return undefined
-  const addons = addonsStore.get()
-  const meta: Meta = await getMeta(addons, state.meta.type, state.meta.id)
-  const nextVideo = meta.videos?.find((v) => v.id === state.nextVideoId)
-  if (!nextVideo) return undefined
-  const sorted = [...(meta.videos ?? [])].sort((a, b) => (a.season ?? 0) - (b.season ?? 0) || (a.episode ?? 0) - (b.episode ?? 0))
-  const afterNext = sorted[sorted.findIndex((v) => v.id === nextVideo.id) + 1]
-
-  return new Promise((resolve) => {
-    const timer = setTimeout(() => {
-      cancel()
-      resolve(undefined)
-    }, 15000)
-    const cancel = getStreams(addons, state.meta.type, nextVideo.id, (groups) => {
-      for (const g of groups) {
-        const s = g.streams.find((x) => x.behaviorHints?.bingeGroup === group && x.url)
-        if (s?.url) {
-          clearTimeout(timer)
-          cancel()
-          resolve({
-            ...state,
-            stream: s,
-            playUrl: s.url,
-            video: { id: nextVideo.id, season: nextVideo.season, episode: nextVideo.episode, title: nextVideo.title, name: nextVideo.name },
-            nextVideoId: afterNext?.id,
-          })
-          return
-        }
-      }
-      if (groups.every((g) => !g.loading)) {
-        clearTimeout(timer)
-        resolve(undefined)
-      }
-    })
-  })
-}
 
 function externalPlayerUrl(url: string) {
   // En Android/Fire TV abre el selector de reproductores (VLC, MX Player, Just Player...).
