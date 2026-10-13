@@ -3,6 +3,14 @@ import react from '@vitejs/plugin-react'
 import { VitePWA } from 'vite-plugin-pwa'
 import pkg from './package.json' with { type: 'json' }
 
+const segmentsProxy = {
+  '/api/segments': {
+    target: 'https://api.introdb.app',
+    changeOrigin: true,
+    rewrite: (path: string) => path.replace(/^\/api\/segments/, '/segments'),
+  },
+}
+
 export default defineConfig({
   define: { __APP_VERSION__: JSON.stringify(pkg.version) },
   plugins: [
@@ -54,6 +62,7 @@ export default defineConfig({
     }),
   ],
   build: { target: 'es2020', chunkSizeWarningLimit: 700 },
-  server: { host: true },
-  preview: { host: true },
+  // En producción /api/segments es una Pages Function (functions/api/segments.ts); en local, un proxy.
+  server: { host: true, proxy: segmentsProxy },
+  preview: { host: true, proxy: segmentsProxy },
 })
