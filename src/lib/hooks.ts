@@ -15,10 +15,14 @@ export interface AsyncState<T> {
 function useAsync<T>(cacheKey: string | undefined, run: (() => Promise<T>) | undefined, deps: unknown[]): AsyncState<T> {
   // Si ya está en memoria arrancamos con el dato: cero parpadeo al volver atrás.
   const initial = cacheKey ? peekMemory<T>(cacheKey)?.data : undefined
-  const [state, setState] = useState<AsyncState<T>>({ data: initial, loading: !initial })
+  const [state, setState] = useState<AsyncState<T>>({ data: initial, loading: !initial && !!run })
 
   useEffect(() => {
-    if (!run) return
+    if (!run) {
+      // Sin nada que pedir no quedan datos viejos (ej. la ficha anterior) ni un "cargando" eterno.
+      setState((s) => (s.data === undefined && !s.loading && !s.error ? s : { loading: false }))
+      return
+    }
     let alive = true
     const mem = cacheKey ? peekMemory<T>(cacheKey)?.data : undefined
     setState({ data: mem, loading: !mem })

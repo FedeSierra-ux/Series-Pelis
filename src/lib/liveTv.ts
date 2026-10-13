@@ -49,7 +49,12 @@ function parseEntries(text: string): RawEntry[] {
   for (const raw of text.split(/\r?\n/)) {
     const line = raw.trim()
     if (line.startsWith('#EXTINF')) {
-      const comma = line.lastIndexOf(',')
+      // El título va después de la primera coma que sigue a los atributos (`clave="valor"`), así un
+      // nombre con coma ("Canal 9, Buenos Aires") no se corta. Sin atributos, es la primera coma.
+      const afterAttrs = line.lastIndexOf('"') + 1
+      let comma = line.indexOf(',', afterAttrs)
+      if (comma < 0) comma = line.indexOf(',')
+      if (comma < 0) comma = line.length
       const attrs: Record<string, string> = {}
       for (const m of line.slice(0, comma).matchAll(/([\w-]+)="([^"]*)"/g)) attrs[m[1]] = m[2]
       pending = { attrs, title: line.slice(comma + 1).trim() }
