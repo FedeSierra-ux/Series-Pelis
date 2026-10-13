@@ -37,7 +37,10 @@ function SpatialNav() {
 
 function ScrollToTop() {
   const { pathname } = useLocation()
-  useEffect(() => window.scrollTo(0, 0), [pathname])
+  // Llaves: desde Chrome 150 `scrollTo` devuelve una promesa y React la tomaría como limpieza del efecto.
+  useEffect(() => {
+    window.scrollTo(0, 0)
+  }, [pathname])
   return null
 }
 

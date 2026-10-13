@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.8.1] - 2026-10-13
+
+### Arreglado
+- **Pantalla en negro al cambiar de sección** (Chrome 150 en adelante, en PC y celular): desde esa versión
+  `window.scrollTo()` devuelve una promesa, y el efecto que sube la página al navegar la devolvía como si fuera
+  su limpieza. Al ir a otra página React intentaba llamarla, tiraba "is not a function" y se caía toda la app.
+  Un test nuevo revisa que ningún efecto devuelva llamadas del navegador que dan promesas.
+
 ## [0.8.0] - 2026-10-13
 
 Arreglos de la auditoría visual y de la prueba de addons, y TMDB activado desde el sitio para toda la familia.
