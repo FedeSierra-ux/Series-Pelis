@@ -1,4 +1,4 @@
-import { cached, HttpError } from './cache'
+import { cached, HttpError, peekMemory } from './cache'
 import { settingsStore } from './store'
 import type { MetaPreview } from './types'
 
@@ -293,4 +293,10 @@ export async function getEpisodeCast(tvId: number, season: number, episode: numb
     language: LANG,
   })
   return { cast: res.cast ?? [], guests: res.guest_stars ?? [] }
+}
+
+/** Lo que `tmdbCached` ya tiene en memoria para ese pedido (para pintar sin parpadeo al volver). */
+export function peekTmdb<T>(path: string, params: Record<string, string | number | undefined> = {}): T | undefined {
+  const key = `tmdb:${path}?${new URLSearchParams(Object.entries(params).filter(([, v]) => v !== undefined) as [string, string][]).toString()}`
+  return peekMemory<T>(key)?.data
 }

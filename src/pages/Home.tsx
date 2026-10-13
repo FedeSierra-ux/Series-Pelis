@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { PosterCard } from '../components/PosterCard'
 import { ImdbRating } from '../components/Rating'
@@ -7,26 +7,14 @@ import { browsableCatalogs } from '../lib/addons'
 import { episodeLabel } from '../lib/format'
 import { useAddons, useCatalog, useTitle } from '../lib/hooks'
 import { catalogLabel, genreLabel } from '../lib/i18n'
-import { continueWatching, hideFromContinue, progressStore, toggleWatchlist, useStore, watchlistStore } from '../lib/store'
+import { continueWatching, hideFromContinue, progressStore, settingsStore, toggleWatchlist, useStore, watchlistStore, type WatchEntry } from '../lib/store'
 import { episodeLink, useUpNext } from '../lib/upNext'
 import type { CatalogDef, InstalledAddon, MetaPreview } from '../lib/types'
+import { useNearViewport } from './home/lazy'
+import { TmdbHero } from './home/TmdbHero'
+import { BecauseRow, onlyTitles, Top10Row, TrendingWeekRow, useTrending, type Seed } from './home/TmdbRows'
 
 const ROW_LIMIT = 30
-
-/** Carga el catálogo recién cuando la fila se acerca a la pantalla. */
-function useNearViewport<T extends Element>(eager: boolean) {
-  const ref = useRef<T>(null)
-  const [visible, setVisible] = useState(eager)
-  useEffect(() => {
-    if (visible || !ref.current) return
-    const io = new IntersectionObserver((entries) => entries.some((e) => e.isIntersecting) && setVisible(true), {
-      rootMargin: '600px 0px',
-    })
-    io.observe(ref.current)
-    return () => io.disconnect()
-  }, [visible])
-  return [ref, visible] as const
-}
 
 function CatalogRow({ addon, catalog, eager }: { addon: InstalledAddon; catalog: CatalogDef; eager: boolean }) {
   const [ref, visible] = useNearViewport<HTMLDivElement>(eager)
@@ -154,6 +142,20 @@ function UpNextRow() {
   )
 }
 
+/** Los 2 títulos distintos vistos más recientemente (para "Porque viste…"). */
+function recentSeeds(progress: Record<string, WatchEntry>): Seed[] {
+  const seeds: Seed[] = []
+  const sorted = Object.values(progress)
+    .filter((e) => !e.hidden && e.metaId.startsWith('tt'))
+    .sort((a, b) => b.updatedAt - a.updatedAt)
+  for (const e of sorted) {
+    if (seeds.some((s) => s.metaId === e.metaId)) continue
+    seeds.push({ metaId: e.metaId, type: e.type, name: e.name })
+    if (seeds.length === 2) break
+  }
+  return seeds
+}
+
 export function Home() {
   useTitle(undefined)
   const addons = useAddons()
@@ -162,10 +164,22 @@ export function Home() {
   const resume = continueWatching(progress)
   const heroSource = catalogs.find((c) => c.catalog.type === 'movie') ?? catalogs[0]
   const { undo, hide, restore } = useUndoHide()
+  // TMDB es opcional: sin key, Inicio queda igual que siempre.
+  const tmdbKey = useStore(settingsStore).tmdbKey.trim()
+  const trendingDay = useTrending('day', tmdbKey)
+  const heroItems = useMemo(() => onlyTitles(trendingDay.data?.results).filter((i) => i.backdrop_path).slice(0, 8), [trendingDay.data])
+  const seedsKey = JSON.stringify(recentSeeds(progress))
+  const seeds = useMemo(() => JSON.parse(seedsKey) as Seed[], [seedsKey])
 
   return (
     <div className="page home" data-nav-root>
-      {heroSource && <Hero addon={heroSource.addon} catalog={heroSource.catalog} />}
+      {tmdbKey && heroItems.length > 0 ? (
+        <TmdbHero items={heroItems} />
+      ) : tmdbKey && trendingDay.loading ? (
+        <div className="hero hero-skeleton skeleton" />
+      ) : (
+        heroSource && <Hero addon={heroSource.addon} catalog={heroSource.catalog} />
+      )}
 
       {resume.length > 0 && (
         <Row title="Seguir viendo" moreTo="/history">
@@ -184,6 +198,16 @@ export function Home() {
       )}
 
       <UpNextRow />
+
+      {tmdbKey && (
+        <>
+          <Top10Row state={trendingDay} />
+          {seeds.map((seed) => (
+            <BecauseRow key={seed.metaId} seed={seed} tmdbKey={tmdbKey} />
+          ))}
+          <TrendingWeekRow tmdbKey={tmdbKey} />
+        </>
+      )}
 
       {catalogs.map(({ addon, catalog }, i) => (
         <CatalogRow key={`${addon.transportUrl}|${catalog.type}|${catalog.id}`} addon={addon} catalog={catalog} eager={i < 3} />
