@@ -1,5 +1,7 @@
+import { saveDataOn } from '../../lib/dataSaver'
 import { langLabel } from '../../lib/i18n'
 import { settingsStore, useStore, type Settings, type SubtitleStyle } from '../../lib/store'
+import { subtitleClasses } from '../../lib/subtitlePrefs'
 
 const LANGS = ['spa', 'eng', 'por']
 
@@ -76,6 +78,15 @@ export function PlayerSettings() {
         Activarlos solos en el primer idioma preferido que haya
       </label>
       <LangChips label="Idiomas de subtítulos preferidos" value={settings.subtitleLangs} onChange={(subtitleLangs) => update({ subtitleLangs })} />
+      <label className="check">
+        <input type="checkbox" checked={settings.hideSdh} onChange={(e) => update({ hideSdh: e.target.checked })} />
+        Ocultar subtítulos para sordos (SDH) y sacar las descripciones de sonidos ([música], (risas)…)
+      </label>
+      <p className="muted small">
+        Si en el reproductor elegís otro idioma de audio o subtítulos, se recuerda para esa serie o peli y le gana a esto. Si no
+        hay subtítulos activos y el audio está en un idioma preferido, se activan solos los “forzados” (carteles y diálogos en
+        otro idioma) cuando el addon los ofrece.
+      </p>
 
       <h3>Estilo de subtítulos</h3>
       <Choice
@@ -103,12 +114,38 @@ export function PlayerSettings() {
         value={style.background}
         options={[
           ['none', 'Sin fondo'],
+          ['light', 'Suave'],
           ['semi', 'Semitransparente'],
           ['solid', 'Negro'],
         ]}
         onChange={(background) => setStyle({ background })}
       />
-      <div className={`sub-preview sub-size-${style.size} sub-color-${style.color} sub-bg-${style.background}`} aria-hidden="true">
+      <label className="check">
+        <input type="checkbox" checked={style.outline} onChange={(e) => setStyle({ outline: e.target.checked })} />
+        Contorno negro en las letras
+      </label>
+      <Choice
+        label="Letra"
+        value={style.font}
+        options={[
+          ['system', 'Sistema'],
+          ['rounded', 'Redondeada'],
+          ['serif', 'Serif'],
+          ['mono', 'Monoespaciada'],
+        ]}
+        onChange={(font) => setStyle({ font })}
+      />
+      <Choice
+        label="Posición"
+        value={style.position}
+        options={[
+          [0, 'Abajo'],
+          [10, 'Un poco más arriba'],
+          [20, 'Más arriba'],
+        ]}
+        onChange={(position) => setStyle({ position })}
+      />
+      <div className={`sub-preview ${subtitleClasses(style)}`} aria-hidden="true">
         <span className="sub-preview-text">Así se van a ver los subtítulos</span>
       </div>
 
@@ -129,6 +166,17 @@ export function PlayerSettings() {
         onChange={(stillWatchingAfter) => update({ stillWatchingAfter })}
       />
       <p className="muted small">Pausa y pregunta después de esa cantidad de episodios seguidos sin tocar nada.</p>
+
+      <h3>Vista previa al adelantar</h3>
+      <label className="check">
+        <input type="checkbox" checked={settings.seekPreview} onChange={(e) => update({ seekPreview: e.target.checked })} />
+        Mostrar el cuadro de ese momento al pasar el mouse por la barra
+      </label>
+      <p className="muted small">
+        {saveDataOn()
+          ? 'El navegador tiene activado el ahorro de datos: la vista previa queda apagada.'
+          : 'Usa un poco más de datos. Se apaga sola si el navegador tiene activado el ahorro de datos.'}
+      </p>
 
       <h3>Reproductor externo</h3>
       <Choice

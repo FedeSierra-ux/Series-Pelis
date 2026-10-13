@@ -59,8 +59,23 @@ npm run preview    # sirve dist/ en http://localhost:4173
   La key va en Ajustes → TMDB (IndexedDB). **Nunca** commitearla; al publicar en Cloudflare puede ir como secreto.
   Ids `tmdb:movie:603` / `tmdb:tv:1396` en rutas: la ficha los traduce a IMDb.
   El usuario NO quiere reconocimiento de caras (X-Ray solo con el reparto del episodio).
+- v0.4.0 hecha: reproductor, subtítulos y fuentes. `pages/player/` (SeekPreview, SourcesMenu, RecapOffer,
+  CreditsNotice, SubtitleMenu, `useSubtitles.ts`), `lib/credits.ts`, `lib/subtitlePrefs.ts`, `lib/dataSaver.ts`.
+  Idioma por título en `trackPrefsStore`. Cambiar de fuente = `navigate` con `replace` + `resume` en `location.state`.
+- **Cuestionario de funciones (140)** — decisiones del usuario y plan por versiones:
+  - v0.4: 9, 16, 17, 20, 27, 28, 30, 31, 33, 37, 103 (hecha).
+  - v0.5 (descubrir/ficha/biblioteca): 51, 52, 56, 58, 60, 62, 66, 67, 77, 80, 89 (puntaje con **estrellas**),
+    92, 97, 101, 106, 107 y la nueva 141 (al pasar por un póster, a los segundos, tráiler con subs en español).
+  - v0.6 (addons/apariencia/TV): 41, 43, 44, 47, 125, 130, 131, 134, 137, 139 + rediseño.
+    **Antes de implementar 137 (Temas) mostrar preview antes/después.**
+  - Más adelante: 109 perfiles (con el login/D1), 25 subtítulos online y 57 más puntajes (cuando exista el Worker
+    para las keys), 128 modo TV automático.
+  - Descartadas: 68, nube del debrid (45), Trakt por ahora.
+- **Diseño**: el usuario eligió mezclar los estilos 1 (Sala oscura), 8 (Tonal) y 9 (TV): riel lateral, portada
+  redondeada con logo, tarjetas apaisadas, acento `#c4b0ff`, Sora + DM Sans. Preview antes/después en el canvas
+  "Mezcla elegida"; se implementa en v0.6.
 - Pendiente de respuesta: ¿Mi lista / historial deberían guardar el título en español en vez del de Cinemeta?
 - Login con código de vinculación + sincronización en Cloudflare D1 + Worker de caché.
 - Importar addons directo desde la cuenta de Stremio.
 - Empaquetar para Fire TV / Android TV.
-- Integración opcional con Trakt.
+- Integración opcional con Trakt (por ahora no).

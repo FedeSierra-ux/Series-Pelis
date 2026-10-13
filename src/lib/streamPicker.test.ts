@@ -1,6 +1,19 @@
 import { describe, expect, it } from 'vitest'
 import type { LastSource, SourceRules } from './store'
-import { hasKeyword, nameKey, parseQuality, pickBest, playable, rankStreams } from './streamPicker'
+import {
+  analyzeStreams,
+  filterReason,
+  hasKeyword,
+  isHdr,
+  nameKey,
+  parseCodec,
+  parseQuality,
+  parseSize,
+  pickBest,
+  playable,
+  rankStreams,
+  streamKey,
+} from './streamPicker'
 import type { AddonStreams, InstalledAddon, Stream } from './types'
 
 const addon = (name: string): InstalledAddon => ({
@@ -19,6 +32,10 @@ const rules = (over: Partial<SourceRules> = {}): SourceRules => ({
   preferredQuality: '1080p',
   preferKeywords: [],
   excludeKeywords: ['cam', 'hdts'],
+  maxSizeGB: 0,
+  excludeCodecs: [],
+  hdr: 'allow',
+  dedupe: true,
   ...over,
 })
 
@@ -103,5 +120,93 @@ describe('rankStreams / pickBest', () => {
   it('no devuelve nada si no hay streams reproducibles', () => {
     expect(pickBest([group(A, [{ name: 'x', infoHash: 'abc' }])], rules(), undefined, '')).toBeUndefined()
     expect(pickBest([], rules(), undefined, '')).toBeUndefined()
+  })
+})
+
+describe('parseSize / parseCodec / isHdr', () => {
+  it('lee el tamaño del texto o del addon', () => {
+    expect(parseSize({ name: 'X', title: 'Peli.2020.1080p\n👤 12 💾 1.4 GB ⚙️ TPB' })).toBeCloseTo(1.4e9)
+    expect(parseSize({ name: 'X', title: '1400 MB' })).toBe(1.4e9)
+    expect(parseSize({ name: 'X', title: '2,5 GB' })).toBe(2.5e9)
+    expect(parseSize({ name: 'X', behaviorHints: { videoSize: 123 } })).toBe(123)
+    expect(parseSize({ name: 'X', title: 'sin datos' })).toBeUndefined()
+  })
+
+  it('reconoce HEVC, AV1 y HDR', () => {
+    expect(parseCodec({ name: 'Peli.2160p.x265' })).toBe('hevc')
+    expect(parseCodec({ name: 'Peli 1080p H.265' })).toBe('hevc')
+    expect(parseCodec({ name: 'Peli 1080p HEVC' })).toBe('hevc')
+    expect(parseCodec({ name: 'Peli.1080p.AV1.Opus' })).toBe('av1')
+    expect(parseCodec({ name: 'Peli 1080p x264' })).toBeUndefined()
+    expect(isHdr({ name: '4K HDR10+' })).toBe(true)
+    expect(isHdr({ name: 'Peli.2160p.DV.HEVC' })).toBe(true)
+    expect(isHdr({ name: 'Dolby Vision' })).toBe(true)
+    expect(isHdr({ name: 'Peli DVDRip' })).toBe(false)
+    expect(isHdr({ name: 'Peli 1080p SDR' })).toBe(false)
+  })
+})
+
+describe('filtros avanzados', () => {
+  it('con los valores por defecto no se oculta nada nuevo', () => {
+    const streams = [s('4K HDR x265 💾 40 GB'), s('1080p AV1 💾 2 GB'), s('720p')]
+    expect(rankStreams([group(A, streams)], rules(), undefined, '')).toHaveLength(3)
+  })
+
+  it('tamaño máximo: oculta los más pesados y deja los de tamaño desconocido', () => {
+    const groups = [group(A, [s('1080p 💾 12 GB'), s('1080p 💾 3.5 GB'), s('1080p sin tamaño')])]
+    const r = rules({ maxSizeGB: 5 })
+    const { ranked, hidden } = analyzeStreams(groups, r, undefined, '')
+    expect(ranked.map((x) => x.stream.name)).toEqual(['1080p 💾 3.5 GB', '1080p sin tamaño'])
+    expect(hidden.get(streamKey(0, 0))).toBe('Pesa más de 5 GB')
+    expect(pickBest(groups, r, undefined, '')?.stream.name).toBe('1080p 💾 3.5 GB')
+  })
+
+  it('códecs excluidos', () => {
+    const groups = [group(A, [s('1080p x265'), s('1080p AV1'), s('720p x264')])]
+    expect(pickBest(groups, rules({ excludeCodecs: ['hevc', 'av1'] }), undefined, '')?.stream.name).toBe('720p x264')
+    expect(filterReason(s('1080p HEVC'), rules({ excludeCodecs: ['hevc'] }))).toBe('HEVC/x265')
+    expect(filterReason(s('1080p HEVC'), rules({ excludeCodecs: ['av1'] }))).toBeUndefined()
+  })
+
+  it('HDR: permitir, preferir o excluir', () => {
+    const groups = [group(A, [s('1080p'), s('1080p HDR')])]
+    expect(pickBest(groups, rules(), undefined, '')?.stream.name).toBe('1080p')
+    expect(pickBest(groups, rules({ hdr: 'prefer' }), undefined, '')?.stream.name).toBe('1080p HDR')
+    const { ranked, hidden } = analyzeStreams(groups, rules({ hdr: 'exclude' }), undefined, '')
+    expect(ranked.map((x) => x.stream.name)).toEqual(['1080p'])
+    expect(hidden.get(streamKey(0, 1))).toBe('HDR / Dolby Vision')
+  })
+
+  it('las palabras excluidas también quedan como ocultas', () => {
+    const { hidden } = analyzeStreams([group(A, [s('CAM 1080p'), s('720p')])], rules(), undefined, '')
+    expect(hidden.get(streamKey(0, 0))).toBe('Palabra descartada: cam')
+  })
+
+  it('saca los repetidos: mismo torrent, mismo enlace o mismo archivo y tamaño', () => {
+    const groups = [
+      group(A, [
+        { name: 'Uno 1080p', title: 'Peli.2020.1080p.WEB\n💾 2 GB', url: 'https://a.example/1' },
+        { name: 'Uno 720p', infoHash: 'ABC', fileIdx: 1 },
+      ]),
+      group(B, [
+        { name: 'Dos 1080p', title: 'Peli.2020.1080p.WEB\n💾 2.0 GB', url: 'https://b.example/2' },
+        { name: 'Dos 720p', infoHash: 'abc', fileIdx: 1 },
+        { name: 'Dos 1080p', url: 'https://a.example/1' },
+        { name: 'Dos 480p', title: 'Otra.cosa.480p\n💾 2 GB', url: 'https://b.example/3' },
+      ]),
+    ]
+    const { ranked, hidden } = analyzeStreams(groups, rules(), undefined, '')
+    expect(ranked.map((x) => x.stream.url)).toEqual(['https://a.example/1', 'https://b.example/3'])
+    expect([...hidden.keys()].sort()).toEqual([streamKey(1, 0), streamKey(1, 1), streamKey(1, 2)])
+    expect(hidden.get(streamKey(1, 0))).toBe('Repetido')
+    // Sin la opción, quedan todos.
+    expect(analyzeStreams(groups, rules({ dedupe: false }), undefined, '').hidden.size).toBe(0)
+  })
+
+  it('entre dos repetidos queda el que se reproduce mejor', () => {
+    const groups = [group(A, [{ name: 'torrent 1080p', infoHash: 'abc' }]), group(B, [{ name: 'debrid 1080p', infoHash: 'abc', url: 'https://b.example/x' }])]
+    const { ranked, hidden } = analyzeStreams(groups, rules(), undefined, '')
+    expect(ranked[0]?.addon).toBe(B)
+    expect(hidden.get(streamKey(0, 0))).toBe('Repetido')
   })
 })

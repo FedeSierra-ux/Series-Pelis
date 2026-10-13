@@ -1,5 +1,33 @@
 # Changelog
 
+## [0.4.0] - 2026-10-13
+
+Reproductor, subtítulos y fuentes (primera de las tres versiones que salieron del cuestionario de funciones).
+
+### Agregado
+- **Vista previa al adelantar**: al pasar el mouse por la barra se ve el cuadro de ese momento, sin mover el video.
+  Anda con enlaces directos y HLS; se apaga en Ajustes y cuando el navegador pide ahorrar datos.
+- **Sinopsis al pausar**, junto al reparto: título y resumen del episodio o la peli (en español con TMDB).
+- **Escena post-créditos**: si la peli o el episodio tiene una (TMDB o IntroDB), avisa "Quedate…" y la cuenta
+  regresiva del siguiente episodio no la corta.
+- **"¿Ver el resumen?"**: si hace 7 días o más que no ves la serie, ofrece el "Anteriormente en…" en vez de saltearlo.
+- **Cambiar de fuente sin perder el minuto**: menú "Fuentes" en el reproductor; sigue en el mismo segundo y con el
+  mismo subtítulo, retraso y audio.
+- **Subtítulo propio**: "Cargar archivo…" en el menú de subtítulos o arrastrando el archivo (.srt, .vtt, .ass, .ssa).
+- **Más estilo de subtítulos**: letra, altura, fondo suave y contorno, con vista previa. Opción para ocultar los
+  subtítulos para sordos (SDH) y sacar las descripciones de sonidos.
+- **Idioma por serie o peli**: el subtítulo y el audio que elegís a mano quedan guardados para ese título
+  ("Olvidar idiomas de esta serie" para volver a los de Ajustes). Entra en la copia de seguridad.
+- **Subtítulos forzados automáticos**: si no hay subtítulos y el audio está en tu idioma, activa solo los carteles forzados.
+  Las pistas de subtítulos de los HLS ahora aparecen en el menú.
+- **Filtros de fuentes**: tamaño máximo, descartar HEVC/AV1, HDR/Dolby Vision (permitir, preferir o excluir) y
+  ocultar repetidos. Lo descartado queda plegado en "Ocultos por tus filtros", con el motivo.
+- Los **clips de menos de 5 minutos** ya no cuentan en el historial ni en "Seguir viendo".
+
+### Corregido
+- Al elegir un subtítulo se borraban también las pistas que crea hls.js.
+- En el celular, el reparto al pausar y los menús del reproductor tapaban los controles.
+
 ## [0.3.0] - 2026-10-13
 
 TMDB, opcional: sin key la app sigue igual que antes, solo con Cinemeta.
