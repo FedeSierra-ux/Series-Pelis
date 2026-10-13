@@ -1,0 +1,5 @@
+# Cloudflare Pages: `npx wrangler pages deploy` toma de acá el nombre y la carpeta del build.
+# La carpeta functions/ (el proxy /api/segments) se sube sola.
+name = "series-pelis"
+pages_build_output_dir = "dist"
+compatibility_date = "2026-10-01"

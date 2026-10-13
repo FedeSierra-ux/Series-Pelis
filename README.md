@@ -69,15 +69,39 @@ Para tener todo en español y las filas de tendencias, sacá una key gratis en
 
 ## Publicarla en Cloudflare Pages (gratis)
 
-1. Creá una cuenta en Cloudflare.
-2. `npx wrangler login`
-3. `npm run build && npx wrangler pages deploy dist --project-name series-pelis`
-4. Abrí la URL `https://series-pelis.pages.dev` en la PC, el celular y la TV. En el celular: menú del navegador →
-   *Instalar app* / *Agregar a pantalla de inicio*.
+El repo ya trae todo lo que necesita Cloudflare:
 
-`wrangler pages deploy` también sube la carpeta `functions/` (el proxy `/api/segments` para saltar intros).
+- `wrangler.toml`: nombre del proyecto (`series-pelis`) y carpeta del build (`dist`).
+- `functions/api/segments.ts`: el proxy `/api/segments` para saltar intros (se publica solo).
+- `public/_headers`: los archivos de `/assets` (con hash en el nombre) se guardan un año; el service worker y el
+  manifiesto se revisan en cada visita, así las actualizaciones llegan enseguida.
+- `.node-version`: Node 22 para el build.
+- Las rutas de la app (`/detail/...`, `/settings`…) abren bien aunque entres directo: sin `404.html`, Pages sirve
+  `index.html` (modo SPA).
+
+### Opción A — conectada a GitHub (se actualiza sola)
+
+1. Creá una cuenta en Cloudflare → **Workers & Pages** → **Create** → **Pages** → **Connect to Git**.
+2. Elegí el repo `Series-Pelis` y la rama `main`.
+3. Framework preset: **None** (o *Vite*). Build command: `npm run build`. Build output directory: `dist`.
+4. **Save and Deploy**. Cada push a `main` publica una versión nueva y cada PR tiene su propia URL de prueba.
+
+### Opción B — a mano desde la PC
+
+```bash
+npx wrangler login
+npm run build && npx wrangler pages deploy
+```
+
+### Después
+
+Abrí `https://series-pelis.pages.dev` en la PC, el celular y la TV. En el celular: menú del navegador →
+*Instalar app* / *Agregar a pantalla de inicio*. Tus addons, la key de TMDB y el historial quedan en cada navegador
+(hasta que llegue la cuenta con código de vinculación).
 
 En Fire TV podés abrirla desde el navegador Silk mientras tanto; el empaquetado como app nativa queda para más adelante.
+
+Para probar localmente igual que en Cloudflare (con la función y los headers): `npm run build && npx wrangler pages dev`.
 
 ## Herramientas para Claude Code
 
