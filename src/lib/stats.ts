@@ -43,7 +43,6 @@ export interface YearStats {
   genres: { genre: string; label: string; seconds: number }[]
   topSeries: TitleStat[]
   topMovies: TitleStat[]
-  rewatched?: { title: TitleStat; detail: string }
   busiestWeekday?: { label: string; seconds: number }
   streak: { days: number; from?: number; to?: number }
   first?: WatchEntry
@@ -112,7 +111,6 @@ export function computeYearStats(progress: Record<string, WatchEntry>, year: num
   const offset = (new Date(year, 0, 1).getDay() + 6) % 7
 
   const byTitle = new Map<string, TitleStat>()
-  const rewatch = new Map<string, number>()
   const weekday = new Array<number>(7).fill(0)
   const genreSeconds = new Map<string, number>()
   const seriesSeen = new Set<string>()
@@ -154,11 +152,6 @@ export function computeYearStats(progress: Record<string, WatchEntry>, year: num
 
     for (const g of meta?.genres ?? meta?.genre ?? []) genreSeconds.set(g, (genreSeconds.get(g) ?? 0) + secs)
 
-    // No guardamos cuántas veces se reprodujo algo: lo deducimos de lo que hay. Si ya estaba
-    // vista y la posición volvió a empezar, o si se retomó más de una semana después.
-    const restarted = e.watched && e.duration > 0 && e.position > 60 && e.position / e.duration < 0.85
-    const cameBack = e.watched && e.firstWatchedAt && e.updatedAt - e.firstWatchedAt > 7 * DAY
-    if (restarted || cameBack) rewatch.set(e.metaId, (rewatch.get(e.metaId) ?? 0) + 1)
   }
 
   // Niveles de intensidad por cuartiles de los días con actividad.
@@ -180,13 +173,6 @@ export function computeYearStats(progress: Record<string, WatchEntry>, year: num
   })
 
   const titles = [...byTitle.values()].sort((a, b) => b.seconds - a.seconds)
-  let rewatched: YearStats['rewatched']
-  const bestRewatch = [...rewatch.entries()].sort((a, b) => b[1] - a[1] || (byTitle.get(b[0])!.seconds - byTitle.get(a[0])!.seconds))[0]
-  if (bestRewatch) {
-    const title = byTitle.get(bestRewatch[0])!
-    const n = bestRewatch[1]
-    rewatched = { title, detail: title.type === 'series' ? `Volviste a ${n} episodio${n === 1 ? '' : 's'}` : 'La volviste a ver' }
-  }
 
   const maxWeekday = Math.max(...weekday)
   const sortedByStart = [...entries].sort((a, b) => (a.firstWatchedAt || a.updatedAt) - (b.firstWatchedAt || b.updatedAt))
@@ -207,7 +193,6 @@ export function computeYearStats(progress: Record<string, WatchEntry>, year: num
       .map(([genre, secs]) => ({ genre, label: genreLabel(genre), seconds: secs })),
     topSeries: titles.filter((t) => t.type === 'series').slice(0, 5),
     topMovies: titles.filter((t) => t.type === 'movie').slice(0, 5),
-    rewatched,
     busiestWeekday: maxWeekday > 0 ? { label: WEEKDAYS_PLURAL[weekday.indexOf(maxWeekday)], seconds: maxWeekday } : undefined,
     streak,
     first,

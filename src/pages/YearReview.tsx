@@ -275,15 +275,6 @@ export function YearReview() {
               </section>
             )}
 
-            <section className="year-card">
-              <h2>La que más volviste a ver</h2>
-              {s.rewatched ? (
-                <TitleRow t={s.rewatched.title} extra={s.rewatched.detail} />
-              ) : (
-                <p className="muted small">Este año no repetiste nada.</p>
-              )}
-            </section>
-
             {s.first && s.last && (
               <section className="year-card">
                 <h2>De punta a punta</h2>
