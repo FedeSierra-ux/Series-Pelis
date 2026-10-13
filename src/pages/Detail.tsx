@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { Link, useLocation, useNavigate, useParams, useSearchParams } from 'react-router-dom'
+import { GenreChips, KeywordChips, PeopleLinks, tmdbPeopleIndex } from '../components/DetailTags'
 import { NotInterestedButton } from '../components/NotInterested'
 import { ImdbRating } from '../components/Rating'
 import { SpoilerText, useEpisodeSpoilers } from '../components/Spoiler'
@@ -10,7 +11,7 @@ import { WikiTrivia } from '../components/WikiTrivia'
 import { getStreams } from '../lib/addons'
 import { episodeLabel, formatTime, relativeDate } from '../lib/format'
 import { useAddons, useMeta, useTitle, useTmdbDetails } from '../lib/hooks'
-import { genreLabel, typeLabel } from '../lib/i18n'
+import { typeLabel } from '../lib/i18n'
 import { useRating } from '../lib/ratings'
 import { hideTitleSynopsis } from '../lib/spoilers'
 import { lastSourceStore, progressStore, setWatched, settingsStore, toggleWatchlist, useStore, watchlistStore } from '../lib/store'
@@ -352,8 +353,9 @@ function TmdbOnlyDetail({ details: d, type, tmdbType }: { details: TmdbDetails; 
               <span>{typeLabel(type, false)}</span>
               {year && <span>{year}</span>}
             </div>
-            {d.genres?.length ? <div className="chips">{d.genres.map((g) => <span key={g.id} className="chip">{g.name}</span>)}</div> : null}
+            <GenreChips type={type} tmdbGenres={d.genres} />
             {d.overview && <p className="detail-desc">{d.overview}</p>}
+            <KeywordChips type={type} tmdbId={d.id} />
             {trailer && (
               <div className="hero-actions">
                 <a className="btn" href={`https://www.youtube.com/watch?v=${trailer.key}`} target="_blank" rel="noreferrer">
@@ -416,7 +418,7 @@ function DetailPage({ type, id }: { type: string; id: string }) {
 
   const fullMeta: Meta = { ...meta, type }
   const bg = meta.background ?? (id.startsWith('tt') ? `https://images.metahub.space/background/medium/${id}/img` : undefined)
-  const genres = tmdb?.genres?.length ? tmdb.genres.map((g) => g.name) : (meta.genre ?? meta.genres ?? []).map(genreLabel)
+  const peopleIndex = tmdbPeopleIndex(tmdb)
   const description = tmdb?.overview || meta.description
   const tmdbLogo = tmdbImg(pickLogo(tmdb), 'w500')
   const logo = tmdbLogo ?? meta.logo
@@ -461,17 +463,18 @@ function DetailPage({ type, id }: { type: string; id: string }) {
               {meta.releaseInfo && <span>{meta.releaseInfo}</span>}
               {meta.runtime && <span>{meta.runtime}</span>}
             </div>
-            {genres.length > 0 && <div className="chips">{genres.map((g) => <span key={g} className="chip">{g}</span>)}</div>}
+            <GenreChips type={type} tmdbGenres={tmdb?.genres} names={meta.genre ?? meta.genres} />
             {description && (
               <SpoilerText key={id} hidden={hideSynopsis}>
                 <p className="detail-desc">{description}</p>
               </SpoilerText>
             )}
             <dl className="credits">
-              {meta.director?.length ? (<><dt>Dirección</dt><dd>{meta.director.join(', ')}</dd></>) : null}
-              {meta.cast?.length && !hasTmdbCast ? (<><dt>Elenco</dt><dd>{meta.cast.slice(0, 6).join(', ')}</dd></>) : null}
+              {meta.director?.length ? (<><dt>Dirección</dt><dd><PeopleLinks names={meta.director} index={peopleIndex} /></dd></>) : null}
+              {meta.cast?.length && !hasTmdbCast ? (<><dt>Elenco</dt><dd><PeopleLinks names={meta.cast.slice(0, 6)} index={peopleIndex} /></dd></>) : null}
               {meta.awards ? (<><dt>Premios</dt><dd>{meta.awards}</dd></>) : null}
             </dl>
+            {tmdb && <KeywordChips type={type} tmdbId={tmdb.id} />}
             <div className="hero-actions">
               <button className="btn" onClick={() => toggleWatchlist(fullMeta)}>
                 {watchlist[id] ? '✓ En mi lista' : '+ Mi lista'}

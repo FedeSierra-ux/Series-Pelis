@@ -16,6 +16,7 @@ import { ForYouRow } from './home/ForYouRow'
 import { useNearViewport } from './home/lazy'
 import { TmdbHero } from './home/TmdbHero'
 import { BecauseRow, onlyTitles, Top10Row, TrendingWeekRow, useTrending, type Seed } from './home/TmdbRows'
+import { CuratedRows } from './lists/CuratedRows'
 
 const ROW_LIMIT = 30
 
@@ -218,6 +219,8 @@ export function Home() {
           <TrendingWeekRow tmdbKey={tmdbKey} />
         </>
       )}
+
+      <CuratedRows />
 
       {catalogs.map(({ addon, catalog }, i) => (
         <CatalogRow key={`${addon.transportUrl}|${catalog.type}|${catalog.id}`} addon={addon} catalog={catalog} eager={i < 3} />

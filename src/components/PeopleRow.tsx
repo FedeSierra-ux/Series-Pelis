@@ -1,0 +1,55 @@
+import { Link } from 'react-router-dom'
+import { tmdbImg } from '../lib/tmdb'
+import { Row } from './Row'
+
+// Fila de personas (búsqueda): misma tarjeta redonda que el reparto de la ficha.
+
+export interface PersonLike {
+  id: number
+  name: string
+  profile_path?: string | null
+  known_for_department?: string
+}
+
+const DEPARTMENTS: Record<string, string> = {
+  Acting: 'Actuación',
+  Directing: 'Dirección',
+  Writing: 'Guion',
+  Production: 'Producción',
+  Sound: 'Música y sonido',
+  Camera: 'Fotografía',
+  Editing: 'Montaje',
+  Creator: 'Creación',
+  Art: 'Arte',
+  'Costume & Make-Up': 'Vestuario y maquillaje',
+  'Visual Effects': 'Efectos visuales',
+  Lighting: 'Iluminación',
+  Crew: 'Equipo técnico',
+}
+
+export const departmentLabel = (d?: string) => (d ? (DEPARTMENTS[d] ?? d) : undefined)
+
+export function PersonAvatar({ person, size = 'w185' }: { person: PersonLike; size?: 'w185' | 'w92' }) {
+  const photo = tmdbImg(person.profile_path, size)
+  return photo ? (
+    <img className="cast-photo" src={photo} alt="" loading="lazy" decoding="async" />
+  ) : (
+    <span className="cast-photo cast-initial" aria-hidden>
+      {person.name.charAt(0)}
+    </span>
+  )
+}
+
+export function PeopleRow({ title, people, loading }: { title: string; people: PersonLike[]; loading?: boolean }) {
+  return (
+    <Row title={title} loading={loading} empty={people.length === 0}>
+      {people.map((p) => (
+        <Link key={p.id} to={`/person/${p.id}`} className="cast-card" title={p.name}>
+          <PersonAvatar person={p} />
+          <span className="cast-name">{p.name}</span>
+          {p.known_for_department && <span className="cast-character">{departmentLabel(p.known_for_department)}</span>}
+        </Link>
+      ))}
+    </Row>
+  )
+}

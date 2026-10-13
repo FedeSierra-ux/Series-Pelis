@@ -17,6 +17,9 @@ const YearReview = lazy(() => import('./pages/YearReview').then((m) => ({ defaul
 const Diary = lazy(() => import('./pages/Diary').then((m) => ({ default: m.Diary })))
 const Goals = lazy(() => import('./pages/Goals').then((m) => ({ default: m.Goals })))
 const Person = lazy(() => import('./pages/Person').then((m) => ({ default: m.Person })))
+const Together = lazy(() => import('./pages/Together').then((m) => ({ default: m.Together })))
+const ListsIndex = lazy(() => import('./pages/Lists').then((m) => ({ default: m.ListsIndex })))
+const ListPage = lazy(() => import('./pages/Lists').then((m) => ({ default: m.ListPage })))
 
 const pageFallback = <div className="page"><div className="spinner" /></div>
 
@@ -53,6 +56,9 @@ export function App() {
           <Route path="search" element={<Search />} />
           <Route path="detail/:type/:id" element={<Detail />} />
           <Route path="person/:id" element={<Suspense fallback={pageFallback}><Person /></Suspense>} />
+          <Route path="together" element={<Suspense fallback={pageFallback}><Together /></Suspense>} />
+          <Route path="lists" element={<Suspense fallback={pageFallback}><ListsIndex /></Suspense>} />
+          <Route path="lists/:id" element={<Suspense fallback={pageFallback}><ListPage /></Suspense>} />
           <Route path="list" element={<MyList />} />
           <Route path="history" element={<History />} />
           <Route path="history/year" element={<Suspense fallback={pageFallback}><YearReview /></Suspense>} />

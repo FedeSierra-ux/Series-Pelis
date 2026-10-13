@@ -344,6 +344,11 @@ export interface NotInterestedEntry {
 
 export const notInterestedStore = new PersistedStore<Record<string, NotInterestedEntry>>('notInterested', {})
 
+// ---------- v0.5: búsquedas recientes ----------
+
+/** Lo último que buscó el usuario (máx. 10, la más nueva primero). */
+export const recentSearchesStore = new PersistedStore<string[]>('recentSearches', [])
+
 // ---------- Ajustes ----------
 
 export interface SubtitleStyle {
@@ -414,6 +419,8 @@ export interface Settings {
   posterLabels: boolean
   /** v0.5: tráiler en una tarjeta ampliada al quedarse unos segundos sobre un póster (no en celulares). */
   hoverTrailer: boolean
+  /** v0.5: ids de listas curadas que se muestran como filas en Inicio. */
+  curatedRows: string[]
 }
 
 export const settingsStore = new PersistedStore<Settings>('settings', {
@@ -443,6 +450,7 @@ export const settingsStore = new PersistedStore<Settings>('settings', {
   posterRating: 'on',
   posterLabels: true,
   hoverTrailer: true,
+  curatedRows: [],
 })
 
 // ---------- Copia de seguridad ----------
@@ -461,6 +469,7 @@ export function exportData() {
     notInterested: notInterestedStore.get(),
     diary: diaryStore.get().entries,
     goals: goalsStore.get(),
+    recentSearches: recentSearchesStore.get(),
   }
 }
 
@@ -476,6 +485,7 @@ export async function importData(raw: unknown) {
   if (data.diary) diaryStore.set((d) => ({ v: 1, entries: { ...d.entries, ...data.diary } }))
   else if (data.progress) diaryStore.set((d) => ({ v: 1, entries: { ...d.entries, ...missingFromProgress(d.entries, data.progress) } }))
   if (data.goals) goalsStore.set((g) => ({ byYear: { ...g.byYear, ...data.goals.byYear }, seen: [...new Set([...g.seen, ...(data.goals.seen ?? [])])] }))
+  if (Array.isArray(data.recentSearches)) recentSearchesStore.set(data.recentSearches.filter((q) => typeof q === 'string').slice(0, 10))
   const installed = new Set(addonsStore.get().map((a) => a.transportUrl))
   for (const url of data.addons ?? []) {
     if (!installed.has(url)) await installAddon(url).catch(() => {})
@@ -496,6 +506,7 @@ export async function hydrateStores() {
     notInterestedStore.hydrate(),
     diaryStore.hydrate(),
     goalsStore.hydrate(),
+    recentSearchesStore.hydrate(),
   ])
   // La primera vez el diario se arma con lo que ya estaba marcado como visto.
   if (diaryStore.get().v === 0) diaryStore.set({ v: 1, entries: rebuildFromProgress(progressStore.get()) })
