@@ -252,11 +252,18 @@
 .t2-tab:focus-visible {
   outline: none;
 }
+/* Con el control remoto el foco tiene que verse desde el sillón: píldora llena, no solo un anillo. */
 .t2-rail-link:focus-visible .t2-pill,
 .t2-tab:focus-visible .t2-pill {
-  outline: 4px solid var(--accent);
-  outline-offset: 3px;
-  transform: scale(1.06);
+  outline: 3px solid #fff;
+  outline-offset: 2px;
+  background: var(--accent);
+  color: var(--on-accent);
+  transform: scale(1.08);
+}
+.t2-rail-link:focus-visible {
+  color: var(--accent);
+  font-weight: 700;
 }
 
 .t2-main {
@@ -608,6 +615,14 @@
   padding: 44px 44px 36px;
   border-radius: var(--radius-lg);
   overflow: hidden;
+}
+/* En la ficha el texto va a la izquierda: sombra más larga para que no quede sobre caras. En el
+   celular sigue la sombra vertical de abajo (el texto va debajo de la imagen). */
+@media (min-width: 761px) {
+  [data-theme='2'] .detail-hero .hero-shade {
+    background: linear-gradient(90deg, var(--bg) 0%, rgba(11, 11, 16, 0.92) 42%, rgba(11, 11, 16, 0.35) 78%, rgba(11, 11, 16, 0.1)),
+      linear-gradient(0deg, rgba(11, 11, 16, 0.85) 0%, rgba(11, 11, 16, 0) 40%);
+  }
 }
 [data-theme='2'] .detail-poster {
   border-radius: 20px;

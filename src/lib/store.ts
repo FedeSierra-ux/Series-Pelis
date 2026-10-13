@@ -7,7 +7,7 @@ import type { GoalsState } from './goals'
 import type { ExternalPlayerId } from './externalPlayers'
 import type { ScreensaverMinutes } from './idle'
 import type { TvModeSetting } from './platform'
-import type { InstalledAddon, MetaPreview } from './types'
+import type { InstalledAddon, Manifest, MetaPreview } from './types'
 
 // Datos del usuario guardados en el navegador (IndexedDB). En la v0.2 se van a
 // sincronizar con Cloudflare D1; por eso todo pasa por estos stores y no por
@@ -80,15 +80,22 @@ export function useStore<T>(store: PersistedStore<T>): T {
 
 export const addonsStore = new PersistedStore<InstalledAddon[]>('addons', [CINEMETA_ADDON])
 
-export async function installAddon(manifestUrl: string) {
+/** `updated`: ya estaba y se actualizó; `disabled`: ya estaba apagado y sigue apagado. */
+export type InstallStatus = 'new' | 'updated' | 'disabled'
+
+export async function installAddon(manifestUrl: string): Promise<{ manifest: Manifest; status: InstallStatus }> {
   const manifest = await fetchManifest(manifestUrl)
+  let status: InstallStatus = 'new'
   addonsStore.set((list) => {
     const existing = list.findIndex((a) => a.transportUrl === manifestUrl || a.manifest.id === manifest.id)
-    const entry = { transportUrl: manifestUrl, manifest }
-    if (existing >= 0) return list.map((a, i) => (i === existing ? entry : a))
-    return [...list, entry]
+    const entry: InstalledAddon = { transportUrl: manifestUrl, manifest }
+    if (existing < 0) return [...list, entry]
+    // Volver a pegar la URL no lo prende: si estaba apagado, sigue apagado (se avisa en pantalla).
+    status = list[existing].disabled ? 'disabled' : 'updated'
+    if (list[existing].disabled) entry.disabled = true
+    return list.map((a, i) => (i === existing ? entry : a))
   })
-  return manifest
+  return { manifest, status }
 }
 
 export function removeAddon(transportUrl: string) {

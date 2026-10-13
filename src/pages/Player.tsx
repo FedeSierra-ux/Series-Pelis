@@ -9,6 +9,7 @@ import { episodeLabel, formatTime, isHls } from '../lib/format'
 import { useTitle } from '../lib/hooks'
 import { langLabel } from '../lib/i18n'
 import { findNextStream, prefetchNextStreams } from '../lib/nextEpisode'
+import { setReturnVideo } from '../lib/returnVideo'
 import { currentPlatform } from '../lib/platform'
 import { getSegments, imdbIdOf, type Segment, type Segments } from '../lib/segments'
 import { progressStore, rememberTracks, saveProgress, settingsStore, trackPrefsStore, useStore } from '../lib/store'
@@ -19,6 +20,7 @@ import { RateAtEnd } from './player/RateAtEnd'
 import { daysAway, RECAP_AFTER_DAYS, RecapOffer } from './player/RecapOffer'
 import { SeekPreview } from './player/SeekPreview'
 import { SourcesMenu, useSwitchSource, type Resume, type SwitchState } from './player/SourcesMenu'
+import { PlayerIcon } from './player/PlayerIcons'
 import { SubtitleMenu } from './player/SubtitleMenu'
 import { useSubtitles } from './player/useSubtitles'
 
@@ -132,6 +134,8 @@ function PlayerView({ state, resume }: { state: PlayState; resume?: Resume }) {
   const [duration, setDuration] = useState(0)
   const [controls, setControls] = useState(true)
   const [error, setError] = useState<string>()
+  // Con error, los controles se ocultan: la lista de fuentes se abre dentro de la tarjeta.
+  const [errorSources, setErrorSources] = useState(false)
   const [toast, setToast] = useState<string>()
   const [resumedFrom, setResumedFrom] = useState<number>()
   const [menu, setMenu] = useState<Menu | null>(null)
@@ -162,7 +166,14 @@ function PlayerView({ state, resume }: { state: PlayState; resume?: Resume }) {
   useEffect(() => () => clearTimeout(toastTimer.current), [])
 
   const audioLang = audioTracks.find((t) => t.id === audioTrack)?.lang ?? guessAudioLang(state.stream)
-  const subs = useSubtitles({ videoRef, hlsRef, state, audioLang, flash, closeMenu: () => setMenu(null) })
+  // Lo que ocupa la barra de controles, para que los subtítulos suban y no queden tapados.
+  const [controlsClear, setControlsClear] = useState(0)
+  useEffect(() => {
+    const root = rootRef.current
+    const bar = root?.querySelector<HTMLElement>('.player-controls')
+    setControlsClear(controls && root && bar && root.clientHeight ? Math.ceil((bar.offsetHeight / root.clientHeight) * 100) : 0)
+  }, [controls])
+  const subs = useSubtitles({ videoRef, hlsRef, state, audioLang, flash, closeMenu: () => setMenu(null), controlsClear })
 
   // ---------- Carga del video ----------
   useEffect(() => {
@@ -347,9 +358,11 @@ function PlayerView({ state, resume }: { state: PlayState; resume?: Resume }) {
 
   const exit = useCallback(() => {
     persist()
+    // Si pasó solo al siguiente episodio, la ficha de atrás todavía marca el anterior: le avisamos cuál se vio último.
+    if (state.video) setReturnVideo({ metaId: meta.id, videoId: state.video.id, season: state.video.season })
     if (window.history.length > 1) navigate(-1)
     else navigate(`/detail/${meta.type}/${encodeURIComponent(meta.id)}`, { replace: true })
-  }, [persist, navigate, meta.type, meta.id])
+  }, [persist, navigate, meta.type, meta.id, state.video])
 
   /** `auto`: lo disparó la cuenta regresiva o el final del video, no el usuario. */
   const goNext = async (auto = false) => {
@@ -529,6 +542,17 @@ function PlayerView({ state, resume }: { state: PlayState; resume?: Resume }) {
     }
   }, [menu])
 
+  // Al abrir las fuentes desde la tarjeta de error, el foco va a la lista.
+  useEffect(() => {
+    if (!errorSources) return
+    const box = rootRef.current?.querySelector('.player-error-sources')
+    ;(
+      box?.querySelector<HTMLElement>('button.active') ??
+      box?.querySelector<HTMLElement>('button') ??
+      rootRef.current?.querySelector<HTMLElement>('.player-error .btn')
+    )?.focus()
+  }, [errorSources])
+
   /** Pasa el foco al botón anterior/siguiente dentro de `scope`. Devuelve false si no había adónde ir. */
   const moveFocus = (scope: Element | null | undefined, selector: string, from: Element | null, delta: number) => {
     const items = Array.from(scope?.querySelectorAll<HTMLElement>(selector) ?? [])
@@ -552,6 +576,7 @@ function PlayerView({ state, resume }: { state: PlayState; resume?: Resume }) {
         case 'Backspace':
           e.preventDefault()
           if (menu) setMenu(null)
+          else if (errorSources) setErrorSources(false)
           else exit()
           return
         case ' ':
@@ -599,7 +624,11 @@ function PlayerView({ state, resume }: { state: PlayState; resume?: Resume }) {
         case 'ArrowUp':
         case 'ArrowDown': {
           e.preventDefault()
-          if (floating?.classList.contains('player-modal')) return
+          if (floating?.classList.contains('player-modal')) {
+            // En la tarjeta de error, ↑/↓ recorren la lista de fuentes y los botones.
+            if (floating.classList.contains('player-error')) moveFocus(floating, 'button:not([disabled]), a[href]', active, e.key === 'ArrowDown' ? 1 : -1)
+            return
+          }
           showControls()
           const delta = e.key === 'ArrowDown' ? 1 : -1
           const menuEl = active?.closest('.player-menu')
@@ -718,20 +747,39 @@ function PlayerView({ state, resume }: { state: PlayState; resume?: Resume }) {
       )}
 
       {error && (
-        <div className="player-error player-float player-modal" role="alert">
-          <p>{error}</p>
-          <div className="hero-actions">
-            <button className="btn" onClick={exit} autoFocus>
-              Volver
-            </button>
-            {external && (
-              <a className="btn" href={external}>
-                Abrir en otro reproductor
-              </a>
+        <div
+          className="player-error player-float player-modal"
+          role="alert"
+          style={{ ['--player-bg' as string]: meta.background ? `url("${meta.background}")` : undefined }}
+        >
+          <div className="player-error-card">
+            <span className="player-error-icon">
+              <PlayerIcon name="alert" size={40} />
+            </span>
+            <p>{error}</p>
+            {errorSources && (
+              <div className="player-error-sources">
+                <SourcesMenu state={state} onPick={changeSource} />
+              </div>
             )}
-            <button className="btn" onClick={() => copyText(state.playUrl).then((ok) => flash(ok ? 'Enlace copiado' : 'No se pudo copiar el enlace'))}>
-              Copiar enlace
-            </button>
+            <div className="hero-actions">
+              {!errorSources && (
+                <button className="btn btn-primary" onClick={() => setErrorSources(true)} autoFocus>
+                  Elegir otra fuente
+                </button>
+              )}
+              <button className="btn" onClick={exit}>
+                Volver
+              </button>
+              {external && (
+                <a className="btn" href={external}>
+                  Abrir en otro reproductor
+                </a>
+              )}
+              <button className="btn" onClick={() => copyText(state.playUrl).then((ok) => flash(ok ? 'Enlace copiado' : 'No se pudo copiar el enlace'))}>
+                Copiar enlace
+              </button>
+            </div>
           </div>
         </div>
       )}
@@ -874,13 +922,13 @@ function PlayerView({ state, resume }: { state: PlayState; resume?: Resume }) {
         <SeekPreview bar={seekbarRef} url={state.playUrl} duration={duration} enabled={settings.seekPreview && !saveDataOn()} />
         <div className="controls-row">
           <button onClick={() => seek(-SEEK_STEP)} aria-label="Retroceder 10 segundos">
-            ⟲10
+            <PlayerIcon name="back10" />
           </button>
           <button ref={playBtnRef} onClick={togglePlay} aria-label={playing ? 'Pausa' : 'Reproducir'} className="play-btn">
-            {playing ? '❚❚' : '▶'}
+            <PlayerIcon name={playing ? 'pause' : 'play'} size={28} />
           </button>
           <button onClick={() => seek(SEEK_STEP)} aria-label="Adelantar 10 segundos">
-            10⟳
+            <PlayerIcon name="fwd10" />
           </button>
           <span className="time">
             {formatTime(time)} / {formatTime(duration)}
@@ -903,7 +951,8 @@ function PlayerView({ state, resume }: { state: PlayState; resume?: Resume }) {
             aria-expanded={menu === 'sleep'}
             className={sleep.kind !== 'off' ? 'active' : ''}
           >
-            ☾{sleep.kind === 'time' ? ` ${sleepMinutesLeft} min` : sleep.kind === 'episode' ? ' Fin' : ''}
+            <PlayerIcon name="moon" />
+            {sleep.kind === 'time' ? `${sleepMinutesLeft} min` : sleep.kind === 'episode' ? 'Fin' : ''}
           </button>
           {settings.externalPlayer !== 'none' && (
             <button onClick={openExternal} aria-label={`Abrir en ${externalLaunch(settings.externalPlayer, state.playUrl, currentPlatform().os).label}`}>
@@ -916,7 +965,7 @@ function PlayerView({ state, resume }: { state: PlayState; resume?: Resume }) {
             </button>
           )}
           <button onClick={toggleFullscreen} aria-label="Pantalla completa">
-            ⛶
+            <PlayerIcon name="fullscreen" />
           </button>
         </div>
       </div>

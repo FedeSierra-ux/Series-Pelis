@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { KeyboardToggle } from '../../components/OnScreenKeyboard'
 import { clearCache } from '../../lib/cache'
 import { settingsStore, useStore } from '../../lib/store'
-import { testTmdbKey } from '../../lib/tmdb'
+import { testTmdbKey, useServerTmdb } from '../../lib/tmdb'
 
 export function TmdbSettings() {
   const settings = useStore(settingsStore)
@@ -10,6 +10,7 @@ export function TmdbSettings() {
   const [msg, setMsg] = useState<{ ok: boolean; text: string }>()
   const [busy, setBusy] = useState(false)
   const configured = settings.tmdbKey.trim().length > 0
+  const fromSite = useServerTmdb()
 
   const save = async (e?: React.FormEvent) => {
     e?.preventDefault()
@@ -29,7 +30,7 @@ export function TmdbSettings() {
   }
 
   const remove = async () => {
-    if (!confirm('¿Quitar la key de TMDB? La app vuelve a usar solo Cinemeta.')) return
+    if (!confirm(fromSite ? '¿Quitar tu key de TMDB? Se vuelve a usar la del sitio.' : '¿Quitar la key de TMDB? La app vuelve a usar solo Cinemeta.')) return
     settingsStore.set((s) => ({ ...s, tmdbKey: '' }))
     await clearCache()
     setMsg({ ok: true, text: 'Key quitada.' })
@@ -44,6 +45,9 @@ export function TmdbSettings() {
         título en Argentina. Sirve la “API Key” o el “API Read Access Token”. Se guarda solo en este navegador (y en la copia
         de seguridad).
       </p>
+      {fromSite && !configured && (
+        <p className="ok">✓ TMDB activado por el sitio: no hace falta cargar nada. Si querés, podés usar una key tuya.</p>
+      )}
       {configured ? (
         <div className="inline-form">
           <span className="ok">✓ Key configurada (…{settings.tmdbKey.trim().slice(-4)})</span>

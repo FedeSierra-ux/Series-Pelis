@@ -8,6 +8,11 @@ import { useNearViewport } from './lazy'
 
 const ROW_LIMIT = 30
 
+function downNotice(row: CatalogRowDef): string {
+  const names = [...new Set(row.sources.map((s) => s.addon.manifest.name))]
+  return `${names.join(' y ')} no ${names.length > 1 ? 'responden' : 'responde'} ahora. Probá de nuevo en un rato.`
+}
+
 /** Fila de Inicio que junta varios catálogos (fusionados en el gestor de catálogos). */
 export function MergedCatalogRow({ row, eager }: { row: CatalogRowDef; eager: boolean }) {
   const [ref, visible] = useNearViewport<HTMLDivElement>(eager)
@@ -22,6 +27,7 @@ export function MergedCatalogRow({ row, eager }: { row: CatalogRowDef; eager: bo
         moreTo={`/discover/${encodeURIComponent(row.type)}?row=${encodeURIComponent(row.key)}`}
         loading={loading || !visible}
         error={error}
+        errorNotice={downNotice(row)}
         empty={items.length === 0}
       >
         {items.map((m, i) => (

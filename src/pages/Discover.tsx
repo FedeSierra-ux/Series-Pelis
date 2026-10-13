@@ -18,10 +18,11 @@ import {
 import { useTitle } from '../lib/hooks'
 import { typeLabel } from '../lib/i18n'
 import { offlineMessage } from '../lib/online'
-import { settingsStore, useStore } from '../lib/store'
+import { useTmdbKey } from '../lib/tmdb'
 import type { MetaPreview } from '../lib/types'
 import { FilterBar, type CatalogOption } from './discover/FilterBar'
 import { CuratedStrip } from './lists/CuratedStrip'
+import { errorText } from '../lib/errors'
 
 /** Con filtros del lado del cliente (catálogos de addons) se mira hasta esta cantidad de páginas. */
 const MAX_CLIENT_PAGES = 20
@@ -51,7 +52,7 @@ function toOption(r: CatalogRowDef): CatalogOption {
 export function Discover() {
   const { type = 'movie' } = useParams()
   const [params, setParams] = useSearchParams()
-  const tmdbOn = useStore(settingsStore).tmdbKey.trim().length > 0
+  const tmdbOn = useTmdbKey().length > 0
   const filters = useMemo(() => parseFilters(params), [params])
   const [kwName, setKwName] = useState<string>()
 
@@ -155,7 +156,7 @@ export function Discover() {
       })
       if ((useTmdb && page.length === 0) || last) setDone(true)
     } catch (err) {
-      if (currentKey.current === key) setError(err instanceof Error ? err.message : String(err))
+      if (currentKey.current === key) setError(errorText(err))
     } finally {
       if (currentKey.current === key) setLoading(false)
     }

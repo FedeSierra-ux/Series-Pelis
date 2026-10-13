@@ -128,13 +128,16 @@ export function subtitleClasses(style: SubtitleStyle) {
     .join(' ')
 }
 
-/** Sube el cue `position` % (0 = donde lo pone el navegador). */
-export function placeCue(cue: TextTrackCue, position: number) {
+/**
+ * Sube el cue `position` % (0 = donde lo pone el navegador). `clear` es el % de abajo que tiene que quedar
+ * libre (la barra de controles cuando se ve), así el subtítulo no queda tapado.
+ */
+export function placeCue(cue: TextTrackCue, position: number, clear = 0) {
   if (!('line' in cue)) return
   const c = cue as VTTCue
+  const line = clear > 0 ? Math.min(92 - position, 98 - clear) : position > 0 ? 92 - position : undefined
   // Solo se asigna lo que cambia: cada cambio vuelve a dibujar los subtítulos.
-  if (position > 0) {
-    const line = 92 - position
+  if (line !== undefined) {
     if (c.snapToLines) c.snapToLines = false
     if (c.lineAlign !== 'end') c.lineAlign = 'end'
     if (c.line !== line) c.line = line

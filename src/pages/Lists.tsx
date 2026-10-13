@@ -7,6 +7,8 @@ import { curatedItemPath, loadCurated, type CuratedResult } from '../lib/discove
 import { useTitle } from '../lib/hooks'
 import { typeLabel } from '../lib/i18n'
 import { settingsStore, useStore } from '../lib/store'
+import { useTmdbKey } from '../lib/tmdb'
+import { errorText } from '../lib/errors'
 
 // Listas curadas (v0.5): índice en /lists y cada lista en /lists/:id.
 
@@ -42,7 +44,7 @@ function ListTile({ def }: { def: CuratedDef }) {
 
 export function ListsIndex() {
   useTitle('Listas')
-  const tmdbOn = useStore(settingsStore).tmdbKey.trim().length > 0
+  const tmdbOn = useTmdbKey().length > 0
   const lists = CURATED.filter((l) => tmdbOn || !l.needsTmdb)
   return (
     <div className="page lists-page">
@@ -66,7 +68,7 @@ export function ListsIndex() {
 export function ListPage() {
   const { id = '' } = useParams()
   const def = curatedById(id)
-  const tmdbOn = useStore(settingsStore).tmdbKey.trim().length > 0
+  const tmdbOn = useTmdbKey().length > 0
   const [state, setState] = useState<{ id: string; data?: CuratedResult; error?: string }>()
   const blocked = !!def?.needsTmdb && !tmdbOn
   const [attempt, setAttempt] = useState(0)
@@ -76,7 +78,7 @@ export function ListPage() {
     let alive = true
     loadCurated(id)
       .then((data) => alive && setState({ id, data }))
-      .catch((err: unknown) => alive && setState({ id, error: err instanceof Error ? err.message : String(err) }))
+      .catch((err: unknown) => alive && setState({ id, error: errorText(err) }))
     return () => {
       alive = false
     }

@@ -174,7 +174,7 @@ export function TmdbHero({ items }: { items: TmdbListItem[] }) {
         </div>
         {overview && <p className="hero-desc">{overview}</p>}
         <div className="hero-actions">
-          <Link className="btn btn-primary" to={tmdbDetailPath(item)}>
+          <Link className="btn btn-primary" data-autofocus to={tmdbDetailPath(item)}>
             ▶ Ver ahora
           </Link>
           {/* aria-disabled en vez de disabled: así el control remoto no pierde el foco mientras resuelve. */}

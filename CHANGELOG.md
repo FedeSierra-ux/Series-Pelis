@@ -1,5 +1,41 @@
 # Changelog
 
+## [0.8.0] - 2026-10-13
+
+Arreglos de la auditoría visual y de la prueba de addons, y TMDB activado desde el sitio para toda la familia.
+
+### Agregado
+- **TMDB sin configurar nada**: si el sitio publicado en Cloudflare tiene el secreto `TMDB_KEY`, la app pide a TMDB
+  por `/api/tmdb/*` y las fichas salen en español sin cargar ninguna key. La key nunca llega al navegador.
+  - La función solo responde a la app (mismo sitio) y a las rutas de TMDB que se usan.
+  - Si alguien carga su propia key en Ajustes → TMDB, se usa la suya. Ajustes y el asistente inicial avisan
+    que TMDB ya viene activado.
+- **Pantalla de error del reproductor**: tarjeta sobre el fondo de la peli con **Elegir otra fuente** ahí mismo,
+  en vez de un cartel que tapaba el botón Fuentes. Lo mismo cuando una peli no tiene fuentes.
+- Aviso en la fila cuando un addon no responde, en vez de que la fila desaparezca de Inicio.
+- Reemplazo con el nombre del título cuando un póster no carga.
+
+### Cambiado
+- Los botones del reproductor usan íconos de línea parejos, y "Abrir en…" ya no se corta en la TV. En el celular
+  los controles van en dos renglones.
+- Ficha: fondo más oscuro a la izquierda y renglones más angostos para que el texto no se pise con las caras.
+  Se reserva el lugar de lo que carga después, así no salta.
+- Tema 2: "Tus series" usa tarjetas apaisadas como "Seguir viendo", el teclado en pantalla tiene más contraste
+  y el aro de foco del riel ya no tapa el texto.
+- Los torrents sin debrid van plegados al final de cada addon ("N torrents sin debrid"), así no llenan la lista.
+- Errores en español y sin jerga técnica (antes salían "Failed to fetch" o "signal is aborted…").
+- Las URLs de addons se limpian solas: espacios, `stremio://`, sin `https://` o terminadas en `/configure`.
+- Volver a instalar un addon apagado lo deja apagado y lo avisa.
+
+### Arreglado
+- Tema 1: el borde de foco de los pósters quedaba cortado.
+- TV: la primera flecha iba al logo o al menú; ahora va al contenido ("Ver ahora", el stream recomendado…).
+- TV: con → se pasa del campo de URL del addon al botón "Agregar" (cuando el cursor está al final).
+- "Volver" después de pasar solo al episodio siguiente dejaba la ficha en el episodio anterior; ahora queda en el
+  último que viste.
+- Si un subtítulo no carga, sigue el que estaba puesto.
+- Los subtítulos suben cuando aparecen los controles, así no quedan tapados.
+
 ## [0.7.0] - 2026-10-13
 
 ### Agregado

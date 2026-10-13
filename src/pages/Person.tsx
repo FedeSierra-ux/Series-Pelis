@@ -4,8 +4,8 @@ import { TogetherPicker } from '../components/PersonPicker'
 import { PosterCard } from '../components/PosterCard'
 import { Empty, ErrorBox } from '../components/Status'
 import { useTitle } from '../lib/hooks'
-import { settingsStore, useStore } from '../lib/store'
-import { getPerson, itemYear, tmdbImg, tmdbToPreview, type TmdbListItem, type TmdbPerson } from '../lib/tmdb'
+import { getPerson, itemYear, tmdbImg, tmdbToPreview, useTmdbKey, type TmdbListItem, type TmdbPerson } from '../lib/tmdb'
+import { errorText } from '../lib/errors'
 
 const MAX_KNOWN_FOR = 40
 const LONG_BIO = 700
@@ -54,7 +54,7 @@ function knownFor(cast: TmdbListItem[] | undefined): TmdbListItem[] {
 
 export function Person() {
   const { id = '' } = useParams()
-  const key = useStore(settingsStore).tmdbKey.trim()
+  const key = useTmdbKey()
   const [state, setState] = useState<{ id: string; person?: TmdbPerson; error?: string }>()
   const [expanded, setExpanded] = useState(false)
 
@@ -64,7 +64,7 @@ export function Person() {
     setExpanded(false)
     getPerson(Number(id))
       .then((person) => alive && setState({ id, person }))
-      .catch((err: unknown) => alive && setState({ id, error: err instanceof Error ? err.message : String(err) }))
+      .catch((err: unknown) => alive && setState({ id, error: errorText(err) }))
     return () => {
       alive = false
     }

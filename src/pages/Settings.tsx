@@ -1,14 +1,13 @@
 import { useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { Advanced } from '../components/Advanced'
-import { KeyboardToggle } from '../components/OnScreenKeyboard'
-import { CINEMETA_URL, normalizeManifestUrl } from '../lib/addons'
+import { AddonUrlForm } from '../components/AddonUrlForm'
+import { CINEMETA_URL } from '../lib/addons'
 import { clearCache } from '../lib/cache'
 import { useAddons, useTitle } from '../lib/hooks'
 import {
   exportData,
   importData,
-  installAddon,
   moveAddon,
   removeAddon,
   setAddonEnabled,
@@ -24,31 +23,12 @@ import { TasteSettings } from './settings/TasteSettings'
 import { StremioImport } from './settings/StremioImport'
 import { TmdbSettings } from './settings/TmdbSettings'
 import { TvSettings } from './settings/TvSettings'
+import { errorText } from '../lib/errors'
 
 const DEFAULT_SERVER = 'http://127.0.0.1:11470'
 
 function AddonsSection() {
   const addons = useAddons()
-  const [url, setUrl] = useState('')
-  const [busy, setBusy] = useState(false)
-  const [msg, setMsg] = useState<{ ok: boolean; text: string }>()
-
-  const add = async (e?: React.FormEvent) => {
-    e?.preventDefault()
-    if (!url.trim()) return
-    setBusy(true)
-    setMsg(undefined)
-    try {
-      const manifest = await installAddon(normalizeManifestUrl(url))
-      setMsg({ ok: true, text: `Listo: se agregó “${manifest.name}”.` })
-      setUrl('')
-    } catch (err) {
-      setMsg({ ok: false, text: `No se pudo agregar: ${err instanceof Error ? err.message : String(err)}` })
-    } finally {
-      setBusy(false)
-    }
-  }
-
   return (
     <section className="settings-section">
       <h2>Addons de Stremio</h2>
@@ -56,21 +36,7 @@ function AddonsSection() {
         Pegá la URL del manifest de cada addon que usás en Stremio (termina en <code>/manifest.json</code>, también sirve el
         enlace <code>stremio://</code>). Si un addon usa tu cuenta de Real-Debrid o TorBox, la URL ya incluye esa configuración.
       </p>
-      <form className="inline-form" onSubmit={add}>
-        <input
-          type="url"
-          inputMode="url"
-          placeholder="https://…/manifest.json"
-          value={url}
-          onChange={(e) => setUrl(e.target.value)}
-          aria-label="URL del manifest"
-        />
-        <button className="btn btn-primary" disabled={busy}>
-          {busy ? 'Agregando…' : 'Agregar'}
-        </button>
-      </form>
-      <KeyboardToggle value={url} onChange={setUrl} onDone={() => add()} doneLabel="Agregar" label="Teclado para la URL del addon" />
-      {msg && <p className={msg.ok ? 'ok' : 'error-text'}>{msg.text}</p>}
+      <AddonUrlForm />
 
       <ul className="addon-list">
         {addons.map((a, i) => {
@@ -218,7 +184,7 @@ function DataSection() {
       await importData(JSON.parse(await file.text()))
       setMsg('✓ Datos importados')
     } catch (err) {
-      setMsg(`No se pudo importar: ${err instanceof Error ? err.message : String(err)}`)
+      setMsg(`No se pudo importar: ${errorText(err)}`)
     }
   }
 

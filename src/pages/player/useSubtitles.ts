@@ -28,6 +28,7 @@ export function useSubtitles({
   audioLang,
   flash,
   closeMenu,
+  controlsClear = 0,
 }: {
   videoRef: RefObject<HTMLVideoElement | null>
   hlsRef: RefObject<Hls | null>
@@ -36,6 +37,8 @@ export function useSubtitles({
   audioLang?: string
   flash: (msg: string) => void
   closeMenu: () => void
+  /** % de abajo que tapa la barra de controles (0 si está oculta): los subtítulos suben para no quedar debajo. */
+  controlsClear?: number
 }) {
   const addons = useAddons()
   const settings = useStore(settingsStore)
@@ -51,6 +54,8 @@ export function useSubtitles({
   const delayRef = useRef(0)
   const positionRef = useRef(settings.subtitleStyle.position)
   positionRef.current = settings.subtitleStyle.position
+  const clearRef = useRef(controlsClear)
+  clearRef.current = controlsClear
   const userPicked = useRef(false)
   const autoRank = useRef(99)
   const request = useRef(0)
@@ -96,7 +101,7 @@ export function useSubtitles({
         const end = Math.max(0, orig[1] + d)
         if (cue.startTime !== start) cue.startTime = start
         if (cue.endTime !== end) cue.endTime = end
-        placeCue(cue, positionRef.current)
+        placeCue(cue, positionRef.current, clearRef.current)
       }
     }
   }, [videoRef])
@@ -116,7 +121,7 @@ export function useSubtitles({
     }
   }, [videoRef, adjustCues])
 
-  useEffect(adjustCues, [settings.subtitleStyle.position, adjustCues])
+  useEffect(adjustCues, [settings.subtitleStyle.position, controlsClear, adjustCues])
 
   const changeDelay = (delta: number) => {
     const next = Math.round((delayRef.current + delta) * 10) / 10
@@ -132,6 +137,20 @@ export function useSubtitles({
     if (!auto) {
       userPicked.current = true
       closeMenu()
+    }
+    // Primero se baja el archivo: si falla, sigue el subtítulo que estaba (antes quedaban apagados).
+    let src: string | undefined
+    if (url && option?.hls === undefined) {
+      try {
+        src = await loadSubtitle(url, { stripSdh: settingsStore.get().hideSdh })
+      } catch {
+        if (req !== request.current) return
+        if (!auto) flash(activeRef.current ? 'No se pudo cargar ese subtítulo: sigue el anterior' : 'No se pudo cargar ese subtítulo')
+        return
+      }
+      if (req !== request.current) return
+    }
+    if (!auto) {
       // Se recuerda para este título; los archivos propios no tienen idioma.
       if (!url) rememberTracks(metaId, { subOff: true, subLang: undefined, subForced: undefined })
       else if (option && !option.file && option.lang) rememberTracks(metaId, { subOff: false, subLang: lang3(option.lang), subForced: !!option.forced })
@@ -149,24 +168,16 @@ export function useSubtitles({
         hls.subtitleTrack = option.hls
       }
     }
-    if (!url || option?.hls !== undefined) return
-    try {
-      const src = await loadSubtitle(url, { stripSdh: settingsStore.get().hideSdh })
-      if (req !== request.current) return
-      const track = document.createElement('track')
-      track.kind = 'subtitles'
-      track.label = option ? subLabel(option).main : ''
-      track.src = src
-      track.default = true
-      track.dataset.spSub = ''
-      track.addEventListener('load', adjustCues)
-      el.appendChild(track)
-      track.track.mode = 'showing'
-    } catch {
-      if (req !== request.current) return
-      setActive('')
-      if (!auto) flash('No se pudo cargar ese subtítulo')
-    }
+    if (!src) return
+    const track = document.createElement('track')
+    track.kind = 'subtitles'
+    track.label = option ? subLabel(option).main : ''
+    track.src = src
+    track.default = true
+    track.dataset.spSub = ''
+    track.addEventListener('load', adjustCues)
+    el.appendChild(track)
+    track.track.mode = 'showing'
   }
 
   // Subtítulo automático: lo elegido para este título, el primer idioma preferido o, si no hay

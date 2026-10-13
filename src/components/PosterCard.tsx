@@ -1,4 +1,4 @@
-import { memo, useEffect, useRef, type FocusEvent, type KeyboardEvent, type MouseEvent } from 'react'
+import { memo, useEffect, useRef, useState, type FocusEvent, type KeyboardEvent, type MouseEvent } from 'react'
 import { Link } from 'react-router-dom'
 import { prefetchMeta } from '../lib/addons'
 import { smallPoster } from '../lib/format'
@@ -33,6 +33,8 @@ export const PosterCard = memo(function PosterCard({ meta, progress, watched, su
     else prefetchMeta(addonsStore.get(), meta.type, meta.id)
   }
   const src = smallPoster(meta.id, meta.poster)
+  // Si la imagen no carga (404, CDN caído) mostramos el nombre en vez de un hueco vacío.
+  const [brokenSrc, setBrokenSrc] = useState<string>()
   // v0.5: puntaje sobre el póster, etiqueta y tráiler al quedarse encima.
   const { posterRating, posterLabels } = useStore(settingsStore)
   const posterLabel = usePosterLabel(meta, posterLabels)
@@ -66,8 +68,15 @@ export const PosterCard = memo(function PosterCard({ meta, progress, watched, su
       title={meta.name}
     >
       <div className="poster-img">
-        {src ? (
-          <img src={src} alt="" loading={eager ? 'eager' : 'lazy'} decoding="async" fetchPriority={eager ? 'high' : 'auto'} />
+        {src && src !== brokenSrc ? (
+          <img
+            src={src}
+            alt=""
+            loading={eager ? 'eager' : 'lazy'}
+            decoding="async"
+            fetchPriority={eager ? 'high' : 'auto'}
+            onError={() => setBrokenSrc(src)}
+          />
         ) : (
           <div className="poster-fallback">{meta.name}</div>
         )}

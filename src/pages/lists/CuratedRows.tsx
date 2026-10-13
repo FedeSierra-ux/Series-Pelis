@@ -3,6 +3,7 @@ import { Row } from '../../components/Row'
 import { curatedById, curatedPath } from '../../lib/curated'
 import { curatedItemPath, loadCurated } from '../../lib/discoverApi'
 import { settingsStore, useStore } from '../../lib/store'
+import { useTmdbKey } from '../../lib/tmdb'
 import { useNearViewport, useTmdbQuery } from '../home/lazy'
 
 // Filas opcionales de Inicio con las listas curadas que el usuario marcó ("+ Mostrar en Inicio").
@@ -34,7 +35,7 @@ function CuratedRow({ id }: { id: string }) {
 
 export function CuratedRows() {
   const settings = useStore(settingsStore)
-  const tmdbOn = settings.tmdbKey.trim().length > 0
+  const tmdbOn = useTmdbKey().length > 0
   const ids = (settings.curatedRows ?? []).filter((id) => {
     const def = curatedById(id)
     return def && (tmdbOn || !def.needsTmdb)

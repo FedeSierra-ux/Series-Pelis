@@ -6,14 +6,14 @@ import { PosterCard, PosterSkeleton } from '../components/PosterCard'
 import { Empty, ErrorBox } from '../components/Status'
 import { getTogether, type Together as TogetherData } from '../lib/discoverApi'
 import { useTitle } from '../lib/hooks'
-import { settingsStore, useStore } from '../lib/store'
-import { itemYear, tmdbToPreview } from '../lib/tmdb'
+import { itemYear, tmdbToPreview, useTmdbKey } from '../lib/tmdb'
+import { errorText } from '../lib/errors'
 
 // /together?ids=69310,1234 → títulos donde aparecen las dos personas (delante o detrás de cámara).
 
 export function Together() {
   const [params] = useSearchParams()
-  const key = useStore(settingsStore).tmdbKey.trim()
+  const key = useTmdbKey()
   const ids = (params.get('ids') ?? '')
     .split(',')
     .filter((x) => /^\d+$/.test(x))
@@ -28,7 +28,7 @@ export function Together() {
     let alive = true
     getTogether(a, b)
       .then((data) => alive && setState({ k, data }))
-      .catch((err: unknown) => alive && setState({ k, error: err instanceof Error ? err.message : String(err) }))
+      .catch((err: unknown) => alive && setState({ k, error: errorText(err) }))
     return () => {
       alive = false
     }

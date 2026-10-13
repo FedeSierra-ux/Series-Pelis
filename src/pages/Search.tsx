@@ -9,7 +9,8 @@ import { useAddons, useTitle } from '../lib/hooks'
 import { typeLabel } from '../lib/i18n'
 import { useOnline } from '../lib/online'
 import { debounce, MIN_QUERY, normalizeQuery, parseTogether, pushRecent, removeRecent } from '../lib/searchHistory'
-import { recentSearchesStore, settingsStore, useStore } from '../lib/store'
+import { recentSearchesStore, useStore } from '../lib/store'
+import { useTmdbKey } from '../lib/tmdb'
 import { useTvMode } from '../lib/tv'
 import type { MetaPreview } from '../lib/types'
 
@@ -74,7 +75,7 @@ export function Search() {
   useTitle('Buscar')
   const addons = useAddons()
   const recents = useStore(recentSearchesStore)
-  const tmdbOn = useStore(settingsStore).tmdbKey.trim().length > 0
+  const tmdbOn = useTmdbKey().length > 0
   const [params, setParams] = useSearchParams()
   const [text, setText] = useState(params.get('q') ?? '')
   const [query, setQuery] = useState(() => normalizeQuery(params.get('q') ?? ''))

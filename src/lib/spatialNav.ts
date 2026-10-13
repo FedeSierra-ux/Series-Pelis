@@ -25,6 +25,19 @@ function candidates(): HTMLElement[] {
   return Array.from(scope.querySelectorAll<HTMLElement>(FOCUSABLE)).filter(isVisible)
 }
 
+/**
+ * Sin nada enfocado (recién se entró a la pantalla), la primera flecha va al contenido: primero lo
+ * marcado con `data-autofocus` (el "Ver ahora" de la portada, el stream recomendado, el episodio
+ * elegido) y si no hay, lo primero de <main>. Antes caía en el logo o en el riel del menú.
+ */
+function initialTarget(els: HTMLElement[]): HTMLElement | undefined {
+  if (document.querySelector('[data-nav-scope]')) return els[0]
+  const main = document.querySelector('main')
+  if (!main) return els[0]
+  const marked = Array.from(main.querySelectorAll<HTMLElement>('[data-autofocus]')).find(isVisible)
+  return marked ?? els.find((el) => main.contains(el)) ?? els[0]
+}
+
 function center(r: DOMRect) {
   return { x: r.left + r.width / 2, y: r.top + r.height / 2 }
 }
@@ -64,6 +77,17 @@ function isTextInput(el: Element | null) {
   return el instanceof HTMLInputElement && !['checkbox', 'radio', 'range', 'button', 'submit'].includes(el.type)
 }
 
+/**
+ * ← / → dentro de un campo de texto mueven el cursor; recién cuando está en el borde (al final con →,
+ * al principio con ←) pasan al botón de al lado, como el "Agregar" de la URL del addon.
+ */
+function caretAtEdge(el: HTMLInputElement | HTMLTextAreaElement, dir: 'left' | 'right') {
+  const { selectionStart: start, selectionEnd: end } = el
+  // Algunos tipos (email, number) no exponen el cursor: ahí las flechas siguen siendo del campo.
+  if (start === null || end === null || start !== end) return false
+  return dir === 'right' ? end === el.value.length : start === 0
+}
+
 export function initSpatialNav(onBack: () => void) {
   const handler = (e: KeyboardEvent) => {
     if (e.defaultPrevented || e.altKey || e.ctrlKey || e.metaKey) return
@@ -84,13 +108,13 @@ export function initSpatialNav(onBack: () => void) {
 
     const dir = KEYS[e.key]
     if (!dir) return
-    if (isTextInput(active) && (dir === 'left' || dir === 'right')) return
+    if ((dir === 'left' || dir === 'right') && isTextInput(active) && !caretAtEdge(active as HTMLInputElement, dir)) return
     if (active instanceof HTMLSelectElement) return
 
     const els = candidates()
     const from =
       active && active !== document.body ? (active as HTMLElement).getBoundingClientRect() : new DOMRect(0, 0, 0, 0)
-    const next = active && active !== document.body ? best(from, dir, els, active) : els[0]
+    const next = active && active !== document.body ? best(from, dir, els, active) : initialTarget(els)
     if (next) {
       e.preventDefault()
       next.focus({ preventScroll: true })
