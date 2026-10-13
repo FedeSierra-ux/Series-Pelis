@@ -14,6 +14,7 @@ import { Settings } from './pages/Settings'
 const Player = lazy(() => import('./pages/Player').then((m) => ({ default: m.Player })))
 const Calendar = lazy(() => import('./pages/Calendar').then((m) => ({ default: m.Calendar })))
 const YearReview = lazy(() => import('./pages/YearReview').then((m) => ({ default: m.YearReview })))
+const Person = lazy(() => import('./pages/Person').then((m) => ({ default: m.Person })))
 
 const pageFallback = <div className="page"><div className="spinner" /></div>
 
@@ -49,6 +50,7 @@ export function App() {
           <Route path="discover/:type" element={<Discover />} />
           <Route path="search" element={<Search />} />
           <Route path="detail/:type/:id" element={<Detail />} />
+          <Route path="person/:id" element={<Suspense fallback={pageFallback}><Person /></Suspense>} />
           <Route path="list" element={<MyList />} />
           <Route path="history" element={<History />} />
           <Route path="history/year" element={<Suspense fallback={pageFallback}><YearReview /></Suspense>} />
