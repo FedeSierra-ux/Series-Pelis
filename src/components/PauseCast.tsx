@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { getMeta } from '../lib/addons'
 import { addonsStore } from '../lib/store'
+import { useEpisodeSpoilers } from './Spoiler'
 import { findByImdb, getDetails, getEpisodeCast, getEpisodeInfo, hasTmdb, tmdbImg, type TmdbCast } from '../lib/tmdb'
 
 interface Props {
@@ -63,6 +64,9 @@ export function PauseCast({ imdbId, type, season, episode, videoId, visible }: P
   const [people, setPeople] = useState<Person[]>()
   const [info, setInfo] = useState<Info>()
   const [show, setShow] = useState(false)
+  // Modo sin spoilers: la sinopsis de un episodio que todavía no terminaste no se muestra.
+  const hideEpisodeSpoiler = useEpisodeSpoilers()
+  const spoil = !!videoId && season !== undefined && hideEpisodeSpoiler({ metaId: imdbId, videoId, season, episode })
 
   useEffect(() => {
     setPeople(undefined)
@@ -116,7 +120,8 @@ export function PauseCast({ imdbId, type, season, episode, videoId, visible }: P
       {(label || overview) && (
         <div className="pause-info">
           {label && <strong className="pause-info-title">{label}</strong>}
-          {overview && <p className="pause-info-overview">{overview}</p>}
+          {overview && !spoil && <p className="pause-info-overview">{overview}</p>}
+          {overview && spoil && <p className="pause-info-overview spoiler-hidden">Sinopsis oculta (modo sin spoilers)</p>}
         </div>
       )}
       {!!people?.length && (

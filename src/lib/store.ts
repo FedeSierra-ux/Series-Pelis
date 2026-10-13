@@ -285,6 +285,34 @@ export function toggleWatchlist(meta: MetaPreview) {
   })
 }
 
+// ---------- v0.5 gustos: tu puntaje y "Ya no me interesa" ----------
+
+/** Tu puntaje de un título (peli o serie), de 0,5 a 5 estrellas. */
+export interface RatingEntry {
+  stars: number
+  at: number
+  type: string
+  name: string
+  poster?: string
+  /** Id de TMDB, si se conocía al puntuar (para las recomendaciones). */
+  tmdbId?: number
+}
+
+/** Por id del título (`tt…`, o `tmdb:movie:603` si no tiene IMDb). Ver `ratings.ts`. */
+export const ratingsStore = new PersistedStore<Record<string, RatingEntry>>('ratings', {})
+
+/** Títulos que el usuario sacó de las recomendaciones y de las filas de Inicio. */
+export interface NotInterestedEntry {
+  id: string
+  type: string
+  name: string
+  poster?: string
+  tmdbId?: number
+  at: number
+}
+
+export const notInterestedStore = new PersistedStore<Record<string, NotInterestedEntry>>('notInterested', {})
+
 // ---------- Ajustes ----------
 
 export interface SubtitleStyle {
@@ -343,6 +371,12 @@ export interface Settings {
   tmdbKey: string
   /** Reproducir el tráiler sin sonido en la portada de Inicio (necesita TMDB). */
   heroTrailer: boolean
+  /** Modo sin spoilers: difumina miniaturas y oculta sinopsis de los episodios que no viste. */
+  spoilerFree: boolean
+  /** Con el modo sin spoilers, ocultar también la sinopsis de los títulos que no empezaste. */
+  spoilerUnstarted: boolean
+  /** Ofrecer puntuar con estrellas al terminar una peli o el último episodio. */
+  askRatingAtEnd: boolean
 }
 
 export const settingsStore = new PersistedStore<Settings>('settings', {
@@ -366,6 +400,9 @@ export const settingsStore = new PersistedStore<Settings>('settings', {
   externalPlayer: 'system',
   tmdbKey: '',
   heroTrailer: true,
+  spoilerFree: false,
+  spoilerUnstarted: false,
+  askRatingAtEnd: true,
 })
 
 // ---------- Copia de seguridad ----------
@@ -380,6 +417,8 @@ export function exportData() {
     watchlist: watchlistStore.get(),
     settings: settingsStore.get(),
     trackPrefs: trackPrefsStore.get(),
+    ratings: ratingsStore.get(),
+    notInterested: notInterestedStore.get(),
   }
 }
 
@@ -390,6 +429,8 @@ export async function importData(raw: unknown) {
   if (data.watchlist) watchlistStore.set((all) => ({ ...all, ...data.watchlist }))
   if (data.settings) settingsStore.merge({ ...settingsStore.get(), ...data.settings })
   if (data.trackPrefs) trackPrefsStore.set((all) => ({ ...all, ...data.trackPrefs }))
+  if (data.ratings) ratingsStore.set((all) => ({ ...all, ...data.ratings }))
+  if (data.notInterested) notInterestedStore.set((all) => ({ ...all, ...data.notInterested }))
   const installed = new Set(addonsStore.get().map((a) => a.transportUrl))
   for (const url of data.addons ?? []) {
     if (!installed.has(url)) await installAddon(url).catch(() => {})
@@ -406,6 +447,8 @@ export async function hydrateStores() {
     settingsStore.hydrate(),
     lastSourceStore.hydrate(),
     trackPrefsStore.hydrate(),
+    ratingsStore.hydrate(),
+    notInterestedStore.hydrate(),
   ])
   if (addonsStore.get().length === 0) addonsStore.set([CINEMETA_ADDON])
   // No bloquea el arranque.

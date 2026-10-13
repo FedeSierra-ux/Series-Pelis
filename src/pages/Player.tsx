@@ -13,6 +13,7 @@ import { progressStore, rememberTracks, saveProgress, settingsStore, trackPrefsS
 import { audioPrefs, guessAudioLang, lang3, langRank, subtitleClasses } from '../lib/subtitlePrefs'
 import type { PlayState } from './Detail'
 import { CreditsNotice } from './player/CreditsNotice'
+import { RateAtEnd } from './player/RateAtEnd'
 import { daysAway, RECAP_AFTER_DAYS, RecapOffer } from './player/RecapOffer'
 import { SeekPreview } from './player/SeekPreview'
 import { SourcesMenu, useSwitchSource, type Resume, type SwitchState } from './player/SourcesMenu'
@@ -611,7 +612,7 @@ function PlayerView({ state, resume }: { state: PlayState; resume?: Resume }) {
             moveFocus(menuEl, 'button', active, delta)
             return
           }
-          const corner = rootRef.current?.querySelector<HTMLElement>('.player-corner button')
+          const corner = rootRef.current?.querySelector<HTMLElement>('.player-corner button, .player-rate [role="slider"]')
           if (e.key === 'ArrowUp' && focusedControl && corner) corner.focus()
           else if (floating || !focusedControl) playBtnRef.current?.focus()
           return
@@ -693,6 +694,10 @@ function PlayerView({ state, resume }: { state: PlayState; resume?: Resume }) {
       {buffering && !error && !askStill && !sleepFired && <div className="player-spinner" aria-label="Cargando" />}
 
       {!error && !askStill && !sleepFired && <CreditsNotice imdbId={meta.id} type={meta.type} plan={plan} time={time} duration={duration} />}
+
+      {!error && !askStill && !sleepFired && (
+        <RateAtEnd meta={meta} hasNext={!!state.nextVideoId} time={time} duration={duration} creditsStart={plan.credits?.start} />
+      )}
 
       {resumedFrom !== undefined && (
         <div className="player-toast">

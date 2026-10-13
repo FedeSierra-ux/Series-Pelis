@@ -13,6 +13,7 @@ import {
 } from '../lib/store'
 import { PlayerSettings } from './settings/PlayerSettings'
 import { SourceSettings } from './settings/SourceSettings'
+import { TasteSettings } from './settings/TasteSettings'
 import { TmdbSettings } from './settings/TmdbSettings'
 
 const DEFAULT_SERVER = 'http://127.0.0.1:11470'
@@ -236,6 +237,7 @@ export function Settings() {
       <PlaybackSection />
       <PlayerSettings />
       <SourceSettings />
+      <TasteSettings />
       <DataSection />
     </div>
   )

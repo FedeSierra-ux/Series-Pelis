@@ -1,5 +1,6 @@
 import { useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
+import { UserStars } from '../components/StarRating'
 import { Empty } from '../components/Status'
 import { dayLabel, episodeLabel, formatTime, smallPoster } from '../lib/format'
 import { useTitle } from '../lib/hooks'
@@ -100,7 +101,9 @@ export function History() {
                   <Link to={link} className="history-link">
                     <img src={smallPoster(e.metaId, e.poster)} alt="" loading="lazy" decoding="async" />
                     <div className="history-text">
-                      <strong>{e.name}</strong>
+                      <strong>
+                        {e.name} <UserStars id={e.metaId} />
+                      </strong>
                       <span className="muted small">
                         {typeLabel(e.type, false)}
                         {e.season !== undefined && ` · ${episodeLabel(e.season, e.episode)}`}
