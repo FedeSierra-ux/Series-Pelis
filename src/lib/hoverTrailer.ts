@@ -148,7 +148,23 @@ let armed: HoverTarget | undefined
 let open: OpenTrailer | undefined
 let timers: ReturnType<typeof setTimeout>[] = []
 let closeTimer: ReturnType<typeof setTimeout> | undefined
+let suppressed = 0
 const listeners = new Set<() => void>()
+
+/**
+ * Apaga el tráiler de los pósters mientras la pantalla tiene el suyo (Películas y Series pasan el
+ * tráiler a la portada de arriba): nunca dos videos a la vez. Devuelve la función para volver a prenderlo.
+ */
+export function suppressHoverTrailer(): () => void {
+  suppressed += 1
+  closeTrailer()
+  let done = false
+  return () => {
+    if (done) return
+    done = true
+    suppressed = Math.max(0, suppressed - 1)
+  }
+}
 
 function emit() {
   listeners.forEach((l) => l())
@@ -167,7 +183,7 @@ export function armTrailer(target: HoverTarget) {
     return
   }
   closeTrailer()
-  if (!trailerAllowed(currentEnv(), target.via)) return
+  if (suppressed > 0 || !trailerAllowed(currentEnv(), target.via)) return
   armed = target
   const started = Date.now()
   let resolved: Promise<{ ytId?: string; backdrop?: string }> | undefined

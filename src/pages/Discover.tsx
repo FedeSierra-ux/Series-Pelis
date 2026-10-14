@@ -25,7 +25,8 @@ import { withoutHidden } from '../lib/recommend'
 import { useTmdbKey } from '../lib/tmdb'
 import type { MetaPreview } from '../lib/types'
 import { FilterBar, type CatalogOption } from './discover/FilterBar'
-import { DiscoverHero } from './discover/DiscoverHero'
+import { BrowsePage } from './discover/BrowsePage'
+import { isBrowseKind, wantsGrid } from '../lib/browseRows'
 import { CuratedStrip } from './lists/CuratedStrip'
 import { errorText } from '../lib/errors'
 
@@ -56,14 +57,22 @@ function toOption(r: CatalogRowDef): CatalogOption {
   return { addon: first.addon, catalog, label: r.merged || r.renamed ? r.name : undefined, rowKey: r.merged ? r.key : undefined }
 }
 
+/**
+ * Películas y Series sin filtros: la página de filas (v0.15, U11). Con filtros, `?all=1` o cualquier
+ * otro tipo de catálogo: la grilla con filtros de siempre.
+ */
 export function Discover() {
+  const { type = 'movie' } = useParams()
+  const [params] = useSearchParams()
+  if (isBrowseKind(type) && !wantsGrid(params)) return <BrowsePage key={type} kind={type} />
+  return <DiscoverGrid key={type} />
+}
+
+function DiscoverGrid() {
   const { type = 'movie' } = useParams()
   const [params, setParams] = useSearchParams()
   const tmdbKey = useTmdbKey()
   const tmdbOn = tmdbKey.length > 0
-  // Películas y Series llevan la portada grande con lo que está en tendencia hoy.
-  const heroType = type === 'movie' ? 'movie' : type === 'series' ? 'tv' : undefined
-  const withHero = !!heroType && tmdbOn
   const filters = useMemo(() => parseFilters(params), [params])
   const [kwName, setKwName] = useState<string>()
 
@@ -208,15 +217,19 @@ export function Discover() {
     [raw, clientFiltering, clientKey, hidden],
   )
 
-  const apply = (next: DiscoverFilters) => setParams(filtersToParams(next), { replace: true })
+  // `all=1` mantiene la grilla aunque se saquen todos los filtros (sin nada, Películas y Series muestran las filas).
+  const apply = (next: DiscoverFilters) => {
+    const p = filtersToParams(next)
+    if (isBrowseKind(type)) p.set('all', '1')
+    setParams(p, { replace: true })
+  }
   const emptyAfterFilters = done && !loading && raw.length > 0 && items.length === 0
   const noneAtAll = done && !loading && raw.length === 0 && !error
 
   return (
-    <div className={`page discover${withHero ? ' discover-with-hero' : ''}`}>
+    <div className="page discover">
       {/* Modo TV: el fondo de arriba sigue al póster enfocado (U30). */}
       <FocusBillboard />
-      {withHero && heroType && <DiscoverHero key={heroType} type={heroType} tmdbKey={tmdbKey} />}
       <header className="page-header">
         <h1>
           {typeLabel(type)}

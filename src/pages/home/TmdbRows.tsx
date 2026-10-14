@@ -15,22 +15,12 @@ import {
   toTmdbType,
   type TmdbListItem,
   type TmdbPage,
-  type TmdbType,
 } from '../../lib/tmdb'
 import { useNearViewport, useTmdbQuery, type TmdbState } from './lazy'
 
 /** Solo pelis y series (las tendencias también traen personas). */
 export const onlyTitles = (list: TmdbListItem[] | undefined) =>
   (list ?? []).filter((i) => i.media_type === 'movie' || i.media_type === 'tv')
-
-/** Películas o series en tendencia hoy: la portada de Películas / Series y su Top 10. */
-export function useTrendingOf(type: TmdbType, tmdbKey: string, enabled = true): TmdbState<TmdbPage> {
-  return useTmdbQuery(
-    tmdbKey && enabled ? `${type}-day|${tmdbKey}` : undefined,
-    () => getTrending(type, 'day'),
-    () => peekTmdb<TmdbPage>(`/trending/${type}/day`, { language: LANG }),
-  )
-}
 
 /** Estrenos en cines de Argentina: la portada de Inicio. */
 export function useNowPlaying(tmdbKey: string): TmdbState<TmdbPage> {
