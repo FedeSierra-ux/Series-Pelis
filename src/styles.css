@@ -4014,16 +4014,10 @@ button.chip-link {
   font-size: 0.72rem;
 }
 .curated-chip {
-  padding: 6px 12px;
-  border: 1px solid var(--line);
+  text-decoration: none;
 }
 .curated-more {
   color: var(--muted);
-}
-.curated-chip:hover,
-.curated-chip:focus-visible {
-  border-color: var(--accent);
-  color: var(--text);
 }
 .list-tiles {
   display: grid;
@@ -4382,6 +4376,22 @@ button.chip-link {
 .catalog-merge select {
   flex: 1;
   min-width: 0;
+}
+/* Filas de TMDB en Inicio (v0.14): solo el botón "Apaisada", también en el celular. */
+.catalog-manager-tmdb {
+  margin-top: 28px;
+}
+.catalog-manager-tmdb h2 {
+  margin: 0 0 4px;
+  font-size: 1.1rem;
+}
+.catalog-manager-tmdb > p {
+  margin: 0 0 12px;
+}
+@media (max-width: 700px) {
+  .catalog-item-actions.is-shape-only .btn-text {
+    display: inline-flex;
+  }
 }
 @media (max-width: 700px) {
   .catalog-item-main {
@@ -5135,6 +5145,14 @@ input[type='password']:focus-visible {
 }
 .ltv-note.warn {
   color: #f0c36a;
+}
+/* Canales que este navegador no puede reproducir (sin CORS): atenuados, pero en su lugar y con su número. */
+.ltv-row.is-blocked .ltv-ch {
+  opacity: 0.55;
+}
+.ltv-row.is-blocked .ltv-ch:focus-visible,
+.ltv-row.is-blocked .ltv-ch[aria-current='true'] {
+  opacity: 1;
 }
 .ltv-fav {
   flex: none;

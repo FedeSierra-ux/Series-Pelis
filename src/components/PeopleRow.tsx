@@ -65,12 +65,37 @@ export function PeopleRow({ title, people, loading, stale }: { title: string; pe
   return (
     <Row title={title} empty={people.length === 0} stale={stale}>
       {people.map((p) => (
-        <Link key={p.id} to={`/person/${p.id}`} className="cast-card" title={p.name}>
-          <PersonAvatar person={p} />
-          <span className="cast-name">{p.name}</span>
-          {p.known_for_department && <span className="cast-character">{departmentLabel(p.known_for_department)}</span>}
-        </Link>
+        <PersonCard key={p.id} person={p} />
       ))}
     </Row>
+  )
+}
+
+function PersonCard({ person: p }: { person: PersonLike }) {
+  return (
+    <Link to={`/person/${p.id}`} className="cast-card" title={p.name}>
+      <PersonAvatar person={p} />
+      <span className="cast-name">{p.name}</span>
+      {p.known_for_department && <span className="cast-character">{departmentLabel(p.known_for_department)}</span>}
+    </Link>
+  )
+}
+
+/** v0.14: pestaña "Personas" de Buscar: las mismas tarjetas, en grilla en vez de fila. */
+export function PeopleGrid({ people, loading, stale, label }: { people: PersonLike[]; loading?: boolean; stale?: boolean; label: string }) {
+  return (
+    <div className={`people-grid${stale ? ' is-stale' : ''}`} role="list" aria-label={label} aria-busy={loading || undefined}>
+      {loading && people.length === 0
+        ? Array.from({ length: 12 }, (_, i) => (
+            <div key={i} role="listitem">
+              <CastSkeleton />
+            </div>
+          ))
+        : people.map((p) => (
+            <div key={p.id} role="listitem">
+              <PersonCard person={p} />
+            </div>
+          ))}
+    </div>
   )
 }

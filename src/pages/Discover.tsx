@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { Link, useParams, useSearchParams } from 'react-router-dom'
+import { FocusBillboard } from '../components/FocusBillboard'
 import { PosterCard, PosterSkeleton } from '../components/PosterCard'
 import { ErrorBox } from '../components/Status'
 import { getCatalog } from '../lib/addons'
@@ -213,6 +214,8 @@ export function Discover() {
 
   return (
     <div className={`page discover${withHero ? ' discover-with-hero' : ''}`}>
+      {/* Modo TV: el fondo de arriba sigue al póster enfocado (U30). */}
+      <FocusBillboard />
       {withHero && heroType && <DiscoverHero key={heroType} type={heroType} tmdbKey={tmdbKey} />}
       <header className="page-header">
         <h1>

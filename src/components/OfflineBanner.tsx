@@ -1,11 +1,15 @@
 import { useEffect, useRef, useState } from 'react'
+import { useLocation } from 'react-router-dom'
 import { useOnline } from '../lib/online'
 
 const BACK_ONLINE_MS = 8000
+/** Pantallas con su propio aviso de "sin conexión" (y que se recargan solas al volver la red): así no hay dos. */
+const OWN_NOTICE = new Set(['/search'])
 
 /** Aviso "Sin conexión" arriba de todo; al volver internet ofrece actualizar. */
 export function OfflineBanner() {
   const online = useOnline()
+  const { pathname } = useLocation()
   const wasOffline = useRef(!online)
   const [back, setBack] = useState(false)
 
@@ -22,7 +26,7 @@ export function OfflineBanner() {
     return () => clearTimeout(t)
   }, [online])
 
-  if (online && !back) return null
+  if ((online && !back) || OWN_NOTICE.has(pathname)) return null
   return (
     <div className={`offline-banner${online ? ' is-back' : ''}`} role="status">
       {online ? (

@@ -1,5 +1,5 @@
 import { lazy, Suspense, useEffect, useLayoutEffect, useRef } from 'react'
-import { BrowserRouter, Navigate, Route, Routes, useLocation, useNavigate, useNavigationType } from 'react-router-dom'
+import { Navigate, Route, Routes, useLocation, useNavigate, useNavigationType } from 'react-router-dom'
 import { ErrorBoundary } from './components/ErrorBoundary'
 import { Theme2Layout as Layout } from './components/Theme2Layout'
 import { Onboarding } from './components/Onboarding'
@@ -7,11 +7,14 @@ import { Screensaver } from './components/Screensaver'
 import { ShortcutsHelp, useGlobalShortcuts } from './components/ShortcutsHelp'
 import { TvHints } from './components/TvHints'
 import { UpdateToast } from './components/UpdateToast'
+import { ViewTransitionRouter } from './components/ViewTransitionRouter'
+import { StorageWarning } from './components/StorageWarning'
 import { resetFocus, restoreFocus, saveFocus, trackFocus } from './lib/focusMemory'
-import { initSpatialNav } from './lib/spatialNav'
+import { initSpatialNav, ladderBack } from './lib/spatialNav'
 import { Detail } from './pages/Detail'
 import { Discover } from './pages/Discover'
 import { History } from './pages/History'
+import { Me } from './pages/Me'
 import { Home } from './pages/Home'
 import { MyList } from './pages/MyList'
 import { Search } from './pages/Search'
@@ -35,7 +38,16 @@ const pageFallback = <div className="page"><div className="spinner" /></div>
 function SpatialNav() {
   const navigate = useNavigate()
   const location = useLocation()
-  useEffect(() => initSpatialNav(() => location.pathname !== '/' && navigate(-1)), [navigate, location.pathname])
+  // "Atrás" en escalera en Inicio, Películas, Series y Mi lista: arriba de la pantalla, después el riel
+  // y recién después lo de siempre (volver; en Inicio, nada). Devuelve la limpieza a propósito.
+  useEffect(
+    () =>
+      initSpatialNav(() => {
+        if (ladderBack(location.pathname)) return
+        if (location.pathname !== '/') navigate(-1)
+      }),
+    [navigate, location.pathname],
+  )
   return null
 }
 
@@ -74,7 +86,8 @@ function ScrollMemory() {
 
 export function App() {
   return (
-    <BrowserRouter>
+    // Como BrowserRouter, con transiciones entre pantallas (View Transitions) donde el navegador las tenga.
+    <ViewTransitionRouter>
       <SpatialNav />
       <GlobalShortcuts />
       <ScrollMemory />
@@ -85,6 +98,7 @@ export function App() {
         <TvHints />
         <ShortcutsHelp />
         <UpdateToast />
+        <StorageWarning />
         <Routes>
           <Route
             path="/watch/:type/:id"
@@ -107,6 +121,7 @@ export function App() {
             <Route path="lists/:id" element={<Suspense fallback={pageFallback}><ListPage /></Suspense>} />
             <Route path="tv" element={<Suspense fallback={pageFallback}><LiveTv /></Suspense>} />
             <Route path="list" element={<MyList />} />
+            <Route path="me" element={<Me />} />
             <Route path="history" element={<History />} />
             <Route path="history/year" element={<Suspense fallback={pageFallback}><YearReview /></Suspense>} />
             <Route path="history/diary" element={<Suspense fallback={pageFallback}><Diary /></Suspense>} />
@@ -118,6 +133,6 @@ export function App() {
           </Route>
         </Routes>
       </ErrorBoundary>
-    </BrowserRouter>
+    </ViewTransitionRouter>
   )
 }

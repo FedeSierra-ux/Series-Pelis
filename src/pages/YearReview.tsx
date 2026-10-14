@@ -149,8 +149,8 @@ export function YearReview() {
     <div className="page year-page">
       <header className="page-header">
         <div>
-          <Link to="/history" className="year-back">
-            ← Historial
+          <Link to="/me" className="year-back">
+            ← Vos
           </Link>
           <h1>Tu año</h1>
         </div>

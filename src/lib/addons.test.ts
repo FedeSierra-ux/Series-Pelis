@@ -30,3 +30,15 @@ describe('normalizeManifestUrl', () => {
     expect(normalizeManifestUrl('https://addon.example/manifest.json?token=1')).toBe('https://addon.example/manifest.json?token=1')
   })
 })
+
+describe('normalizeManifestUrl: barra final (auditoría de uso #5)', () => {
+  it('no arma …/manifest.json/manifest.json', () => {
+    expect(normalizeManifestUrl('https://opensubtitles-v3.strem.io/manifest.json/')).toBe('https://opensubtitles-v3.strem.io/manifest.json')
+    expect(normalizeManifestUrl('https://addon.example/cfg/manifest.json//')).toBe('https://addon.example/cfg/manifest.json')
+    expect(normalizeManifestUrl('https://addon.example/manifest.json/?token=1')).toBe('https://addon.example/manifest.json?token=1')
+  })
+
+  it('una URL sin manifest pero con query lo agrega antes de la query', () => {
+    expect(normalizeManifestUrl('https://addon.example/cfg/?token=1')).toBe('https://addon.example/cfg/manifest.json?token=1')
+  })
+})

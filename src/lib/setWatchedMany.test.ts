@@ -5,7 +5,8 @@ const writes: string[] = []
 vi.mock('idb-keyval', () => ({
   createStore: () => ({}),
   get: async () => undefined,
-  set: async (key: string) => {
+  // Los stores guardan con `update` (lee y mezcla con lo de otras pestañas en la misma transacción).
+  update: async (key: string) => {
     writes.push(key)
   },
 }))

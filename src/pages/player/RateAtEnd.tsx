@@ -1,10 +1,12 @@
 import { useEffect, useState } from 'react'
 import { StarRatingInput } from '../../components/StarRating'
+import { endCardAt } from '../../lib/credits'
 import { ratingsStore } from '../../lib/ratings'
 import { settingsStore, useStore } from '../../lib/store'
 
 /** Sin datos de créditos, la tarjeta aparece este tiempo antes del final. */
-const FALLBACK_S = 45
+export const END_FALLBACK_S = 45
+const FALLBACK_S = END_FALLBACK_S
 
 interface Props {
   meta: { id: string; type: string; name: string; poster?: string }
@@ -34,8 +36,8 @@ export function RateAtEnd({ meta, hasNext, time, duration, creditsStart }: Props
     return () => clearTimeout(t)
   }, [thanks])
 
-  const from = creditsStart !== undefined && creditsStart < duration ? creditsStart : duration - FALLBACK_S
-  const due = !hasNext && duration > 4 * FALLBACK_S && time >= from
+  const from = endCardAt(creditsStart, duration, FALLBACK_S)
+  const due = !hasNext && from !== undefined && time >= from
   const ended = duration > 0 && time >= duration - 1
   if (!ask || ratedBefore || closed || !due) return null
 

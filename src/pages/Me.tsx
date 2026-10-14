@@ -1,0 +1,227 @@
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { Link } from 'react-router-dom'
+import { ContinueCard } from '../components/ContinueCard'
+import { PosterCard } from '../components/PosterCard'
+import { Row } from '../components/Row'
+import { Theme2Icon, type Theme2IconName } from '../components/Theme2Icons'
+import { computeAchievements, unseenAchievements } from '../lib/goals'
+import { useTitle } from '../lib/hooks'
+import { formatStars, isHighStars } from '../lib/stars'
+import {
+  continueWatching,
+  diaryStore,
+  goalsStore,
+  hideFromContinue,
+  progressStore,
+  ratingsStore,
+  useStore,
+  watchlistStore,
+} from '../lib/store'
+import { HistoryGoal } from './goals/GoalLink'
+import { HistoryFeed, HistoryStats } from './history/HistoryFeed'
+import './me.css'
+
+// v0.14 (U26): "Vos", estilo "Mi Netflix" pero con el historial adentro. Junta lo personal que antes estaba
+// repartido: Seguir viendo, Mi lista, lo que te gustó (4-5 ★), lo que viste (por día) y los accesos a
+// Historial, Calendario, Diario, Metas y Tu año.
+
+/** Cuántas entradas del historial se ven acá; el resto, en "Ver todo el historial". */
+const HISTORY_PREVIEW = 8
+const ROW_MAX = 20
+const UNDO_MS = 5000
+
+const detailLink = (e: { type: string; metaId: string; season?: number; videoId: string }) =>
+  `/detail/${e.type}/${encodeURIComponent(e.metaId)}${e.season !== undefined ? `?season=${e.season}&video=${encodeURIComponent(e.videoId)}` : ''}`
+
+export function Me() {
+  useTitle('Vos')
+  const progress = useStore(progressStore)
+  const list = useStore(watchlistStore)
+  const ratings = useStore(ratingsStore)
+  const resume = useMemo(() => continueWatching(progress), [progress])
+  const myList = useMemo(
+    () =>
+      Object.values(list)
+        .sort((a, b) => b.addedAt - a.addedAt)
+        .slice(0, ROW_MAX),
+    [list],
+  )
+  const liked = useMemo(
+    () =>
+      Object.entries(ratings)
+        .filter(([, r]) => isHighStars(r.stars))
+        .sort(([, a], [, b]) => b.stars - a.stars || b.at - a.at)
+        .slice(0, ROW_MAX),
+    [ratings],
+  )
+  const watchedMovies = useMemo(
+    () => new Set(Object.values(progress).filter((e) => e.type === 'movie' && e.watched).map((e) => e.metaId)),
+    [progress],
+  )
+  const { undo, hide, restore } = useUndoHide()
+  const empty = resume.length === 0 && myList.length === 0 && liked.length === 0 && Object.keys(progress).length === 0
+
+  return (
+    <div className="page me-page">
+      <header className="page-header me-header">
+        <div>
+          <h1>Vos</h1>
+          <p className="muted me-sub">Lo que estás viendo, lo que guardaste y todo lo que ya viste.</p>
+        </div>
+      </header>
+
+      <MeShortcuts />
+      <HistoryGoal />
+
+      {empty && (
+        <p className="me-empty muted">
+          Todavía no hay nada tuyo. Lo que mires, guardes en <strong>Mi lista</strong> o puntúes con estrellas aparece acá.{' '}
+          <Link to="/discover/movie">Explorar películas</Link>
+        </p>
+      )}
+
+      {resume.length > 0 && (
+        <Row title="Seguir viendo">
+          {resume.map((e) => (
+            <ContinueCard key={e.videoId} entry={e} to={detailLink(e)} onRemove={() => hide(e.metaId, e.name)} />
+          ))}
+        </Row>
+      )}
+
+      {myList.length > 0 && (
+        <Row title="Mi lista" moreTo="/list">
+          {myList.map((m) => (
+            <PosterCard
+              key={m.id}
+              meta={{ id: m.id, type: m.type, name: m.name, poster: m.poster, releaseInfo: m.year, imdbRating: m.imdbRating }}
+              watched={watchedMovies.has(m.id)}
+            />
+          ))}
+        </Row>
+      )}
+
+      {liked.length > 0 && (
+        <Row title="Te gustaron">
+          {liked.map(([id, r]) => (
+            <PosterCard
+              key={id}
+              meta={{ id, type: r.type, name: r.name, poster: r.poster }}
+              subtitle={`★ ${formatStars(r.stars)} · tu puntaje`}
+              watched={watchedMovies.has(id)}
+            />
+          ))}
+        </Row>
+      )}
+
+      <section className="me-history" aria-labelledby="me-history-title">
+        <header className="me-history-head">
+          <h2 id="me-history-title">Lo que viste</h2>
+          <HistoryStats className="stats me-stats" />
+          <Link to="/history" className="row-more">
+            Historial completo
+          </Link>
+        </header>
+        <HistoryFeed limit={HISTORY_PREVIEW} dayHeading="h3" />
+      </section>
+
+      {undo && (
+        <div className="undo-toast" role="status">
+          <span>
+            Quitado de Seguir viendo<span className="muted"> · {undo.name}</span>
+          </span>
+          <button type="button" className="btn btn-small" onClick={restore}>
+            Deshacer
+          </button>
+        </div>
+      )}
+    </div>
+  )
+}
+
+interface Tile {
+  to: string
+  icon: Theme2IconName
+  label: string
+  hint: string
+  badge?: number
+  primary?: boolean
+}
+
+/** Accesos: Tu año, Historial, Calendario, Diario y Metas (con los logros nuevos sin ver). */
+function MeShortcuts() {
+  const diary = useStore(diaryStore)
+  const { seen } = useStore(goalsStore)
+  const year = new Date().getFullYear()
+  const fresh = useMemo(() => unseenAchievements(computeAchievements(Object.values(diary.entries), year), year, seen).length, [diary, seen, year])
+  const tiles: Tile[] = [
+    { to: '/history/year', icon: 'sparkles', label: `Tu año ${year}`, hint: 'Tu resumen y tu historia', primary: true },
+    { to: '/history', icon: 'history', label: 'Historial', hint: 'Todo lo que viste, por día' },
+    { to: '/calendar', icon: 'calendar', label: 'Calendario', hint: 'Episodios que salen' },
+    { to: '/history/diary', icon: 'book', label: 'Diario', hint: 'Lo que viste y cuándo' },
+    { to: '/history/goals', icon: 'trophy', label: 'Metas y logros', hint: 'Tu meta del año', badge: fresh },
+  ]
+  return (
+    <nav className="me-tiles" aria-label="Accesos de Vos">
+      {tiles.map((t) => (
+        <Link
+          key={t.to}
+          to={t.to}
+          className={`me-tile${t.primary ? ' is-primary' : ''}`}
+          aria-label={t.badge ? `${t.label}: ${t.badge} ${t.badge === 1 ? 'logro nuevo' : 'logros nuevos'}` : undefined}
+        >
+          <span className="me-tile-icon" aria-hidden>
+            <Theme2Icon name={t.icon} size={24} />
+          </span>
+          <span className="me-tile-text">
+            <strong>{t.label}</strong>
+            <span>{t.hint}</span>
+          </span>
+          {t.badge ? (
+            <span className="goal-dot me-tile-badge" aria-hidden>
+              {t.badge}
+            </span>
+          ) : null}
+        </Link>
+      ))}
+    </nav>
+  )
+}
+
+/** "Quitado de Seguir viendo · Deshacer" (igual que en Inicio). */
+function useUndoHide() {
+  const [undo, setUndo] = useState<{ name: string; ids: string[] }>()
+  const timer = useRef<ReturnType<typeof setTimeout>>(undefined)
+  useEffect(
+    () => () => {
+      clearTimeout(timer.current)
+    },
+    [],
+  )
+
+  const hide = useCallback((metaId: string, name: string) => {
+    const ids = Object.values(progressStore.get())
+      .filter((e) => e.metaId === metaId && !e.hidden)
+      .map((e) => e.videoId)
+    hideFromContinue(metaId)
+    setUndo({ name, ids })
+    clearTimeout(timer.current)
+    timer.current = setTimeout(() => setUndo(undefined), UNDO_MS)
+  }, [])
+
+  const restore = useCallback(() => {
+    if (!undo) return
+    progressStore.set((all) => {
+      const copy = { ...all }
+      for (const id of undo.ids) {
+        if (!copy[id]) continue
+        const { hidden: _hidden, ...rest } = copy[id]
+        copy[id] = rest
+      }
+      return copy
+    })
+    clearTimeout(timer.current)
+    setUndo(undefined)
+  }, [undo])
+
+  return { undo, hide, restore }
+}

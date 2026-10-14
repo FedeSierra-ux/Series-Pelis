@@ -5,10 +5,10 @@ import { useStore } from '../lib/store'
 const UNDO_MS = 6000
 
 /**
- * "Ya no me interesa": saca el título de "Para vos" y de las filas de Inicio. Tocándolo de nuevo
- * se deshace; también se gestiona en Ajustes → Gustos.
+ * "Ya no me interesa" sin el botón: el estado, el cambio y el aviso con "Deshacer". Lo usa el menú ⋯
+ * de la ficha (el aviso va afuera del menú, así no desaparece cuando el menú se cierra).
  */
-export function NotInterestedButton({ title, tmdbId }: { title: RatedTitle; tmdbId?: number }) {
+export function useNotInterested(title: RatedTitle, tmdbId?: number) {
   const marked = !!useStore(notInterestedStore)[title.id]
   const [toast, setToast] = useState<{ text: string; undo: () => void }>()
   const timer = useRef<ReturnType<typeof setTimeout>>(undefined)
@@ -30,6 +30,35 @@ export function NotInterestedButton({ title, tmdbId }: { title: RatedTitle; tmdb
     }
   }
 
+  const toastEl = toast && (
+    <div className="undo-toast" role="status">
+      <span>
+        {toast.text}
+        <span className="muted"> · {title.name}</span>
+      </span>
+      <button
+        type="button"
+        className="btn btn-small"
+        onClick={() => {
+          toast.undo()
+          clearTimeout(timer.current)
+          setToast(undefined)
+        }}
+      >
+        Deshacer
+      </button>
+    </div>
+  )
+
+  return { marked, toggle, toast: toastEl }
+}
+
+/**
+ * "Ya no me interesa": saca el título de "Para vos" y de las filas de Inicio. Tocándolo de nuevo
+ * se deshace; también se gestiona en Ajustes → Gustos.
+ */
+export function NotInterestedButton({ title, tmdbId }: { title: RatedTitle; tmdbId?: number }) {
+  const { marked, toggle, toast } = useNotInterested(title, tmdbId)
   return (
     <>
       <button
@@ -41,25 +70,7 @@ export function NotInterestedButton({ title, tmdbId }: { title: RatedTitle; tmdb
       >
         {marked ? '⊘ No me interesa' : '⊘ Ya no me interesa'}
       </button>
-      {toast && (
-        <div className="undo-toast" role="status">
-          <span>
-            {toast.text}
-            <span className="muted"> · {title.name}</span>
-          </span>
-          <button
-            type="button"
-            className="btn btn-small"
-            onClick={() => {
-              toast.undo()
-              clearTimeout(timer.current)
-              setToast(undefined)
-            }}
-          >
-            Deshacer
-          </button>
-        </div>
-      )}
+      {toast}
     </>
   )
 }

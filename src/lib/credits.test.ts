@@ -35,3 +35,20 @@ describe('creditsPlan', () => {
     expect(creditsPlan({ outro: { start: 1000, end: 1100 } }, 1200, false, 30).nextAt).toBeUndefined()
   })
 })
+
+describe('endCardAt', () => {
+  it('al empezar los créditos', async () => {
+    const { endCardAt } = await import('./credits')
+    expect(endCardAt(6000, 6600, 45)).toBe(6000)
+  })
+  it('sin datos, 45 s antes del final', async () => {
+    const { endCardAt } = await import('./credits')
+    expect(endCardAt(undefined, 6600, 45)).toBe(6555)
+    // Créditos fuera del video (datos de otra versión): como sin datos.
+    expect(endCardAt(7000, 6600, 45)).toBe(6555)
+  })
+  it('nunca en videos cortos', async () => {
+    const { endCardAt } = await import('./credits')
+    expect(endCardAt(undefined, 120, 45)).toBeUndefined()
+  })
+})

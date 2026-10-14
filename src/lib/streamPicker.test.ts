@@ -2,7 +2,11 @@ import { afterEach, describe, expect, it, vi } from 'vitest'
 import type { LastSource, SourceRules } from './store'
 import {
   analyzeStreams,
+  audioLangs,
   capQuality,
+  lastSourceOf,
+  releaseGroup,
+  sameLanguage,
   effectivePreferredQuality,
   filterReason,
   hasKeyword,
@@ -319,5 +323,77 @@ describe('calidad según la conexión', () => {
     const last: LastSource = { addonUrl: A.transportUrl, streamName: 'Uno\n1080p', at: 0 }
     const groups = [group(A, [s('Uno\n1080p'), s('Otro\n720p')])]
     expect(pickBest(groups, rules(), last, '')?.stream.name).toBe('Uno\n1080p')
+  })
+})
+
+describe('siguiente episodio en el mismo idioma (auditoría #7)', () => {
+  const TORRENTIO = addon('Torrentio')
+  const torrentio = (quality: string, title: string, url = `https://v/${quality}-${title.length}`): Stream => ({
+    name: `[TB+] Torrentio\n${quality}`,
+    title,
+    url,
+  })
+  const latino = torrentio('720p', 'Serie.S01E02.720p.WEB-DL.x264-GRP.mkv\n👤 30 💾 1.1 GB\n🇲🇽 Latino')
+  const ingles = torrentio('1080p', 'Serie.S01E02.1080p.WEB-DL.x264-OTRO.mkv\n👤 300 💾 2.1 GB')
+  const castellano = torrentio('1080p', 'Serie.S01E02.1080p.Castellano.mkv\n🇪🇸')
+
+  it('audioLangs reconoce banderas y palabras, sin confundir títulos comunes', () => {
+    expect([...audioLangs('🇲🇽 Latino')]).toEqual(['lat'])
+    expect([...audioLangs('Dual Audio Español Latino / Inglés')].sort()).toEqual(['eng', 'lat', 'multi'])
+    expect([...audioLangs('Castellano 🇪🇸')]).toEqual(['cas'])
+    expect([...audioLangs('Español')]).toEqual(['spa'])
+    expect([...audioLangs('Amor.Por.Siempre.2020.1080p')]).toEqual([])
+    expect([...audioLangs('Serie.S01E02.1080p.WEB-DL.x264')]).toEqual([])
+  })
+
+  it('sameLanguage: "Español" sin variante sirve para latino; sin datos de antes, no opina', () => {
+    expect(sameLanguage(new Set(['lat']), new Set(['lat', 'eng', 'multi']))).toBe(true)
+    expect(sameLanguage(new Set(['lat']), new Set(['spa']))).toBe(true)
+    expect(sameLanguage(new Set(['lat']), new Set())).toBe(false)
+    expect(sameLanguage(new Set(['lat']), new Set(['cas']))).toBe(false)
+    expect(sameLanguage(new Set(), new Set(['eng']))).toBeUndefined()
+  })
+
+  it('venías en latino 720p: el siguiente sigue en latino aunque haya inglés o castellano en 1080p', () => {
+    const last = lastSourceOf(TORRENTIO.transportUrl, latino)
+    expect(last.streamTitle).toContain('Latino')
+    const nextLatino = torrentio('720p', 'Serie.S01E03.720p.WEB-DL.x264-GRP.mkv\n🇲🇽 Latino')
+    const groups = [group(TORRENTIO, [ingles, castellano, nextLatino])]
+    const best = pickBest(groups, rules(), last, '')
+    expect(best?.stream).toBe(nextLatino)
+  })
+
+  it('si no hay latino, el de otro idioma no cuenta como "la misma fuente" (en manual no arranca solo)', () => {
+    const last = lastSourceOf(TORRENTIO.transportUrl, latino)
+    const ranked = rankStreams([group(TORRENTIO, [ingles])], rules({ mode: 'manual' }), last, '')
+    expect(ranked[0].match).toBe('none')
+  })
+
+  it('latino de otro addon le gana a otro idioma del mismo addon', () => {
+    const last = lastSourceOf(TORRENTIO.transportUrl, latino)
+    const otro = { name: 'Otro addon', title: 'Serie S01E03 Latino 720p', url: 'https://v/otro' }
+    const best = pickBest([group(TORRENTIO, [ingles]), group(B, [otro])], rules(), last, '')
+    expect(best?.stream).toBe(otro)
+  })
+
+  it('a igual idioma, prefiere el mismo grupo del release', () => {
+    expect(releaseGroup('Serie.S01E02.720p.WEB-DL.x264-GRP.mkv')).toBe('grp')
+    expect(releaseGroup('Serie 1080p WEB-DL')).toBeUndefined()
+    const last = lastSourceOf(TORRENTIO.transportUrl, latino)
+    const mismo = torrentio('720p', 'Serie.S01E03.720p.WEB-DL.x264-GRP.mkv\n🇲🇽 Latino', 'https://v/mismo')
+    const otro = torrentio('720p', 'Serie.S01E03.720p.WEB-DL.x264-XYZ.mkv\n🇲🇽 Latino', 'https://v/otro')
+    expect(pickBest([group(TORRENTIO, [otro, mismo])], rules(), last, '')?.stream).toBe(mismo)
+  })
+
+  it('una fuente guardada sin título (versiones viejas) se comporta como antes', () => {
+    const last: LastSource = { addonUrl: TORRENTIO.transportUrl, streamName: '[TB+] Torrentio\n720p', at: 0 }
+    const best = pickBest([group(TORRENTIO, [latino, ingles])], rules(), last, '')
+    expect(best?.match).toBe('name')
+    expect(best?.stream).toBe(ingles)
+  })
+
+  it('un grupo con streams que no son una lista no rompe el análisis', () => {
+    const broken = { addon: B, streams: { error: 'x' } as unknown as Stream[], loading: false }
+    expect(rankStreams([broken, group(A, [s('1080p')])], rules(), undefined, '')).toHaveLength(1)
   })
 })

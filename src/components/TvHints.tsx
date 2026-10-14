@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState, type KeyboardEvent } from 'react'
 import { useLocation } from 'react-router-dom'
+import { focusInitialTarget } from '../lib/spatialNav'
 import { settingsStore, useStore } from '../lib/store'
 import { useTvMode } from '../lib/tv'
 import './tv-hints.css'
@@ -80,7 +81,7 @@ const HINTS: Hint[] = [
   {
     id: 'back',
     title: 'Atrás para volver',
-    text: 'Vuelve a la pantalla anterior y cierra ventanas y menús. En Inicio no hace nada.',
+    text: 'Vuelve a la pantalla anterior y cierra ventanas y menús. En Inicio, Películas, Series y Mi lista primero te lleva arriba y después al menú.',
     icon: BackIcon,
   },
   {
@@ -124,8 +125,26 @@ export function TvHints() {
     return () => clearInterval(id)
   }, [want])
 
+  // Al abrir, el foco va a "Entendido"; al cerrar, vuelve a donde estaba (el botón de Ajustes) o a lo
+  // primero de la pantalla. Antes quedaba en <body> y no se veía nada marcado hasta la primera flecha.
+  const before = useRef<HTMLElement | null>(null)
+  const wasShown = useRef(false)
   useEffect(() => {
-    if (show) box.current?.querySelector<HTMLElement>('[data-autofocus]')?.focus({ preventScroll: true })
+    if (show) {
+      wasShown.current = true
+      const prev = document.activeElement
+      before.current = prev instanceof HTMLElement && prev !== document.body ? prev : null
+      box.current?.querySelector<HTMLElement>('[data-autofocus]')?.focus({ preventScroll: true })
+      return
+    }
+    if (!wasShown.current) return
+    wasShown.current = false
+    const prev = before.current
+    before.current = null
+    const active = document.activeElement
+    if (active && active !== document.body) return
+    if (prev?.isConnected) prev.focus({ preventScroll: true })
+    else focusInitialTarget()
   }, [show])
 
   if (!show) return null

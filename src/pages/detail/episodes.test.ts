@@ -1,7 +1,19 @@
 import { describe, expect, it } from 'vitest'
 import type { WatchEntry } from '../../lib/store'
 import type { Video } from '../../lib/types'
-import { episodeToContinue, firstEpisode, formatReleaseDate, isReleased, localToday, nextReleased, seasonStatus, sortVideos } from './episodes'
+import {
+  episodeBadge,
+  episodeToContinue,
+  firstEpisode,
+  formatReleaseDate,
+  isReleased,
+  localToday,
+  nextReleased,
+  seasonLabel,
+  seasonsAsDropdown,
+  seasonStatus,
+  sortVideos,
+} from './episodes'
 
 const NOW = new Date(2026, 9, 13, 15).getTime() // 13 oct 2026, 15:00 local
 
@@ -75,5 +87,37 @@ describe('episodios de la ficha', () => {
     expect(s.complete).toBe(true)
     expect(seasonStatus(season1, {}, NOW).complete).toBe(false)
     expect(seasonStatus([v(2, 1, '2027-01-01')], {}, NOW)).toEqual({ released: [], complete: false })
+  })
+
+  it('"Ver ahora" en una serie sin ver es T1 E1, no un especial de la temporada 0 (auditoría #1)', () => {
+    const list = sortVideos([v(0, 1, '2009-02-17'), v(0, 2, '2009-02-24'), ...season1])
+    expect(list[0].season).toBe(0)
+    expect(episodeToContinue(list, {}, NOW)?.id).toBe('tt1:1:1')
+    // Vistos todos los de la temporada 1 ya estrenados: no vuelve a los especiales.
+    const seen = Object.fromEntries(season1.slice(0, 3).map((e, i) => [e.id, watched(e, true, i + 1)]))
+    expect(episodeToContinue(list, seen, NOW)).toBeUndefined()
+    // Una serie que solo tiene especiales sigue andando.
+    expect(episodeToContinue([v(0, 1, '2020-01-01')], {}, NOW)?.id).toBe('tt1:0:1')
+    // Si lo último que tocaste fue un especial a medias, se sigue con ese.
+    const special = { 'tt1:0:2': watched(v(0, 2), false, 50) }
+    expect(episodeToContinue(list, special, NOW)?.id).toBe('tt1:0:2')
+  })
+
+  it('selector de temporadas: pestañas hasta 6, desplegable desde 7 (los especiales no cuentan)', () => {
+    expect(seasonsAsDropdown([1, 2, 3, 4, 5, 6])).toBe(false)
+    expect(seasonsAsDropdown([1, 2, 3, 4, 5, 6, 0])).toBe(false)
+    expect(seasonsAsDropdown([1, 2, 3, 4, 5, 6, 7])).toBe(true)
+    expect(seasonsAsDropdown([])).toBe(false)
+    expect(seasonLabel(0)).toBe('Especiales')
+    expect(seasonLabel(3)).toBe('Temporada 3')
+  })
+
+  it('marca "Siguiente" o "Continuar" solo en el episodio sugerido y si ya empezaste la serie', () => {
+    const [e1, e2] = season1
+    expect(episodeBadge(e1, e1, {}, false)).toBeUndefined()
+    expect(episodeBadge(e2, e2, { [e1.id]: watched(e1) }, true)).toBe('Siguiente')
+    expect(episodeBadge(e1, e2, { [e1.id]: watched(e1) }, true)).toBeUndefined()
+    expect(episodeBadge(e2, e2, { [e2.id]: watched(e2, false) }, true)).toBe('Continuar')
+    expect(episodeBadge(e2, undefined, {}, true)).toBeUndefined()
   })
 })

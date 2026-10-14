@@ -24,9 +24,17 @@ export interface CatalogPrefs {
   /** Nombre propio de cada fila. */
   names: Record<string, string>
   merges: CatalogMerge[]
+  /**
+   * Forma de las tarjetas de cada fila de Inicio (v0.14, U10). Solo se guarda lo que difiere de la
+   * forma de fábrica (`defaultShape`).
+   */
+  shapes: Record<string, RowShape>
 }
 
-export const DEFAULT_CATALOG_PREFS: CatalogPrefs = { order: [], hidden: {}, names: {}, merges: [] }
+export const DEFAULT_CATALOG_PREFS: CatalogPrefs = { order: [], hidden: {}, names: {}, merges: [], shapes: {} }
+
+/** `poster`: póster vertical. `landscape`: tarjeta 16:9 con el fondo y el logo del título. */
+export type RowShape = 'poster' | 'landscape'
 
 export interface CatalogRowDef {
   /** `cat:<addon>|<tipo>|<catálogo>` o `merge:<id>` */
@@ -39,7 +47,55 @@ export interface CatalogRowDef {
   renamed: boolean
   hidden: boolean
   merged: boolean
+  /** Fila propia de Inicio que no sale de un addon (ej. "Mi lista"): `sources` va vacío. */
+  virtual?: boolean
   sources: CatalogSource[]
+}
+
+/**
+ * Filas de Inicio que no son catálogos de addons pero se ocultan, mueven y renombran igual desde el
+ * gestor. Tipo `home`: Descubrir (que filtra por película / serie) nunca las muestra.
+ */
+export interface VirtualRowDef {
+  key: string
+  name: string
+}
+
+export const VIRTUAL_TYPE = 'home'
+export const WATCHLIST_ROW_KEY = 'home:watchlist'
+export const HOME_VIRTUAL_ROWS: VirtualRowDef[] = [{ key: WATCHLIST_ROW_KEY, name: 'Mi lista' }]
+
+/**
+ * Filas de TMDB de Inicio. No se mueven ni se ocultan desde el gestor: solo se elige su forma.
+ * "Top 10" no está porque su número grande va al costado del póster.
+ */
+export const FORYOU_ROW_KEY = 'tmdb:foryou'
+export const BECAUSE_ROW_KEY = 'tmdb:because'
+export const TRENDING_WEEK_ROW_KEY = 'tmdb:trending-week'
+export const TMDB_HOME_ROWS: VirtualRowDef[] = [
+  { key: FORYOU_ROW_KEY, name: 'Para vos' },
+  { key: BECAUSE_ROW_KEY, name: 'Porque viste…' },
+  { key: TRENDING_WEEK_ROW_KEY, name: 'Tendencias de la semana' },
+]
+
+/**
+ * De fábrica van apaisadas las filas de TMDB (siempre traen fondo); los catálogos de addons y
+ * "Mi lista" siguen con póster porque a veces no hay fondo ni logo.
+ */
+const LANDSCAPE_BY_DEFAULT = new Set(TMDB_HOME_ROWS.map((r) => r.key))
+
+export const defaultShape = (key: string): RowShape => (LANDSCAPE_BY_DEFAULT.has(key) ? 'landscape' : 'poster')
+
+export function rowShape(prefs: Partial<CatalogPrefs> | undefined, key: string): RowShape {
+  const s = prefs?.shapes?.[key]
+  return s === 'poster' || s === 'landscape' ? s : defaultShape(key)
+}
+
+export function setRowShape(prefs: CatalogPrefs, key: string, shape: RowShape): CatalogPrefs {
+  const shapes = { ...prefs.shapes }
+  if (shape === defaultShape(key)) delete shapes[key]
+  else shapes[key] = shape
+  return { ...prefs, shapes }
 }
 
 /**
@@ -58,6 +114,7 @@ export function normalizePrefs(p: Partial<CatalogPrefs> | undefined): CatalogPre
     hidden: p?.hidden && typeof p.hidden === 'object' ? p.hidden : {},
     names: p?.names && typeof p.names === 'object' ? p.names : {},
     merges: Array.isArray(p?.merges) ? p.merges.filter((m) => m && Array.isArray(m.members)) : [],
+    shapes: p?.shapes && typeof p.shapes === 'object' ? p.shapes : {},
   }
 }
 
@@ -69,6 +126,7 @@ export function arrangeCatalogs(
   sources: CatalogSource[],
   rawPrefs: Partial<CatalogPrefs> | undefined,
   label: (s: CatalogSource) => string,
+  virtual: VirtualRowDef[] = [],
 ): CatalogRowDef[] {
   const prefs = normalizePrefs(rawPrefs)
   const byId = new Map<string, CatalogSource>()
@@ -77,7 +135,8 @@ export function arrangeCatalogs(
   const owner = new Map<string, CatalogMerge>()
   for (const m of prefs.merges) for (const id of m.members) if (!owner.has(id)) owner.set(id, m)
 
-  const natural: CatalogRowDef[] = []
+  // Las filas virtuales van primero: de entrada "Mi lista" queda arriba, después de "Seguir viendo".
+  const natural: CatalogRowDef[] = virtual.map((v) => ({ ...row(v.key, VIRTUAL_TYPE, v.name, [], false, prefs), virtual: true }))
   const placed = new Set<string>()
   for (const [id, s] of byId) {
     const merge = owner.get(id)
@@ -97,7 +156,8 @@ export function arrangeCatalogs(
   const index = new Map(prefs.order.map((k, i) => [k, i]))
   const known = natural.filter((r) => index.has(r.key)).sort((a, b) => index.get(a.key)! - index.get(b.key)!)
   const unknown = natural.filter((r) => !index.has(r.key))
-  return [...known, ...unknown]
+  // Una fila virtual nueva (que el orden guardado no conoce) va arriba, no al final de todo.
+  return [...unknown.filter((r) => r.virtual), ...known, ...unknown.filter((r) => !r.virtual)]
 }
 
 function row(key: string, type: string, defaultName: string, sources: CatalogSource[], merged: boolean, prefs: CatalogPrefs): CatalogRowDef {
@@ -115,6 +175,16 @@ function row(key: string, type: string, defaultName: string, sources: CatalogSou
 }
 
 export const visibleRows = (rows: CatalogRowDef[]) => rows.filter((r) => !r.hidden)
+
+/**
+ * Reparte las filas de Inicio: las virtuales que quedaron arriba de todos los catálogos van después de
+ * "Seguir viendo" (`lead`); el resto, en su lugar entre los catálogos de los addons (`rest`).
+ */
+export function splitLeadingVirtual(rows: CatalogRowDef[]): { lead: CatalogRowDef[]; rest: CatalogRowDef[] } {
+  const first = rows.findIndex((r) => !r.virtual)
+  const cut = first < 0 ? rows.length : first
+  return { lead: rows.slice(0, cut), rest: rows.slice(cut) }
+}
 
 /**
  * Sube o baja una fila. `viewKeys` es lo que ve el usuario (por ejemplo solo las series):
@@ -177,7 +247,12 @@ export function mergeRows(
   const hidden = { ...prefs.hidden }
   delete hidden[a]
   delete hidden[b]
-  return { prefs: { order, hidden, names, merges }, key }
+  // La fila nueva se queda con la forma de `a`.
+  const shapes = { ...prefs.shapes }
+  if (shapes[a]) shapes[key] = shapes[a]
+  delete shapes[a]
+  delete shapes[b]
+  return { prefs: { order, hidden, names, merges, shapes }, key }
 }
 
 /** Deshace una fusión: los catálogos vuelven a ser filas sueltas en el mismo lugar. */
@@ -190,7 +265,9 @@ export function splitMerge(prefs: CatalogPrefs, rows: CatalogRowDef[], key: stri
   delete names[key]
   const hidden = { ...prefs.hidden }
   delete hidden[key]
-  return { order, hidden, names, merges: prefs.merges.filter((m) => m !== merge) }
+  const shapes = { ...prefs.shapes }
+  delete shapes[key]
+  return { order, hidden, names, merges: prefs.merges.filter((m) => m !== merge), shapes }
 }
 
 /** Intercala los resultados de varios catálogos (uno de cada uno) sin repetir títulos. */

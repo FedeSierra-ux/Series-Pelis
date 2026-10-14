@@ -2,6 +2,7 @@ import { openOnboarding } from '../../components/Onboarding'
 import { SCREENSAVER_OPTIONS } from '../../lib/idle'
 import { currentPlatform, type TvModeSetting } from '../../lib/platform'
 import { settingsStore, useStore, type Settings } from '../../lib/store'
+import { normalizeUiScale, UI_SCALES } from '../../lib/tv'
 import { Choice } from './PlayerSettings'
 
 const TV_OPTIONS: [TvModeSetting, string][] = [
@@ -18,6 +19,18 @@ export function TvSettings() {
   return (
     <section className="settings-section">
       <h2>Pantalla y control remoto</h2>
+
+      <h3>Tamaño de la interfaz</h3>
+      <Choice
+        label="Tamaño de la interfaz"
+        value={normalizeUiScale(settings.uiScale)}
+        options={UI_SCALES.map((v) => [v, `${v} %`])}
+        onChange={(uiScale) => update({ uiScale })}
+      />
+      <p className="muted small">
+        Agranda o achica letras, pósters y botones en toda la app (el reproductor tiene sus propios tamaños). Sirve para
+        ver la TV de lejos o un celular con letra más grande.
+      </p>
 
       <h3>Protector de pantalla</h3>
       <Choice

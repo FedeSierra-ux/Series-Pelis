@@ -1,0 +1,421 @@
+/* v0.14: Buscar (U13 sugerencias, U14 pestañas y mejor resultado, F13 voz, bug #2). Solo variables del tema. */
+
+/* ---------- Campo con micrófono ---------- */
+
+.search-field {
+  position: relative;
+}
+.search-field.has-voice .search-input {
+  padding-right: 64px !important;
+}
+.voice-btn {
+  position: absolute;
+  right: 8px;
+  top: 28px;
+  transform: translateY(-50%);
+  display: grid;
+  place-items: center;
+  width: 44px;
+  height: 44px;
+  border: 0;
+  border-radius: 50%;
+  background: transparent;
+  color: var(--muted);
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s;
+}
+.voice-btn:hover,
+.voice-btn:focus-visible {
+  background: var(--surface-2, var(--bg-3));
+  color: var(--text);
+}
+.voice-btn:focus-visible {
+  outline: var(--focus-ring, 3px solid var(--accent));
+  outline-offset: 0;
+}
+.voice-btn.is-listening {
+  background: var(--accent-fill, var(--accent));
+  color: var(--on-accent);
+  animation: voice-pulse 1.2s ease-in-out infinite;
+}
+@keyframes voice-pulse {
+  50% {
+    box-shadow: 0 0 0 8px color-mix(in srgb, var(--accent) 25%, transparent);
+  }
+}
+.voice-status {
+  min-height: 0;
+  margin: -14px 0 14px;
+  color: var(--accent);
+  font-size: 0.9rem;
+}
+.voice-status:empty {
+  display: none;
+}
+.voice-status.is-error {
+  color: var(--muted);
+}
+/* Tecla "Voz" del teclado en pantalla. */
+.osk-actions .osk-voice {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  flex-grow: 1.4;
+}
+
+/* ---------- Pestañas ---------- */
+
+.search-tabs {
+  display: flex;
+  gap: 8px;
+  margin: 0 0 20px;
+  overflow-x: auto;
+  scrollbar-width: none;
+  /* Espacio para el anillo de foco. */
+  padding: 6px 4px;
+}
+.search-tabs::-webkit-scrollbar {
+  display: none;
+}
+.search-tab {
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 9px 18px;
+  border: 0;
+  border-radius: 999px;
+  background: var(--bg-2);
+  color: var(--muted);
+  font: inherit;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s;
+}
+.search-tab:hover {
+  color: var(--text);
+}
+.search-tab.active {
+  background: var(--accent-fill, var(--accent));
+  color: var(--on-accent);
+}
+.search-tab-count {
+  min-width: 22px;
+  padding: 1px 7px;
+  border-radius: 999px;
+  background: color-mix(in srgb, currentColor 16%, transparent);
+  font-size: 0.8rem;
+  font-variant-numeric: tabular-nums;
+}
+
+/* ---------- Mejor resultado ---------- */
+
+.search-best {
+  position: relative;
+  display: flex;
+  align-items: flex-end;
+  min-height: clamp(220px, 28vw, 340px);
+  margin: 0 0 26px;
+  border-radius: var(--radius-lg, 24px);
+  overflow: hidden;
+  background: var(--surface-1, var(--bg-2));
+  isolation: isolate;
+}
+.search-best-art {
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+}
+.search-best-art img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: center 25%;
+}
+/* Sombra para que el texto se lea sobre cualquier fondo. */
+.search-best-art::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background:
+    linear-gradient(90deg, color-mix(in srgb, var(--bg) 92%, transparent) 0%, color-mix(in srgb, var(--bg) 55%, transparent) 45%, transparent 75%),
+    linear-gradient(0deg, color-mix(in srgb, var(--bg) 80%, transparent) 0%, transparent 55%);
+}
+.search-best-body {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 10px;
+  max-width: min(560px, 100%);
+  padding: 28px 30px;
+}
+.search-best-eyebrow {
+  color: var(--accent);
+  font-size: 0.8rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+.search-best-title {
+  margin: 0;
+  font-size: clamp(1.5rem, 3vw, 2.3rem);
+  line-height: 1.1;
+}
+.search-best-title.has-logo img {
+  display: block;
+  max-width: min(360px, 70vw);
+  max-height: 96px;
+  object-fit: contain;
+  object-position: left bottom;
+}
+.search-best-facts {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px 12px;
+  margin: 0;
+  color: var(--text-soft, var(--text));
+  font-size: 0.95rem;
+}
+.search-best-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-top: 4px;
+}
+.search-best-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  height: 46px;
+  padding: 0 22px;
+  border: 0;
+  border-radius: var(--radius-sm, 10px);
+  font: inherit;
+  font-weight: 700;
+  white-space: nowrap;
+  cursor: pointer;
+  transition: background 0.15s, transform 0.15s;
+}
+.search-best-btn.is-play {
+  background: var(--text);
+  color: var(--bg);
+}
+.search-best-btn.is-ghost {
+  background: color-mix(in srgb, var(--text) 20%, transparent);
+  color: var(--text);
+}
+.search-best-btn.is-ghost.is-on svg {
+  color: var(--accent);
+}
+@media (hover: hover) {
+  .search-best-btn.is-play:hover {
+    background: color-mix(in srgb, var(--text) 82%, transparent);
+  }
+  .search-best-btn.is-ghost:hover {
+    background: color-mix(in srgb, var(--text) 32%, transparent);
+  }
+}
+.search-best-btn:focus-visible {
+  outline: var(--focus-ring, 3px solid var(--accent));
+  outline-offset: 3px;
+  transform: scale(1.04);
+}
+
+/* ---------- Grupos, personas y avisos ---------- */
+
+.search-group-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 14px;
+}
+.search-group-head h2 {
+  margin: 0;
+}
+.search-group-head .row-more {
+  border: 0;
+  background: none;
+  font: inherit;
+  font-size: 0.9rem;
+  cursor: pointer;
+  border-radius: 999px;
+}
+.people-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(118px, 1fr));
+  gap: 18px 10px;
+  margin-bottom: 28px;
+}
+.people-grid .cast-card {
+  width: auto;
+}
+.search-partial {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px 14px;
+  margin: 0 0 28px;
+  padding: 12px 16px;
+  border: 1px dashed var(--line);
+  border-radius: var(--radius);
+  color: var(--muted);
+  font-size: 0.92rem;
+}
+
+/* ---------- Buscar vacío: lo más buscado y géneros ---------- */
+
+.search-suggest {
+  display: grid;
+  grid-template-columns: minmax(0, 1.1fr) minmax(0, 1fr);
+  gap: 28px 40px;
+  align-items: start;
+}
+.search-suggest h2 {
+  margin: 0 0 12px;
+  font-size: 1.05rem;
+}
+.search-trending-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 6px 14px;
+}
+.search-trending-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 6px 10px 6px 6px;
+  border-radius: var(--radius-sm, 12px);
+  color: var(--text);
+  transition: background 0.15s;
+}
+.search-trending-item:hover,
+.search-trending-item:focus-visible {
+  background: var(--surface-1, var(--bg-2));
+}
+.search-trending-item:focus-visible {
+  outline-offset: 2px;
+}
+.search-trending-rank {
+  flex: none;
+  width: 1.6em;
+  color: var(--muted);
+  font-family: var(--font-display, inherit);
+  font-weight: 800;
+  font-size: 1.1rem;
+  text-align: center;
+  font-variant-numeric: tabular-nums;
+}
+.search-trending-item img,
+.search-trending-noimg {
+  flex: none;
+  width: 40px;
+  aspect-ratio: 2 / 3;
+  border-radius: 6px;
+  object-fit: cover;
+  background: var(--bg-3);
+}
+.search-trending-text {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+  flex: 1;
+}
+.search-trending-text strong {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-weight: 600;
+}
+.search-trending-text > span {
+  color: var(--muted);
+  font-size: 0.82rem;
+}
+.search-trending-item.is-skeleton .skeleton-line {
+  width: 70%;
+}
+.search-genre-line + .search-genre-line {
+  margin-top: 16px;
+}
+.search-genre-line h3 {
+  margin: 0 0 8px;
+  color: var(--muted);
+  font-size: 0.85rem;
+  font-weight: 600;
+}
+.search-genre-chips {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.search-genre-chip {
+  display: inline-block;
+  padding: 8px 14px;
+  border-radius: 999px;
+}
+.search-genre-chip:hover,
+.search-genre-chip:focus-visible {
+  background: var(--tonal, var(--bg-3));
+  color: var(--text);
+}
+
+@media (max-width: 1100px) {
+  .search-suggest {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+@media (max-width: 760px) {
+  .search-trending-list {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .search-best {
+    min-height: 260px;
+  }
+  .search-best-body {
+    padding: 20px 18px;
+  }
+  .search-best-btn {
+    height: 44px;
+    padding: 0 16px;
+  }
+  .people-grid {
+    grid-template-columns: repeat(auto-fill, minmax(100px, 1fr));
+  }
+  .people-grid .cast-photo {
+    width: 84px;
+    height: 84px;
+  }
+}
+
+html[data-tv] .search-tab {
+  padding: 12px 24px;
+  font-size: 1.05rem;
+}
+html[data-tv] .search-best-btn {
+  height: 56px;
+  padding: 0 28px;
+  font-size: 1.1rem;
+}
+html[data-tv] .search-trending-item img,
+html[data-tv] .search-trending-noimg {
+  width: 48px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .voice-btn.is-listening {
+    animation: none;
+  }
+  .search-best-btn:focus-visible {
+    transform: none;
+  }
+}

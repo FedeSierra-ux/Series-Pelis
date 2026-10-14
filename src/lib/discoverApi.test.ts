@@ -4,7 +4,10 @@ vi.mock('idb-keyval', () => ({
   createStore: () => ({}),
   get: async () => undefined,
   set: async () => undefined,
+  update: async () => undefined,
   del: async () => undefined,
+  delMany: async () => undefined,
+  keys: async () => [],
   clear: async () => undefined,
 }))
 

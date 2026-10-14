@@ -1,8 +1,9 @@
 import { useEffect, useRef, useState } from 'react'
 import { stremioAddonCollection, stremioLibrary, stremioLogin, stremioLogout } from '../../lib/stremioApi'
-import { mergeProgress, mergeWatchlist, parseStremioJson, planImport, type ImportPlan, type StremioData } from '../../lib/stremioLibrary'
-import { addInstalledAddons, addonsStore, progressStore, watchlistStore } from '../../lib/store'
+import { mergeWatchlist, parseStremioJson, planImport, type ImportPlan, type StremioData } from '../../lib/stremioLibrary'
+import { addInstalledAddons, addonsStore, importProgress, progressStore, watchlistStore } from '../../lib/store'
 import { errorText } from '../../lib/errors'
+import { addonName } from '../../lib/addons'
 
 type Mode = 'login' | 'authKey' | 'json'
 
@@ -107,11 +108,9 @@ export function StremioImport() {
       }
     }
     if (pick.progress) {
-      const { result, changed } = mergeProgress(progressStore.get(), fresh.progress.entries)
-      if (changed) {
-        progressStore.set(result)
-        parts.push(`${plural(changed, 'entrada', 'entradas')} de historial y progreso`)
-      }
+      // Mezcla por fecha y anota en el diario lo terminado (auditoría #8: antes Diario y "Tu año" quedaban vacíos).
+      const changed = importProgress(fresh.progress.entries)
+      if (changed) parts.push(`${plural(changed, 'entrada', 'entradas')} de historial y progreso`)
     }
     setDone(parts.length ? `✓ Listo: se importaron ${parts.join(', ')}.` : 'No había nada nuevo para importar.')
     setData(undefined)
@@ -247,7 +246,7 @@ export function StremioImport() {
             </span>
           </label>
           {plan.addons.fresh.length > 0 && pick.addons && (
-            <p className="muted small">Addons nuevos: {plan.addons.fresh.map((a) => a.manifest.name).join(', ')}</p>
+            <p className="muted small">Addons nuevos: {plan.addons.fresh.map((a) => addonName(a.manifest)).join(', ')}</p>
           )}
           <div className="hero-actions">
             <button className="btn btn-primary" onClick={apply} disabled={!pick.addons && !pick.watchlist && !pick.progress}>

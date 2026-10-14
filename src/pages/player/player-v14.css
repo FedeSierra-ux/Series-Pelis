@@ -1,0 +1,560 @@
+/* Reproductor v0.14: volumen con mouse, adelantar con miniatura (scrub), tarjeta del siguiente con imagen,
+   ajustes rápidos ⚙, gestos y bloqueo en el celular, "Más como esto" al final de una peli, ajustar/llenar/
+   estirar y el celular apaisado. Todo con las variables del tema (la paleta puede cambiar). */
+
+/* El navegador no hace zoom ni "doble toque = zoom" sobre el video: esos gestos son del reproductor. */
+.player-video {
+  touch-action: none;
+}
+
+/* La barra de arriba y los controles van por encima del reparto de la pausa (PauseCast), que antes
+   oscurecía el "←", el título y los botones de la izquierda. */
+.player-top,
+.player-controls {
+  z-index: 3;
+}
+
+.controls-row .time {
+  white-space: nowrap;
+}
+
+/* La esquina (saltar intro, siguiente episodio, "Más como esto") queda siempre a la altura que tenía con
+   los controles visibles: antes bajaba al ocultarse y, al acercar el mouse, los controles aparecían y la
+   tarjeta saltaba 90 px justo cuando ibas a tocar "Cancelar". */
+.player-corner,
+.show-controls .player-corner {
+  bottom: 130px;
+  transition: none;
+}
+@media (max-width: 760px) {
+  .player-corner,
+  .show-controls .player-corner {
+    bottom: 170px;
+  }
+}
+
+/* ---------- Volumen (U23) ---------- */
+
+.vol {
+  display: inline-flex;
+  align-items: center;
+  flex-shrink: 0;
+}
+.vol-slider {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 0;
+  height: 4px;
+  margin: 0;
+  opacity: 0;
+  border-radius: 2px;
+  cursor: pointer;
+  background: linear-gradient(to right, var(--accent) var(--vol, 100%), rgba(255, 255, 255, 0.3) var(--vol, 100%));
+  transition:
+    width 0.18s ease-out,
+    opacity 0.18s ease-out,
+    margin 0.18s ease-out;
+}
+.vol:hover .vol-slider,
+.vol:focus-within .vol-slider {
+  width: 92px;
+  margin: 0 10px 0 4px;
+  opacity: 1;
+}
+.vol-slider::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: var(--text, #fff);
+}
+.vol-slider::-moz-range-thumb {
+  width: 14px;
+  height: 14px;
+  border: none;
+  border-radius: 50%;
+  background: var(--text, #fff);
+}
+.vol-slider:focus-visible {
+  outline: 3px solid var(--accent);
+  outline-offset: 4px;
+}
+/* En la TV y en el celular manda el volumen del aparato (el control remoto o los botones del costado). */
+html[data-tv] .vol {
+  display: none;
+}
+@media (hover: none) {
+  .vol {
+    display: none;
+  }
+}
+
+/* ---------- Ajustar / llenar / estirar (F17) ---------- */
+
+.controls-row .fit-label {
+  display: none;
+}
+@media (min-width: 1400px) {
+  .controls-row .fit-label {
+    display: inline;
+  }
+}
+
+/* ---------- Modo scrub (U24) ---------- */
+
+.player-scrub-hint {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  z-index: 3;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  padding: 14px 22px;
+  transform: translate(-50%, -50%);
+  text-align: center;
+  font-variant-numeric: tabular-nums;
+  background: rgba(0, 0, 0, 0.62);
+  border-radius: var(--radius, 18px);
+  pointer-events: none;
+}
+.player-scrub-hint strong {
+  font-family: var(--font-display, inherit);
+  font-size: clamp(1.3rem, 2.6vw, 2rem);
+}
+.seek-preview.is-scrub.with-video {
+  width: clamp(192px, 22vw, 320px);
+}
+.is-scrubbing .seekbar {
+  height: 8px;
+}
+html[data-tv] .seek-preview.is-scrub.with-video {
+  width: clamp(260px, 24vw, 400px);
+}
+html[data-tv] .seek-preview.is-scrub .seek-preview-time {
+  font-size: 1.15rem;
+}
+
+/* ---------- Tarjeta del siguiente episodio con imagen (U25) ---------- */
+
+.next-card.next-card-v14 {
+  flex-direction: row;
+  align-items: stretch;
+  gap: 14px;
+  width: min(460px, calc(100vw - 2 * var(--gutter)));
+  min-width: 0;
+  padding: 12px;
+}
+.next-thumb {
+  position: relative;
+  flex: 0 0 auto;
+  width: 168px;
+  aspect-ratio: 16 / 9;
+  overflow: hidden;
+  border-radius: calc(var(--radius, 18px) * 0.6);
+  background: var(--bg-3, #2a2732);
+}
+.next-thumb img,
+.next-thumb-ph {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+/* La barra que se llena con la cuenta regresiva (cada segundo, con una transición de 1 s). */
+.next-progress {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 4px;
+  background: rgba(255, 255, 255, 0.25);
+}
+.next-progress > span {
+  display: block;
+  height: 100%;
+  background: var(--accent);
+  transform-origin: left center;
+  transition: transform 1s linear;
+}
+.next-info {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 4px;
+  min-width: 0;
+}
+.next-kicker {
+  font-size: 0.85rem;
+  color: var(--muted, #a8a3b3);
+  font-variant-numeric: tabular-nums;
+}
+.next-title {
+  font-family: var(--font-display, inherit);
+  font-size: 1rem;
+  line-height: 1.3;
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  line-clamp: 2;
+  overflow: hidden;
+}
+.next-card-v14 .next-card-actions {
+  margin-top: 6px;
+}
+html[data-tv] .next-card.next-card-v14 {
+  width: min(560px, 45vw);
+}
+html[data-tv] .next-thumb {
+  width: 220px;
+}
+@media (prefers-reduced-motion: reduce) {
+  .next-progress > span {
+    transition: none;
+  }
+}
+
+/* ---------- "Más como esto" al final de una peli (F5) ---------- */
+
+.postplay {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  width: min(560px, calc(100vw - 2 * var(--gutter)));
+  padding: 14px;
+  background: rgba(28, 26, 34, 0.95);
+  border-radius: var(--radius-lg, 22px);
+  animation: postplay-in 0.25s ease-out;
+}
+.postplay-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+.postplay-head strong {
+  font-family: var(--font-display, inherit);
+  font-size: 1.05rem;
+}
+.postplay-items {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+}
+.postplay-item {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+  padding: 0 0 6px;
+  font: inherit;
+  text-align: left;
+  color: inherit;
+  background: transparent;
+  border: 0;
+  border-radius: calc(var(--radius, 18px) * 0.6);
+  cursor: pointer;
+}
+.postplay-item img,
+.postplay-ph {
+  display: block;
+  width: 100%;
+  aspect-ratio: 16 / 9;
+  object-fit: cover;
+  border-radius: calc(var(--radius, 18px) * 0.6);
+  background: var(--bg-3, #2a2732);
+}
+.postplay-name {
+  padding: 0 4px;
+  font-size: 0.88rem;
+  font-weight: 600;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.postplay-year {
+  padding: 0 4px;
+}
+.postplay-item:hover img,
+.postplay-item:focus-visible img {
+  outline: 3px solid var(--accent);
+  outline-offset: 2px;
+}
+.postplay-item:focus-visible {
+  outline: none;
+}
+@keyframes postplay-in {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .postplay {
+    animation: none;
+  }
+}
+
+/* ---------- Ajustes rápidos ⚙ (U29) ---------- */
+
+.player-menu.player-menu-quick {
+  width: min(460px, calc(100vw - 2 * var(--gutter)));
+  min-width: 0;
+  max-height: min(78vh, calc(100% - 150px));
+  gap: 4px;
+}
+.qs-row {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 8px 6px;
+}
+.qs-row + .qs-row {
+  border-top: 1px solid var(--line, rgba(255, 255, 255, 0.12));
+}
+.qs-label {
+  padding: 0 8px;
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--muted, #a8a3b3);
+}
+.qs-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+.player-menu .qs-chips button {
+  padding: 8px 14px;
+  text-align: center;
+  font-weight: 600;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.08);
+}
+.player-menu .qs-chips button.active {
+  color: var(--on-accent, #1f0f4d);
+  background: var(--accent);
+}
+.qs-hint {
+  padding: 0 8px;
+}
+
+/* ---------- Gestos del celular (U35) ---------- */
+
+/* Onda del doble toque: medio círculo del lado tocado con "+10 s". */
+.player-ripple {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  z-index: 2;
+  width: 40%;
+  display: grid;
+  place-items: center;
+  overflow: hidden;
+  pointer-events: none;
+}
+.player-ripple-left {
+  left: 0;
+}
+.player-ripple-right {
+  right: 0;
+}
+.player-ripple-wave {
+  position: absolute;
+  inset: -10% -40%;
+  background: rgba(255, 255, 255, 0.12);
+  animation: ripple-wave 0.65s ease-out forwards;
+}
+.player-ripple-left .player-ripple-wave {
+  border-radius: 0 50% 50% 0;
+  right: 10%;
+}
+.player-ripple-right .player-ripple-wave {
+  border-radius: 50% 0 0 50%;
+  left: 10%;
+}
+.player-ripple-text {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  text-shadow: 0 1px 4px rgba(0, 0, 0, 0.6);
+}
+@keyframes ripple-wave {
+  from {
+    opacity: 0;
+    transform: scale(0.6);
+  }
+  30% {
+    opacity: 1;
+  }
+  to {
+    opacity: 0;
+    transform: scale(1);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .player-ripple-wave {
+    animation: none;
+    opacity: 0.6;
+  }
+}
+
+/* Botón "Bloquear" arriba a la derecha y la capa que tapa todo mientras está bloqueado. */
+.player-top .player-lock-btn {
+  margin-left: auto;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.9rem;
+}
+.player-lock-layer {
+  position: absolute;
+  inset: 0;
+  z-index: 20;
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  /* Arriba: abajo taparía los subtítulos. */
+  padding-top: max(20px, env(safe-area-inset-top));
+  touch-action: none;
+}
+.player-unlock-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 22px;
+  color: var(--on-accent, #1f0f4d);
+  background: var(--accent);
+  border: 0;
+}
+.player.is-locked .player-corner,
+.player.is-locked .player-rate,
+.player.is-locked .player-menu {
+  visibility: hidden;
+}
+
+/* ---------- Celular apaisado (auditoría #3) ----------
+   Un celular acostado mide más de 760 px de ancho pero unos 390 de alto: antes recibía la fila de
+   escritorio y "Pantalla completa" quedaba afuera. Con poco alto, los controles van en dos renglones
+   (−10 / play / +10 / tiempo arriba; el resto abajo) y todo se achica un poco. */
+@media (max-height: 500px) {
+  .player-top {
+    padding-top: 8px;
+    padding-bottom: 8px;
+  }
+  .player-title {
+    min-width: 0;
+  }
+  .player-title > * {
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .player-controls {
+    padding-top: 6px;
+    padding-bottom: max(8px, env(safe-area-inset-bottom));
+  }
+  .player-controls .seekbar {
+    margin-bottom: 4px;
+  }
+  .controls-row {
+    flex-wrap: wrap;
+    justify-content: space-around;
+    row-gap: 0;
+    gap: 2px;
+  }
+  .controls-row .spacer {
+    flex: 0 0 100%;
+    height: 0;
+  }
+  .controls-row button {
+    padding: 6px 10px;
+  }
+  [data-theme='2'] .controls-row .play-btn {
+    min-width: 42px;
+    height: 42px;
+  }
+  .player-corner,
+  .show-controls .player-corner {
+    bottom: 120px;
+  }
+  .player-menu {
+    bottom: 108px;
+    max-height: calc(100% - 160px);
+  }
+  /* La sinopsis de la pausa no se encima con el título. */
+  .pause-cast {
+    padding-top: 64px;
+    padding-bottom: 120px;
+  }
+  .pause-info-overview {
+    -webkit-line-clamp: 3;
+    line-clamp: 3;
+  }
+  .player-rate {
+    top: 56px;
+  }
+  .player-chip,
+  .player-net-note {
+    top: 56px;
+  }
+  .next-thumb {
+    width: 128px;
+  }
+  .postplay-items {
+    gap: 8px;
+  }
+}
+
+/* Celular vertical: la barra ocupa varios renglones (154 a 242 px según el ancho) y los menús con un
+   `bottom` fijo quedaban encima de la línea de tiempo. Se apoyan arriba de la barra medida
+   (`--controls-h`, lo pone el reproductor) sin tapar el título ni "Volver". */
+@media (max-width: 760px) and (min-height: 501px) {
+  .player-menu {
+    bottom: calc(var(--controls-h, 150px) + 4px);
+    max-height: calc(100% - var(--controls-h, 150px) - 120px);
+  }
+  .player-menu.player-menu-quick {
+    max-height: min(78vh, calc(100% - var(--controls-h, 150px) - 100px));
+  }
+}
+
+/* Celular vertical: los subtítulos no partían la línea (Chromium) y tocaban los bordes de la pantalla.
+   Van en reglas separadas: si el navegador no conoce el pseudoelemento de -webkit, descarta solo esa. */
+@media (max-width: 760px) {
+  .player-video::cue {
+    white-space: pre-wrap;
+  }
+  .player-video::-webkit-media-text-track-display {
+    padding-inline: max(16px, env(safe-area-inset-left), env(safe-area-inset-right));
+  }
+}
+
+/* Celular vertical: la tarjeta del siguiente va con la imagen arriba. */
+@media (max-width: 520px) {
+  .next-card.next-card-v14 {
+    flex-direction: column;
+  }
+  .next-thumb {
+    width: 100%;
+  }
+  .postplay-items {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 6px;
+  }
+  .postplay-name {
+    font-size: 0.8rem;
+  }
+}
+
+/* ---------- Menú CC (auditoría #6) ---------- */
+
+/* "Otros idiomas (85)": los que no son preferidos quedan plegados. */
+.player-menu .sub-menu-more {
+  color: var(--accent);
+  font-weight: 600;
+}

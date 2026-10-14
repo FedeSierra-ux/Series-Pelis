@@ -5,7 +5,19 @@ import { getSubtitles } from '../../lib/addons'
 import { useAddons } from '../../lib/hooks'
 import { langLabel } from '../../lib/i18n'
 import { forgetTracks, rememberTracks, settingsStore, trackPrefsStore, useStore } from '../../lib/store'
-import { FORCED_RANK, addonSubOption, autoSubtitle, lang3, langRank, looksForced, looksSdh, placeCue, type SubOption } from '../../lib/subtitlePrefs'
+import {
+  FORCED_RANK,
+  addonSubOption,
+  autoSubtitle,
+  lang3,
+  langRank,
+  looksForced,
+  looksSdh,
+  placeCue,
+  subLangName,
+  subMenuLabels,
+  type SubOption,
+} from '../../lib/subtitlePrefs'
 import { SUBTITLE_FILE_RE, loadSubtitle, loadSubtitleFile } from '../../lib/subtitles'
 import type { PlayState } from '../Detail'
 
@@ -15,10 +27,12 @@ const hlsKey = (i: number) => `hls:${i}`
 /** Pistas HLS que marcan descripciones de sonidos (subtítulos para sordos). */
 const SDH_CHARACTERISTICS = /describes-music-and-sound|transcribes-spoken-dialog/
 
+/** Nombre del idioma en español, con la tabla de la app primero ("tur" → "Turco"). */
+export const langName = (code: string | undefined) => subLangName(code, langLabel)
+
+/** Nombre de un subtítulo (para la pista `<track>`, que ven el menú nativo, PiP y los lectores de pantalla). */
 export function subLabel(o: SubOption) {
-  // La marca va solo si el nombre no la dice ya.
-  const tags = [o.forced && !looksForced(o.label, o.id) && 'Forzados', o.sdh && !looksSdh(o.label) && !looksSdh(o.id) && 'SDH'].filter(Boolean)
-  return { main: o.label ?? langLabel(o.lang), extra: [o.file || o.hls !== undefined ? undefined : o.id, ...tags].filter(Boolean).join(' · ') }
+  return o.label ?? langName(o.lang)
 }
 
 export function useSubtitles({
@@ -130,7 +144,7 @@ export function useSubtitles({
     adjustCues()
   }
 
-  const select = async (url: string, auto = false, given?: SubOption) => {
+  const select = async (url: string, auto = false, given?: SubOption, fallbackLabel?: string) => {
     const el = videoRef.current
     const req = ++request.current
     const option = given ?? subsRef.current.find((s) => s.url === url)
@@ -171,7 +185,8 @@ export function useSubtitles({
     if (!src) return
     const track = document.createElement('track')
     track.kind = 'subtitles'
-    track.label = option ? subLabel(option).main : ''
+    // Al cambiar de fuente la lista todavía no llegó: vale el nombre que traía la fuente anterior.
+    track.label = option ? subLabel(option) : fallbackLabel || 'Subtítulos'
     track.src = src
     track.default = true
     track.dataset.spSub = ''
@@ -210,7 +225,7 @@ export function useSubtitles({
       ...tracks.map((t, i) => ({
         url: hlsKey(i),
         lang: t.lang ?? '',
-        label: t.name || langLabel(t.lang ?? '') || `Pista ${i + 1}`,
+        label: t.name || (t.lang ? langName(t.lang) : `Pista ${i + 1}`),
         hls: i,
         forced: t.forced || looksForced(t.name),
         sdh: looksSdh(t.name) || SDH_CHARACTERISTICS.test(t.characteristics ?? ''),
@@ -244,13 +259,13 @@ export function useSubtitles({
   }, [subs])
 
   /** Al cambiar de fuente: el subtítulo y el retraso que estaban activos, sin pisarlos con el automático. */
-  const restore = (url: string, d: number) => {
+  const restore = (url: string, d: number, label?: string) => {
     userPicked.current = true
     delayRef.current = d
     setDelay(d)
     if (!url) return
     if (url.startsWith('hls:')) pendingHls.current = url
-    else select(url, true)
+    else select(url, true, undefined, label)
   }
 
   // ---------- Archivo propio ----------
@@ -302,9 +317,32 @@ export function useSubtitles({
   const options = useMemo(() => {
     const visible = subs.filter((s) => !(settings.hideSdh && s.sdh) || s.url === active)
     const langs = pref?.subLang ? [pref.subLang, ...settings.subtitleLangs] : settings.subtitleLangs
-    // Los archivos propios arriba; después por idioma preferido.
-    return visible.sort((a, b) => Number(!!b.file) - Number(!!a.file) || langRank(a.lang, langs) - langRank(b.lang, langs))
+    // Los archivos propios arriba; después los idiomas preferidos y el resto por nombre ("Alemán", "Turco"…).
+    return visible.sort(
+      (a, b) =>
+        Number(!!b.file) - Number(!!a.file) ||
+        langRank(a.lang, langs) - langRank(b.lang, langs) ||
+        (a.label ?? langName(a.lang)).localeCompare(b.label ?? langName(b.lang), 'es'),
+    )
   }, [subs, settings.hideSdh, settings.subtitleLangs, pref?.subLang, active])
+
+  /** Textos del menú, sin ids internos: los repetidos se numeran. */
+  const labels = useMemo(() => subMenuLabels(options, langName), [options])
+
+  /**
+   * Los que se ven de entrada: idiomas preferidos, archivos propios, pistas del stream y el activo. El resto
+   * (OpenSubtitles trae decenas de idiomas) queda detrás de "Otros idiomas", así en la TV no es una lista eterna.
+   */
+  const featured = useMemo(() => {
+    const langs = pref?.subLang ? [pref.subLang, ...settings.subtitleLangs] : settings.subtitleLangs
+    return options.map((o) => !!o.file || o.hls !== undefined || o.url === active || langRank(o.lang, langs) < 99)
+  }, [options, pref?.subLang, settings.subtitleLangs, active])
+
+  /** Nombre del subtítulo activo (para llevarlo al cambiar de fuente). */
+  const activeLabel = () => {
+    const o = subsRef.current.find((s) => s.url === activeRef.current)
+    return o ? subLabel(o) : undefined
+  }
 
   const forget = () => {
     forgetTracks(metaId)
@@ -312,7 +350,7 @@ export function useSubtitles({
     flash('Listo: se vuelven a usar los idiomas de Ajustes')
   }
 
-  return { options, active, delay, changeDelay, select, pickFile, dropProps, dragging, onHlsTracks, onHlsSwitch, hasPref: !!pref, forget, restore }
+  return { options, labels, featured, activeLabel, active, delay, changeDelay, select, pickFile, dropProps, dragging, onHlsTracks, onHlsSwitch, hasPref: !!pref, forget, restore }
 }
 
 export type SubtitlesApi = ReturnType<typeof useSubtitles>

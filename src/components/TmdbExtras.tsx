@@ -51,12 +51,19 @@ export function CastRow({ details, type }: { details: TmdbDetails; type: TmdbTyp
   )
 }
 
+function recommendations(details: TmdbDetails): TmdbListItem[] {
+  const recs = details.recommendations?.results ?? []
+  const list = recs.length > 0 ? recs : (details.similar?.results ?? [])
+  return list.filter((i) => i.media_type !== 'person')
+}
+
+/** ¿Hay algo para la pestaña "Más como esto" de la ficha (recomendaciones o una saga)? */
+export function hasMoreLikeThis(details: TmdbDetails | undefined, type: TmdbType): boolean {
+  return !!details && (recommendations(details).length > 0 || (type === 'movie' && !!details.belongs_to_collection))
+}
+
 export function MoreLikeThis({ details, type }: { details: TmdbDetails; type: TmdbType }) {
-  const items = useMemo(() => {
-    const recs = details.recommendations?.results ?? []
-    const list = recs.length > 0 ? recs : (details.similar?.results ?? [])
-    return list.filter((i) => i.media_type !== 'person').slice(0, MAX_RECS).map((i) => tmdbToPreview(i, type))
-  }, [details, type])
+  const items = useMemo(() => recommendations(details).slice(0, MAX_RECS).map((i) => tmdbToPreview(i, type)), [details, type])
 
   return (
     <Row title="Más como esto" empty={items.length === 0}>

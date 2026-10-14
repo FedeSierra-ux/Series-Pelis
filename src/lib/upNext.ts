@@ -30,6 +30,8 @@ export interface EpisodeItem {
   watched: boolean
   /** 0..1 si ya lo empezó. */
   progress?: number
+  /** Lo último que vio de la serie (ms). Solo en `next`: para ordenarlo con "Seguir viendo". */
+  lastActivity?: number
 }
 
 export interface UpNextData {
@@ -151,7 +153,7 @@ export function computeUpNext(
       const rel = candidate && releaseDate(candidate)
       if (candidate && rel && rel.at <= now) {
         const item = toItem(meta, f, candidate, progress)
-        if (item) next.push(item)
+        if (item) next.push({ ...item, lastActivity: latest.get(f.id)?.updatedAt ?? f.lastActivity })
       }
     }
 
@@ -165,6 +167,38 @@ export function computeUpNext(
 
   calendar.sort((a, b) => a.released - b.released || a.seriesName.localeCompare(b.seriesName) || (a.episode ?? 0) - (b.episode ?? 0))
   return { next, calendar, followed: followed.length }
+}
+
+/** Una tarjeta de la fila "Seguir viendo" de Inicio: algo empezado o el siguiente episodio de una serie. */
+export type ContinueItem =
+  | { kind: 'resume'; key: string; at: number; entry: WatchEntry }
+  | { kind: 'next'; key: string; at: number; episode: EpisodeItem; label: 'Siguiente' | 'Episodio nuevo' }
+
+/**
+ * Une "Seguir viendo" y "Tus series: siguiente episodio" en una sola fila, la más reciente primero.
+ * Lo empezado cuenta desde la última vez que se vio; el siguiente episodio, desde lo último que se vio
+ * de la serie o desde su estreno si salió después ("Episodio nuevo"). Una serie aparece una sola vez.
+ */
+export function continueRowItems(resume: WatchEntry[], next: EpisodeItem[]): ContinueItem[] {
+  const items: ContinueItem[] = resume.map((entry) => ({ kind: 'resume', key: entry.videoId, at: entry.updatedAt, entry }))
+  const taken = new Set(resume.map((e) => e.metaId))
+  for (const ep of next) {
+    if (taken.has(ep.metaId)) continue
+    taken.add(ep.metaId)
+    const seen = ep.lastActivity ?? 0
+    const isNew = ep.released > seen
+    items.push({ kind: 'next', key: ep.videoId, at: Math.max(seen, ep.released), episode: ep, label: isNew ? 'Episodio nuevo' : 'Siguiente' })
+  }
+  return items.sort((a, b) => b.at - a.at)
+}
+
+/** Lo de Mi lista que todavía no se empezó (fila "Mi lista" de Inicio), lo agregado más recientemente primero. */
+export function unstartedWatchlist(watchlist: Record<string, ListItem>, progress: Record<string, WatchEntry>, limit = 30): ListItem[] {
+  const started = new Set(Object.values(progress).map((e) => e.metaId))
+  return Object.values(watchlist)
+    .filter((item) => !started.has(item.id))
+    .sort((a, b) => b.addedAt - a.addedAt)
+    .slice(0, limit)
 }
 
 export async function loadUpNext(

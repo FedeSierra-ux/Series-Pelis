@@ -1,0 +1,48 @@
+/* v0.14: riel con barrita de la sección activa (U2) y tamaño de la interfaz (U4). Solo variables del tema. */
+
+/* ---------- U2: barrita lateral de acento en el ítem activo, además de la píldora ---------- */
+
+.t2-rail-link {
+  position: relative;
+}
+.t2-rail-link::before {
+  content: '';
+  position: absolute;
+  /* Pegada al borde izquierdo del riel: (ancho del riel - ancho del ítem) / 2 hacia afuera. */
+  left: calc((var(--rail-w) - 80px) / -2);
+  top: 50%;
+  width: 4px;
+  height: 0;
+  border-radius: 0 4px 4px 0;
+  background: var(--accent);
+  transform: translateY(-50%);
+  transition: height 0.18s ease;
+}
+.t2-rail-link.active::before {
+  height: 28px;
+}
+@media (min-width: 761px) {
+  html[data-tv] .t2-rail-link::before {
+    left: calc((var(--rail-w) - 96px) / -2);
+    width: 5px;
+  }
+  html[data-tv] .t2-rail-link.active::before {
+    height: 36px;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .t2-rail-link::before {
+    transition: none;
+  }
+}
+
+/* ---------- U4: tamaño de la interfaz (Ajustes → Pantalla y control remoto) ---------- */
+
+/* lib/tv.ts pone data-ui-scale y --ui-zoom en <html>. `zoom` agranda todo el marco (los estilos están en px). */
+html[data-ui-scale] .t2-app {
+  zoom: var(--ui-zoom, 1);
+}
+/* Con zoom, 100vw/100vh crecen junto con todo: que nada empuje un scroll de costado. */
+html[data-ui-scale] .t2-main {
+  overflow-x: clip;
+}

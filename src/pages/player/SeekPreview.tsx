@@ -18,9 +18,21 @@ interface Props {
   duration: number
   /** Con false se muestra solo el tiempo. */
   enabled: boolean
+  /** Modo scrub (← / → mantenidas, U24): miniatura del destino, sin mouse. */
+  scrubAt?: number
 }
 
-export function SeekPreview({ bar, url, duration, enabled }: Props) {
+/** Posición del cuadro sobre la barra para el segundo `t` (sin salirse de la pantalla en los bordes). */
+function placeAt(el: HTMLInputElement, t: number, duration: number) {
+  const rect = el.getBoundingClientRect()
+  const frac = duration > 0 ? Math.min(1, Math.max(0, t / duration)) : 0
+  const parent = el.offsetParent as HTMLElement | null
+  const width = parent?.clientWidth ?? window.innerWidth
+  const x = el.offsetLeft + THUMB / 2 + frac * (rect.width - THUMB)
+  return { t, left: Math.min(width - BOX_W / 2 - 4, Math.max(BOX_W / 2 + 4, x)), top: el.offsetTop }
+}
+
+export function SeekPreview({ bar, url, duration, enabled, scrubAt }: Props) {
   const [hover, setHover] = useState<{ t: number; left: number; top: number }>()
   const [alive, setAlive] = useState(false)
   const [failed, setFailed] = useState(false)
@@ -37,10 +49,7 @@ export function SeekPreview({ bar, url, duration, enabled }: Props) {
       if (e.pointerType === 'touch' || !(durationRef.current > 0)) return
       const rect = el.getBoundingClientRect()
       const frac = Math.min(1, Math.max(0, (e.clientX - rect.left - THUMB / 2) / (rect.width - THUMB)))
-      const parent = el.offsetParent as HTMLElement | null
-      const width = parent?.clientWidth ?? window.innerWidth
-      const x = el.offsetLeft + THUMB / 2 + frac * (rect.width - THUMB)
-      setHover({ t: frac * durationRef.current, left: Math.min(width - BOX_W / 2 - 4, Math.max(BOX_W / 2 + 4, x)), top: el.offsetTop })
+      setHover(placeAt(el, frac * durationRef.current, durationRef.current))
       clearTimeout(destroy)
       setAlive(true)
     }
@@ -58,7 +67,23 @@ export function SeekPreview({ bar, url, duration, enabled }: Props) {
     }
   }, [bar])
 
-  useEffect(() => setFailed(false), [url])
+  useEffect(() => {
+    setFailed(false)
+  }, [url])
+
+  // En modo scrub el cuadro sigue al destino; al salir se destruye un rato después (como al sacar el mouse).
+  const scrubbing = scrubAt !== undefined
+  const scrubTimer = useRef<ReturnType<typeof setTimeout>>(undefined)
+  useEffect(() => {
+    if (!scrubbing) return
+    clearTimeout(scrubTimer.current)
+    setAlive(true)
+    return () => {
+      scrubTimer.current = setTimeout(() => setAlive(false), DESTROY_AFTER_MS)
+    }
+  }, [scrubbing])
+  useEffect(() => () => clearTimeout(scrubTimer.current), [])
+  const shown = scrubbing && bar.current ? placeAt(bar.current, scrubAt, duration) : hover
 
   const withVideo = enabled && alive && !failed
 
@@ -105,7 +130,7 @@ export function SeekPreview({ bar, url, duration, enabled }: Props) {
   }, [withVideo, url])
 
   // Busca el cuadro con un poco de demora y de a un pedido por vez (el último gana).
-  const target = hover?.t
+  const target = shown?.t
   useEffect(() => {
     const el = videoRef.current
     if (!withVideo || !el || target === undefined) return
@@ -121,11 +146,11 @@ export function SeekPreview({ bar, url, duration, enabled }: Props) {
     return () => clearTimeout(t)
   }, [target, withVideo])
 
-  if (!hover && !withVideo) return null
+  if (!shown && !withVideo) return null
   return (
     <div
-      className={`seek-preview ${hover ? 'visible' : ''} ${withVideo ? 'with-video' : ''}`}
-      style={hover ? { left: hover.left, top: hover.top } : undefined}
+      className={`seek-preview ${shown ? 'visible' : ''} ${withVideo ? 'with-video' : ''} ${scrubbing ? 'is-scrub' : ''}`}
+      style={shown ? { left: shown.left, top: shown.top } : undefined}
       aria-hidden="true"
     >
       {withVideo && (
@@ -141,7 +166,7 @@ export function SeekPreview({ bar, url, duration, enabled }: Props) {
           onError={() => setFailed(true)}
         />
       )}
-      <span className="seek-preview-time">{formatTime(hover?.t ?? 0)}</span>
+      <span className="seek-preview-time">{formatTime(shown?.t ?? 0)}</span>
     </div>
   )
 }

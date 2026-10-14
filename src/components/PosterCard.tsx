@@ -2,12 +2,15 @@ import { memo, useEffect, useRef, useState, type FocusEvent, type KeyboardEvent,
 import { Link } from 'react-router-dom'
 import { prefetchMeta } from '../lib/addons'
 import { smallPoster } from '../lib/format'
+import { genreLabel } from '../lib/i18n'
 import { armTrailer, disarmTrailer } from '../lib/hoverTrailer'
 import { LABEL_TEXT, usePosterLabel } from '../lib/posterLabels'
 import { addonsStore, settingsStore, useStore } from '../lib/store'
+import { cardBackdrop, useNearOnce, useTitleLogo } from '../lib/titleArt'
 import { imdbFromTmdb, parseTmdbId } from '../lib/tmdb'
 import type { MetaPreview } from '../lib/types'
 import { ImdbRating, PosterRating } from './Rating'
+import './landscape-card.css'
 
 interface Props {
   meta: MetaPreview
@@ -19,9 +22,14 @@ interface Props {
   /** Muestra un botón ✕ sobre la tarjeta (por ejemplo para sacarla de "Seguir viendo"). */
   onRemove?: () => void
   removeLabel?: string
+  /**
+   * Tarjeta apaisada (v0.14, U10): fondo 16:9 con el logo del título encima y, abajo, año y género.
+   * Sin logo va el nombre. La forma de cada fila se elige en el gestor de catálogos.
+   */
+  landscape?: boolean
 }
 
-export const PosterCard = memo(function PosterCard({ meta, progress, watched, subtitle, to, eager, onRemove, removeLabel }: Props) {
+export const PosterCard = memo(function PosterCard({ meta, progress, watched, subtitle, to, eager, onRemove, removeLabel, landscape }: Props) {
   const prefetched = useRef(false)
   // Precargamos la ficha cuando el usuario se detiene en el póster: al entrar ya está lista.
   const prefetch = () => {
@@ -32,9 +40,16 @@ export const PosterCard = memo(function PosterCard({ meta, progress, watched, su
     if (tmdb) imdbFromTmdb(tmdb.id, tmdb.type).then((tt) => tt && prefetchMeta(addonsStore.get(), meta.type, tt)).catch(() => {})
     else prefetchMeta(addonsStore.get(), meta.type, meta.id)
   }
-  const src = smallPoster(meta.id, meta.poster)
+  const backdrop = landscape ? cardBackdrop(meta) : undefined
+  const posterSrc = smallPoster(meta.id, meta.poster)
+  // Apaisada sin fondo: el póster centrado y recortado (mejor que un hueco).
+  const src = landscape ? (backdrop ?? posterSrc) : posterSrc
   // Si la imagen no carga (404, CDN caído) mostramos el nombre en vez de un hueco vacío.
   const [brokenSrc, setBrokenSrc] = useState<string>()
+  const [imgRef, near] = useNearOnce<HTMLDivElement>(!!landscape && !eager)
+  const logo = useTitleLogo(meta, !!landscape && (eager || near))
+  const [brokenLogo, setBrokenLogo] = useState<string>()
+  const showLogo = !!logo && logo !== brokenLogo
   // v0.5: puntaje sobre el póster, etiqueta y tráiler al quedarse encima.
   const { posterRating, posterLabels } = useStore(settingsStore)
   const posterLabel = usePosterLabel(meta, posterLabels)
@@ -60,7 +75,9 @@ export const PosterCard = memo(function PosterCard({ meta, progress, watched, su
       to={to ?? `/detail/${meta.type}/${encodeURIComponent(meta.id)}`}
       ref={linkRef}
       data-focus-id={meta.id}
-      className={`poster-card shape-${meta.posterShape ?? 'poster'}`}
+      className={landscape ? 'poster-card is-landscape' : `poster-card shape-${meta.posterShape ?? 'poster'}`}
+      // Apaisada: el nombre está en el logo, así que no se repite abajo (sí para el lector de pantalla).
+      aria-label={landscape ? [meta.name, landInfo(meta)].filter(Boolean).join(', ') : undefined}
       onMouseEnter={onEnter}
       onMouseLeave={(e) => disarmTrailer(e.currentTarget, 'mouse')}
       onFocus={onFocus}
@@ -68,7 +85,7 @@ export const PosterCard = memo(function PosterCard({ meta, progress, watched, su
       onTouchStart={prefetch}
       title={meta.name}
     >
-      <div className="poster-img">
+      <div className="poster-img" ref={landscape ? imgRef : undefined}>
         {src && src !== brokenSrc ? (
           <img
             src={src}
@@ -76,10 +93,20 @@ export const PosterCard = memo(function PosterCard({ meta, progress, watched, su
             loading={eager ? 'eager' : 'lazy'}
             decoding="async"
             fetchPriority={eager ? 'high' : 'auto'}
+            className={landscape && !backdrop ? 'is-poster' : undefined}
             onError={() => setBrokenSrc(src)}
           />
         ) : (
-          <div className="poster-fallback">{meta.name}</div>
+          !landscape && <div className="poster-fallback">{meta.name}</div>
+        )}
+        {landscape && (
+          <div className="land-art" aria-hidden>
+            {showLogo ? (
+              <img className="land-logo" src={logo} alt="" loading="lazy" decoding="async" onError={() => setBrokenLogo(logo)} />
+            ) : (
+              <span className="land-name">{meta.name}</span>
+            )}
+          </div>
         )}
         {posterLabel && <span className={`poster-label poster-label-${posterLabel}`}>{LABEL_TEXT[posterLabel]}</span>}
         {/* Arriba a la derecha: el puntaje y, debajo, el ✓ de "vista". */}
@@ -96,9 +123,9 @@ export const PosterCard = memo(function PosterCard({ meta, progress, watched, su
         )}
       </div>
       <div className="poster-info">
-        <span className="poster-title">{meta.name}</span>
+        {!landscape && <span className="poster-title">{meta.name}</span>}
         <span className="poster-sub">
-          {subtitle ?? meta.releaseInfo ?? meta.year}
+          {subtitle ?? (landscape ? landInfo(meta) : (meta.releaseInfo ?? meta.year))}
           {posterRating === 'below' && <ImdbRating value={meta.imdbRating} size="sm" />}
         </span>
       </div>
@@ -136,9 +163,15 @@ export const PosterCard = memo(function PosterCard({ meta, progress, watched, su
   )
 })
 
-export function PosterSkeleton() {
+/** Debajo de la tarjeta apaisada: "2024 · Ciencia ficción". */
+function landInfo(meta: MetaPreview): string {
+  const genre = (meta.genres ?? meta.genre ?? [])[0]
+  return [meta.releaseInfo ?? meta.year, genre ? genreLabel(genre) : undefined].filter(Boolean).join(' · ')
+}
+
+export function PosterSkeleton({ landscape }: { landscape?: boolean }) {
   return (
-    <div className="poster-card skeleton-card" aria-hidden>
+    <div className={`poster-card skeleton-card${landscape ? ' is-landscape' : ''}`} aria-hidden>
       <div className="poster-img skeleton" />
       <div className="poster-info">
         <span className="skeleton skeleton-line" />

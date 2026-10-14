@@ -1,7 +1,8 @@
-import type { ReactNode } from 'react'
+import { useCallback, useEffect, useState, type ReactNode } from 'react'
 import { Link } from 'react-router-dom'
 import { PosterSkeleton } from './PosterCard'
 import { ReportButton } from './ReportButton'
+import './rows.css'
 
 interface Props {
   title: string
@@ -15,10 +16,66 @@ interface Props {
   reportContext?: Record<string, string | undefined>
   /** Muestra lo anterior atenuado mientras carga lo nuevo (ej. resultados de la búsqueda anterior). */
   stale?: boolean
+  /** Fila de tarjetas apaisadas: los esqueletos de carga tienen esa forma. */
+  landscape?: boolean
   children: ReactNode
 }
 
-export function Row({ title, moreTo, loading, error, empty, errorNotice, reportContext, stale, children }: Props) {
+/** Margen para dar por llegado al borde (redondeos del zoom). */
+const EDGE_PX = 4
+
+/**
+ * Flechas ‹ › para recorrer la fila con el mouse (en Windows la rueda vertical no mueve una fila
+ * horizontal). Avanzan una "página" de tarjetas y el `scroll-snap` deja la fila alineada a una tarjeta.
+ * El CSS solo las muestra con un mouse de verdad y fuera del modo TV; quedan fuera del orden de foco
+ * y la navegación con flechas no las elige (`data-nav-skip`).
+ */
+function useRowPaging(deps: unknown) {
+  // Con estado (no useRef): la fila puede aparecer recién cuando llegan los datos.
+  const [el, setEl] = useState<HTMLDivElement | null>(null)
+  const [edges, setEdges] = useState({ start: true, end: true })
+
+  const measure = useCallback(() => {
+    if (!el) return
+    const start = el.scrollLeft <= EDGE_PX
+    const end = el.scrollLeft + el.clientWidth >= el.scrollWidth - EDGE_PX
+    setEdges((prev) => (prev.start === start && prev.end === end ? prev : { start, end }))
+  }, [el])
+
+  useEffect(() => {
+    if (!el) return
+    measure()
+    el.addEventListener('scroll', measure, { passive: true })
+    const ro = typeof ResizeObserver === 'function' ? new ResizeObserver(measure) : undefined
+    ro?.observe(el)
+    return () => {
+      el.removeEventListener('scroll', measure)
+      ro?.disconnect()
+    }
+  }, [el, measure])
+
+  // Llegaron (o se fueron) tarjetas: el ancho total cambió.
+  useEffect(() => {
+    measure()
+  }, [deps, measure])
+
+  const page = (dir: -1 | 1) => {
+    if (!el) return
+    const pad = parseFloat(getComputedStyle(el).paddingLeft) || 0
+    const reduced = typeof matchMedia === 'function' && matchMedia('(prefers-reduced-motion: reduce)').matches
+    el.scrollBy({ left: dir * Math.max(120, el.clientWidth - pad * 2), behavior: reduced ? 'auto' : 'smooth' })
+  }
+
+  return { ref: setEl, edges, page }
+}
+
+// Las flechas no se quedan con el foco al tocarlas (si no, el anillo queda pintado).
+const noFocus = (e: React.MouseEvent) => e.preventDefault()
+
+export function Row({ title, moreTo, loading, error, empty, errorNotice, reportContext, stale, landscape, children }: Props) {
+  const showSkeleton = !!(loading && empty)
+  const { ref, edges, page } = useRowPaging(showSkeleton ? 'skeleton' : children)
+
   if (!loading && error && empty && errorNotice) {
     return (
       <section className="row">
@@ -43,8 +100,42 @@ export function Row({ title, moreTo, loading, error, empty, errorNotice, reportC
           </Link>
         )}
       </header>
-      <div className={stale ? 'row-scroller is-stale' : 'row-scroller'} aria-busy={stale || undefined}>
-        {loading && empty ? Array.from({ length: 8 }, (_, i) => <PosterSkeleton key={i} />) : children}
+      <div className="row-body">
+        <div ref={ref} className={stale ? 'row-scroller is-stale' : 'row-scroller'} aria-busy={stale || undefined}>
+          {showSkeleton ? Array.from({ length: 8 }, (_, i) => <PosterSkeleton key={i} landscape={landscape} />) : children}
+        </div>
+        {!showSkeleton && (
+          <>
+            <button
+              type="button"
+              className="row-page is-prev"
+              tabIndex={-1}
+              data-nav-skip
+              aria-label={`${title}: anteriores`}
+              hidden={edges.start}
+              onMouseDown={noFocus}
+              onClick={() => page(-1)}
+            >
+              <svg viewBox="0 0 24 24" width="30" height="30" fill="none" stroke="currentColor" strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+                <path d="M15 5l-7 7 7 7" />
+              </svg>
+            </button>
+            <button
+              type="button"
+              className="row-page is-next"
+              tabIndex={-1}
+              data-nav-skip
+              aria-label={`${title}: siguientes`}
+              hidden={edges.end}
+              onMouseDown={noFocus}
+              onClick={() => page(1)}
+            >
+              <svg viewBox="0 0 24 24" width="30" height="30" fill="none" stroke="currentColor" strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+                <path d="M9 5l7 7-7 7" />
+              </svg>
+            </button>
+          </>
+        )}
       </div>
     </section>
   )

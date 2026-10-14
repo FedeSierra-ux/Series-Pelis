@@ -26,6 +26,7 @@ export const GOTO_TARGETS: Record<string, { to: string; label: string }> = {
   b: { to: '/search', label: 'Buscar' },
   l: { to: '/list', label: 'Mi lista' },
   i: { to: '/history', label: 'Historial' },
+  v: { to: '/me', label: 'Vos' },
   c: { to: '/calendar', label: 'Calendario' },
   a: { to: '/settings', label: 'Ajustes' },
 }
@@ -52,11 +53,14 @@ export const SHORTCUT_GROUPS: ShortcutGroup[] = [
     title: 'En el reproductor',
     shortcuts: [
       { keys: ['Espacio', 'K'], description: 'Reproducir o pausar' },
-      { keys: ['←', '→'], description: 'Retroceder o adelantar 10 s' },
+      { keys: ['←', '→'], description: 'Retroceder o adelantar 10 s; mantenidas, adelantan rápido con la miniatura (Enter va, Esc cancela)' },
       { keys: ['J', 'L'], description: 'Retroceder o adelantar 10 s' },
       { keys: ['↑', '↓'], description: 'Subir o bajar el volumen (en la TV mueven el foco)' },
       { keys: ['M'], description: 'Silenciar o volver el sonido' },
+      // Espacios duros: es una sola tecla (los espacios comunes separan las de una secuencia, como "G H").
+      { keys: ['Rueda\u00a0del\u00a0mouse'], description: 'Sobre el video, subir o bajar el volumen' },
       { keys: ['F'], description: 'Pantalla completa' },
+      { keys: ['Z'], description: 'Imagen: ajustar, llenar o estirar' },
       { keys: ['C'], description: 'Subtítulos sí / no' },
       { keys: ['S'], description: 'Menú de subtítulos' },
       { keys: ['A', 'V'], description: 'Fuentes' },
@@ -75,7 +79,10 @@ export const SHORTCUT_GROUPS: ShortcutGroup[] = [
       { keys: ['Flechas'], description: 'Moverse entre pósters, botones y menús' },
       { keys: ['OK'], description: 'Elegir o abrir lo marcado; en el reproductor, pausar o reanudar' },
       { keys: ['Atrás'], description: 'Volver a la pantalla anterior o cerrar una ventana' },
-      { keys: ['← →'], description: 'En el reproductor, retroceder o adelantar 10 s' },
+      {
+        keys: ['← →'],
+        description: 'En el reproductor, retroceder o adelantar 10 s. Mantenelas para ir rápido viendo la miniatura: OK va a ese momento y Atrás vuelve',
+      },
       { keys: ['↑ ↓'], description: 'En el reproductor, mostrar los controles y moverse entre ellos' },
       { keys: ['Play/Pausa'], description: 'Las teclas de medios del control también sirven en el reproductor' },
     ],

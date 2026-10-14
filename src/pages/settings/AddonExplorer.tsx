@@ -2,9 +2,10 @@ import { useCallback, useEffect, useState } from 'react'
 import { invalidate } from '../../lib/cache'
 import { useAddons } from '../../lib/hooks'
 import { typeLabel } from '../../lib/i18n'
+import { addonName } from '../../lib/addons'
 import { officialAddons } from '../../lib/stremioApi'
 import { isImportableAddon, toInstalledAddon, type StremioAddonDescriptor } from '../../lib/stremioLibrary'
-import { addInstalledAddons, installAddon } from '../../lib/store'
+import { addInstalledAddons, installAddon, sameAddon } from '../../lib/store'
 import { errorText } from '../../lib/errors'
 
 const RESOURCE_LABEL: Record<string, string> = {
@@ -17,8 +18,8 @@ const RESOURCE_LABEL: Record<string, string> = {
 /** Algunos logos de la colección vienen por http o ya no existen: mostramos la inicial. */
 function AddonLogo({ src, name }: { src?: string; name: string }) {
   const [broken, setBroken] = useState(false)
-  const url = src?.replace(/^http:\/\//, 'https://')
-  if (!url || broken) return <div className="addon-logo placeholder">{name[0]}</div>
+  const url = typeof src === 'string' ? src.replace(/^http:\/\//, 'https://') : undefined
+  if (!url || broken) return <div className="addon-logo placeholder">{name[0] ?? '?'}</div>
   return <img src={url} alt="" className="addon-logo" loading="lazy" onError={() => setBroken(true)} />
 }
 
@@ -41,15 +42,22 @@ export function AddonExplorer() {
 
   useEffect(() => load(), [load])
 
-  const isInstalled = (d: StremioAddonDescriptor) =>
-    installed.some((a) => a.transportUrl === d.transportUrl || a.manifest.id === d.manifest.id)
+  // Por URL (auditoría #4): tener Torrentio con tu debrid no hace que el Torrentio oficial figure instalado.
+  const isInstalled = (d: StremioAddonDescriptor) => installed.some((a) => sameAddon(a.transportUrl, d.transportUrl))
 
   const install = async (d: StremioAddonDescriptor) => {
     setBusy(d.transportUrl)
     setFailed(({ [d.transportUrl]: _old, ...rest }) => rest)
     try {
       // Con el manifest al día; si el addon no responde ahora, usamos el que vino en la colección.
-      await installAddon(d.transportUrl).catch(() => addInstalledAddons([toInstalledAddon(d)]))
+      await installAddon(d.transportUrl).catch((err) => {
+        // `toInstalledAddon` tira error si el manifest de la colección tampoco sirve: se muestra el primero.
+        try {
+          addInstalledAddons([toInstalledAddon(d)])
+        } catch {
+          throw err
+        }
+      })
     } catch (err) {
       setFailed((f) => ({ ...f, [d.transportUrl]: errorText(err) }))
     } finally {
@@ -79,12 +87,12 @@ export function AddonExplorer() {
             const resources = (m.resources ?? []).map((r) => (typeof r === 'string' ? r : r.name)).filter((r) => RESOURCE_LABEL[r])
             return (
               <li key={d.transportUrl} className="addon-item">
-                <AddonLogo src={m.logo} name={m.name} />
+                <AddonLogo src={m.logo} name={addonName(m)} />
                 <div className="addon-text">
                   <strong>
-                    {m.name} {d.flags?.official && <span className="chip small addon-official">Oficial</span>}
+                    {addonName(m)} {d.flags?.official && <span className="chip small addon-official">Oficial</span>}
                   </strong>
-                  {m.description && <span className="muted small addon-desc">{m.description}</span>}
+                  {typeof m.description === 'string' && m.description && <span className="muted small addon-desc">{m.description}</span>}
                   <span className="chips">
                     {(m.types ?? []).map((t) => (
                       <span key={`t-${t}`} className="chip small">

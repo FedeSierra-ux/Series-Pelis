@@ -1,21 +1,22 @@
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
 import { Link, useLocation, useNavigate, useParams, useSearchParams } from 'react-router-dom'
-import { GenreChips, KeywordChips, PeopleLinks, tmdbPeopleIndex } from '../components/DetailTags'
-import { NotInterestedButton } from '../components/NotInterested'
+import { GenreChips, PeopleLinks, tmdbPeopleIndex } from '../components/DetailTags'
 import { ImdbRating } from '../components/Rating'
 import { SpoilerText, useEpisodeSpoilers } from '../components/Spoiler'
-import { StarRatingInput } from '../components/StarRating'
 import { ErrorBox } from '../components/Status'
+import { CastRow, hasMoreLikeThis, MoreLikeThis, SagaBlock, TmdbSections } from '../components/TmdbExtras'
+import { TrailerPlayer } from '../components/TrailerPlayer'
 import { offlineMessage } from '../lib/online'
-import { TmdbSections } from '../components/TmdbExtras'
-import { WikiTrivia } from '../components/WikiTrivia'
 import { episodeLabel, formatTime, relativeDate } from '../lib/format'
 import { useMeta, useTitle, useTmdbDetails } from '../lib/hooks'
+import { trailerKeyFromMeta } from '../lib/hoverTrailer'
 import { typeLabel } from '../lib/i18n'
 import { useRating } from '../lib/ratings'
+import { remainingLabel } from '../lib/remaining'
 import { takeReturnVideo } from '../lib/returnVideo'
 import { hideTitleSynopsis } from '../lib/spoilers'
-import { progressStore, setWatched, setWatchedMany, settingsStore, toggleWatchlist, useStore, watchlistStore } from '../lib/store'
+import { findResumeStream } from '../lib/nextEpisode'
+import { lastSourceStore, progressStore, RESUME_MIN_S, setWatched, settingsStore, toggleWatchlist, useStore, watchlistStore } from '../lib/store'
 import {
   getDetails,
   imdbFromTmdb,
@@ -32,44 +33,55 @@ import {
 import { useTvMode } from '../lib/tv'
 import type { Meta, Video } from '../lib/types'
 import { errorText } from '../lib/errors'
-import {
-  episodeNumber,
-  episodeToContinue,
-  firstEpisode,
-  formatReleaseDate,
-  isReleased,
-  nextReleased,
-  seasonStatus,
-  sortVideos,
-} from './detail/episodes'
+import { DetailActions, type PrimaryAction } from './detail/DetailActions'
+import { DetailsPanel, ExtrasPanel } from './detail/DetailPanels'
+import { DetailTabs, type DetailTab } from './detail/DetailTabs'
+import { EpisodesPanel } from './detail/EpisodesPanel'
+import { episodeNumber, episodeToContinue, firstEpisode, nextReleased, sortVideos } from './detail/episodes'
+import { HeroTrailer, useBackdropTrailerAllowed } from './detail/HeroTrailer'
+import type { MoreItem } from './detail/MoreMenu'
+import { safeMeta } from './detail/safeData'
+import { SectionBoundary } from './detail/SectionBoundary'
 import { StreamList, type DetailLocationState } from './detail/StreamList'
+import { extrasFromTmdb, isYtId, originalTitle, type ExtraVideo } from './detail/trailers'
 import { NARROW_QUERY, useMediaQuery } from './detail/useMediaQuery'
 import './detail/detail-fixes.css'
+import './detail/detail-v14.css'
 
 export type { PlayState } from './detail/StreamList'
 
 const detailSkeleton = <div className="page detail-skeleton"><div className="hero skeleton" /></div>
 
 export function Detail() {
-  const { type = 'movie', id: rawId = '' } = useParams()
-  const id = decodeURIComponent(rawId)
+  // El router ya decodifica el parámetro: decodificarlo otra vez rompía ids con `%` (auditoría de código #11).
+  const { type = 'movie', id = '' } = useParams()
+  // "Reintentar" en el error: se vuelve a montar la ficha y se piden los datos de nuevo.
+  const [attempt, setAttempt] = useState(0)
+  const retry = () => setAttempt((n) => n + 1)
   const tmdb = parseTmdbId(id)
   // Los ítems de TMDB (`tmdb:movie:603`) se traducen a IMDb, que es lo que usan Cinemeta y los addons.
-  if (tmdb) return <TmdbResolver key={id} type={type} tmdbType={tmdb.type} tmdbId={tmdb.id} />
-  return <DetailPage type={type} id={id} />
+  if (tmdb) return <TmdbResolver key={`${id}|${attempt}`} type={type} tmdbType={tmdb.type} tmdbId={tmdb.id} onRetry={retry} />
+  return <DetailPage key={`${id}|${attempt}`} type={type} id={id} onRetry={retry} />
 }
 
-/** Error de la ficha (no cargó o el título no existe) con un botón para volver. */
-function DetailError({ message }: { message: string }) {
+/** Error de la ficha (no cargó o el título no existe): "Reintentar" (si puede servir) y "Volver". */
+function DetailError({ message, onRetry, children }: { message: string; onRetry?: () => void; children?: ReactNode }) {
   const navigate = useNavigate()
   const location = useLocation()
   // Sin historial (se abrió el link directo) "Volver" lleva al inicio.
   const back = () => (location.key === 'default' ? navigate('/') : navigate(-1))
   return (
     <div className="page">
+      <h1 className="d-sr-only">No se pudo abrir la ficha</h1>
       <ErrorBox message={message} />
+      {children}
       <div className="detail-error-actions">
-        <button className="btn" onClick={back} data-autofocus>
+        {onRetry && (
+          <button className="btn btn-primary" onClick={onRetry} data-autofocus>
+            Reintentar
+          </button>
+        )}
+        <button className="btn" onClick={back} data-autofocus={!onRetry || undefined}>
           Volver
         </button>
       </div>
@@ -77,7 +89,7 @@ function DetailError({ message }: { message: string }) {
   )
 }
 
-function TmdbResolver({ type, tmdbType, tmdbId }: { type: string; tmdbType: TmdbType; tmdbId: number }) {
+function TmdbResolver({ type, tmdbType, tmdbId, onRetry }: { type: string; tmdbType: TmdbType; tmdbId: number; onRetry: () => void }) {
   const navigate = useNavigate()
   const location = useLocation()
   const [state, setState] = useState<{ details?: TmdbDetails; error?: string }>()
@@ -100,12 +112,11 @@ function TmdbResolver({ type, tmdbType, tmdbId }: { type: string; tmdbType: Tmdb
 
   if (state?.error)
     return (
-      <div className="page">
-        <ErrorBox message={offlineMessage('esta ficha no está guardada') ?? `No se pudo abrir este título de TMDB: ${state.error}`} />
-        <p className="muted">
+      <DetailError message={offlineMessage('esta ficha no está guardada') ?? `No se pudo abrir este título de TMDB: ${state.error}`} onRetry={onRetry}>
+        <p className="muted detail-error-hint">
           Revisá la key de TMDB en <Link to="/settings">Ajustes</Link>.
         </p>
-      </div>
+      </DetailError>
     )
   if (!state?.details) return detailSkeleton
   return <TmdbOnlyDetail details={state.details} type={type} tmdbType={tmdbType} />
@@ -113,12 +124,14 @@ function TmdbResolver({ type, tmdbType, tmdbId }: { type: string; tmdbType: Tmdb
 
 /** Ficha armada solo con TMDB, para títulos que no tienen id de IMDb. */
 function TmdbOnlyDetail({ details: d, type, tmdbType }: { details: TmdbDetails; type: string; tmdbType: TmdbType }) {
-  const title = itemTitle(d)
+  // El nombre original, no el traducido (el usuario no quiere títulos en español).
+  const title = originalTitle(d, itemTitle(d))
   const logo = tmdbImg(pickLogo(d), 'w500')
   const poster = tmdbImg(d.poster_path, 'w342')
   const bg = tmdbImg(d.backdrop_path, 'w1280')
   const year = itemYear(d)
   const trailer = pickTrailer(d.videos?.results)
+  const [trailerOpen, setTrailerOpen] = useState(false)
   useTitle(title)
 
   return (
@@ -128,7 +141,7 @@ function TmdbOnlyDetail({ details: d, type, tmdbType }: { details: TmdbDetails; 
         <div className="detail-head">
           {poster && <img className="detail-poster" src={poster} alt="" />}
           <div className="detail-info">
-            {logo ? <img className="detail-logo" src={logo} alt={title} /> : <h1>{title}</h1>}
+            <h1 className="detail-title">{logo ? <img className="detail-logo" src={logo} alt={title} /> : title}</h1>
             {d.tagline && <p className="detail-tagline">{d.tagline}</p>}
             <div className="hero-meta">
               <span>{typeLabel(type, false)}</span>
@@ -136,12 +149,11 @@ function TmdbOnlyDetail({ details: d, type, tmdbType }: { details: TmdbDetails; 
             </div>
             <GenreChips type={type} tmdbGenres={d.genres} />
             {d.overview && <p className="detail-desc">{d.overview}</p>}
-            <KeywordChips type={type} tmdbId={d.id} />
-            {trailer && (
+            {trailer && isYtId(trailer.key) && (
               <div className="hero-actions">
-                <a className="btn" href={`https://www.youtube.com/watch?v=${trailer.key}`} target="_blank" rel="noreferrer">
-                  Tráiler
-                </a>
+                <button type="button" className="btn" onClick={() => setTrailerOpen(true)} data-autofocus>
+                  ▶ Tráiler
+                </button>
               </div>
             )}
           </div>
@@ -151,15 +163,23 @@ function TmdbOnlyDetail({ details: d, type, tmdbType }: { details: TmdbDetails; 
         <p className="tmdb-notice">Este título no está en Cinemeta, así que no podemos buscar fuentes.</p>
       </section>
       <TmdbSections details={d} type={tmdbType} />
+      {trailerOpen && trailer && <TrailerPlayer ytId={trailer.key} title={title} backdrop={bg} onClose={() => setTrailerOpen(false)} />}
     </div>
   )
 }
 
 const NOT_FOUND = 'No encontramos este título'
+const reducedMotion = () => typeof matchMedia === 'function' && matchMedia('(prefers-reduced-motion: reduce)').matches
+/** "T2 E4" para el botón principal. */
+const shortEp = (v: Video) => `T${v.season ?? 0} E${episodeNumber(v) ?? '?'}`
 
-function DetailPage({ type, id }: { type: string; id: string }) {
+function DetailPage({ type, id, onRetry }: { type: string; id: string; onRetry: () => void }) {
   const [params, setParams] = useSearchParams()
-  const { data: meta, loading, error } = useMeta(type, id)
+  const location = useLocation()
+  const navigate = useNavigate()
+  const { data: rawMeta, loading, error } = useMeta(type, id)
+  // Lo que manda el addon se valida acá: una lista que no es lista no tira abajo la ficha.
+  const meta = useMemo(() => (rawMeta ? safeMeta(rawMeta) : undefined), [rawMeta])
   const { data: tmdb } = useTmdbDetails(type, id)
   const progress = useStore(progressStore)
   const watchlist = useStore(watchlistStore)
@@ -168,12 +188,21 @@ function DetailPage({ type, id }: { type: string; id: string }) {
   const spoilerSettings = useStore(settingsStore)
   const hideEpisodeSpoiler = useEpisodeSpoilers()
   const hideSynopsis = hideTitleSynopsis(spoilerSettings, id, progress, rated)
-  // Con TMDB, título, sinopsis, frase y géneros en español; el puntaje sigue siendo el de IMDb (Cinemeta).
-  const title = (tmdb && itemTitle(tmdb)) || meta?.name
+  // El título es el de Cinemeta (el original): con TMDB solo van en español la sinopsis y los datos.
+  const title = meta?.name || undefined
   useTitle(title)
   // Celular: las fuentes van debajo del episodio elegido (en PC y TV, a la derecha).
   const tv = useTvMode()
   const inlineStreams = useMediaQuery(NARROW_QUERY) && !tv
+  const backdropAllowed = useBackdropTrailerAllowed()
+  const [trailer, setTrailer] = useState<{ ytId: string; kind?: string }>()
+  // Si el logo no carga, va el nombre en texto (y no la imagen rota).
+  const [logoFailed, setLogoFailed] = useState(false)
+  // "Reproducir" directo (U16): mientras busca la fuente de la última vez.
+  const lastSources = useStore(lastSourceStore)
+  const [starting, setStarting] = useState(false)
+  const startAbort = useRef<AbortController>(undefined)
+  useEffect(() => () => startAbort.current?.abort(), [])
 
   const videos = useMemo(() => sortVideos(meta?.videos ?? []), [meta?.videos])
 
@@ -185,6 +214,7 @@ function DetailPage({ type, id }: { type: string; id: string }) {
     const next = new URLSearchParams(params)
     if (back.season !== undefined) next.set('season', String(back.season))
     next.set('video', back.videoId)
+    next.delete('tab')
     const state: DetailLocationState = { noAuto: true }
     setParams(next, { replace: true, state })
   }, [id])
@@ -214,80 +244,302 @@ function DetailPage({ type, id }: { type: string; id: string }) {
   // Al elegir desde los botones de la portada o en celular, se lleva la vista a las fuentes.
   const listRef = useRef<HTMLOListElement>(null)
   const panelRef = useRef<HTMLLIElement>(null)
+  const sourcesRef = useRef<HTMLElement>(null)
   const scrollNext = useRef(false)
+  const focusSources = useRef(false)
   useEffect(() => {
     if (!scrollNext.current || !selectedVideoId) return
     scrollNext.current = false
-    const target = inlineStreams ? panelRef.current : listRef.current?.querySelector<HTMLElement>('.episode.selected')
-    const reduced = typeof matchMedia === 'function' && matchMedia('(prefers-reduced-motion: reduce)').matches
-    target?.scrollIntoView({ block: 'nearest', behavior: reduced ? 'auto' : 'smooth' })
+    // En el celular, el episodio elegido arriba y sus fuentes justo debajo (antes quedaban tapadas por la barra de abajo).
+    const target = listRef.current?.querySelector<HTMLElement>('.episode.selected') ?? panelRef.current
+    target?.scrollIntoView({ block: inlineStreams ? 'start' : 'nearest', behavior: reducedMotion() ? 'auto' : 'smooth' })
   }, [selectedVideoId, inlineStreams])
 
+  const firstTab = isSeries ? 'episodes' : 'sources'
+  const activeTab = params.get('tab') ?? firstTab
+
+  // Película: "Reproducir" lleva a las fuentes y deja el foco en la recomendada (o en la primera).
+  useEffect(() => {
+    if (!focusSources.current || activeTab !== firstTab) return
+    focusSources.current = false
+    const section = sourcesRef.current
+    if (!section) return
+    section.scrollIntoView({ block: 'start', behavior: reducedMotion() ? 'auto' : 'smooth' })
+    const target =
+      section.querySelector<HTMLElement>('.stream-item.recommended') ??
+      section.querySelector<HTMLElement>('button.stream-item, a.stream-item') ??
+      section.querySelector<HTMLElement>('h2')
+    target?.focus({ preventScroll: true })
+  })
+
+  const extras = useMemo(() => extrasFromTmdb(tmdb?.videos?.results), [tmdb])
+
   if (loading && !meta) return detailSkeleton
-  if (error && !meta) return <DetailError message={offlineMessage('esta ficha no está guardada') ?? `No se pudo cargar: ${error}`} />
+  if (error && !meta) return <DetailError message={offlineMessage('esta ficha no está guardada') ?? `No se pudo cargar: ${error}`} onRetry={onRetry} />
   // Cinemeta responde con una ficha vacía para ids que no existen (`tt0000000`).
   if (!meta || !meta.name) return <DetailError message={NOT_FOUND} />
 
+  const name = meta.name
   const fullMeta: Meta = { ...meta, type }
   const bg = meta.background ?? (id.startsWith('tt') ? `https://images.metahub.space/background/medium/${id}/img` : undefined)
   const peopleIndex = tmdbPeopleIndex(tmdb)
   const description = tmdb?.overview || meta.description
   const tmdbLogo = tmdbImg(pickLogo(tmdb), 'w500')
-  const logo = tmdbLogo ?? meta.logo
+  const logo = logoFailed ? undefined : (tmdbLogo ?? meta.logo)
   const movieProgress = progress[id]
-  const trailer =
-    pickTrailer(tmdb?.videos?.results)?.key ??
-    meta.trailerStreams?.[0]?.ytId ??
-    meta.trailers?.find((t) => t.type === 'Trailer')?.source
-  // Con el control remoto, la primera flecha va al episodio elegido o al primero sin ver de la temporada.
+  const tmdbTrailer = pickTrailer(tmdb?.videos?.results)?.key
+  const trailerKey = isYtId(tmdbTrailer) ? tmdbTrailer : trailerKeyFromMeta(meta)
+  const tmdbType = toTmdbType(type)
+  // Con el control remoto, la primera flecha va al botón principal; sin él, al episodio elegido o al primero sin ver.
   const seasonVideos = videos.filter((v) => (v.season ?? 0) === season)
   const focusVideoId = selectedVideoId ?? (seasonVideos.find((v) => !progress[v.id]?.watched) ?? seasonVideos[0])?.id
   // Si hay fila de reparto con fotos, el elenco en texto sobra.
   const hasTmdbCast = !!(type === 'movie' ? tmdb?.credits?.cast : tmdb?.aggregate_credits?.cast)?.length
-  // "Marcar temporada como vista" solo cuenta los episodios ya estrenados.
-  const { released: seasonReleased, complete: seasonComplete } = seasonStatus(seasonVideos, progress)
-  // Botones de la portada de una serie: "Continuar"/"Ver ahora" y, con progreso, "Ver desde el principio".
   const seriesProgress = isSeries && !!lastWatched
   const continueEp = isSeries ? episodeToContinue(videos, progress) : undefined
   const firstEp = isSeries ? firstEpisode(videos) : undefined
 
-  const selectVideo = (v: Video, opts?: { scroll?: boolean; fromStart?: boolean }) => {
+  /** Cambia parámetros de la URL sin disparar el modo automático (cambiar de pestaña no es elegir). */
+  const updateParams = (mutate: (p: URLSearchParams) => void, state: DetailLocationState = { noAuto: true }) => {
     const next = new URLSearchParams(params)
-    next.set('season', String(v.season ?? 0))
-    next.set('video', v.id)
-    scrollNext.current = !!opts?.scroll
-    const state: DetailLocationState | undefined = opts?.fromStart ? { fromStart: true } : undefined
+    mutate(next)
     setParams(next, { replace: true, state })
+  }
+
+  const setTab = (tab: string) =>
+    updateParams((p) => {
+      if (tab === firstTab) p.delete('tab')
+      else p.set('tab', tab)
+    }, { ...(location.state as DetailLocationState | null), noAuto: true })
+
+  const selectVideo = (v: Video, opts?: { scroll?: boolean; fromStart?: boolean }) => {
+    scrollNext.current = !!opts?.scroll
+    // Elegir un episodio sí puede arrancar el modo automático (sin `noAuto`).
+    updateParams(
+      (p) => {
+        p.set('season', String(v.season ?? 0))
+        p.set('video', v.id)
+        p.delete('tab')
+      },
+      opts?.fromStart ? { fromStart: true } : {},
+    )
+  }
+
+  const goToSources = (fromStart = false) => {
+    focusSources.current = true
+    updateParams((p) => p.delete('tab'), fromStart ? { fromStart: true } : { ...(location.state as DetailLocationState | null) })
   }
 
   const watchBase = (v?: Video) => ({
     videoId: v?.id ?? id,
     metaId: id,
     type,
-    name: meta.name,
+    name,
     poster: meta.poster,
     season: v?.season,
     episode: v ? episodeNumber(v) : undefined,
     episodeTitle: v?.title ?? v?.name,
   })
 
+  /**
+   * "Reproducir" / "Continuar" directo, sin pasar por la lista de fuentes: la misma fuente que la última
+   * vez (o, en modo automático, la mejor) con `findResumeStream`. Si no hay una (modo manual sin fuente
+   * recordada, o no apareció), se hace lo de siempre: elegir el episodio y mostrar las fuentes.
+   */
+  const play = async (fallback: () => void, video?: Video, fromStart = false) => {
+    if (starting) {
+      // Segundo toque mientras busca: deja de buscar y muestra las fuentes.
+      startAbort.current?.abort()
+      setStarting(false)
+      return fallback()
+    }
+    const rules = spoilerSettings.sourceRules
+    if (rules.mode !== 'auto' && !(rules.rememberLast && lastSources[id])) return fallback()
+    const ctrl = new AbortController()
+    startAbort.current = ctrl
+    setStarting(true)
+    try {
+      const state = await findResumeStream({ type, metaId: id, videoId: video?.id }, ctrl.signal)
+      if (ctrl.signal.aborted) return
+      if (!state) return fallback()
+      const full = fromStart ? { ...state, resume: { at: 0 } } : state
+      navigate(`/watch/${type}/${encodeURIComponent(state.video?.id ?? id)}`, { state: full })
+    } catch {
+      if (!ctrl.signal.aborted) fallback()
+    } finally {
+      if (startAbort.current === ctrl) setStarting(false)
+    }
+  }
+
+  // ---------- Botón principal y menú ⋯ ----------
+  const movieStarted = !isSeries && !!movieProgress && !movieProgress.watched && movieProgress.position > RESUME_MIN_S
+  let primary: PrimaryAction | undefined
+  if (isSeries) {
+    const ep = continueEp ?? firstEp
+    if (ep) {
+      const w = progress[ep.id]
+      // Mismo umbral que Seguir viendo y el reproductor: con 18 s vistos no dice "quedan…" (arranca de cero).
+      const midway = !!w && !w.watched && w.position > RESUME_MIN_S
+      const epTitle = ep.title ?? ep.name
+      primary = {
+        label: continueEp ? `${seriesProgress ? 'Continuar' : 'Reproducir'} ${shortEp(ep)}` : `Volver a ver ${shortEp(ep)}`,
+        sub: midway ? remainingLabel(w.position, w.duration) : epTitle,
+        title: `${episodeLabel(ep.season, episodeNumber(ep))}${epTitle ? ` · ${epTitle}` : ''}`,
+        onClick: () => void play(() => selectVideo(ep, { scroll: true, fromStart: !continueEp }), ep, !continueEp),
+      }
+    }
+  } else {
+    primary = {
+      label: movieStarted ? 'Continuar' : 'Reproducir',
+      sub: movieStarted ? remainingLabel(movieProgress.position, movieProgress.duration) : undefined,
+      title: movieStarted
+        ? `Te quedaste en ${formatTime(movieProgress.position)} de ${formatTime(movieProgress.duration)} · ${relativeDate(movieProgress.updatedAt)}`
+        : 'Elegir una fuente',
+      onClick: () => void play(() => goToSources()),
+    }
+  }
+  if (primary && starting) primary = { ...primary, sub: 'Buscando la fuente…', busy: true }
+
+  const more: MoreItem[] = []
+  if (seriesProgress && firstEp)
+    more.push({
+      id: 'restart',
+      label: 'Ver desde el principio',
+      icon: 'restart',
+      onSelect: () => void play(() => selectVideo(firstEp, { scroll: true, fromStart: true }), firstEp, true),
+    })
+  if (movieStarted)
+    more.push({ id: 'restart', label: 'Ver desde el principio', icon: 'restart', onSelect: () => void play(() => goToSources(true), undefined, true) })
+  if (!isSeries)
+    more.push({
+      id: 'watched',
+      label: movieProgress?.watched ? 'Vista (desmarcar)' : 'Marcar como vista',
+      icon: 'eye',
+      checked: !!movieProgress?.watched,
+      onSelect: () => setWatched(watchBase(), !movieProgress?.watched),
+    })
+  if (id.startsWith('tt')) more.push({ id: 'imdb', label: 'Ver en IMDb', icon: 'external', href: `https://www.imdb.com/title/${id}/` })
+
+  /** ↑ desde las pestañas: al botón principal (o a las estrellas abiertas), no al chip que quede más cerca. */
+  const focusHeroActions = () => {
+    const el = ['.d-rate .star-input', '.d-actions .d-play', '.d-actions .d-icon-btn']
+      .map((sel) => document.querySelector<HTMLElement>(sel))
+      .find(Boolean)
+    if (!el) return false
+    el.focus({ preventScroll: true })
+    el.scrollIntoView({ block: 'center', behavior: reducedMotion() ? 'auto' : 'smooth' })
+    return true
+  }
+
+  // ---------- Pestañas ----------
   const streamsPanel = selectedVideo && (
     <>
       <h2>
         {episodeLabel(selectedVideo.season, episodeNumber(selectedVideo))} · {selectedVideo.title ?? selectedVideo.name}
       </h2>
-      <StreamList meta={fullMeta} video={selectedVideo} nextVideoId={nextVideo?.id} />
+      <SectionBoundary what="las fuentes" resetKey={selectedVideo.id}>
+        <StreamList meta={fullMeta} video={selectedVideo} nextVideoId={nextVideo?.id} />
+      </SectionBoundary>
     </>
   )
+
+  // Sin videos de TMDB, el tráiler de Cinemeta solo.
+  const extraList: ExtraVideo[] =
+    extras.length > 0 || !trailerKey
+      ? extras
+      : [{ key: trailerKey, name: 'Tráiler', kind: 'Tráiler', thumb: `https://i.ytimg.com/vi/${encodeURIComponent(trailerKey)}/mqdefault.jpg` }]
+
+  const tabs: DetailTab[] = [
+    isSeries
+      ? {
+          id: 'episodes',
+          label: 'Episodios',
+          content: (
+            <EpisodesPanel
+              videos={videos}
+              seasons={seasons}
+              season={season}
+              onSeason={(s) => updateParams((p) => {
+                p.set('season', String(s))
+                p.delete('video')
+              })}
+              progress={progress}
+              selectedVideoId={selectedVideoId}
+              onSelect={(v) => selectVideo(v, { scroll: inlineStreams })}
+              focusVideoId={focusVideoId}
+              suggested={continueEp}
+              started={seriesProgress}
+              hideSpoiler={(v) => hideEpisodeSpoiler({ metaId: id, videoId: v.id, season: v.season, episode: episodeNumber(v) })}
+              watchBase={watchBase}
+              inlineStreams={inlineStreams}
+              streamsPanel={streamsPanel}
+              listRef={listRef}
+              panelRef={panelRef}
+            />
+          ),
+        }
+      : {
+          id: 'sources',
+          label: 'Fuentes',
+          content: (
+            <section className="movie-streams" ref={sourcesRef}>
+              <h2 className="d-sr-only" tabIndex={-1}>
+                Fuentes
+              </h2>
+              <SectionBoundary what="las fuentes">
+                <StreamList meta={fullMeta} />
+              </SectionBoundary>
+            </section>
+          ),
+        },
+  ]
+  if (hasMoreLikeThis(tmdb, tmdbType) && tmdb)
+    tabs.push({
+      id: 'more',
+      label: 'Más como esto',
+      content: (
+        <SectionBoundary>
+          {tmdbType === 'movie' && tmdb.belongs_to_collection && <SagaBlock details={tmdb} />}
+          <MoreLikeThis details={tmdb} type={tmdbType} />
+        </SectionBoundary>
+      ),
+    })
+  if (extraList.length > 0)
+    tabs.push({
+      id: 'extras',
+      label: 'Extras',
+      content: <ExtrasPanel videos={extraList} onPlay={(v) => setTrailer({ ytId: v.key, kind: v.kind })} />,
+    })
+  if (tmdb || id.startsWith('tt') || meta.awards)
+    tabs.push({
+      id: 'details',
+      label: 'Detalles',
+      content: (
+        <SectionBoundary>
+          <DetailsPanel
+            type={type}
+            imdbId={id.startsWith('tt') ? id : undefined}
+            tmdb={tmdb}
+            awards={meta.awards}
+            country={meta.country}
+            writers={meta.writer}
+          />
+        </SectionBoundary>
+      ),
+    })
 
   return (
     <div className="page detail">
       <section className="detail-hero" style={{ backgroundImage: bg ? `url(${bg})` : undefined }}>
+        {trailerKey && backdropAllowed && <HeroTrailer ytId={trailerKey} title={name} suspended={!!trailer} />}
         <div className="hero-shade" />
         <div className="detail-head">
           {meta.poster && <img className="detail-poster" src={meta.poster} alt="" />}
           <div className="detail-info">
-            {logo ? <img className="detail-logo" src={logo} alt={title} /> : <h1>{title}</h1>}
+            {/* El h1 siempre está (auditoría de uso, UX 4): con logo, el logo es su contenido y su texto alternativo, el nombre. */}
+            <h1 className="detail-title">
+              {logo ? <img className="detail-logo" src={logo} alt={name} onError={() => setLogoFailed(true)} /> : name}
+            </h1>
             {tmdb?.tagline && <p className="detail-tagline">{tmdb.tagline}</p>}
             <div className="hero-meta">
               <ImdbRating value={meta.imdbRating} />
@@ -301,158 +553,31 @@ function DetailPage({ type, id }: { type: string; id: string }) {
                 <p className="detail-desc">{description}</p>
               </SpoilerText>
             )}
-            <dl className="credits">
-              {meta.director?.length ? (<><dt>Dirección</dt><dd><PeopleLinks names={meta.director} index={peopleIndex} /></dd></>) : null}
-              {meta.cast?.length && !hasTmdbCast ? (<><dt>Elenco</dt><dd><PeopleLinks names={meta.cast.slice(0, 6)} index={peopleIndex} /></dd></>) : null}
-              {meta.awards ? (<><dt>Premios</dt><dd>{meta.awards}</dd></>) : null}
-            </dl>
-            {tmdb && <KeywordChips type={type} tmdbId={tmdb.id} />}
-            <div className="hero-actions">
-              {continueEp && (
-                <button
-                  className="btn btn-primary"
-                  title={`${episodeLabel(continueEp.season, episodeNumber(continueEp))} · ${continueEp.title ?? continueEp.name ?? ''}`}
-                  onClick={() => selectVideo(continueEp, { scroll: true })}
-                >
-                  ▶ {seriesProgress ? 'Continuar' : 'Ver ahora'} · {episodeLabel(continueEp.season, episodeNumber(continueEp))}
-                </button>
-              )}
-              {seriesProgress && firstEp && (
-                <button className="btn btn-ghost" onClick={() => selectVideo(firstEp, { scroll: true, fromStart: true })}>
-                  Ver desde el principio
-                </button>
-              )}
-              <button className="btn" onClick={() => toggleWatchlist(fullMeta)}>
-                {watchlist[id] ? '✓ En mi lista' : '+ Mi lista'}
-              </button>
-              {!isSeries && (
-                <button className="btn" onClick={() => setWatched(watchBase(), !movieProgress?.watched)}>
-                  {movieProgress?.watched ? '✓ Vista' : 'Marcar como vista'}
-                </button>
-              )}
-              {trailer && (
-                <a className="btn" href={`https://www.youtube.com/watch?v=${trailer}`} target="_blank" rel="noreferrer">
-                  Tráiler
-                </a>
-              )}
-              {id.startsWith('tt') && (
-                <a className="btn" href={`https://www.imdb.com/title/${id}/`} target="_blank" rel="noreferrer">
-                  Ver en IMDb
-                </a>
-              )}
-              <NotInterestedButton title={{ id, type, name: meta.name, poster: meta.poster }} tmdbId={tmdb?.id} />
-            </div>
-            <StarRatingInput title={{ id, type, name: meta.name, poster: meta.poster }} tmdbId={tmdb?.id} />
-            {!isSeries && movieProgress && !movieProgress.watched && movieProgress.position > 30 && (
-              <p className="muted">
-                Te quedaste en {formatTime(movieProgress.position)} de {formatTime(movieProgress.duration)} ·{' '}
-                {relativeDate(movieProgress.updatedAt)}
-              </p>
-            )}
+            {(meta.director?.length || (meta.cast?.length && !hasTmdbCast)) ? (
+              <dl className="credits">
+                {meta.director?.length ? (<><dt>Dirección</dt><dd><PeopleLinks names={meta.director} index={peopleIndex} /></dd></>) : null}
+                {meta.cast?.length && !hasTmdbCast ? (<><dt>Elenco</dt><dd><PeopleLinks names={meta.cast.slice(0, 6)} index={peopleIndex} /></dd></>) : null}
+              </dl>
+            ) : null}
+            <DetailActions
+              title={{ id, type, name, poster: meta.poster }}
+              tmdbId={tmdb?.id}
+              primary={primary}
+              inList={!!watchlist[id]}
+              onToggleList={() => toggleWatchlist(fullMeta)}
+              onTrailer={trailerKey ? () => setTrailer({ ytId: trailerKey, kind: 'Tráiler' }) : undefined}
+              more={more}
+            />
           </div>
         </div>
       </section>
 
-      {isSeries ? (
-        <section className="episodes-section">
-          <div className="season-bar">
-            <div className="season-tabs" role="tablist">
-              {seasons.map((s) => (
-                <button
-                  key={s}
-                  role="tab"
-                  aria-selected={s === season}
-                  className={`tab ${s === season ? 'active' : ''}`}
-                  onClick={() => setParams({ season: String(s) }, { replace: true })}
-                >
-                  {s === 0 ? 'Especiales' : `Temporada ${s}`}
-                </button>
-              ))}
-            </div>
-            {seasonReleased.length > 0 && (
-              <button
-                className="btn btn-ghost season-mark"
-                onClick={() => setWatchedMany(seasonReleased.map((v) => watchBase(v)), !seasonComplete)}
-              >
-                {seasonComplete ? '✓ Marcar temporada como no vista' : 'Marcar temporada como vista'}
-              </button>
-            )}
-          </div>
-          <div className="episodes-layout">
-            <ol className="episodes" ref={listRef}>
-              {seasonVideos.map((v) => {
-                const p = progress[v.id]
-                const released = formatReleaseDate(v)
-                const upcoming = !isReleased(v)
-                const rating = Number(v.rating)
-                // Sin spoilers: lo que no viste va difuminado hasta que lo elegís.
-                const spoil = v.id !== selectedVideoId && hideEpisodeSpoiler({ metaId: id, videoId: v.id, season: v.season, episode: episodeNumber(v) })
-                const selected = v.id === selectedVideoId
-                return [
-                  <li key={v.id} className={`episode ${selected ? 'selected' : ''} ${p?.watched ? 'watched' : ''}`}>
-                    <button className="episode-main" data-focus-id={v.id} data-autofocus={v.id === focusVideoId || undefined} onClick={() => selectVideo(v, { scroll: inlineStreams })}>
-                      <div className={`episode-thumb${spoil ? ' spoiler-blur' : ''}`}>
-                        {v.thumbnail && <img src={v.thumbnail} alt="" loading="lazy" decoding="async" />}
-                        {p && p.duration > 0 && !p.watched && (
-                          <div className="progress-bar"><div style={{ width: `${(p.position / p.duration) * 100}%` }} /></div>
-                        )}
-                      </div>
-                      <div className="episode-text">
-                        <span className="episode-title">
-                          {episodeNumber(v)}. {v.title ?? v.name ?? `Episodio ${episodeNumber(v)}`}
-                        </span>
-                        <span className="muted small">
-                          {released}
-                          {upcoming && ' · Próximamente'}
-                          {rating > 0 && (
-                            <>
-                              {' · '}
-                              <ImdbRating value={rating.toFixed(1)} size="sm" />
-                            </>
-                          )}
-                        </span>
-                        {(v.overview ?? v.description) &&
-                          (spoil ? (
-                            <span className="episode-desc spoiler-hidden">Sinopsis oculta · elegilo para verla</span>
-                          ) : (
-                            <span className="episode-desc">{v.overview ?? v.description}</span>
-                          ))}
-                      </div>
-                    </button>
-                    <button
-                      className={`episode-check ${p?.watched ? 'on' : ''}`}
-                      title={p?.watched ? 'Marcar como no vista' : 'Marcar como vista'}
-                      aria-label={p?.watched ? 'Marcar como no vista' : 'Marcar como vista'}
-                      onClick={() => setWatched(watchBase(v), !p?.watched)}
-                    >
-                      ✓
-                    </button>
-                  </li>,
-                  // Celular: las fuentes justo debajo del episodio elegido, así no quedan fuera de pantalla.
-                  inlineStreams && selected && streamsPanel ? (
-                    <li key={`${v.id}-streams`} className="episode-streams episode-streams-inline" ref={panelRef}>
-                      {streamsPanel}
-                    </li>
-                  ) : null,
-                ]
-              })}
-            </ol>
-            {!inlineStreams && (
-              <aside className="episode-streams">
-                {streamsPanel ?? <div className="streams-empty muted">Elegí un episodio para ver las fuentes disponibles.</div>}
-              </aside>
-            )}
-          </div>
-        </section>
-      ) : (
-        <section className="movie-streams">
-          <h2>Fuentes</h2>
-          <StreamList meta={fullMeta} />
-        </section>
-      )}
+      <DetailTabs tabs={tabs} active={activeTab} onChange={setTab} onExitUp={focusHeroActions} />
 
-      {tmdb && <TmdbSections details={tmdb} type={toTmdbType(type)} />}
-      {id.startsWith('tt') && <WikiTrivia imdbId={id} />}
+      {/* El reparto queda donde estaba, fuera de las pestañas (decisión del usuario). */}
+      {tmdb && <CastRow details={tmdb} type={tmdbType} />}
+
+      {trailer && <TrailerPlayer ytId={trailer.ytId} kind={trailer.kind} title={name} backdrop={bg} onClose={() => setTrailer(undefined)} />}
     </div>
   )
 }

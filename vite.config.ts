@@ -103,17 +103,11 @@ export default defineConfig({
               cacheableResponse: { statuses: [200] },
             },
           },
-          {
-            // Catálogos y metadatos de Cinemeta: se muestran al instante y se refrescan en segundo plano.
-            urlPattern: ({ url }) => /strem\.io$/.test(url.hostname),
-            handler: 'StaleWhileRevalidate',
-            options: {
-              cacheName: 'cinemeta',
-              expiration: { maxEntries: 500, maxAgeSeconds: 60 * 60 * 24 * 7 },
-              // Solo respuestas CORS (200): una opaca (status 0) no se puede leer y ocupa muchísimo lugar.
-              cacheableResponse: { statuses: [200] },
-            },
-          },
+          // Catálogos y fichas de Cinemeta (*.strem.io) NO van acá (auditoría #6): la app ya tiene su propia
+          // caché con fecha (src/lib/cache.ts: pinta al instante, refresca al vencer y sirve sin conexión).
+          // Con un StaleWhileRevalidate del SW encima, al vencer la de la app el SW contestaba la copia de
+          // hace días y la app la guardaba como nueva: los episodios de anoche tardaban dos visitas en
+          // aparecer. La caché vieja `cinemeta` se borra al arrancar (dropLegacySwCaches en cache.ts).
         ],
       },
     }),

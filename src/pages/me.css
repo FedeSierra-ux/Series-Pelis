@@ -1,0 +1,199 @@
+/* v0.14: "Vos" (U26) y el Historial (bug #8 y UX 5). Solo variables del tema: la paleta va a cambiar. */
+
+/* Texto solo para lectores de pantalla (por ejemplo, la etiqueta del filtro del historial). */
+.sp-sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  padding: 0;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  clip-path: inset(50%);
+  white-space: nowrap;
+  border: 0;
+}
+
+.me-header {
+  margin-bottom: 18px;
+}
+.me-sub {
+  margin: 4px 0 0;
+}
+.me-empty {
+  margin: 8px 0 16px;
+}
+.me-empty a {
+  color: var(--accent);
+  text-decoration: underline;
+}
+
+/* Las filas (Seguir viendo, Mi lista…) van de borde a borde, como en Inicio (gana a `[data-theme='2'] .row`). */
+.page.me-page .row {
+  margin-left: calc(-1 * var(--gutter));
+  margin-right: calc(-1 * var(--gutter));
+}
+
+/* ---------- Accesos ---------- */
+
+.me-tiles {
+  display: grid;
+  /* auto-fit: con pantalla ancha (TV) las 5 tarjetas se estiran en vez de dejar columnas vacías y cortar los textos. */
+  grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
+  gap: 12px;
+  margin-bottom: 20px;
+}
+.me-tile {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  min-height: 76px;
+  padding: 12px 16px;
+  border-radius: var(--radius);
+  background: var(--surface-1, var(--bg-2));
+  color: var(--text);
+  transition: background 0.15s, transform 0.15s;
+}
+.me-tile:hover,
+.me-tile:focus-visible {
+  background: var(--tonal, var(--bg-3));
+}
+.me-tile:focus-visible {
+  transform: scale(1.03);
+}
+.me-tile-icon {
+  flex: none;
+  display: grid;
+  place-items: center;
+  width: 46px;
+  height: 46px;
+  border-radius: 50%;
+  background: var(--surface-2, var(--bg-3));
+  color: var(--accent);
+}
+.me-tile.is-primary .me-tile-icon {
+  background: var(--accent-fill, var(--accent));
+  color: var(--on-accent);
+}
+.me-tile-text {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+.me-tile-text strong {
+  font-family: var(--font-display, inherit);
+  font-size: 1rem;
+}
+.me-tile-text span {
+  color: var(--muted);
+  font-size: 0.82rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.me-tile-badge {
+  position: absolute;
+  top: 8px;
+  right: 10px;
+}
+
+/* ---------- Lo que viste ---------- */
+
+.me-history {
+  margin-top: 30px;
+}
+.me-history-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 8px 18px;
+  margin-bottom: 14px;
+}
+.me-history-head h2 {
+  font-size: clamp(1.05rem, 1.6vw, 1.35rem);
+}
+.me-history-head .row-more {
+  margin-left: auto;
+}
+.me-stats {
+  flex-wrap: wrap;
+  gap: 6px 16px;
+  font-size: 0.92rem;
+}
+.me-stats b {
+  font-size: 1.05rem;
+}
+.me-history .history-day h3 {
+  font-size: 1rem;
+  color: var(--muted);
+  text-transform: capitalize;
+  margin-bottom: 10px;
+}
+
+/* Historial (también la página completa). */
+.history-filter-tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.history-filters {
+  row-gap: 10px;
+}
+.history-more {
+  margin: 4px 0 24px;
+}
+.history-page .stats {
+  flex-wrap: wrap;
+  gap: 6px 18px;
+}
+
+@media (max-width: 760px) {
+  .me-tiles {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 10px;
+  }
+  .me-tile {
+    gap: 10px;
+    min-height: 64px;
+    padding: 10px 12px;
+  }
+  .me-tile-icon {
+    width: 38px;
+    height: 38px;
+  }
+  .me-tile-text strong {
+    font-size: 0.92rem;
+  }
+  .me-tile-text span {
+    display: none;
+  }
+  /* "Tu año" ocupa el ancho entero: es el acceso estrella. */
+  .me-tile.is-primary {
+    grid-column: 1 / -1;
+  }
+  .me-tile.is-primary .me-tile-text span {
+    display: block;
+  }
+  .history-filters .filter-input {
+    max-width: none;
+    flex-basis: 100%;
+  }
+}
+
+html[data-tv] .me-tile {
+  min-height: 92px;
+}
+html[data-tv] .me-tile-text strong {
+  font-size: 1.1rem;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .me-tile {
+    transition: none;
+  }
+  .me-tile:focus-visible {
+    transform: none;
+  }
+}

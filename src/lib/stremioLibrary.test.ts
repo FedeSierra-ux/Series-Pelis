@@ -156,9 +156,35 @@ describe('planImport', () => {
       { addons: installed, progress: {}, watchlist: { tt0111161: { id: 'tt0111161', type: 'movie', name: 'A', addedAt: 1 } } },
     )
     expect(plan.addons).toMatchObject({ total: 3, skipped: 1 })
-    expect(plan.addons.fresh.map((a) => a.manifest.id)).toEqual(['org.example'])
+    // Mismo `manifest.id` que uno instalado pero otra URL: es otro addon (auditoría #4) y se importa.
+    expect(plan.addons.fresh.map((a) => a.manifest.id)).toEqual(['com.linvo.cinemeta', 'org.example'])
     expect(plan.watchlist).toMatchObject({ total: 2, fresh: 1 })
     expect(plan.progress).toMatchObject({ total: 2, fresh: 2 })
+  })
+})
+
+describe('planImport: addons por URL (auditoría #4)', () => {
+  const TORBOX = 'https://torrentio.strem.fun/torbox=casa/manifest.json'
+  const MINE = 'https://torrentio.strem.fun/realdebrid=propio/manifest.json'
+  const installed: InstalledAddon[] = [{ transportUrl: TORBOX, manifest: desc(TORBOX, 'com.stremio.torrentio').manifest }]
+
+  it('Torrentio con otro debrid se importa aunque ya haya un Torrentio', () => {
+    const plan = planImport({ addons: [desc(MINE, 'com.stremio.torrentio')] }, { addons: installed, progress: {}, watchlist: {} })
+    expect(plan.addons.fresh.map((a) => a.transportUrl)).toEqual([MINE])
+  })
+
+  it('la misma URL (con otro dominio en mayúsculas o barra final) no se repite, ni dos veces en la cuenta', () => {
+    const plan = planImport(
+      { addons: [desc('https://TORRENTIO.strem.fun/torbox=casa/manifest.json', 'com.stremio.torrentio'), desc(MINE, 'x'), desc(MINE, 'x')] },
+      { addons: installed, progress: {}, watchlist: {} },
+    )
+    expect(plan.addons.fresh.map((a) => a.transportUrl)).toEqual([MINE])
+  })
+
+  it('un manifest sin nombre se importa con el id como nombre', () => {
+    const d = desc('https://x.example/manifest.json', 'org.sin.nombre')
+    const plan = planImport({ addons: [{ ...d, manifest: { ...d.manifest, name: undefined as unknown as string } }] }, { addons: [], progress: {}, watchlist: {} })
+    expect(plan.addons.fresh[0].manifest.name).toBe('org.sin.nombre')
   })
 })
 

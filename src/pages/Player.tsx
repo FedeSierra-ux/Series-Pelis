@@ -1,9 +1,9 @@
 import type Hls from 'hls.js'
-import { useCallback, useEffect, useRef, useState, type MouseEvent } from 'react'
-import { Navigate, useLocation, useNavigate } from 'react-router-dom'
+import { useCallback, useEffect, useRef, useState, type MouseEvent, type WheelEvent } from 'react'
+import { Navigate, useLocation, useNavigate, useParams } from 'react-router-dom'
 import { PauseCast } from '../components/PauseCast'
 import { getStreams } from '../lib/addons'
-import { creditsPlan } from '../lib/credits'
+import { creditsPlan, endCardAt } from '../lib/credits'
 import { saveDataOn } from '../lib/dataSaver'
 import { androidIntent, externalLaunch } from '../lib/externalPlayers'
 import { episodeLabel, formatTime, isHls } from '../lib/format'
@@ -13,7 +13,7 @@ import { findNextStream, nextEpisodeSeason, prefetchNextStreams } from '../lib/n
 import { setReturnVideo } from '../lib/returnVideo'
 import { currentPlatform } from '../lib/platform'
 import { getSegments, imdbIdOf, type Segment, type Segments } from '../lib/segments'
-import { addonsStore, lastSourceStore, progressStore, rememberTracks, saveProgress, settingsStore, trackPrefsStore, useStore } from '../lib/store'
+import { addonsStore, lastSourceStore, progressStore, rememberTracks, RESUME_MIN_S, saveProgress, settingsStore, trackPrefsStore, useStore } from '../lib/store'
 import { capQuality, qualityCapFor, rankStreams } from '../lib/streamPicker'
 import { audioPrefs, guessAudioLang, lang3, langRank, subtitleClasses } from '../lib/subtitlePrefs'
 import { useTvMode } from '../lib/tv'
@@ -31,6 +31,19 @@ import { formatRate, readRate, SpeedMenu, stepRate, storeRate, type Rate } from 
 import { SubtitleMenu } from './player/SubtitleMenu'
 import { useMediaSession, usePictureInPicture, useWakeLock } from './player/useMediaSession'
 import { useSubtitles } from './player/useSubtitles'
+import { launchUrl } from './player/externalLaunch'
+import { detailPathFor } from './player/fallback'
+import { isPhoneLike, toggleFullscreen as toggleScreen, usePlayerScreen } from './player/fullscreen'
+import { NextCard } from './player/NextCard'
+import { PostPlay, type PostPlayPick } from './player/PostPlay'
+import { QuickSettings, quickSettingsArrow } from './player/QuickSettings'
+import { END_FALLBACK_S } from './player/RateAtEnd'
+import { isHold, scrubDelta, scrubKey, startScrub, type Dir, type LastPress, type Scrub } from './player/scrub'
+import { useTouchGestures } from './player/useTouchGestures'
+import { FIT_HINTS, FIT_LABELS, nextFit, readFit, storeFit, type VideoFit } from './player/videoFit'
+import { useVolume, VolumeControl } from './player/VolumeControl'
+import { wheelVolumeDelta } from './player/volume'
+import './player/player-v14.css'
 
 const SAVE_EVERY_MS = 5000
 const HIDE_CONTROLS_MS = 3500
@@ -51,7 +64,7 @@ const VOLUME_STEP = 0.1
 /** Cuánto dura el aviso "Conexión lenta: se eligió 720p". */
 const NET_NOTE_MS = 6000
 
-type Menu = 'subs' | 'audio' | 'sleep' | 'sources' | 'speed'
+type Menu = 'subs' | 'audio' | 'sleep' | 'sources' | 'speed' | 'quick'
 type Sleep = { kind: 'off' } | { kind: 'time'; at: number } | { kind: 'episode' }
 
 // sessionStorage puede estar bloqueado (modo privado en algunos navegadores de TV).
@@ -72,25 +85,16 @@ function sessionSet(key: string, value: string) {
 const readAutoCount = () => Number(sessionGet(AUTONEXT_KEY)) || 0
 
 const isAndroid = () => /android/i.test(navigator.userAgent)
-const isIOS = () => /iphone|ipad|ipod/i.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1)
+/** Freno de la rueda del mouse: un touchpad manda decenas de eventos por gesto. */
+const WHEEL_THROTTLE_MS = 70
+/** Cuánto dura la onda "+10 s" del doble toque. */
+const RIPPLE_MS = 650
+/** Cuánto se ve el botón "Desbloquear" después de tocar la pantalla bloqueada. */
+const UNLOCK_HINT_MS = 3000
 
 function externalPlayerUrl(url: string) {
   // En Android/Fire TV abre el selector de reproductores (VLC, MX Player, Just Player...).
   return isAndroid() ? androidIntent(url) : undefined
-}
-
-/** Abre un esquema propio (vlc://, intent://) sin sacar al usuario de la app si no hay nada instalado. */
-function launchUrl(url: string) {
-  if (isAndroid() || isIOS()) {
-    window.location.href = url
-    return
-  }
-  // En la PC un iframe evita la página de error de Firefox si VLC no registró el esquema.
-  const frame = document.createElement('iframe')
-  frame.style.display = 'none'
-  frame.src = url
-  document.body.appendChild(frame)
-  setTimeout(() => frame.remove(), 3000)
 }
 
 async function copyText(text: string): Promise<boolean> {
@@ -121,8 +125,10 @@ async function copyText(text: string): Promise<boolean> {
 
 export function Player() {
   const location = useLocation()
+  const params = useParams()
   const { resume, ...state } = (location.state ?? {}) as SwitchState
-  if (!state.playUrl) return <Navigate to="/" replace />
+  // Sin el stream (se recargó la página o se abrió el enlace directo): a la ficha, con el episodio elegido.
+  if (!state.playUrl) return <Navigate to={detailPathFor(params.type ?? 'movie', params.id ?? '', progressStore.get())} replace />
   // La key reinicia el reproductor completo al pasar al siguiente episodio (o al cambiar de fuente).
   return <PlayerView key={state.playUrl} state={state} resume={resume} />
 }
@@ -189,6 +195,58 @@ function PlayerView({ state, resume }: { state: PlayState; resume?: Resume }) {
   const [askStill, setAskStill] = useState(() => settings.stillWatchingAfter > 0 && readAutoCount() >= settings.stillWatchingAfter)
   const askStillRef = useRef(askStill)
 
+  // Ajustar / llenar / estirar (F17): se recuerda por dispositivo.
+  const [fit, setFitState] = useState<VideoFit>(readFit)
+  const fitRef = useRef(fit)
+  fitRef.current = fit
+  const setFit = (next: VideoFit, announce = true) => {
+    setFitState(next)
+    storeFit(next)
+    if (announce) flash(`Imagen: ${FIT_LABELS[next]}`)
+  }
+
+  // Celular: pantalla completa y horizontal al entrar (U34); gestos y bloqueo de pantalla (U35).
+  const [phone] = useState(() => !tvMode && isPhoneLike())
+  const [touch] = useState(() => {
+    try {
+      return !tvMode && matchMedia('(pointer: coarse)').matches
+    } catch {
+      return false
+    }
+  })
+  usePlayerScreen(phone)
+  const [locked, setLocked] = useState(false)
+  const [unlockHint, setUnlockHint] = useState(false)
+  const unlockTimer = useRef<ReturnType<typeof setTimeout>>(undefined)
+  const [ripple, setRipple] = useState<{ zone: 'left' | 'right'; seconds: number; key: number }>()
+  const rippleTimer = useRef<ReturnType<typeof setTimeout>>(undefined)
+  useEffect(
+    () => () => {
+      clearTimeout(unlockTimer.current)
+      clearTimeout(rippleTimer.current)
+    },
+    [],
+  )
+  /** Con qué se tocó por última vez (mouse, touch, pen): el clic del mouse pausa, el toque no. */
+  const lastPointer = useRef('mouse')
+  const lastWheel = useRef(0)
+
+  // Adelantar manteniendo ← / → (U24).
+  const [scrub, setScrubState] = useState<Scrub>()
+  const scrubRef = useRef<Scrub | undefined>(undefined)
+  const setScrub = (next: Scrub | undefined) => {
+    scrubRef.current = next
+    setScrubState(next)
+  }
+  const lastPress = useRef<LastPress | undefined>(undefined)
+  /** Dónde estaba antes de la primera flecha de la tanda (Atrás vuelve acá). */
+  const pressOrigin = useRef(0)
+
+  // "Más como esto" al final de una peli (F5).
+  const [postPlayClosed, setPostPlayClosed] = useState(false)
+
+  const volume = useVolume(videoRef)
+
   const { meta, video } = state
   const videoId = video?.id ?? meta.id
   useTitle(video ? `${meta.name} ${episodeLabel(video.season, video.episode)}` : meta.name)
@@ -208,6 +266,20 @@ function PlayerView({ state, resume }: { state: PlayState; resume?: Resume }) {
     const bar = root?.querySelector<HTMLElement>('.player-controls')
     setControlsClear(controls && root && bar && root.clientHeight ? Math.ceil((bar.offsetHeight / root.clientHeight) * 100) : 0)
   }, [controls])
+  // Alto real de la barra (en el celular vertical va en varios renglones y cambia con el ancho): los menús
+  // se apoyan arriba de ella con `--controls-h` en vez de un `bottom` fijo que la tapaba.
+  useEffect(() => {
+    const root = rootRef.current
+    const bar = root?.querySelector<HTMLElement>('.player-controls')
+    if (!root || !bar || typeof ResizeObserver === 'undefined') return
+    const ro = new ResizeObserver(() => {
+      root.style.setProperty('--controls-h', `${bar.offsetHeight}px`)
+    })
+    ro.observe(bar)
+    return () => {
+      ro.disconnect()
+    }
+  }, [])
   const subs = useSubtitles({ videoRef, hlsRef, state, audioLang, flash, closeMenu: () => setMenu(null), controlsClear })
   const pip = usePictureInPicture(videoRef)
   // Pantalla prendida mientras se reproduce; se suelta en pausa y al salir.
@@ -322,6 +394,9 @@ function PlayerView({ state, resume }: { state: PlayState; resume?: Resume }) {
           setError(`Error de reproducción (${data.details})`)
         })
         start()
+      }).catch(() => {
+        // Sin red justo al abrir, o el pedazo de la app con hls.js no estaba guardado (PWA recién actualizada).
+        if (!disposed) setError('No se pudo cargar el reproductor de streams HLS. Revisá la conexión y probá de nuevo, o elegí otra fuente.')
       })
     } else {
       el.src = url
@@ -428,7 +503,7 @@ function PlayerView({ state, resume }: { state: PlayState; resume?: Resume }) {
     const saved = progressStore.get()[videoId]
     // `resume.at === 0` es "sin posición" (se cambió de fuente antes de que cargara el video): vale lo guardado.
     if (resume && resume.at > 0) el.currentTime = Math.min(resume.at, Math.max(0, el.duration - 1))
-    else if (saved && !saved.watched && saved.position > 30 && saved.position < el.duration - 30) {
+    else if (saved && !saved.watched && saved.position > RESUME_MIN_S && saved.position < el.duration - 30) {
       el.currentTime = saved.position
       setResumedFrom(saved.position)
       setTimeout(() => setResumedFrom(undefined), 8000)
@@ -450,21 +525,143 @@ function PlayerView({ state, resume }: { state: PlayState; resume?: Resume }) {
   const togglePlay = () => {
     const el = videoRef.current
     if (!el) return
+    if (scrubRef.current) {
+      finishScrub(true)
+      return
+    }
     if (el.paused) el.play().catch(() => {})
     else el.pause()
     showControls()
   }
 
-  const seek = (delta: number) => {
+  /** `reveal`: mostrar los controles (el doble toque del celular adelanta sin taparlo todo). */
+  const seek = (delta: number, reveal = true) => {
     const el = videoRef.current
     if (!el) return
     el.currentTime = Math.max(0, Math.min(el.duration || 0, el.currentTime + delta))
+    if (reveal) showControls()
+  }
+
+  // ---------- Modo scrub (← / → mantenidas) ----------
+  const finishScrub = (confirm: boolean) => {
+    const s = scrubRef.current
+    const el = videoRef.current
+    if (!s) return
+    setScrub(undefined)
+    if (el) {
+      el.currentTime = confirm ? s.target : s.origin
+      if (s.wasPlaying) el.play().catch(() => {})
+    }
     showControls()
   }
 
+  /** Flecha ← / → sin un botón enfocado: toque = ±10 s; mantenida = modo scrub con miniatura. */
+  const arrowSeek = (key: string, dir: Dir, repeat: boolean, now: number) => {
+    const el = videoRef.current
+    if (!el) return
+    const held = isHold(lastPress.current, key, now, repeat, tvMode)
+    lastPress.current = { key, at: now, up: false }
+    const current = scrubRef.current
+    if (current) {
+      setScrub(scrubKey(current, dir, now, el.duration, held))
+      showControls()
+      return
+    }
+    if (!held) {
+      pressOrigin.current = el.currentTime
+      seek(dir * SEEK_STEP)
+      return
+    }
+    // Se mantiene: el video se pausa y se mueve el destino (con la miniatura de ese momento).
+    const wasPlaying = !el.paused
+    if (wasPlaying) el.pause()
+    setScrub(scrubKey(startScrub(pressOrigin.current, el.currentTime, dir, now, wasPlaying), dir, now, el.duration, true))
+    showControls()
+  }
+
+  useEffect(() => {
+    const onUp = (e: KeyboardEvent) => {
+      if (e.key !== 'ArrowLeft' && e.key !== 'ArrowRight') return
+      // Se soltó: el destino queda quieto esperando OK o Atrás (la próxima flecha, si tarda, empieza despacio).
+      if (lastPress.current?.key === e.key) lastPress.current = { ...lastPress.current, up: true, at: e.timeStamp }
+    }
+    window.addEventListener('keyup', onUp)
+    return () => window.removeEventListener('keyup', onUp)
+  }, [])
+
   const toggleFullscreen = () => {
-    if (document.fullscreenElement) document.exitFullscreen().catch(() => {})
-    else rootRef.current?.requestFullscreen().catch(() => {})
+    // El iPhone no tiene pantalla completa para una página: solo la del propio <video> (con sus controles).
+    const v = videoRef.current as (HTMLVideoElement & { webkitEnterFullscreen?: () => void }) | null
+    if (typeof document.documentElement.requestFullscreen !== 'function' && typeof v?.webkitEnterFullscreen === 'function') v.webkitEnterFullscreen()
+    else toggleScreen()
+    showControls()
+  }
+
+  // ---------- Ajustar / llenar / estirar ----------
+  const cycleFit = () => {
+    setFit(nextFit(fitRef.current))
+    showControls()
+  }
+
+  // ---------- Toques (celular) ----------
+  const hideControls = () => {
+    clearTimeout(hideTimer.current)
+    setControls(false)
+    setMenu(null)
+  }
+
+  useTouchGestures(videoRef, {
+    // Toque simple: muestra u oculta los controles (antes pausaba).
+    onTap: () => {
+      if (menu) setMenu(null)
+      else if (controls) hideControls()
+      else showControls()
+    },
+    onSeek: (zone, count) => {
+      seek(zone === 'right' ? SEEK_STEP : -SEEK_STEP, false)
+      setRipple({ zone, seconds: count * SEEK_STEP, key: Date.now() })
+      clearTimeout(rippleTimer.current)
+      rippleTimer.current = setTimeout(() => setRipple(undefined), RIPPLE_MS)
+    },
+    onPinch: (next) => setFit(next),
+    getFit: () => fitRef.current,
+  })
+
+  const lockScreen = () => {
+    setMenu(null)
+    hideControls()
+    setLocked(true)
+    flash('Pantalla bloqueada. Tocá la pantalla y después “Desbloquear”.')
+  }
+  const unlockScreen = () => {
+    clearTimeout(unlockTimer.current)
+    setUnlockHint(false)
+    setLocked(false)
+    showControls()
+  }
+  const revealUnlock = () => {
+    setUnlockHint(true)
+    clearTimeout(unlockTimer.current)
+    unlockTimer.current = setTimeout(() => setUnlockHint(false), UNLOCK_HINT_MS)
+  }
+
+  // ---------- Rueda del mouse: volumen (U23) ----------
+  const onWheel = (e: WheelEvent<HTMLDivElement>) => {
+    const target = e.target as HTMLElement
+    // En los menús y carteles la rueda hace scroll, como siempre.
+    if (target !== videoRef.current && !target.closest('.vol')) return
+    const delta = wheelVolumeDelta(e.deltaY)
+    if (!delta || e.timeStamp - lastWheel.current < WHEEL_THROTTLE_MS) return
+    lastWheel.current = e.timeStamp
+    changeVolume(delta)
+  }
+
+  const setVolume = (v: number) => {
+    const el = videoRef.current
+    if (!el) return
+    el.volume = Math.max(0, Math.min(1, v))
+    el.muted = v === 0
+    showControls()
   }
 
   const toggleMenu = (kind: Menu, e: MouseEvent<HTMLElement>) => {
@@ -556,7 +753,7 @@ function PlayerView({ state, resume }: { state: PlayState; resume?: Resume }) {
   useEffect(() => {
     if (!resume) return
     flash(`Fuente: ${state.addonName}`)
-    if (resume.sub !== undefined) subs.restore(resume.sub, resume.subDelay ?? 0)
+    if (resume.sub !== undefined) subs.restore(resume.sub, resume.subDelay ?? 0, resume.subLabel)
   }, [])
 
   const selectAudio = (id: number) => {
@@ -680,7 +877,7 @@ function PlayerView({ state, resume }: { state: PlayState; resume?: Resume }) {
     }
     // Se copia igual por si la app no está instalada o el navegador bloquea el esquema.
     const copying = launch.copy ? copyText(url) : Promise.resolve(false)
-    launchUrl(launch.href)
+    launchUrl(launch.href, currentPlatform().os)
     copying.then((ok) =>
       flash(ok ? `Abriendo ${launch.label}… Si no abre, el enlace ya está copiado: pegalo en tu reproductor` : `Abriendo ${launch.label}…`),
     )
@@ -700,6 +897,7 @@ function PlayerView({ state, resume }: { state: PlayState; resume?: Resume }) {
     switchSource(pick, {
       at: loaded ? el.currentTime : savedAt,
       sub: subs.active,
+      subLabel: subs.activeLabel(),
       subDelay: subs.delay,
       audioLang: hls && audioTrack >= 0 ? hls.audioTracks[audioTrack]?.lang : undefined,
     })
@@ -730,7 +928,8 @@ function PlayerView({ state, resume }: { state: PlayState; resume?: Resume }) {
 
   /** Pasa el foco al botón anterior/siguiente dentro de `scope`. Devuelve false si no había adónde ir. */
   const moveFocus = (scope: Element | null | undefined, selector: string, from: Element | null, delta: number) => {
-    const items = Array.from(scope?.querySelectorAll<HTMLElement>(selector) ?? [])
+    // Solo lo que se ve: el volumen, por ejemplo, está oculto en la TV y en el celular.
+    const items = Array.from(scope?.querySelectorAll<HTMLElement>(selector) ?? []).filter((el) => el.getClientRects().length > 0)
     const i = items.indexOf(from as HTMLElement)
     const target = items[i < 0 ? 0 : i + delta]
     target?.focus()
@@ -744,12 +943,37 @@ function PlayerView({ state, resume }: { state: PlayState; resume?: Resume }) {
       if (e.ctrlKey || e.metaKey || e.altKey) return
       const target = e.target as HTMLElement | null
       if (target?.closest?.('input:not([type="range"]), textarea, [contenteditable="true"]')) return
+      // Pantalla bloqueada (celular): no se toca nada hasta desbloquear.
+      if (locked) return
+      // En el slider de volumen las flechas son del slider.
+      if (target?.closest?.('.vol-slider') && e.key.startsWith('Arrow')) return
       const active = document.activeElement as HTMLElement | null
       const focusedControl = active?.closest('.player-controls button, .player-menu button')
       // Botones flotantes (saltar intro, siguiente episodio) y carteles (error, temporizador, ¿seguís viendo?).
       const floating = active?.closest('.player-float')
       // Las letras valen con mayúscula o Bloq Mayús; los símbolos (< >) ya vienen con Shift.
       const key = e.key.length === 1 ? e.key.toLowerCase() : e.key
+      // Modo scrub: OK (o Espacio) va al destino, Atrás vuelve a donde estaba.
+      if (scrubRef.current) {
+        if (key === 'Enter' || key === ' ' || key === 'k' || key === 'MediaPlayPause') {
+          e.preventDefault()
+          finishScrub(true)
+          return
+        }
+        if (key === 'Escape' || key === 'GoBack' || key === 'BrowserBack' || key === 'Backspace') {
+          e.preventDefault()
+          finishScrub(false)
+          return
+        }
+      }
+      const menuEl = active?.closest('.player-menu')
+      // En el ⚙ las flechas van por filas (↑/↓) y dentro de la fila (←/→).
+      if (menu === 'quick' && menuEl && key.startsWith('Arrow')) {
+        e.preventDefault()
+        quickSettingsArrow(menuEl, active, key)
+        showControls()
+        return
+      }
       // 0–9: saltar al 0–90 % (no con un cartel abierto, que ahí se navega con los botones).
       if (key >= '0' && key <= '9' && !floating && !menu) {
         const el = videoRef.current
@@ -803,7 +1027,7 @@ function PlayerView({ state, resume }: { state: PlayState; resume?: Resume }) {
             return
           }
           e.preventDefault()
-          seek(delta * SEEK_STEP)
+          arrowSeek(e.key, delta as Dir, e.repeat, e.timeStamp)
           return
         }
         case 'MediaFastForward':
@@ -828,7 +1052,6 @@ function PlayerView({ state, resume }: { state: PlayState; resume?: Resume }) {
             if (floating.classList.contains('player-error')) moveFocus(floating, 'button:not([disabled]), a[href]', active, e.key === 'ArrowDown' ? 1 : -1)
             return
           }
-          const menuEl = active?.closest('.player-menu')
           // Con teclado (no en la TV) y sin nada enfocado, ↑/↓ es el volumen. En la TV las flechas
           // mueven el foco por los controles, como siempre.
           if (!tvMode && !menuEl && !focusedControl && !floating) {
@@ -841,13 +1064,31 @@ function PlayerView({ state, resume }: { state: PlayState; resume?: Resume }) {
             moveFocus(menuEl, 'button', active, delta)
             return
           }
-          const corner = rootRef.current?.querySelector<HTMLElement>('.player-corner button, .player-rate [role="slider"]')
+          // Entre "¿Qué te pareció?" (arriba) y la esquina (siguiente, "Más como esto"): ↓ baja, ↑ sube.
+          // En "Más como esto" se entra por el primer título, no por "Cerrar".
+          const rateEl = rootRef.current?.querySelector<HTMLElement>('.player-rate [role="slider"]')
+          const cornerBtn =
+            rootRef.current?.querySelector<HTMLElement>('.player-corner .postplay-item') ??
+            rootRef.current?.querySelector<HTMLElement>('.player-corner button:not([disabled])')
+          if (floating?.classList.contains('player-rate') && e.key === 'ArrowDown' && cornerBtn) {
+            cornerBtn.focus()
+            return
+          }
+          if (floating?.classList.contains('player-corner') && e.key === 'ArrowUp' && rateEl) {
+            rateEl.focus()
+            return
+          }
+          // Desde los controles, ↑ va primero a la esquina (justo arriba de la barra) y si no hay, al puntaje.
+          const corner = cornerBtn ?? rateEl
           if (e.key === 'ArrowUp' && focusedControl && corner) corner.focus()
           else if (floating || !focusedControl) playBtnRef.current?.focus()
           return
         }
         case 'f':
           toggleFullscreen()
+          return
+        case 'z':
+          cycleFit()
           return
         case 'm':
           toggleMute()
@@ -898,24 +1139,61 @@ function PlayerView({ state, resume }: { state: PlayState; resume?: Resume }) {
   const external = externalPlayerUrl(state.playUrl)
   const subStyle = settings.subtitleStyle
   const showSkip = !!skipKind && settings.skipSegments === 'button' && !(skipKind === 'recap' && longAway)
-  const showCorner = !menu && !error && !askStill && !sleepFired && (showNextCard || offerRecap || showSkip || inCredits)
+  // "Más como esto" al empezar los créditos de una peli (o al final, sin datos de créditos).
+  const isMovie = meta.type === 'movie' && !state.nextVideoId
+  const postPlayFrom = isMovie ? endCardAt(plan.credits?.start, duration, END_FALLBACK_S) : undefined
+  const postPlayDue = postPlayFrom !== undefined && time >= postPlayFrom && !postPlayClosed
+  const openPick = (pick: PostPlayPick) => {
+    persist()
+    // Reemplaza al reproductor: "Atrás" desde la ficha nueva vuelve a la de esta peli.
+    navigate(`/detail/${pick.type}/${encodeURIComponent(pick.id)}`, { replace: true })
+  }
+  const skipButton = (showSkip || inCredits) && (
+    <button
+      key={skipKind ?? 'credits'}
+      className="btn skip-btn"
+      autoFocus
+      onClick={() => skipTo(skipKind ? segments?.[skipKind] : plan.credits)}
+    >
+      {skipKind === 'intro' ? 'Saltar intro' : skipKind === 'recap' ? 'Saltar resumen' : 'Saltar créditos'}
+    </button>
+  )
+  const showCorner = !menu && !error && !askStill && !sleepFired && !locked && (showNextCard || offerRecap || showSkip || inCredits || postPlayDue)
+  // Cuenta regresiva de la tarjeta del siguiente: con escena post-créditos, hasta el final del video.
+  const nextLeft = plan.afterCredits ? duration - time : countdown
+  const nextTotal = plan.afterCredits && nextAt !== undefined ? duration - nextAt : NEXT_COUNTDOWN_S
 
   return (
     <div
       ref={rootRef}
-      className={`player ${controls ? 'show-controls' : ''} ${subtitleClasses(subStyle)}`}
+      className={`player ${controls && !locked ? 'show-controls' : ''} ${locked ? 'is-locked' : ''} ${scrub ? 'is-scrubbing' : ''} ${subtitleClasses(subStyle)}`}
       data-nav-disabled
+      data-fit={fit}
       {...subs.dropProps}
-      onMouseMove={showControls}
-      onTouchStart={showControls}
+      onPointerDown={(e) => {
+        lastPointer.current = e.pointerType
+        // Un toque sobre el video lo maneja el gesto (muestra u oculta); sobre los controles, los mantiene visibles.
+        if (!locked && (e.pointerType !== 'touch' || e.target !== videoRef.current)) showControls()
+      }}
+      onPointerMove={(e) => {
+        // Solo el mouse: en el celular, después de cada toque el navegador manda un "movimiento" de compatibilidad.
+        if (e.pointerType !== 'touch' && !locked) showControls()
+      }}
+      onWheel={onWheel}
     >
       <video
         ref={videoRef}
         className="player-video"
+        style={{ objectFit: fit }}
         playsInline
         autoPlay={!askStill}
-        onClick={togglePlay}
-        onDoubleClick={toggleFullscreen}
+        // Con mouse, clic = pausa y doble clic = pantalla completa. Con el dedo eso lo manejan los gestos.
+        onClick={() => {
+          if (lastPointer.current !== 'touch') togglePlay()
+        }}
+        onDoubleClick={() => {
+          if (lastPointer.current !== 'touch') toggleFullscreen()
+        }}
         onPlay={() => {
           setPlaying(true)
           setSleepFired(false)
@@ -952,10 +1230,30 @@ function PlayerView({ state, resume }: { state: PlayState; resume?: Resume }) {
         season={video?.season}
         episode={video?.episode}
         videoId={video?.id}
-        visible={!playing && !buffering && time > 0 && !error && !menu && !askStill && !sleepFired}
+        visible={!playing && !buffering && time > 0 && !error && !menu && !askStill && !sleepFired && !scrub && !locked}
       />
 
       {buffering && !error && !askStill && !sleepFired && <div className="player-spinner" aria-label="Cargando" />}
+
+      {ripple && (
+        <div key={ripple.key} className={`player-ripple player-ripple-${ripple.zone}`} aria-hidden>
+          <span className="player-ripple-wave" />
+          <span className="player-ripple-text">
+            <PlayerIcon name={ripple.zone === 'right' ? 'fwd10' : 'back10'} size={30} />
+            {ripple.zone === 'right' ? '+' : '−'}
+            {ripple.seconds} s
+          </span>
+        </div>
+      )}
+
+      {scrub && (
+        <div className="player-scrub-hint" role="status">
+          <strong>
+            {formatTime(scrub.target)} <span className="muted">({scrubDelta(scrub) >= 0 ? '+' : '−'}{formatTime(Math.abs(scrubDelta(scrub)))})</span>
+          </strong>
+          <span className="muted small">{tvMode ? 'OK para ir · Atrás para cancelar' : 'Enter para ir · Esc para cancelar'}</span>
+        </div>
+      )}
 
       {!error && !askStill && !sleepFired && <CreditsNotice imdbId={meta.id} type={meta.type} plan={plan} time={time} duration={duration} />}
 
@@ -1095,32 +1393,21 @@ function PlayerView({ state, resume }: { state: PlayState; resume?: Resume }) {
               }}
             />
           ) : showNextCard ? (
-            <div className="next-card" role="status">
-              <strong>
-                {nextLoading
-                  ? 'Cargando el siguiente episodio…'
-                  : settings.autoplayNext
-                    ? `Siguiente episodio en ${Math.max(0, plan.afterCredits ? Math.ceil(duration - time) : countdown)} s`
-                    : 'Siguiente episodio'}
-              </strong>
-              <div className="next-card-actions">
-                <button className="btn btn-primary btn-small" onClick={() => goNext()} disabled={nextLoading} autoFocus>
-                  Ver ahora
-                </button>
-                <button className="btn btn-small" onClick={() => setNextDismissed(true)}>
-                  Cancelar
-                </button>
-              </div>
-            </div>
+            <NextCard
+              state={state}
+              loading={nextLoading}
+              autoplay={settings.autoplayNext}
+              secondsLeft={nextLeft}
+              total={nextTotal}
+              onPlay={() => goNext()}
+              onCancel={() => setNextDismissed(true)}
+            />
+          ) : postPlayDue ? (
+            <PostPlay imdbId={meta.id} due={postPlayDue} autoFocus={tvMode} onOpen={openPick} onClose={() => setPostPlayClosed(true)}>
+              {skipButton}
+            </PostPlay>
           ) : (
-            <button
-              key={skipKind ?? 'credits'}
-              className="btn skip-btn"
-              autoFocus
-              onClick={() => skipTo(skipKind ? segments?.[skipKind] : plan.credits)}
-            >
-              {skipKind === 'intro' ? 'Saltar intro' : skipKind === 'recap' ? 'Saltar resumen' : 'Saltar créditos'}
-            </button>
+            skipButton
           )}
         </div>
       )}
@@ -1138,10 +1425,38 @@ function PlayerView({ state, resume }: { state: PlayState; resume?: Resume }) {
           )}
           <span className="muted small">{state.addonName}</span>
         </div>
+        {touch && (
+          <button className="btn btn-ghost player-lock-btn" onClick={lockScreen} aria-label="Bloquear pantalla">
+            <PlayerIcon name="lock" />
+            <span>Bloquear</span>
+          </button>
+        )}
       </div>
 
+      {locked && (
+        // Tapa todo: ningún toque llega al video ni a los controles hasta tocar "Desbloquear".
+        <div className="player-lock-layer" onPointerUp={revealUnlock} role="presentation">
+          {unlockHint && (
+            <button
+              className="btn player-unlock-btn"
+              onPointerUp={(e) => e.stopPropagation()}
+              onClick={unlockScreen}
+              autoFocus
+            >
+              <PlayerIcon name="unlock" />
+              Desbloquear
+            </button>
+          )}
+        </div>
+      )}
+
       {menu && (
-        <div className={`player-menu ${menu === 'sources' ? 'player-menu-wide' : ''}`} role="menu">
+        <div
+          className={`player-menu ${menu === 'sources' ? 'player-menu-wide' : ''} ${menu === 'quick' ? 'player-menu-quick' : ''}`}
+          role={menu === 'quick' ? 'group' : 'menu'}
+          aria-label={menu === 'quick' ? 'Ajustes rápidos' : undefined}
+        >
+          {menu === 'quick' && <QuickSettings fit={fit} onFit={(f) => setFit(f, false)} onChange={showControls} />}
           {menu === 'subs' && <SubtitleMenu subs={subs} isSeries={!!video} onInteract={showControls} />}
           {menu === 'audio' &&
             audioTracks.map((t) => (
@@ -1186,16 +1501,28 @@ function PlayerView({ state, resume }: { state: PlayState; resume?: Resume }) {
           min={0}
           max={duration || 0}
           step={1}
-          value={time}
+          value={scrub ? scrub.target : time}
           aria-label="Posición"
+          aria-valuetext={formatTime(scrub ? scrub.target : time)}
           tabIndex={-1}
           onChange={(e) => {
+            const s = scrubRef.current
+            if (s) {
+              setScrub(undefined)
+              if (s.wasPlaying) videoRef.current?.play().catch(() => {})
+            }
             if (videoRef.current) videoRef.current.currentTime = Number(e.target.value)
             showControls()
           }}
-          style={{ ['--pct' as string]: duration ? `${(time / duration) * 100}%` : '0%' }}
+          style={{ ['--pct' as string]: duration ? `${((scrub ? scrub.target : time) / duration) * 100}%` : '0%' }}
         />
-        <SeekPreview bar={seekbarRef} url={state.playUrl} duration={duration} enabled={settings.seekPreview && !saveDataOn()} />
+        <SeekPreview
+          bar={seekbarRef}
+          url={state.playUrl}
+          duration={duration}
+          enabled={settings.seekPreview && !saveDataOn()}
+          scrubAt={scrub?.target}
+        />
         <div className="controls-row">
           <button onClick={() => seek(-SEEK_STEP)} aria-label="Retroceder 10 segundos">
             <PlayerIcon name="back10" />
@@ -1206,8 +1533,9 @@ function PlayerView({ state, resume }: { state: PlayState; resume?: Resume }) {
           <button onClick={() => seek(SEEK_STEP)} aria-label="Adelantar 10 segundos">
             <PlayerIcon name="fwd10" />
           </button>
+          <VolumeControl state={volume} onToggleMute={toggleMute} onSet={setVolume} />
           <span className="time">
-            {formatTime(time)} / {formatTime(duration)}
+            {formatTime(scrub ? scrub.target : time)} / {formatTime(duration)}
           </span>
           <span className="spacer" />
           <button onClick={(e) => toggleMenu('subs', e)} data-menu="subs" aria-label="Subtítulos" aria-expanded={menu === 'subs'}>
@@ -1259,6 +1587,22 @@ function PlayerView({ state, resume }: { state: PlayState; resume?: Resume }) {
               <PlayerIcon name="pip" />
             </button>
           )}
+          <button
+            onClick={cycleFit}
+            aria-label={`Imagen: ${FIT_LABELS[fit]} (${FIT_HINTS[fit]}). Cambiar entre ajustar, llenar y estirar`}
+            className={`fit-btn ${fit !== 'contain' ? 'active' : ''}`}
+          >
+            <PlayerIcon name="fit" />
+            <span className="fit-label">{FIT_LABELS[fit]}</span>
+          </button>
+          <button
+            onClick={(e) => toggleMenu('quick', e)}
+            data-menu="quick"
+            aria-label="Ajustes rápidos"
+            aria-expanded={menu === 'quick'}
+          >
+            <PlayerIcon name="gear" />
+          </button>
           <button onClick={toggleFullscreen} aria-label="Pantalla completa">
             <PlayerIcon name="fullscreen" />
           </button>

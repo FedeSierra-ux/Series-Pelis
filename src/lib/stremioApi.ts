@@ -1,3 +1,4 @@
+import { fetchWithTimeout } from './abort'
 import { cached } from './cache'
 import type { StremioAddonDescriptor, StremioLibraryItem } from './stremioLibrary'
 
@@ -26,11 +27,13 @@ const MESSAGES: Record<number, string> = {
 async function call<T>(method: string, body: Record<string, unknown>): Promise<T> {
   let res: Response
   try {
-    res = await fetch(STREMIO_API + method, {
+    // Sin `AbortSignal.timeout`: en las TVs viejas (Chromium < 103) no existe y el importador y el
+    // explorador de addons nunca andaban (auditoría #9).
+    res = await fetchWithTimeout(STREMIO_API + method, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(body),
-      signal: AbortSignal.timeout(TIMEOUT),
+      timeoutMs: TIMEOUT,
     })
   } catch {
     throw new StremioApiError('No se pudo conectar con Stremio. Revisá la conexión e intentá de nuevo.')

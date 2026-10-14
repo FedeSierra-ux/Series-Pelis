@@ -1,0 +1,109 @@
+import { describe, expect, it, vi } from 'vitest'
+
+vi.mock('idb-keyval', () => ({
+  createStore: () => ({}),
+  get: async () => undefined,
+  set: async () => undefined,
+  update: async () => undefined,
+  del: async () => undefined,
+  delMany: async () => undefined,
+  keys: async () => [],
+  clear: async () => undefined,
+}))
+
+import type { ListItem, WatchEntry } from './store'
+import type { Meta } from './types'
+import { computeUpNext, continueRowItems, unstartedWatchlist, type EpisodeItem } from './upNext'
+
+const DAY = 24 * 60 * 60 * 1000
+
+const entry = (videoId: string, metaId: string, over: Partial<WatchEntry> = {}): WatchEntry => ({
+  videoId,
+  metaId,
+  type: 'series',
+  name: metaId,
+  position: 600,
+  duration: 1200,
+  watched: false,
+  updatedAt: 1,
+  firstWatchedAt: 1,
+  ...over,
+})
+
+const episode = (metaId: string, over: Partial<EpisodeItem> = {}): EpisodeItem => ({
+  metaId,
+  seriesName: metaId,
+  videoId: `${metaId}:1:2`,
+  season: 1,
+  episode: 2,
+  released: 0,
+  hasTime: false,
+  watched: false,
+  ...over,
+})
+
+describe('continueRowItems (Seguir viendo + siguiente episodio en una fila)', () => {
+  it('ordena todo por fecha, lo más reciente primero', () => {
+    const resume = [entry('ttA:1:1', 'ttA', { updatedAt: 300 }), entry('ttM', 'ttM', { type: 'movie', updatedAt: 100 })]
+    const next = [episode('ttB', { lastActivity: 200, released: 50 })]
+    expect(continueRowItems(resume, next).map((i) => i.key)).toEqual(['ttA:1:1', 'ttB:1:2', 'ttM'])
+  })
+
+  it('"Episodio nuevo" si salió después de lo último que viste; si no, "Siguiente"', () => {
+    const items = continueRowItems([], [episode('ttB', { lastActivity: 100, released: 500 }), episode('ttC', { lastActivity: 400, released: 50 })])
+    expect(items.map((i) => (i.kind === 'next' ? [i.episode.metaId, i.label] : []))).toEqual([
+      ['ttB', 'Episodio nuevo'],
+      ['ttC', 'Siguiente'],
+    ])
+    // El estreno cuenta como fecha del episodio nuevo.
+    expect(items[0].at).toBe(500)
+  })
+
+  it('una serie aparece una sola vez (lo empezado gana)', () => {
+    const items = continueRowItems([entry('ttA:1:3', 'ttA', { updatedAt: 10 })], [episode('ttA', { videoId: 'ttA:1:4', lastActivity: 10 })])
+    expect(items).toHaveLength(1)
+    expect(items[0].kind).toBe('resume')
+  })
+})
+
+describe('computeUpNext', () => {
+  const now = new Date(2026, 9, 14, 12).getTime()
+  const meta: Meta = {
+    id: 'ttS',
+    type: 'series',
+    name: 'Serie',
+    videos: [
+      { id: 'ttS:1:1', season: 1, episode: 1, released: '2026-09-01T00:00:00.000Z' },
+      { id: 'ttS:1:2', season: 1, episode: 2, released: '2026-10-10T00:00:00.000Z' },
+      { id: 'ttS:1:3', season: 1, episode: 3, released: '2026-10-30T00:00:00.000Z' },
+    ],
+  }
+  const followed = [{ id: 'ttS', name: 'Serie', lastActivity: 5 }]
+
+  it('el siguiente sin ver lleva cuándo viste la serie por última vez', () => {
+    const progress = { 'ttS:1:1': entry('ttS:1:1', 'ttS', { watched: true, updatedAt: now - 10 * DAY }) }
+    const { next } = computeUpNext(followed, new Map([['ttS', meta]]), progress, now)
+    expect(next.map((n) => n.videoId)).toEqual(['ttS:1:2'])
+    expect(next[0].lastActivity).toBe(now - 10 * DAY)
+    // Salió después de lo último visto: en la fila de Inicio es "Episodio nuevo".
+    expect(continueRowItems([], next)[0]).toMatchObject({ kind: 'next', label: 'Episodio nuevo' })
+  })
+
+  it('no sugiere un episodio que todavía no salió', () => {
+    const progress = {
+      'ttS:1:1': entry('ttS:1:1', 'ttS', { watched: true }),
+      'ttS:1:2': entry('ttS:1:2', 'ttS', { watched: true, updatedAt: 9 }),
+    }
+    expect(computeUpNext(followed, new Map([['ttS', meta]]), progress, now).next).toEqual([])
+  })
+})
+
+describe('unstartedWatchlist (fila "Mi lista" de Inicio)', () => {
+  const item = (id: string, addedAt: number): ListItem => ({ id, type: 'movie', name: id, addedAt })
+  it('solo lo que no se empezó, lo agregado más recientemente primero', () => {
+    const list = { a: item('a', 1), b: item('b', 3), c: item('c', 2) }
+    const progress = { c: entry('c', 'c', { type: 'movie' }) }
+    expect(unstartedWatchlist(list, progress).map((i) => i.id)).toEqual(['b', 'a'])
+    expect(unstartedWatchlist(list, {}, 2).map((i) => i.id)).toEqual(['b', 'c'])
+  })
+})
