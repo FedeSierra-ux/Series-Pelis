@@ -196,8 +196,8 @@ npm run preview    # sirve dist/ en http://localhost:4173
   `_status` va antes de `crossSite`. Descarga sin key anda (200); el reintento con key usa `?api_key=`.
 - **Decisiones para la v0.17 (reemplazan el reparto del plan de abajo)**: addons y TorBox **iguales para todas las
   casas**, solo los cambia el admin (opción A). Ajustes generales (subtítulos, idiomas, autoplay, saltar intro, sin
-  spoilers, reglas de fuentes) **iguales en toda la casa**; falta confirmar si lo físico (modo TV, tamaño de la
-  interfaz, protector, reproductor externo, servidor local, búsquedas) queda por aparato. Por perfil (en la v0.17,
+  spoilers, reglas de fuentes) **iguales en toda la casa**; lo físico (modo TV, tamaño de la interfaz, protector,
+  reproductor externo, servidor local de Stremio, búsquedas recientes) queda **por aparato** (confirmado). Por perfil (en la v0.17,
   un perfil "principal" por casa): historial, seguir viendo, mi lista, estrellas, diario y metas. Datos locales:
   se mezclan solos (gana el más nuevo). Login obligatorio con D1, también para `/api/tmdb` y `/api/subs`. Casas e
   invitaciones se manejan desde la app (Ajustes → Casas).
