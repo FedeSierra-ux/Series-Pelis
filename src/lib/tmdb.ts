@@ -218,6 +218,8 @@ export interface TmdbDetails {
   first_air_date?: string
   runtime?: number
   episode_run_time?: number[]
+  /** TMDB dejó `episode_run_time` vacío en casi todas las series: la duración sale del último episodio. */
+  last_episode_to_air?: { runtime?: number | null } | null
   genres?: { id: number; name: string }[]
   vote_average?: number
   belongs_to_collection?: { id: number; name: string; poster_path?: string | null; backdrop_path?: string | null } | null
@@ -319,6 +321,11 @@ export function getTrending(type: 'all' | TmdbType = 'all', window: 'day' | 'wee
   return tmdbCached<TmdbPage>(`/trending/${type}/${window}`, { language: LANG }, 3 * 60 * 60 * 1000)
 }
 
+/** Estrenos en cines de Argentina (para la portada de Inicio). */
+export function getNowPlaying(): Promise<TmdbPage> {
+  return tmdbCached<TmdbPage>('/movie/now_playing', { language: LANG, region: REGION }, 6 * 60 * 60 * 1000)
+}
+
 export function getRecommendations(type: TmdbType, id: number): Promise<TmdbPage> {
   return tmdbCached<TmdbPage>(`/${type}/${id}/recommendations`, { language: LANG })
 }
@@ -326,6 +333,13 @@ export function getRecommendations(type: TmdbType, id: number): Promise<TmdbPage
 // ---------- Ayudas ----------
 
 export const itemTitle = (i: { title?: string; name?: string }) => i.title ?? i.name ?? ''
+/** Duración en minutos de TMDB → "2 h 6 min" / "45 min". */
+export function formatRuntime(minutes: number | undefined): string {
+  if (!minutes || minutes <= 0) return ''
+  const h = Math.floor(minutes / 60)
+  const m = minutes % 60
+  return h > 0 ? (m > 0 ? `${h} h ${m} min` : `${h} h`) : `${m} min`
+}
 export const itemYear = (i: { release_date?: string; first_air_date?: string }) => (i.release_date || i.first_air_date || '').slice(0, 4)
 
 /** Tráiler de YouTube: primero en español, después oficial, después cualquiera. */

@@ -1,7 +1,7 @@
 import { lazy, Suspense, useEffect, useLayoutEffect, useRef } from 'react'
 import { BrowserRouter, Navigate, Route, Routes, useLocation, useNavigate, useNavigationType } from 'react-router-dom'
 import { ErrorBoundary } from './components/ErrorBoundary'
-import { Layout } from './components/Layout'
+import { Theme2Layout as Layout } from './components/Theme2Layout'
 import { Onboarding } from './components/Onboarding'
 import { Screensaver } from './components/Screensaver'
 import { ShortcutsHelp, useGlobalShortcuts } from './components/ShortcutsHelp'
@@ -39,7 +39,7 @@ function SpatialNav() {
   return null
 }
 
-/** Atajos de teclado globales ("/", "?", "T", "G" + letra); necesita el router, por eso es un componente. */
+/** Atajos de teclado globales ("/", "?", "G" + letra); necesita el router, por eso es un componente. */
 function GlobalShortcuts() {
   useGlobalShortcuts()
   return null

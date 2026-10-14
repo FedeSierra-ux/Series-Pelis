@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="es-AR">
+<html lang="es-AR" data-theme="2">
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
@@ -14,12 +14,6 @@
     <link rel="preconnect" href="https://image.tmdb.org" />
     <link rel="dns-prefetch" href="https://episodes.metahub.space" />
     <title>Series-Pelis</title>
-    <!-- Tema 2: se marca antes de pintar para que no aparezca un instante el Tema 1 (ver src/lib/theme.ts). -->
-    <script>
-      try {
-        if (localStorage.getItem('sp-theme') === '2') document.documentElement.dataset.theme = '2'
-      } catch (e) {}
-    </script>
   </head>
   <body>
     <div id="root"></div>

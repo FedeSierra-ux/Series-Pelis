@@ -15,7 +15,6 @@ import {
   useStore,
 } from '../lib/store'
 import { AddonExplorer } from './settings/AddonExplorer'
-import { AppearanceSettings } from './settings/AppearanceSettings'
 import { PlayerSettings } from './settings/PlayerSettings'
 import { PosterSettings } from './settings/PosterSettings'
 import { SourceSettings } from './settings/SourceSettings'
@@ -245,7 +244,6 @@ const ALL_SECTIONS: SettingsSectionDef[] = [
   { id: 'stremio', title: 'Importar desde Stremio', element: <StremioImport /> },
   { id: 'tmdb', title: 'TMDB', element: <TmdbSettings /> },
   { id: 'posters', title: 'Pósters', element: <PosterSettings /> },
-  { id: 'appearance', title: 'Apariencia', element: <AppearanceSettings /> },
   { id: 'playback', title: 'Reproducción', element: <PlaybackSection /> },
   { id: 'player', title: 'Reproductor', element: <PlayerSettings /> },
   { id: 'sources', title: 'Elección de fuente', element: <SourceSettings /> },

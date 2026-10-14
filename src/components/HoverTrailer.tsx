@@ -8,12 +8,16 @@ import {
   placeCard,
   trailerSound,
   useOpenTrailer,
+  YT_LISTEN,
+  YT_ORIGIN,
   ytCommand,
+  ytPlayerState,
   type OpenTrailer,
 } from '../lib/hoverTrailer'
 import { ImdbRating } from './Rating'
 
-const YT_ORIGIN = 'https://www.youtube-nocookie.com'
+// Si YouTube no manda su estado (la API de mensajes no responde), mostramos el video igual pasado esto.
+const STATE_FALLBACK_MS = 6000
 const BACK_KEYS = new Set(['Escape', 'GoBack', 'BrowserBack', 'Backspace'])
 
 function isTyping() {
@@ -39,6 +43,7 @@ function HoverTrailerCard({ t }: { t: OpenTrailer }) {
   const frame = useRef<HTMLIFrameElement>(null)
   // Si intentamos arrancar con sonido y el navegador lo frena, volvemos a sin sonido.
   const autoUnmute = useRef(false)
+  const gotState = useRef(false)
 
   const post = (func: string, args: unknown[] = []) => frame.current?.contentWindow?.postMessage(ytCommand(func, args), YT_ORIGIN)
 
@@ -80,6 +85,13 @@ function HoverTrailerCard({ t }: { t: OpenTrailer }) {
       } catch {
         return
       }
+      // El video aparece recién cuando reproduce: así nunca se ve el botón de play o pausa de YouTube.
+      const state = ytPlayerState(data)
+      if (state !== undefined) {
+        gotState.current = true
+        if (state === 1) setReady(true)
+        else if (state === 2 || state === 5) setReady(false)
+      }
       if (data?.event === 'onReady' && trailerSound.on) {
         autoUnmute.current = true
         post('unMute')
@@ -114,9 +126,10 @@ function HoverTrailerCard({ t }: { t: OpenTrailer }) {
 
   const onLoad = () => {
     // Pedimos los eventos del reproductor (listo, silenciado, pausado) para el botón de sonido.
-    frame.current?.contentWindow?.postMessage(JSON.stringify({ event: 'listening', id: 1, channel: 'widget' }), YT_ORIGIN)
-    // YouTube muestra un instante en negro: esperamos un poco antes del fundido.
-    setTimeout(() => setReady(true), 500)
+    frame.current?.contentWindow?.postMessage(YT_LISTEN, YT_ORIGIN)
+    setTimeout(() => {
+      if (!gotState.current) setReady(true)
+    }, STATE_FALLBACK_MS)
   }
 
   const openDetail = () => {

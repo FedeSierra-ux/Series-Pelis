@@ -1,7 +1,7 @@
 {
   "name": "series-pelis",
   "private": true,
-  "version": "0.10.0",
+  "version": "0.12.0",
   "description": "Plataforma personal para ver pelis y series con addons de Stremio, puntaje de IMDb e historial.",
   "type": "module",
   "scripts": {

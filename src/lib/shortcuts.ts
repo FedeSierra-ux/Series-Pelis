@@ -40,7 +40,6 @@ export const SHORTCUT_GROUPS: ShortcutGroup[] = [
     shortcuts: [
       { keys: ['/'], description: 'Ir a Buscar' },
       { keys: ['?'], description: 'Mostrar u ocultar esta ayuda' },
-      { keys: ['T'], description: 'Cambiar el tema (Tema 1 / Tema 2)' },
       ...Object.entries(GOTO_TARGETS).map(([letter, t]) => ({
         keys: [`G ${letter.toUpperCase()}`],
         description: `Ir a ${t.label}`,

@@ -235,3 +235,32 @@ export const trailerSound = { on: false }
 export function ytCommand(func: string, args: unknown[] = []): string {
   return JSON.stringify({ event: 'command', func, args })
 }
+
+export const YT_ORIGIN = 'https://www.youtube-nocookie.com'
+
+/** Pide los eventos del reproductor (listo, estado, silencio). Se manda al cargar el iframe. */
+export const YT_LISTEN = JSON.stringify({ event: 'listening', id: 1, channel: 'widget' })
+
+/**
+ * Estado del reproductor que viene en un mensaje de YouTube: -1 sin empezar, 0 terminó, 1 reproduciendo,
+ * 2 pausado, 3 cargando, 5 en espera. Mostramos el video recién con el 1: antes (o si el navegador frenó
+ * la reproducción automática) YouTube pone su botón grande de play encima.
+ */
+export function ytPlayerState(data: unknown): number | undefined {
+  let msg: unknown = data
+  if (typeof data === 'string') {
+    try {
+      msg = JSON.parse(data)
+    } catch {
+      return undefined
+    }
+  }
+  if (!msg || typeof msg !== 'object') return undefined
+  const { event, info } = msg as { event?: string; info?: unknown }
+  if (event === 'onStateChange' && typeof info === 'number') return info
+  if (event === 'infoDelivery' && info && typeof info === 'object') {
+    const state = (info as { playerState?: unknown }).playerState
+    return typeof state === 'number' ? state : undefined
+  }
+  return undefined
+}

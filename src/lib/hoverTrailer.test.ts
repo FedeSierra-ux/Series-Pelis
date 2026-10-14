@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { hoverTrailerUrl, placeCard, trailerAllowed, trailerKeyFromMeta, ytCommand, type TrailerEnv } from './hoverTrailer'
+import { hoverTrailerUrl, placeCard, trailerAllowed, trailerKeyFromMeta, ytCommand, ytPlayerState, type TrailerEnv } from './hoverTrailer'
 
 describe('hoverTrailerUrl', () => {
   const url = new URL(hoverTrailerUrl('dQw4w9WgXcQ', 'http://localhost:4177'))
@@ -95,5 +95,18 @@ describe('placeCard', () => {
 describe('ytCommand', () => {
   it('mensaje de la API de iframes de YouTube', () => {
     expect(JSON.parse(ytCommand('unMute'))).toEqual({ event: 'command', func: 'unMute', args: [] })
+  })
+})
+
+describe('ytPlayerState', () => {
+  it('lee el estado de infoDelivery y de onStateChange', () => {
+    expect(ytPlayerState(JSON.stringify({ event: 'infoDelivery', info: { playerState: 1, muted: true } }))).toBe(1)
+    expect(ytPlayerState({ event: 'onStateChange', info: 2 })).toBe(2)
+  })
+
+  it('ignora lo que no trae estado o no es JSON', () => {
+    expect(ytPlayerState(JSON.stringify({ event: 'infoDelivery', info: { muted: true } }))).toBeUndefined()
+    expect(ytPlayerState('no es json')).toBeUndefined()
+    expect(ytPlayerState(null)).toBeUndefined()
   })
 })

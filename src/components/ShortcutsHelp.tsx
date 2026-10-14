@@ -1,8 +1,6 @@
 import { useEffect, useRef, useState, type KeyboardEvent, type MouseEvent } from 'react'
 import { useLocation, useNavigate } from 'react-router-dom'
 import { GOTO_TARGETS, SHORTCUT_GROUPS, createChordMatcher, isTypingTarget, type Shortcut } from '../lib/shortcuts'
-import { settingsStore } from '../lib/store'
-import { normalizeTheme } from '../lib/theme'
 import './shortcuts-help.css'
 
 // Ayuda "?" con la tabla de atajos (lib/shortcuts.ts) y el hook que escucha los atajos globales.
@@ -46,7 +44,7 @@ function focusSearchInput() {
 }
 
 /**
- * Atajos globales: "/" (Buscar), "?" (ayuda), "T" (tema) y "G" + letra (ir a una sección).
+ * Atajos globales: "/" (Buscar), "?" (ayuda) y "G" + letra (ir a una sección).
  * No se meten cuando se está escribiendo, con el teclado en pantalla abierto, dentro de una ventana
  * (data-nav-scope: asistente, ayuda, listas) ni donde la página maneja sus teclas (data-nav-disabled:
  * el reproductor y "Tu año"). Las flechas y "Atrás" siguen siendo de lib/spatialNav.ts.
@@ -88,11 +86,6 @@ export function useGlobalShortcuts() {
         case '?':
           e.preventDefault()
           toggleShortcutsHelp()
-          return
-        case 't':
-        case 'T':
-          e.preventDefault()
-          settingsStore.set((s) => ({ ...s, theme: normalizeTheme(s.theme) === '2' ? '1' : '2' }))
           return
       }
     }

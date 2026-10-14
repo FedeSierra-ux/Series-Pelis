@@ -1,5 +1,36 @@
 # Changelog
 
+## [0.12.0] - 2026-10-14
+
+### Agregado
+- **Series con portada grande**: igual que Películas, a todo el ancho y estilo Stremio (logo, IMDb, año,
+  duración, géneros y reparto) con las series en tendencia de hoy y el "Top 10 series de hoy" encimado abajo.
+
+### Arreglado
+- La duración de las series en la portada: TMDB ya casi no manda la duración general de una serie, así que
+  ahora se toma la del último episodio emitido.
+
+## [0.11.0] - 2026-10-14
+
+### Cambiado
+- **Un solo diseño**: los colores del Tema 2 quedan como los de toda la app y se saca el Tema 1 (y la sección
+  Ajustes → Apariencia). Ya no hay parpadeo al abrir: el tema va marcado en el HTML. Con el Tema 1 se van también
+  el atajo `T` (cambiar el tema) y la barra inferior con "Más" que tenía ese tema en el celular; en el celular queda
+  la barra del Tema 2.
+- **Portada nueva estilo Stremio** (con TMDB): logo del título, puntaje de IMDb, año, duración, géneros, sinopsis
+  y las caras del reparto principal, con la imagen de fondo de la peli completa.
+  - **Películas**: portada grande a todo el ancho con las películas en tendencia y el "Top 10 películas de hoy"
+    montado sobre la parte de abajo.
+  - **Inicio**: portada más chica con los **estrenos en cines**, que no ocupa toda la parte de arriba.
+  - En el celular la imagen va arriba y el texto empieza donde se funde, para que se lea bien.
+- **Tráiler sin controles**: a los segundos el tráiler arranca solo y no aparece la interfaz de YouTube (ni el botón
+  de play/pausa ni el título); el video recién se muestra cuando ya se está reproduciendo, mientras tanto se ve la
+  imagen de fondo. Vale para la portada y para el tráiler al pasar por un póster.
+
+### Agregado
+- **Pausar el tráiler tocando la portada**: un click (o OK en la TV) pausa y otro lo sigue. Con el control remoto,
+  ↑ desde "Ver ahora" o "Mi lista" va a la portada (antes se iba al menú lateral).
+
 ## [0.10.0] - 2026-10-14
 
 Lo que quedó afuera de la v0.9: reproductor con controles del sistema y velocidad, atajos y ayuda, guía del control

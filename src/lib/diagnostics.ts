@@ -218,7 +218,8 @@ export function buildReport(kind: ReportKind, err: unknown, extra: ReportExtra =
       os: platform.os,
       tv: resolveTvMode(settings.tvMode, platform.tv),
     },
-    theme: settings.theme,
+    // Desde la v0.11 hay un solo tema; el campo queda porque el servidor lo espera.
+    theme: '2',
     addons: [...new Set((extra.addons ?? []).map(hostOf).filter(Boolean))].slice(0, 20),
     installId: installId(),
     at: new Date().toISOString(),
