@@ -6,3 +6,8 @@ dev-dist
 .wrangler
 .claude/worktrees
 *.tsbuildinfo
+# Keys para probar las Functions en local (wrangler): nunca se suben
+.dev.vars
+.dev.vars.*
+.env
+.env.*

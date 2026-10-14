@@ -1,5 +1,11 @@
 # Changelog
 
+## [0.15.1] - 2026-10-14
+
+### Seguridad
+- `.gitignore` ignora `.dev.vars` y `.env` (donde van las keys para probar las Functions en la compu), así
+  nunca se suben al repo por error.
+
 ## [0.15.0] - 2026-10-14
 
 ### Agregado
