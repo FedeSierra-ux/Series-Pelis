@@ -127,6 +127,14 @@ npm run preview    # sirve dist/ en http://localhost:4173
   atenuado, `aria-busy`); esqueletos solo en la primera búsqueda (`SKELETONS = 12`). `usePeople` devuelve `stale` y
   `PeopleRow` tiene su propio esqueleto redondo (`CastSkeleton`, mismo alto que `.cast-card`); `Row` acepta `stale`.
   Queda un solo corrimiento inevitable: cuando la búsqueda nueva no tiene personas, la fila se cierra.
+- v0.12.2 hecha: **subtítulos automáticos prendidos de fábrica** (`autoSubtitles: true`). Migración de una sola vez
+  en `hydrateStores` con la marca `settings.autoSubsMigrated` (si el usuario los apaga después, se respeta).
+- **Subtítulos online (25), pendiente**: SubDL como fuente principal (tiene el archivo de Subscene, fuerte en español
+  latino) y OpenSubtitles de respaldo, con una Pages Function `/api/subs` igual que la de TMDB (secretos de
+  Cloudflare, lista blanca, solo mismo sitio, caché para que cada episodio se baje una vez para todas las casas;
+  los .zip de SubDL se pasan a VTT). **Esperar a que el usuario cree las cuentas**; las keys nunca en el código.
+- Modo TV automático (128): ya existe desde v0.6/v0.9 (`detectPlatform`, `tvMode: 'auto'`). Pendiente que el
+  usuario diga si su TV muestra "Este dispositivo parece una TV" y qué TV/navegador usa antes de tocar nada.
 - Función 137 (temas OLED / acento / color del póster): el usuario pidió **ver el preview antes/después primero**
   (v0.10, página en el scratchpad de la sesión); después decide. Perfiles locales (109): **todavía no**.
 - **Cuestionario de funciones (140)** — decisiones del usuario y plan por versiones:

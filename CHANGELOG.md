@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.12.2] - 2026-10-14
+
+### Cambiado
+- **Subtítulos en español activados de entrada**: la opción "Activarlos solos en el primer idioma preferido que
+  haya" (Ajustes → Reproductor) ahora viene prendida, con español primero y después inglés. A quien ya tenía la
+  app se le prende una sola vez; si la apaga, queda apagada. Los subtítulos salen de los addons instalados (por
+  ejemplo, "OpenSubtitles v3" de Stremio): si ningún addon trae subtítulos para ese título, no aparece nada.
+
 ## [0.12.1] - 2026-10-14
 
 ### Arreglado

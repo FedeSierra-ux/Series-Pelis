@@ -608,12 +608,14 @@ export interface Settings {
   hintsSeen: boolean
   /** v0.10: mandar solos los errores de la app al sitio (sin URLs de addons ni keys; ver lib/diagnostics.ts). */
   sendReports: boolean
+  /** v0.12.2: ya se prendieron una vez los subtítulos automáticos (antes venían apagados de fábrica). */
+  autoSubsMigrated: boolean
 }
 
 export const settingsStore = new PersistedStore<Settings>('settings', {
   streamingServerUrl: '',
   subtitleLangs: ['spa', 'eng'],
-  autoSubtitles: false,
+  autoSubtitles: true,
   audioLangs: ['spa', 'eng'],
   subtitleStyle: { size: 'm', color: 'white', background: 'semi', outline: false, font: 'system', position: 0 },
   hideSdh: false,
@@ -645,6 +647,7 @@ export const settingsStore = new PersistedStore<Settings>('settings', {
   onboardingDone: false,
   hintsSeen: false,
   sendReports: false,
+  autoSubsMigrated: false,
 })
 
 // ---------- Copia de seguridad ----------
@@ -743,6 +746,9 @@ export async function hydrateStores() {
   // La primera vez el diario se arma con lo que ya estaba marcado como visto.
   if (diaryStore.get().v === 0) diaryStore.set({ v: 1, entries: rebuildFromProgress(progressStore.get()) })
   if (addonsStore.get().length === 0) addonsStore.set([CINEMETA_ADDON])
+  // v0.12.2: los subtítulos en el idioma preferido vienen prendidos. A quien ya tenía la app se le prenden una
+  // sola vez (casi nadie los había tocado: venían apagados); si después los apaga, queda apagado.
+  if (!settingsStore.get().autoSubsMigrated) settingsStore.set((s) => ({ ...s, autoSubtitles: true, autoSubsMigrated: true }))
   // No bloquea el arranque.
   setTimeout(() => refreshManifests().catch(() => {}), 2000)
 }
