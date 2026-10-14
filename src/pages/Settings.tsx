@@ -1,5 +1,5 @@
-import { useRef, useState } from 'react'
-import { Link } from 'react-router-dom'
+import { useEffect, useRef, useState } from 'react'
+import { Link, useLocation } from 'react-router-dom'
 import { Advanced } from '../components/Advanced'
 import { AddonUrlForm } from '../components/AddonUrlForm'
 import { CINEMETA_URL } from '../lib/addons'
@@ -23,7 +23,9 @@ import { TasteSettings } from './settings/TasteSettings'
 import { StremioImport } from './settings/StremioImport'
 import { TmdbSettings } from './settings/TmdbSettings'
 import { TvSettings } from './settings/TvSettings'
+import { SettingsBlock, SettingsIndex, WIDE_QUERY, goToSection, useActiveSection, useMediaQuery, type SettingsSectionDef } from './settings/SettingsLayout'
 import { errorText } from '../lib/errors'
+import './settings/settings-layout.css'
 
 const DEFAULT_SERVER = 'http://127.0.0.1:11470'
 
@@ -230,30 +232,68 @@ function DataSection() {
   )
 }
 
+/**
+ * Secciones de Ajustes, en el orden en que se ven. Es la única lista: de acá salen el índice
+ * (PC/TV), los plegables (celular) y las anclas `#id`. Para agregar una sección nueva alcanza con
+ * una línea acá; el `id` es el ancla y `title` lo que dice el índice.
+ */
+const SECTIONS: SettingsSectionDef[] = [
+  { id: 'addons', title: 'Addons de Stremio', element: <AddonsSection /> },
+  { id: 'stremio', title: 'Importar desde Stremio', element: <StremioImport /> },
+  { id: 'tmdb', title: 'TMDB', element: <TmdbSettings /> },
+  { id: 'posters', title: 'Pósters', element: <PosterSettings /> },
+  { id: 'appearance', title: 'Apariencia', element: <AppearanceSettings /> },
+  { id: 'playback', title: 'Reproducción', element: <PlaybackSection /> },
+  { id: 'player', title: 'Reproductor', element: <PlayerSettings /> },
+  { id: 'sources', title: 'Elección de fuente', element: <SourceSettings /> },
+  { id: 'taste', title: 'Gustos y spoilers', element: <TasteSettings /> },
+  { id: 'tv', title: 'Pantalla y control remoto', element: <TvSettings /> },
+  // TODO v0.10: ShortcutsSettings — { id: 'shortcuts', title: 'Atajos y ayuda', element: <ShortcutsSettings /> },
+  { id: 'data', title: 'Tus datos', element: <DataSection /> },
+  // TODO v0.10: DiagnosticsSettings — { id: 'diagnostics', title: 'Diagnóstico', element: <DiagnosticsSettings /> },
+]
+const SECTION_IDS = SECTIONS.map((s) => s.id)
+
 export function Settings() {
   useTitle('Ajustes')
   const { showAdvanced } = useStore(settingsStore)
+  const { hash } = useLocation()
+  const wide = useMediaQuery(WIDE_QUERY)
+  const [active, setActive] = useActiveSection(SECTION_IDS, wide)
+
+  // `/settings#tmdb` abre y muestra esa sección (sirve para enlazar desde otras pantallas).
+  useEffect(() => {
+    const id = hash.slice(1)
+    if (id && SECTION_IDS.includes(id)) goToSection(id, false)
+  }, [hash])
+
   return (
     <div className={`page settings${showAdvanced ? ' show-advanced' : ''}`}>
       <header className="page-header">
         <h1>Ajustes</h1>
         <span className="muted small">Versión {__APP_VERSION__}</span>
       </header>
-      <label className="check settings-advanced-toggle">
-        <input type="checkbox" checked={showAdvanced} onChange={(e) => settingsStore.set((s) => ({ ...s, showAdvanced: e.target.checked }))} />
-        Mostrar opciones avanzadas
-      </label>
-      <AddonsSection />
-      <StremioImport />
-      <TmdbSettings />
-      <PosterSettings />
-      <AppearanceSettings />
-      <PlaybackSection />
-      <PlayerSettings />
-      <SourceSettings />
-      <TasteSettings />
-      <TvSettings />
-      <DataSection />
+      <div className="settings-layout">
+        <SettingsIndex
+          sections={SECTIONS}
+          active={active}
+          onSelect={(id, focusFirst) => {
+            setActive(id)
+            goToSection(id, focusFirst)
+          }}
+        />
+        <div className="settings-content">
+          <label className="check settings-advanced-toggle">
+            <input type="checkbox" checked={showAdvanced} onChange={(e) => settingsStore.set((s) => ({ ...s, showAdvanced: e.target.checked }))} />
+            Mostrar opciones avanzadas
+          </label>
+          {SECTIONS.map((s, i) => (
+            <SettingsBlock key={s.id} id={s.id} title={s.title} wide={wide} defaultOpen={i === 0}>
+              {s.element}
+            </SettingsBlock>
+          ))}
+        </div>
+      </div>
     </div>
   )
 }

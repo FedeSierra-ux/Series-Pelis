@@ -1103,3 +1103,37 @@ html[data-tv][data-theme='2'] .row-more {
 html[data-tv][data-theme='2'] .btn-small {
   padding: 10px 18px;
 }
+
+/* ---------- v0.10 pantallas ---------- */
+
+/* "Quitar" / "Restablecer": en el Tema 2 el botón pisaba el color de .danger y quedaba blanco. */
+[data-theme='2'] .btn.danger {
+  color: var(--danger);
+}
+
+/* Ajustes en dos columnas: índice con píldoras tonales. */
+[data-theme='2'] .settings-index-link {
+  border-left: 0;
+  border-radius: 999px;
+}
+[data-theme='2'] .settings-index-link.active {
+  background: var(--tonal);
+  color: var(--accent);
+}
+@media (max-width: 1023px) {
+  /* En el celular la tarjeta tonal es el plegable, no la sección de adentro. */
+  [data-theme='2'] .settings-block {
+    border: 0;
+    border-radius: 24px;
+    background: var(--surface-1);
+  }
+  [data-theme='2'] .settings-summary {
+    border-radius: 24px;
+  }
+  [data-theme='2'] .settings-block > .settings-section {
+    margin: 0;
+    padding: 0 18px 20px;
+    border-radius: 0;
+    background: transparent;
+  }
+}

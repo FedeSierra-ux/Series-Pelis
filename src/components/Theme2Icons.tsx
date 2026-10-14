@@ -70,6 +70,22 @@ const PATHS = {
       <path d="M8 5H5a3 3 0 0 0 3 5M16 5h3a3 3 0 0 1-3 5M12 13v4M8 21h8M9 21l1-4h4l1 4" />
     </>
   ),
+  // "Más" (⋯) de la barra inferior y del menú de cada catálogo.
+  more: (
+    <>
+      <circle cx="5" cy="12" r="1.6" fill="currentColor" />
+      <circle cx="12" cy="12" r="1.6" fill="currentColor" />
+      <circle cx="19" cy="12" r="1.6" fill="currentColor" />
+    </>
+  ),
+  lists: <path d="M4 6h16M4 12h16M4 18h10" />,
+  users: (
+    <>
+      <circle cx="9" cy="8" r="3.5" />
+      <path d="M2 20c1-3.5 3.5-5.5 7-5.5s6 2 7 5.5" />
+      <path d="M16 4.5a3.5 3.5 0 0 1 0 7M18.5 14.6c2 .8 3 2.5 3.5 5.4" />
+    </>
+  ),
   keyboard: (
     <>
       <rect x="2" y="6" width="20" height="12" rx="2" />
