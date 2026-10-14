@@ -23,6 +23,7 @@ import { withoutHidden } from '../lib/recommend'
 import { useTmdbKey } from '../lib/tmdb'
 import type { MetaPreview } from '../lib/types'
 import { FilterBar, type CatalogOption } from './discover/FilterBar'
+import { MoviesHero } from './discover/MoviesHero'
 import { CuratedStrip } from './lists/CuratedStrip'
 import { errorText } from '../lib/errors'
 
@@ -56,7 +57,9 @@ function toOption(r: CatalogRowDef): CatalogOption {
 export function Discover() {
   const { type = 'movie' } = useParams()
   const [params, setParams] = useSearchParams()
-  const tmdbOn = useTmdbKey().length > 0
+  const tmdbKey = useTmdbKey()
+  const tmdbOn = tmdbKey.length > 0
+  const withHero = type === 'movie' && tmdbOn
   const filters = useMemo(() => parseFilters(params), [params])
   const [kwName, setKwName] = useState<string>()
 
@@ -206,7 +209,8 @@ export function Discover() {
   const noneAtAll = done && !loading && raw.length === 0 && !error
 
   return (
-    <div className="page discover">
+    <div className={`page discover${withHero ? ' discover-with-hero' : ''}`}>
+      {withHero && <MoviesHero tmdbKey={tmdbKey} />}
       <header className="page-header">
         <h1>
           {typeLabel(type)}

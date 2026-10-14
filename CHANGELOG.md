@@ -1,5 +1,24 @@
 # Changelog
 
+## [0.10.0] - 2026-10-14
+
+### Cambiado
+- **Un solo diseño**: los colores del Tema 2 quedan como los de toda la app y se saca el Tema 1 (y la sección
+  Ajustes → Apariencia). Ya no hay parpadeo al abrir: el tema va marcado en el HTML.
+- **Portada nueva estilo Stremio** (con TMDB): logo del título, puntaje de IMDb, año, duración, géneros, sinopsis
+  y las caras del reparto principal, con la imagen de fondo de la peli completa.
+  - **Películas**: portada grande a todo el ancho con las películas en tendencia y el "Top 10 películas de hoy"
+    montado sobre la parte de abajo.
+  - **Inicio**: portada más chica con los **estrenos en cines**, que no ocupa toda la parte de arriba.
+  - En el celular la imagen va arriba y el texto empieza donde se funde, para que se lea bien.
+- **Tráiler sin controles**: a los segundos el tráiler arranca solo y no aparece la interfaz de YouTube (ni el botón
+  de play/pausa ni el título); el video recién se muestra cuando ya se está reproduciendo, mientras tanto se ve la
+  imagen de fondo. Vale para la portada y para el tráiler al pasar por un póster.
+
+### Agregado
+- **Pausar el tráiler tocando la portada**: un click (o OK en la TV) pausa y otro lo sigue. Con el control remoto,
+  ↑ desde "Ver ahora" o "Mi lista" va a la portada (antes se iba al menú lateral).
+
 ## [0.9.1] - 2026-10-13
 
 ### Arreglado

@@ -3,10 +3,12 @@ import { Row } from '../../components/Row'
 import { useHiddenIds } from '../../lib/ratings'
 import {
   findByImdb,
+  getNowPlaying,
   getRecommendations,
   getTrending,
   LANG,
   peekTmdb,
+  REGION,
   tmdbToPreview,
   toTmdbType,
   type TmdbListItem,
@@ -18,6 +20,24 @@ import { useNearViewport, useTmdbQuery, type TmdbState } from './lazy'
 export const onlyTitles = (list: TmdbListItem[] | undefined) =>
   (list ?? []).filter((i) => i.media_type === 'movie' || i.media_type === 'tv')
 
+/** Películas en tendencia hoy: la portada de Películas y su Top 10. */
+export function useTrendingMovies(tmdbKey: string, enabled = true): TmdbState<TmdbPage> {
+  return useTmdbQuery(
+    tmdbKey && enabled ? `movie-day|${tmdbKey}` : undefined,
+    () => getTrending('movie', 'day'),
+    () => peekTmdb<TmdbPage>('/trending/movie/day', { language: LANG }),
+  )
+}
+
+/** Estrenos en cines de Argentina: la portada de Inicio. */
+export function useNowPlaying(tmdbKey: string): TmdbState<TmdbPage> {
+  return useTmdbQuery(
+    tmdbKey ? `now-playing|${tmdbKey}` : undefined,
+    () => getNowPlaying(),
+    () => peekTmdb<TmdbPage>('/movie/now_playing', { language: LANG, region: REGION }),
+  )
+}
+
 /** Tendencias de TMDB; `day` la comparten la portada y el Top 10. */
 export function useTrending(window: 'day' | 'week', tmdbKey: string, enabled = true): TmdbState<TmdbPage> {
   return useTmdbQuery(
@@ -28,13 +48,13 @@ export function useTrending(window: 'day' | 'week', tmdbKey: string, enabled = t
 }
 
 /** "Top 10 de hoy" con el número grande al costado del póster. */
-export function Top10Row({ state }: { state: TmdbState<TmdbPage> }) {
+export function Top10Row({ state, title = 'Top 10 de hoy' }: { state: TmdbState<TmdbPage>; title?: string }) {
   const hidden = useHiddenIds()
   const items = onlyTitles(state.data?.results)
     .filter((i) => !hidden.has(`tmdb:${i.media_type}:${i.id}`))
     .slice(0, 10)
   return (
-    <Row title="Top 10 de hoy" loading={state.loading} error={state.failed ? 'error' : undefined} empty={items.length === 0}>
+    <Row title={title} loading={state.loading} error={state.failed ? 'error' : undefined} empty={items.length === 0}>
       {items.map((item, i) => (
         <div key={`${item.media_type}:${item.id}`} className="top10-item">
           <span className="top10-rank" aria-hidden>

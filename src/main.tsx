@@ -3,12 +3,13 @@ import { createRoot } from 'react-dom/client'
 import { App } from './App'
 import { hydrateStores } from './lib/store'
 import { probeServerTmdb } from './lib/tmdb'
-import { initTheme, preloadThemeFonts } from './lib/theme'
+import { loadThemeFonts } from './lib/theme'
 import { syncTvAttr } from './lib/tv'
 import './styles.css'
 import './theme2.css'
 
-preloadThemeFonts()
+// Sora y DM Sans (van empaquetadas): se piden enseguida, en paralelo con IndexedDB.
+loadThemeFonts()
 // ¿El sitio trae TMDB (secreto en Cloudflare)? En paralelo: no frena el arranque.
 void probeServerTmdb()
 
@@ -29,7 +30,6 @@ window.addEventListener('vite:preloadError', (event) => {
 // Leemos los datos guardados antes de pintar (tarda unos milisegundos) para que
 // "Seguir viendo" y los addons aparezcan en el primer render.
 hydrateStores().finally(() => {
-  initTheme()
   // `data-tv` en <html>: letras y controles grandes para mirar desde el sillón.
   syncTvAttr()
   createRoot(document.getElementById('root')!).render(

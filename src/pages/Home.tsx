@@ -12,7 +12,6 @@ import { catalogLabel, genreLabel } from '../lib/i18n'
 import { useHiddenIds } from '../lib/ratings'
 import { withoutHidden } from '../lib/recommend'
 import { continueWatching, hideFromContinue, progressStore, toggleWatchlist, useStore, watchlistStore, type WatchEntry } from '../lib/store'
-import { useTheme } from '../lib/theme'
 import { useTmdbKey } from '../lib/tmdb'
 import { episodeLink, useUpNext } from '../lib/upNext'
 import type { CatalogDef, InstalledAddon, MetaPreview } from '../lib/types'
@@ -20,7 +19,7 @@ import { ForYouRow } from './home/ForYouRow'
 import { useNearViewport } from './home/lazy'
 import { MergedCatalogRow } from './home/MergedCatalogRow'
 import { TmdbHero } from './home/TmdbHero'
-import { BecauseRow, onlyTitles, Top10Row, TrendingWeekRow, useTrending, type Seed } from './home/TmdbRows'
+import { BecauseRow, Top10Row, TrendingWeekRow, useNowPlaying, useTrending, type Seed } from './home/TmdbRows'
 import { CuratedRows } from './lists/CuratedRows'
 
 const ROW_LIMIT = 30
@@ -138,35 +137,24 @@ function useUndoHide() {
 
 function UpNextRow() {
   const { data } = useUpNext()
-  // En el Tema 2 usa las mismas tarjetas apaisadas que "Seguir viendo".
-  const landscape = useTheme() === '2'
+  // Mismas tarjetas apaisadas que "Seguir viendo".
   const items = data?.next ?? []
   if (items.length === 0) return null
   return (
     <Row title="Tus series: siguiente episodio">
-      {items.map((it) =>
-        landscape ? (
-          <LandscapeCard
-            key={it.videoId}
-            metaId={it.metaId}
-            type="series"
-            name={it.seriesName}
-            subtitle={[episodeLabel(it.season, it.episode) || 'Siguiente', it.title].filter(Boolean).join(' · ')}
-            backdrop={it.thumbnail ?? backdropFor(it.metaId)}
-            poster={it.poster}
-            progress={it.progress}
-            to={episodeLink(it.metaId, it.season, it.videoId)}
-          />
-        ) : (
-          <PosterCard
-            key={it.videoId}
-            meta={{ id: it.metaId, type: 'series', name: it.seriesName, poster: it.poster }}
-            progress={it.progress}
-            subtitle={episodeLabel(it.season, it.episode) || 'Siguiente'}
-            to={episodeLink(it.metaId, it.season, it.videoId)}
-          />
-        ),
-      )}
+      {items.map((it) => (
+        <LandscapeCard
+          key={it.videoId}
+          metaId={it.metaId}
+          type="series"
+          name={it.seriesName}
+          subtitle={[episodeLabel(it.season, it.episode) || 'Siguiente', it.title].filter(Boolean).join(' · ')}
+          backdrop={it.thumbnail ?? backdropFor(it.metaId)}
+          poster={it.poster}
+          progress={it.progress}
+          to={episodeLink(it.metaId, it.season, it.videoId)}
+        />
+      ))}
     </Row>
   )
 }
@@ -193,14 +181,15 @@ export function Home() {
   const resume = continueWatching(progress)
   const heroSource = (catalogs.find((c) => c.type === 'movie') ?? catalogs[0])?.sources[0]
   const { undo, hide, restore } = useUndoHide()
-  const landscapeResume = useTheme() === '2'
   // TMDB es opcional: sin key, Inicio queda igual que siempre.
   const tmdbKey = useTmdbKey()
   const trendingDay = useTrending('day', tmdbKey)
+  // Portada de Inicio: los estrenos en cines (más chica, no ocupa toda la parte de arriba).
+  const nowPlaying = useNowPlaying(tmdbKey)
   const hidden = useHiddenIds()
   const heroItems = useMemo(
-    () => onlyTitles(trendingDay.data?.results).filter((i) => i.backdrop_path && !hidden.has(`tmdb:${i.media_type}:${i.id}`)).slice(0, 8),
-    [trendingDay.data, hidden],
+    () => (nowPlaying.data?.results ?? []).filter((i) => i.backdrop_path && !hidden.has(`tmdb:movie:${i.id}`)).slice(0, 8),
+    [nowPlaying.data, hidden],
   )
   const seedsKey = JSON.stringify(recentSeeds(progress))
   const seeds = useMemo(() => JSON.parse(seedsKey) as Seed[], [seedsKey])
@@ -208,9 +197,9 @@ export function Home() {
   return (
     <div className="page home" data-nav-root>
       {tmdbKey && heroItems.length > 0 ? (
-        <TmdbHero items={heroItems} />
-      ) : tmdbKey && trendingDay.loading ? (
-        <div className="hero hero-skeleton skeleton" />
+        <TmdbHero items={heroItems} variant="compact" fallbackType="movie" eyebrow="Estrenos en cines" />
+      ) : tmdbKey && nowPlaying.loading ? (
+        <div className="hero hero-compact hero-skeleton skeleton" />
       ) : (
         heroSource && <Hero addon={heroSource.addon} catalog={heroSource.catalog} />
       )}
@@ -219,19 +208,7 @@ export function Home() {
         <Row title="Seguir viendo" moreTo="/history">
           {resume.map((e) => {
             const to = `/detail/${e.type}/${encodeURIComponent(e.metaId)}${e.season !== undefined ? `?season=${e.season}&video=${encodeURIComponent(e.videoId)}` : ''}`
-            // Tema 2: tarjetas apaisadas con el tiempo que falta.
-            if (landscapeResume) return <ContinueCard key={e.videoId} entry={e} to={to} onRemove={() => hide(e.metaId, e.name)} />
-            return (
-              <PosterCard
-                key={e.videoId}
-                meta={{ id: e.metaId, type: e.type, name: e.name, poster: e.poster }}
-                progress={e.duration ? e.position / e.duration : 0}
-                subtitle={e.season !== undefined ? episodeLabel(e.season, e.episode) : 'Continuar'}
-                to={to}
-                onRemove={() => hide(e.metaId, e.name)}
-                removeLabel="Quitar de Seguir viendo"
-              />
-            )
+            return <ContinueCard key={e.videoId} entry={e} to={to} onRemove={() => hide(e.metaId, e.name)} />
           })}
         </Row>
       )}

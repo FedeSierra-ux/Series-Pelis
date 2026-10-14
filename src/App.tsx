@@ -1,7 +1,7 @@
 import { lazy, Suspense, useEffect, useLayoutEffect, useRef } from 'react'
 import { BrowserRouter, Navigate, Route, Routes, useLocation, useNavigate, useNavigationType } from 'react-router-dom'
 import { ErrorBoundary } from './components/ErrorBoundary'
-import { Layout } from './components/Layout'
+import { Theme2Layout as Layout } from './components/Theme2Layout'
 import { Onboarding } from './components/Onboarding'
 import { Screensaver } from './components/Screensaver'
 import { UpdateToast } from './components/UpdateToast'
