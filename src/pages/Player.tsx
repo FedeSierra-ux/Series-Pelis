@@ -25,6 +25,7 @@ import { RateAtEnd } from './player/RateAtEnd'
 import { daysAway, RECAP_AFTER_DAYS, RecapOffer } from './player/RecapOffer'
 import { SeekPreview } from './player/SeekPreview'
 import { SourcesMenu, useSwitchSource, type Resume, type SwitchState } from './player/SourcesMenu'
+import { ReportButton } from '../components/ReportButton'
 import { PlayerIcon } from './player/PlayerIcons'
 import { formatRate, readRate, SpeedMenu, stepRate, storeRate, type Rate } from './player/SpeedMenu'
 import { SubtitleMenu } from './player/SubtitleMenu'
@@ -1029,6 +1030,16 @@ function PlayerView({ state, resume }: { state: PlayState; resume?: Resume }) {
                   Abrir en otro reproductor
                 </a>
               )}
+              <ReportButton
+                kind="player"
+                error={error}
+                addons={state.addonUrl ? [state.addonUrl] : []}
+                stream={{
+                  url: state.playUrl,
+                  type: state.stream.behaviorHints?.notWebReady ? 'external' : state.playUrl.includes('.m3u8') ? 'hls' : 'direct',
+                }}
+                context={{ addon: state.addonName, titulo: state.meta.name, episodio: state.video?.id }}
+              />
               {/* En la TV no hay dónde pegar el enlace. */}
               {!tvMode && (
                 <button className="btn" onClick={() => copyText(state.playUrl).then((ok) => flash(ok ? 'Enlace copiado' : 'No se pudo copiar el enlace'))}>
