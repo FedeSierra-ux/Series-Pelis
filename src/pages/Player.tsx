@@ -2,7 +2,6 @@ import type Hls from 'hls.js'
 import { useCallback, useEffect, useRef, useState, type MouseEvent, type WheelEvent } from 'react'
 import { Navigate, useLocation, useNavigate, useParams } from 'react-router-dom'
 import { PauseCast } from '../components/PauseCast'
-import { getStreams } from '../lib/addons'
 import { creditsPlan, endCardAt } from '../lib/credits'
 import { saveDataOn } from '../lib/dataSaver'
 import { androidIntent, externalLaunch } from '../lib/externalPlayers'
@@ -13,8 +12,7 @@ import { findNextStream, nextEpisodeSeason, prefetchNextStreams } from '../lib/n
 import { setReturnVideo } from '../lib/returnVideo'
 import { currentPlatform } from '../lib/platform'
 import { getSegments, imdbIdOf, type Segment, type Segments } from '../lib/segments'
-import { addonsStore, lastSourceStore, progressStore, rememberTracks, RESUME_MIN_S, saveProgress, settingsStore, trackPrefsStore, useStore } from '../lib/store'
-import { capQuality, qualityCapFor, rankStreams } from '../lib/streamPicker'
+import { progressStore, rememberTracks, RESUME_MIN_S, saveProgress, settingsStore, trackPrefsStore, useStore } from '../lib/store'
 import { audioPrefs, guessAudioLang, lang3, langRank, subtitleClasses } from '../lib/subtitlePrefs'
 import { useTvMode } from '../lib/tv'
 import type { PlayState } from './Detail'
@@ -61,8 +59,6 @@ const HLS_RETRY_MS = 1000
 const AUTONEXT_KEY = 'sp-autonext-count'
 const SLEEP_KEY = 'sp-sleep-at'
 const VOLUME_STEP = 0.1
-/** Cuánto dura el aviso "Conexión lenta: se eligió 720p". */
-const NET_NOTE_MS = 6000
 
 type Menu = 'subs' | 'audio' | 'sleep' | 'sources' | 'speed' | 'quick'
 type Sleep = { kind: 'off' } | { kind: 'time'; at: number } | { kind: 'episode' }
@@ -186,9 +182,6 @@ function PlayerView({ state, resume }: { state: PlayState; resume?: Resume }) {
   const [rate, setRate] = useState<Rate>(readRate)
   const rateRef = useRef(rate)
   rateRef.current = rate
-  // "Conexión lenta: se eligió 720p" (aparte del toast, que lo pisarían los otros avisos).
-  const [netNote, setNetNote] = useState<string>()
-  const netTimer = useRef<ReturnType<typeof setTimeout>>(undefined)
   // Último subtítulo activo, para que la tecla C lo vuelva a prender.
   const lastSub = useRef<string>('')
   // Después de N episodios seguidos sin tocar nada, el siguiente arranca en pausa y pregunta.
@@ -297,31 +290,6 @@ function PlayerView({ state, resume }: { state: PlayState; resume?: Resume }) {
     if (announce) flash(next === 1 ? 'Velocidad normal' : `Velocidad: ${formatRate(next)}`)
     showControls()
   }
-
-  // ---------- Calidad según la conexión ----------
-  // Si el tope de la conexión (3G, ahorro de datos) hizo elegir una fuente distinta de la que
-  // hubiera salido con la preferencia del usuario, se avisa una vez. Los streams ya están en caché.
-  useEffect(() => {
-    const { sourceRules: rules, streamingServerUrl: server } = settingsStore.get()
-    const cap = qualityCapFor(rules)
-    if (!cap || capQuality(rules.preferredQuality, cap) === rules.preferredQuality) return
-    const last = rules.rememberLast ? lastSourceStore.get()[meta.id] : undefined
-    let done = false
-    const cancel = getStreams(addonsStore.get(), meta.type, videoId, (groups) => {
-      if (done || groups.some((g) => g.loading)) return
-      done = true
-      const capped = rankStreams(groups, rules, last, server)[0]
-      const free = rankStreams(groups, { ...rules, adaptQuality: false }, last, server)[0]
-      if (capped?.url !== state.playUrl || !free || free.url === state.playUrl) return
-      setNetNote(`Conexión lenta: se eligió ${cap}`)
-      clearTimeout(netTimer.current)
-      netTimer.current = setTimeout(() => setNetNote(undefined), NET_NOTE_MS)
-    })
-    return () => {
-      cancel()
-      clearTimeout(netTimer.current)
-    }
-  }, [state.playUrl])
 
   // ---------- Carga del video ----------
   useEffect(() => {
@@ -1281,12 +1249,6 @@ function PlayerView({ state, resume }: { state: PlayState; resume?: Resume }) {
       {toast && (
         <div className="player-toast player-note" role="status">
           {toast}
-        </div>
-      )}
-
-      {netNote && !error && (
-        <div className="player-net-note" role="status">
-          {netNote}
         </div>
       )}
 

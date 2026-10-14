@@ -49,6 +49,10 @@
 - La caché de fichas tiene tope.
 - El siguiente episodio automático mantiene el idioma y la versión de la fuente.
 
+### Quitado
+- **Calidad según la conexión** (Ajustes → Reproductor): ya no se baja la calidad a 720p o 480p con una conexión
+  lenta ni aparece el aviso "Conexión lenta: se eligió 720p". Siempre se recomienda la calidad preferida.
+
 ### Arreglado
 - **Ficha**:
   - En una serie sin ver, "Ver ahora" iba a los especiales (T0) en vez de T1 · E1.

@@ -641,8 +641,6 @@ export interface SourceRules {
   hdr: 'allow' | 'prefer' | 'exclude'
   /** Ocultar los repetidos (mismo torrent o enlace, o mismo archivo y tamaño). */
   dedupe: boolean
-  /** v0.10: bajar la calidad preferida según la conexión (3G o ahorro de datos → 720p, 2G → 480p). */
-  adaptQuality: boolean
 }
 
 export interface Settings {
@@ -718,7 +716,6 @@ export const settingsStore = new PersistedStore<Settings>('settings', {
     excludeCodecs: [],
     hdr: 'allow',
     dedupe: true,
-    adaptQuality: true,
   },
   externalPlayer: 'system',
   tmdbKey: '',

@@ -1,6 +1,5 @@
 import { streamingServerUrl } from './addons'
 import { sameAddon } from './addonKey'
-import { effectiveQualityCap, type QualityCap } from './network'
 import type { LastSource, SourceRules } from './store'
 import type { AddonStreams, InstalledAddon, Stream } from './types'
 
@@ -168,29 +167,8 @@ export function lastSourceOf(addonUrl: string, s: Stream, at = Date.now()): Last
 const MATCH_SCORE: Record<SourceMatch, number> = { binge: 10000, name: 5000, addon: 1000, none: 0 }
 
 type PreferredQuality = SourceRules['preferredQuality']
-/** La calidad que se busca: la preferida por el usuario o, con conexión lenta, el tope (que puede ser 480p). */
-export type TargetQuality = PreferredQuality | QualityCap
 
-const qualityValue = (q: Exclude<TargetQuality, 'any'>) => Number(q.replace('p', ''))
-
-/** La calidad preferida con el tope de la conexión encima: el menor de los dos ('any' con tope = el tope). */
-export function capQuality(preferred: PreferredQuality, cap: QualityCap | undefined): TargetQuality {
-  if (!cap) return preferred
-  if (preferred === 'any') return cap
-  return qualityValue(cap) < qualityValue(preferred) ? cap : preferred
-}
-
-/** Tope de la conexión que aplica a estas reglas (ninguno si el usuario apagó "Ajustar la calidad a la conexión"). */
-export function qualityCapFor(rules: SourceRules): QualityCap | undefined {
-  return rules.adaptQuality === false ? undefined : effectiveQualityCap()
-}
-
-/** Calidad que se busca de verdad: la preferida, bajada al tope de la conexión si hace falta. */
-export function effectivePreferredQuality(rules: SourceRules): TargetQuality {
-  return capQuality(rules.preferredQuality, qualityCapFor(rules))
-}
-
-function qualityScore(q: Quality | undefined, preferred: TargetQuality): number {
+function qualityScore(q: Quality | undefined, preferred: PreferredQuality): number {
   if (preferred === 'any') return q ? 30 * (QUALITIES.length - QUALITIES.indexOf(q)) : 0
   if (!q) return 50
   const want = QUALITIES.indexOf(Number(preferred.replace('p', '')) as Quality)
@@ -285,17 +263,13 @@ export interface StreamAnalysis {
   ranked: RankedStream[]
   /** Ocultos por las reglas, con el motivo (por `streamKey`). */
   hidden: Map<string, string>
-  /** Tope de la conexión que bajó la calidad preferida (solo si la bajó de verdad). */
-  cap?: QualityCap
 }
 
 /** Puntúa todos los streams y separa los que esconden los filtros (incluidos los repetidos). */
 export function analyzeStreams(groups: AddonStreams[], rules: SourceRules, last: LastSource | undefined, server: string): StreamAnalysis {
   const hidden = new Map<string, string>()
   const candidates: (Omit<RankedStream, 'url'> & { url?: string })[] = []
-  // Con 3G o ahorro de datos no sirve de nada "preferir 1080p": se busca como máximo lo que la conexión aguanta.
-  const preferred = effectivePreferredQuality(rules)
-  const cap = preferred !== rules.preferredQuality ? (preferred as QualityCap) : undefined
+  const preferred = rules.preferredQuality
   const prevLangs = last ? audioLangs(lastText(last)) : undefined
   const prevGroup = last ? releaseGroup(last.streamTitle) : undefined
   groups.forEach((g, addonIndex) => {
@@ -343,7 +317,7 @@ export function analyzeStreams(groups: AddonStreams[], rules: SourceRules, last:
     }
     if (c.url) ranked.push({ ...c, url: c.url })
   }
-  return { ranked, hidden, cap }
+  return { ranked, hidden }
 }
 
 /** Streams reproducibles en la app, del mejor al peor según las reglas. Los excluidos no aparecen. */

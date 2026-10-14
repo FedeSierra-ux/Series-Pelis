@@ -498,8 +498,7 @@ html[data-tv] .next-thumb {
   .player-rate {
     top: 56px;
   }
-  .player-chip,
-  .player-net-note {
+  .player-chip {
     top: 56px;
   }
   .next-thumb {

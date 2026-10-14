@@ -101,7 +101,8 @@ npm run preview    # sirve dist/ en http://localhost:4173
   rellenos con texto blanco.
 - v0.10.0 hecha: reproductor (`pages/player/useMediaSession.ts`: Media Session, Wake Lock, PiP; `SpeedMenu.tsx`,
   velocidad en sessionStorage `sp-rate`; botones de menús con `data-menu` para los atajos), `lib/network.ts` +
-  `sourceRules.adaptQuality` (tope de calidad por `navigator.connection`), `lib/shortcuts.ts` (tabla única de
+  `sourceRules.adaptQuality` (tope de calidad por `navigator.connection`; **se sacó en la v0.14**: el usuario usa
+  siempre 1080p y no quiere que se baje a 720p), `lib/shortcuts.ts` (tabla única de
   atajos; `ShortcutsHelp` con `?`, `TvHints` con `settings.hintsSeen`), informes de errores opt-in
   (`lib/diagnostics.ts`, `components/ReportButton.tsx`, `functions/api/report/[[path]].ts` con KV `REPORTS` y
   secreto `REPORT_ADMIN_KEY`; marca `sp-report-server`; `settings.sendReports`), `functions/_lib.ts` (`crossSite`),
@@ -159,6 +160,8 @@ npm run preview    # sirve dist/ en http://localhost:4173
     Se cambia en Ajustes → Catálogos (botón "Apaisada").
   - Filtros (U12): en PC el orden no va como chip (solo el botón "Ordenar"; `keepSort` en el panel); en el
     celular sí, porque ahí el botón no está.
+  - Se sacó "Calidad según la conexión" (`lib/network.ts`, `adaptQuality`, aviso `player-net-note`): siempre se
+    recomienda la calidad preferida. No volver a agregar un tope por conexión.
   - **Typecheck con `npx tsc --noEmit`, nunca `tsc -b`**: emitía `.js` al lado de los `.tsx` y Vite/vitest los
     tomaban primero. Ahora `tsconfig.json` tiene `noEmit`.
 - **Subtítulos online (25), pendiente**: SubDL como fuente principal (tiene el archivo de Subscene, fuerte en español
