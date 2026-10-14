@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.16.1] - 2026-10-14
+
+### Cambiado
+- `wrangler.toml` enlaza la base D1 `series-pelis` (binding `DB`) para el login de la v0.17. Todavía no se usa.
+- Las instrucciones del KV de informes dicen que el binding va en `wrangler.toml` (el panel no deja agregarlo
+  cuando el proyecto tiene este archivo).
+
 ## [0.16.0] - 2026-10-14
 
 ### Agregado

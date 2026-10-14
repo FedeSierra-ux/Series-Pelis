@@ -188,6 +188,9 @@ npm run preview    # sirve dist/ en http://localhost:4173
   el español está en los idiomas. `SubOption.latino` + `isLatino`/`latinoBonus` en `subtitlePrefs.ts`: el latino
   gana la elección automática; el de España (`spn`) nunca se elige solo. Secretos: `SUBDL_KEY` (ya cargado) y
   opcionales `OPENSUBTITLES_KEY`/`_USER`/`_PASS`. Las keys nunca en el código ni en el chat.
+- v0.16.1 hecha: binding D1 `DB` (base `series-pelis`) en `wrangler.toml`. **Los bindings van en `wrangler.toml`**:
+  con ese archivo el panel de Pages desactiva "Add" en Bindings. Los secretos sí van en el panel. El KV `REPORTS`
+  nunca se enlazó (está comentado). Secreto `ADMIN_KEY` para arrancar el login (lo carga el usuario).
 - **Plan acordado (pedido "1, 2 y 3")**: v0.17.0 login "Código de casa" (opción A) + sincronización en D1
   (investigación en `scratchpad/v15/login.md`); v0.18.0 perfiles variante D (investigación en
   `scratchpad/v15/perfiles.md`): en la TV "¿Quién está mirando?" al abrir y tras el protector (entra solo a los 10 s),
