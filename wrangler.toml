@@ -4,12 +4,23 @@ name = "series-pelis"
 pages_build_output_dir = "dist"
 compatibility_date = "2026-10-01"
 
+# Con este archivo, los bindings (D1, KV) se manejan desde acá: el botón "Add" del panel queda desactivado.
+# Los secretos sí se cargan en el panel (Settings → Variables and Secrets) o con wrangler, nunca acá.
+# Los ids de abajo no son secretos: solo dicen qué base usar y sin acceso a la cuenta no sirven.
+
+# ---- Base D1 (login de las casas y sincronización, desde la v0.17) ----
+# Creada en el panel: Storage & Databases → D1 → `series-pelis`. Las tablas las crea la app.
+[[d1_databases]]
+binding = "DB"
+database_name = "series-pelis"
+database_id = "da6e1fd0-df31-46db-a965-d3b74591fe42"
+
 # ---- Informes de errores (functions/api/report) ----
 # Sin el KV, /api/report/_status contesta { enabled: false } y la app no muestra nada de esto.
 #
 # 1. Crear el namespace:   npx wrangler kv namespace create REPORTS
-#    y enlazarlo en el panel: Pages → series-pelis → Settings → Bindings → KV namespace,
-#    nombre de variable `REPORTS` (o descomentar el bloque de abajo con el id que devuelve el comando).
+#    (o en el panel: Storage & Databases → KV) y descomentar el bloque de abajo con su id
+#    (el panel no deja enlazarlo: los bindings salen de este archivo).
 # 2. Secreto para leer los informes (una clave larga al azar, ej. `openssl rand -hex 32`):
 #    npx wrangler pages secret put REPORT_ADMIN_KEY
 # 3. Leerlos:  curl -H "Authorization: Bearer $REPORT_ADMIN_KEY" "https://<sitio>/api/report?limit=50"
