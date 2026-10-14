@@ -218,6 +218,8 @@ export interface TmdbDetails {
   first_air_date?: string
   runtime?: number
   episode_run_time?: number[]
+  /** TMDB dejó `episode_run_time` vacío en casi todas las series: la duración sale del último episodio. */
+  last_episode_to_air?: { runtime?: number | null } | null
   genres?: { id: number; name: string }[]
   vote_average?: number
   belongs_to_collection?: { id: number; name: string; poster_path?: string | null; backdrop_path?: string | null } | null

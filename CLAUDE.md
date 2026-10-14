@@ -114,13 +114,16 @@ npm run preview    # sirve dist/ en http://localhost:4173
   `theme` del store ya no existen; `lib/theme.ts` solo tiene `loadThemeFonts`. Los estilos nuevos siguen en
   `theme2.css` con `[data-theme='2']`. Portada estilo Stremio (`pages/home/TmdbHero.tsx`, variantes `compact` y
   `full`): logo, IMDb, `formatRuntime`, géneros y reparto. Inicio = `compact` con `getNowPlaying`/`useNowPlaying`
-  (estrenos, región AR); Películas = `pages/discover/MoviesHero.tsx` (`full`, `useTrendingMovies`, con `Top10Row`
+  (estrenos, región AR); Películas = `pages/discover/MoviesHero.tsx` (desde la v0.12 `DiscoverHero.tsx`; `full`, con `Top10Row`
   y su prop `title` encimado). Tráileres sin interfaz de YouTube: `ytPlayerState` (`lib/hoverTrailer.ts`) y el
   iframe se muestra recién con estado 1 (reproduciendo). Click/OK en `.hero-pause` pausa; `.hero-actions` tiene un
   `onKeyDown` que manda ↑ a la pausa (si no, ganaba el riel). En Chromium headless el tráiler no llega a reproducir.
   Con el Tema 1 se fueron el atajo `T` y la barra inferior con "Más" (`BAR`/`MORE`); `diagnostics` manda `theme: '2'`
-  fijo porque el servidor espera el campo. Pendiente preguntar si Series lleva la misma portada grande y si el
-  celular del Tema 2 quiere la hoja "Más".
+  fijo porque el servidor espera el campo. Pendiente preguntar si el celular del Tema 2 quiere la hoja "Más".
+- v0.12.0 hecha: **Series con la portada grande** igual que Películas. `MoviesHero` pasó a
+  `pages/discover/DiscoverHero.tsx` (prop `type`: `movie` | `tv`, con `key` para que reinicie al cambiar de menú) y
+  `useTrendingMovies` a `useTrendingOf(type, …)`. La duración de una serie sale de `last_episode_to_air.runtime`
+  (TMDB deja `episode_run_time` vacío). A las series muy nuevas a veces les falta el IMDb en Cinemeta: se deja así.
 - Función 137 (temas OLED / acento / color del póster): el usuario pidió **ver el preview antes/después primero**
   (v0.10, página en el scratchpad de la sesión); después decide. Perfiles locales (109): **todavía no**.
 - **Cuestionario de funciones (140)** — decisiones del usuario y plan por versiones:

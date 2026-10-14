@@ -207,7 +207,7 @@ export function TmdbHero({ items, variant = 'compact', fallbackType = 'movie', e
   const overview = item.overview || d?.overview
   const genres = (d?.genres ?? []).slice(0, 3).map((g) => g.name).join(' · ')
   const year = itemYear(item)
-  const runtime = formatRuntime(d?.runtime || d?.episode_run_time?.[0])
+  const runtime = formatRuntime(d?.runtime || d?.episode_run_time?.[0] || d?.last_episode_to_air?.runtime || undefined)
   const cast = variant === 'full' ? (d?.credits?.cast ?? d?.aggregate_credits?.cast ?? []).filter((c) => c.profile_path).slice(0, CAST_SHOWN) : []
   const imdbId = d?.external_ids?.imdb_id || d?.imdb_id || (resolved?.key === itemKey ? resolved.imdb : undefined)
   const inList = !!(imdbId && watchlist[imdbId])

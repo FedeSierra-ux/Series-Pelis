@@ -1,5 +1,15 @@
 # Changelog
 
+## [0.12.0] - 2026-10-14
+
+### Agregado
+- **Series con portada grande**: igual que Películas, a todo el ancho y estilo Stremio (logo, IMDb, año,
+  duración, géneros y reparto) con las series en tendencia de hoy y el "Top 10 series de hoy" encimado abajo.
+
+### Arreglado
+- La duración de las series en la portada: TMDB ya casi no manda la duración general de una serie, así que
+  ahora se toma la del último episodio emitido.
+
 ## [0.11.0] - 2026-10-14
 
 ### Cambiado

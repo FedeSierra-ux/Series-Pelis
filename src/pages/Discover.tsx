@@ -23,7 +23,7 @@ import { withoutHidden } from '../lib/recommend'
 import { useTmdbKey } from '../lib/tmdb'
 import type { MetaPreview } from '../lib/types'
 import { FilterBar, type CatalogOption } from './discover/FilterBar'
-import { MoviesHero } from './discover/MoviesHero'
+import { DiscoverHero } from './discover/DiscoverHero'
 import { CuratedStrip } from './lists/CuratedStrip'
 import { errorText } from '../lib/errors'
 
@@ -59,7 +59,9 @@ export function Discover() {
   const [params, setParams] = useSearchParams()
   const tmdbKey = useTmdbKey()
   const tmdbOn = tmdbKey.length > 0
-  const withHero = type === 'movie' && tmdbOn
+  // Películas y Series llevan la portada grande con lo que está en tendencia hoy.
+  const heroType = type === 'movie' ? 'movie' : type === 'series' ? 'tv' : undefined
+  const withHero = !!heroType && tmdbOn
   const filters = useMemo(() => parseFilters(params), [params])
   const [kwName, setKwName] = useState<string>()
 
@@ -210,7 +212,7 @@ export function Discover() {
 
   return (
     <div className={`page discover${withHero ? ' discover-with-hero' : ''}`}>
-      {withHero && <MoviesHero tmdbKey={tmdbKey} />}
+      {withHero && heroType && <DiscoverHero key={heroType} type={heroType} tmdbKey={tmdbKey} />}
       <header className="page-header">
         <h1>
           {typeLabel(type)}

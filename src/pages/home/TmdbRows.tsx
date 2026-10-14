@@ -13,6 +13,7 @@ import {
   toTmdbType,
   type TmdbListItem,
   type TmdbPage,
+  type TmdbType,
 } from '../../lib/tmdb'
 import { useNearViewport, useTmdbQuery, type TmdbState } from './lazy'
 
@@ -20,12 +21,12 @@ import { useNearViewport, useTmdbQuery, type TmdbState } from './lazy'
 export const onlyTitles = (list: TmdbListItem[] | undefined) =>
   (list ?? []).filter((i) => i.media_type === 'movie' || i.media_type === 'tv')
 
-/** Películas en tendencia hoy: la portada de Películas y su Top 10. */
-export function useTrendingMovies(tmdbKey: string, enabled = true): TmdbState<TmdbPage> {
+/** Películas o series en tendencia hoy: la portada de Películas / Series y su Top 10. */
+export function useTrendingOf(type: TmdbType, tmdbKey: string, enabled = true): TmdbState<TmdbPage> {
   return useTmdbQuery(
-    tmdbKey && enabled ? `movie-day|${tmdbKey}` : undefined,
-    () => getTrending('movie', 'day'),
-    () => peekTmdb<TmdbPage>('/trending/movie/day', { language: LANG }),
+    tmdbKey && enabled ? `${type}-day|${tmdbKey}` : undefined,
+    () => getTrending(type, 'day'),
+    () => peekTmdb<TmdbPage>(`/trending/${type}/day`, { language: LANG }),
   )
 }
 
