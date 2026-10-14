@@ -177,7 +177,8 @@ npm run preview    # sirve dist/ en http://localhost:4173
   (pedido del usuario); si el navegador lo bloquea, sigue mudo y el botón / tecla M lo activa
   (localStorage `sp-browse-muted`). `suppressHoverTrailer()` (`lib/hoverTrailer.ts`) apaga el tráiler chico de
   los pósters mientras está la página. Se borró `DiscoverHero.tsx`; `TmdbHero` variante `full` quedó sin uso.
-- **Subtítulos online (25), pendiente**: SubDL como fuente principal (tiene el archivo de Subscene, fuerte en español
+- v0.15.1 hecha: `.dev.vars` / `.env` en `.gitignore` (keys locales de wrangler).
+- **Subtítulos online (25), pendiente**: el usuario los quiere **en latino** (español latinoamericano). SubDL como fuente principal (tiene el archivo de Subscene, fuerte en español
   latino) y OpenSubtitles de respaldo, con una Pages Function `/api/subs` igual que la de TMDB (secretos de
   Cloudflare, lista blanca, solo mismo sitio, caché para que cada episodio se baje una vez para todas las casas;
   los .zip de SubDL se pasan a VTT). SubDL ya está: secreto `SUBDL_KEY` cargado en Cloudflare y probado (plan
