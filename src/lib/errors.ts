@@ -57,3 +57,18 @@ export function addonUrlProblem(url: string): string | undefined {
     return bad
   }
 }
+
+/**
+ * Error al importar una copia desde un archivo (auditoría de uso #7). `errorText` habla de "la respuesta"
+ * de un servidor; acá el problema es el archivo que eligió el usuario.
+ */
+export function importErrorText(err: unknown): string {
+  const message = err instanceof Error ? err.message : String(err ?? '')
+  if (err instanceof SyntaxError || /unexpected (token|end)|not valid json|json\.parse|unterminated/i.test(message)) {
+    return 'El archivo no es una copia válida: está incompleto o no es un JSON. Volvé a descargar la copia en el otro dispositivo.'
+  }
+  if (err instanceof DOMException || /could not be read|notreadable|permission/i.test(message)) {
+    return 'No se pudo leer el archivo. Probá elegirlo de nuevo.'
+  }
+  return message || 'El archivo no se pudo importar.'
+}

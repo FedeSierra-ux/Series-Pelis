@@ -1,12 +1,16 @@
 // Cloudflare Pages Function: /api/tmdb/* → api.themoviedb.org/3/*
 // La key de TMDB vive como secreto del proyecto (TMDB_KEY), así nadie de la familia tiene que configurarla.
-// Solo GET, solo las rutas que usa la app y solo desde el mismo sitio (que no la use cualquiera).
+// Solo GET, solo las rutas que usa la app y solo desde páginas del mismo sitio (que no la use cualquiera
+// como proxy con curl, ver `fromOwnSite`), con un tope de pedidos por IP.
 
-import { crossSite, json } from '../../_lib'
+import { clientIp, crossSite, fromOwnSite, json, memoryRateLimit } from '../../_lib'
 
 const API = 'https://api.themoviedb.org/3'
 const ALLOWED = new Set(['configuration', 'find', 'movie', 'tv', 'person', 'collection', 'trending', 'discover', 'search', 'genre', 'watch', 'keyword'])
 const SEGMENT = /^[\w.-]+$/
+/** Pedidos por minuto y por IP. Una pantalla de la app hace unas decenas; varias teles de una casa comparten IP. */
+export const TMDB_RATE_LIMIT = 300
+export const tmdbLimiter = memoryRateLimit(TMDB_RATE_LIMIT, 60_000)
 
 interface Env {
   TMDB_KEY?: string
@@ -28,6 +32,9 @@ export const onRequestGet = async (context: { request: Request; env: Env; params
   }
 
   if (!key) return json({ error: 'TMDB no está configurado en el sitio' }, 503)
+  // La key del sitio solo se usa desde la app: sin señales de venir de una página del sitio (curl), no.
+  if (!fromOwnSite(request)) return json({ error: 'Solo desde la app' }, 403)
+  if (tmdbLimiter.over(clientIp(request))) return json({ error: 'Demasiados pedidos' }, 429, { 'Retry-After': '60' })
   if (parts.length === 0 || !ALLOWED.has(parts[0]) || parts.some((p) => !SEGMENT.test(p) || p === '.' || p === '..')) {
     return json({ error: 'Ruta no permitida' }, 404)
   }

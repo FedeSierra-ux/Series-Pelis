@@ -5,10 +5,15 @@ import { useTitle } from '../lib/hooks'
 import {
   LIVE_CATEGORIES,
   channelInitials,
+  loadChannelHealth,
   loadLiveChannels,
+  probeChannels,
+  saveChannelHealth,
   setLastChannel,
   stepChannel,
   toggleLiveFavorite,
+  watchable,
+  type ChannelHealth,
   type LiveCategory,
   type LiveChannel,
 } from '../lib/liveTv'
@@ -24,7 +29,9 @@ const STALL_MS = 20000
 
 const pad = (n: number) => String(n).padStart(3, '0')
 
-function channelNote(c: LiveChannel) {
+function channelNote(c: LiveChannel, health?: ChannelHealth) {
+  if (health === 'blocked') return 'No se puede ver en el navegador'
+  if (health === 'down') return 'Sin señal ahora'
   if (c.geoBlocked) return 'Solo anda en su zona'
   if (c.notAlways) return 'No siempre en el aire'
   return [CATEGORY_LABEL[c.category], c.quality].filter(Boolean).join(' · ')
@@ -62,6 +69,14 @@ export function LiveTv() {
   const screenRef = useRef<HTMLDivElement>(null)
   const hlsRef = useRef<Hls | null>(null)
   const [retry, setRetry] = useState(0)
+  // Con HLS nativo (Safari, Fire TV) el video no pide CORS: no hace falta probar los canales.
+  const nativeHls = useMemo(() => document.createElement('video').canPlayType('application/vnd.apple.mpegurl') !== '', [])
+  const [health, setHealth] = useState<Record<string, ChannelHealth>>(() => (nativeHls ? {} : loadChannelHealth()))
+  const isBad = useCallback((c: LiveChannel) => health[c.id] === 'blocked' || health[c.id] === 'down', [health])
+  const markHealth = useCallback((results: Record<string, ChannelHealth>) => {
+    setHealth((h) => ({ ...h, ...results }))
+    saveChannelHealth(results)
+  }, [])
 
   const fetchChannels = useCallback(() => {
     setLoadError('')
@@ -70,6 +85,17 @@ export function LiveTv() {
       .catch(() => setLoadError('No se pudo bajar la lista de canales. Revisá la conexión y probá de nuevo.'))
   }, [])
   useEffect(fetchChannels, [fetchChannels])
+
+  // En segundo plano: qué canales no se pueden reproducir en este navegador (ver lib/liveTv.ts).
+  useEffect(() => {
+    if (!channels || nativeHls) return
+    const known = loadChannelHealth()
+    const todo = channels.filter((c) => !known[c.id])
+    if (todo.length === 0) return
+    const ctrl = new AbortController()
+    probeChannels(todo, markHealth, { signal: ctrl.signal }).catch(() => {})
+    return () => ctrl.abort()
+  }, [channels, nativeHls, markHealth])
 
   const favSet = useMemo(() => new Set(favorites), [favorites])
   const visible = useMemo(() => {
@@ -83,8 +109,8 @@ export function LiveTv() {
 
   // Arranca con el último canal que se vio (o el primero de la lista).
   useEffect(() => {
-    if (channels?.length && !channels.some((c) => c.id === currentId)) setCurrentId(channels[0].id)
-  }, [channels, currentId])
+    if (channels?.length && !channels.some((c) => c.id === currentId)) setCurrentId(watchable(channels, health)[0].id)
+  }, [channels, currentId, health])
 
   const tune = useCallback((c: LiveChannel | undefined) => {
     if (!c) return
@@ -93,8 +119,8 @@ export function LiveTv() {
   }, [])
 
   const zap = useCallback(
-    (step: number) => tune(stepChannel(visible.length ? visible : channels ?? [], currentId, step)),
-    [visible, channels, currentId, tune],
+    (step: number) => tune(stepChannel(visible.length ? visible : channels ?? [], currentId, step, isBad)),
+    [visible, channels, currentId, tune, isBad],
   )
 
   // Reproducción: HLS con hls.js (o nativo en Safari / Fire TV), cualquier otra cosa directo.
@@ -109,6 +135,8 @@ export function LiveTv() {
     const onPlaying = () => {
       clearTimeout(stall)
       setStatus('playing')
+      // Si estaba marcado como que no anda (un corte de red al probarlo), se desmarca.
+      markHealth({ [current.id]: 'ok' })
     }
     el.addEventListener('playing', onPlaying)
     el.addEventListener('error', fail)
@@ -131,7 +159,13 @@ export function LiveTv() {
         if (!HlsLib.isSupported()) return fail()
         const hls = new HlsLib({ enableWorker: true, lowLatencyMode: true })
         hlsRef.current = hls
-        hls.on(HlsLib.Events.ERROR, (_e, data) => data.fatal && fail())
+        hls.on(HlsLib.Events.ERROR, (_e, data) => {
+          if (!data.fatal) return
+          // Sin respuesta (código 0) con conexión: el servidor no permite pedirlo desde otro sitio (CORS).
+          const code = (data as { response?: { code?: number } }).response?.code
+          if (data.type === HlsLib.ErrorTypes.NETWORK_ERROR && code === 0 && navigator.onLine) markHealth({ [current.id]: 'blocked' })
+          fail()
+        })
         hls.loadSource(current.url)
         hls.attachMedia(el)
         start()
@@ -151,7 +185,7 @@ export function LiveTv() {
       el.removeAttribute('src')
       el.load()
     }
-  }, [current, retry])
+  }, [current, retry, markHealth])
 
   useEffect(() => {
     if (videoRef.current) videoRef.current.muted = muted
@@ -243,7 +277,13 @@ export function LiveTv() {
             {status === 'loading' && <div className="player-spinner ltv-spinner" />}
             {status === 'error' && current && (
               <div className="ltv-error" role="alert">
-                <p>{current.geoBlocked ? 'Este canal solo se ve desde su zona.' : 'Este canal no responde ahora.'}</p>
+                <p>
+                  {health[current.id] === 'blocked'
+                    ? 'Este canal no se puede ver desde el navegador: su servidor no lo permite.'
+                    : current.geoBlocked
+                      ? 'Este canal solo se ve desde su zona.'
+                      : 'Este canal no responde ahora.'}
+                </p>
                 <div className="ltv-error-actions">
                   <button className="btn" onClick={() => setRetry((r) => r + 1)}>
                     Probar de nuevo
@@ -260,7 +300,7 @@ export function LiveTv() {
                 {!digits && current && (
                   <span>
                     <span className="ltv-name">{current.name}</span>
-                    <span className="ltv-meta">{channelNote(current)}</span>
+                    <span className="ltv-meta">{channelNote(current, health[current.id])}</span>
                   </span>
                 )}
               </div>
@@ -288,7 +328,8 @@ export function LiveTv() {
           </div>
           <p className="ltv-hint">
             Con el control: CH+ / CH− cambian de canal, los números van directo a uno y en pantalla completa también
-            sirven ▲ ▼. Se ocultan los canales de cable pago y los que no se pueden ver desde la app.
+            sirven ▲ ▼. Se ocultan los canales de cable pago y los que no se pueden ver desde la app; los que este
+            navegador no puede reproducir aparecen atenuados y se saltean al cambiar de canal.
           </p>
         </section>
 
@@ -316,7 +357,7 @@ export function LiveTv() {
           ) : (
             <ul className="ltv-channels">
               {visible.map((c) => (
-                <li key={c.id} className="ltv-row">
+                <li key={c.id} className={`ltv-row${isBad(c) ? ' is-blocked' : ''}`}>
                   <button
                     className="ltv-ch"
                     aria-current={c.id === currentId ? 'true' : undefined}
@@ -326,7 +367,7 @@ export function LiveTv() {
                     <ChannelLogo channel={c} />
                     <span className="ltv-text">
                       <span className="ltv-ch-name">{c.name}</span>
-                      <span className={`ltv-note${c.notAlways || c.geoBlocked ? ' warn' : ''}`}>{channelNote(c)}</span>
+                      <span className={`ltv-note${c.notAlways || c.geoBlocked || isBad(c) ? ' warn' : ''}`}>{channelNote(c, health[c.id])}</span>
                     </span>
                   </button>
                   <button

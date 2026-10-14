@@ -1,3 +1,5 @@
+import { cleanManifest } from './addons'
+import { addonKey } from './addonKey'
 import type { ListItem, WatchEntry } from './store'
 import type { InstalledAddon, Manifest } from './types'
 
@@ -78,9 +80,9 @@ export function isImportableAddon(d: StremioAddonDescriptor): boolean {
   return /\/manifest\.json$/.test(url.pathname)
 }
 
+/** Con el manifest validado (sin nombre, por ejemplo, rompía Ajustes). Tira error si no sirve. */
 export function toInstalledAddon(d: StremioAddonDescriptor): InstalledAddon {
-  const manifest = { ...d.manifest, catalogs: d.manifest.catalogs ?? [], types: d.manifest.types ?? [], resources: d.manifest.resources ?? [] }
-  return { transportUrl: d.transportUrl, manifest }
+  return { transportUrl: d.transportUrl, manifest: cleanManifest({ ...d.manifest, resources: Array.isArray(d.manifest?.resources) ? d.manifest.resources : [] }) }
 }
 
 /** `tt123:2:5` → temporada 2, episodio 5. */
@@ -185,14 +187,21 @@ export function planImport(
 ): ImportPlan {
   const descriptors = data.addons ?? []
   const usable = descriptors.filter(isImportableAddon)
-  const urls = new Set(current.addons.map((a) => a.transportUrl))
-  const ids = new Set(current.addons.map((a) => a.manifest.id))
+  // La identidad de un addon es su URL (auditoría #4): Torrentio con la TorBox compartida y Torrentio con
+  // tu propio debrid tienen el mismo `manifest.id` pero son dos addons distintos, y los dos se importan.
+  const urls = new Set(current.addons.map((a) => addonKey(a.transportUrl)))
   const fresh: InstalledAddon[] = []
   for (const d of usable) {
-    if (urls.has(d.transportUrl) || ids.has(d.manifest.id)) continue
-    urls.add(d.transportUrl)
-    ids.add(d.manifest.id)
-    fresh.push(toInstalledAddon(d))
+    const key = addonKey(d.transportUrl)
+    if (urls.has(key)) continue
+    let addon: InstalledAddon
+    try {
+      addon = toInstalledAddon(d)
+    } catch {
+      continue
+    }
+    urls.add(key)
+    fresh.push(addon)
   }
 
   const library = (data.library ?? []).filter(isSupported)

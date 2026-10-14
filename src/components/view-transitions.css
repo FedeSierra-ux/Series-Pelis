@@ -1,0 +1,52 @@
+/* v0.14 (U3): transiciones entre pantallas con la View Transitions API (ver ViewTransitionRouter.tsx).
+   Sin soporte del navegador nada de esto aplica; con "reducir movimiento" no se anima. */
+
+/* El póster tocado y la imagen de la ficha comparten nombre solo durante la transición (la clase la pone JS). */
+.vt-shared {
+  view-transition-name: sp-poster;
+}
+
+@media (min-width: 761px) {
+  /* El riel queda quieto: no se funde con la página (solo cambia la píldora activa). */
+  .t2-rail {
+    view-transition-name: sp-rail;
+  }
+}
+@media (max-width: 760px) {
+  .t2-tabs {
+    view-transition-name: sp-tabs;
+  }
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  ::view-transition-old(root),
+  ::view-transition-new(root) {
+    animation-duration: 180ms;
+    animation-timing-function: ease-out;
+  }
+  ::view-transition-group(sp-poster) {
+    animation-duration: 340ms;
+    animation-timing-function: cubic-bezier(0.2, 0.8, 0.2, 1);
+    border-radius: var(--radius-sm, 12px);
+    overflow: hidden;
+  }
+  ::view-transition-old(sp-poster),
+  ::view-transition-new(sp-poster) {
+    animation-duration: 340ms;
+    /* Póster chico y grande tienen la misma proporción: se estiran juntos sin deformarse. */
+    height: 100%;
+    object-fit: cover;
+  }
+  ::view-transition-group(sp-rail),
+  ::view-transition-group(sp-tabs) {
+    animation-duration: 180ms;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  ::view-transition-group(*),
+  ::view-transition-old(*),
+  ::view-transition-new(*) {
+    animation: none !important;
+  }
+}

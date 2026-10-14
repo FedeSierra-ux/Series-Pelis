@@ -13,7 +13,9 @@
 #   pueden venir de cualquier host (img/media/connect-src *). Scripts solo del sitio, sin ninguno inline (desde
 #   la v0.11 el tema va fijo en index.html; src/lib/securityHeaders.test.ts avisa si aparece uno). Estilos
 #   inline: React los usa.
-#   frame-src: solo el tráiler de YouTube (HoverTrailer, TmdbHero). Workers: el service worker y los blob de hls.js.
+#   frame-src: el tráiler de YouTube (HoverTrailer, TmdbHero) y los esquemas de los reproductores externos de la PC
+#   (vlc:, mpv:…): en Firefox "Abrir en…" los abre con un iframe oculto (src/pages/player/externalLaunch.ts; el test
+#   de lib/securityHeaders.test.ts avisa si falta uno). Workers: el service worker y los blob de hls.js.
 # - Permissions-Policy: cámara, micrófono y ubicación apagados; autoplay, pantalla completa y PiP para la app
 #   y para el iframe del tráiler de YouTube (sin eso el tráiler no arranca solo).
 /*
@@ -21,4 +23,4 @@
   Referrer-Policy: strict-origin-when-cross-origin
   X-Frame-Options: DENY
   Permissions-Policy: camera=(), microphone=(), geolocation=(), payment=(), usb=(), autoplay=(self "https://www.youtube.com" "https://www.youtube-nocookie.com"), fullscreen=(self "https://www.youtube.com" "https://www.youtube-nocookie.com"), picture-in-picture=(self "https://www.youtube.com" "https://www.youtube-nocookie.com")
-  Content-Security-Policy: default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src * data: blob:; media-src * data: blob:; connect-src * data: blob:; font-src 'self' data:; worker-src 'self' blob:; frame-src https://www.youtube.com https://www.youtube-nocookie.com; manifest-src 'self'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'; object-src 'none'
+  Content-Security-Policy: default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src * data: blob:; media-src * data: blob:; connect-src * data: blob:; font-src 'self' data:; worker-src 'self' blob:; frame-src https://www.youtube.com https://www.youtube-nocookie.com vlc: mpv: iina: potplayer: infuse:; manifest-src 'self'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'; object-src 'none'

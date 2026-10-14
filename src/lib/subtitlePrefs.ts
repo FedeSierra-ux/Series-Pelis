@@ -147,3 +147,81 @@ export function placeCue(cue: TextTrackCue, position: number, clear = 0) {
     c.line = 'auto'
   }
 }
+
+// ---------- Nombres de idioma para el menú de subtítulos ----------
+
+/** Códigos propios de OpenSubtitles (y parecidos) que ni `langLabel` ni Intl conocen. */
+const EXTRA_LANGS: Record<string, string> = {
+  spl: 'Español latino',
+  spn: 'Español (España)',
+  ea: 'Español latino',
+  pob: 'Portugués (Brasil)',
+  pom: 'Portugués (Mozambique)',
+  zht: 'Chino tradicional',
+  zhs: 'Chino simplificado',
+  zhe: 'Chino e inglés',
+  ze: 'Chino e inglés',
+  mne: 'Montenegrino',
+}
+
+let displayNames: Intl.DisplayNames | null | undefined
+
+/** Intl.DisplayNames en español; `null` si el navegador (una TV vieja) no lo tiene. */
+function languageNames(): Intl.DisplayNames | null {
+  if (displayNames !== undefined) return displayNames
+  try {
+    displayNames = typeof Intl !== 'undefined' && 'DisplayNames' in Intl ? new Intl.DisplayNames(['es-AR', 'es'], { type: 'language' }) : null
+  } catch {
+    displayNames = null
+  }
+  return displayNames
+}
+
+/**
+ * Nombre del idioma en español para un código de 2 o 3 letras ("tur" → "Turco"). Primero la tabla de la
+ * app (`langLabel`), después Intl; si nadie lo conoce, el código en mayúsculas (o "Sin idioma").
+ */
+export function subLangName(code: string | undefined, known: (code: string) => string = (c) => c): string {
+  const raw = (code ?? '').trim()
+  if (!raw) return 'Sin idioma'
+  const lower = raw.toLowerCase()
+  const own = known(lower)
+  if (own && own.toLowerCase() !== lower) return own
+  if (EXTRA_LANGS[lower]) return EXTRA_LANGS[lower]
+  let name: string | undefined
+  try {
+    name = languageNames()?.of(lower)
+  } catch {
+    name = undefined
+  }
+  if (name && name.toLowerCase() !== lower) return name.charAt(0).toLocaleUpperCase('es') + name.slice(1)
+  return raw.toUpperCase()
+}
+
+export interface SubMenuLabel {
+  main: string
+  /** Detalle chico: "Opción 2", "Forzados", "SDH". */
+  extra: string
+}
+
+/**
+ * Textos del menú CC. Nunca muestra los ids internos de los addons (OpenSubtitles da números como
+ * "4026007"): cuando hay varios del mismo idioma se numeran ("Opción 1", "Opción 2"…), en el orden de la lista.
+ */
+export function subMenuLabels(options: SubOption[], langName: (code: string) => string = (c) => subLangName(c)): SubMenuLabel[] {
+  const mains = options.map((o) => o.label ?? langName(o.lang))
+  const total = new Map<string, number>()
+  for (const m of mains) total.set(m, (total.get(m) ?? 0) + 1)
+  const seen = new Map<string, number>()
+  return options.map((o, i) => {
+    const main = mains[i]
+    const n = (seen.get(main) ?? 0) + 1
+    seen.set(main, n)
+    const tags = [
+      (total.get(main) ?? 0) > 1 ? `Opción ${n}` : undefined,
+      o.forced && !looksForced(o.label) ? 'Forzados' : undefined,
+      o.sdh && !looksSdh(o.label) ? 'SDH' : undefined,
+    ].filter(Boolean)
+    return { main, extra: tags.join(' · ') }
+  })
+}

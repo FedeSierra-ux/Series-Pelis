@@ -40,3 +40,13 @@ export function creditsPlan(segments: Segments | null, duration: number, hasNext
   }
   return { credits, afterCredits, nextAt }
 }
+
+/**
+ * Desde cuándo mostrar lo del final de una peli o del último episodio (puntuar, "Más como esto"):
+ * al empezar los créditos o, sin datos, `fallbackS` antes del final. En videos cortos (menos de
+ * 4 × `fallbackS`: tráilers, clips) nunca.
+ */
+export function endCardAt(creditsStart: number | undefined, duration: number, fallbackS: number): number | undefined {
+  if (!(duration > 4 * fallbackS)) return undefined
+  return creditsStart !== undefined && creditsStart < duration ? creditsStart : duration - fallbackS
+}

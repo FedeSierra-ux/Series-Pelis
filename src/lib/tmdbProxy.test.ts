@@ -1,18 +1,24 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import { onRequestGet } from '../../functions/api/tmdb/[[path]]'
+import { onRequestGet, TMDB_RATE_LIMIT, tmdbLimiter } from '../../functions/api/tmdb/[[path]]'
 import { probeServerTmdb, SERVER_KEY, tmdbFetch, tmdbKey } from './tmdb'
 
 const SITE = 'https://series-pelis.pages.dev'
 const FAKE_KEY = 'clave-de-prueba'
 const FAKE_TOKEN = 'eyJ-token-de-prueba'
 
-function call(path: string, { key = FAKE_KEY, headers = {} }: { key?: string; headers?: Record<string, string> } = {}) {
+// Lo que manda un navegador al pedir desde una página del sitio.
+const FROM_APP = { 'Sec-Fetch-Site': 'same-origin' }
+
+function call(path: string, { key = FAKE_KEY, headers = FROM_APP }: { key?: string; headers?: Record<string, string> } = {}) {
   const url = new URL(`${SITE}/api/tmdb/${path}`)
   const parts = url.pathname.replace('/api/tmdb/', '').split('/').filter(Boolean)
   return onRequestGet({ request: new Request(url, { headers }), env: { TMDB_KEY: key }, params: { path: parts } })
 }
 
-afterEach(() => vi.unstubAllGlobals())
+afterEach(() => {
+  vi.unstubAllGlobals()
+  tmdbLimiter.reset()
+})
 
 describe('función /api/tmdb', () => {
   it('pide a TMDB con la key del secreto y saca la api_key que mande el cliente', async () => {
@@ -50,6 +56,35 @@ describe('función /api/tmdb', () => {
     expect((await call('movie/603', { headers: { Origin: 'https://otro.com' } })).status).toBe(403)
     expect((await call('movie/603', { headers: { Origin: SITE, 'Sec-Fetch-Site': 'same-origin' } })).status).toBe(200)
     expect((await call('movie/603', { key: '' })).status).toBe(503)
+  })
+
+  it('sin señales de venir de una página del sitio (curl) no usa la key (auditoría #17)', async () => {
+    let asked = 0
+    vi.stubGlobal('fetch', async () => {
+      asked++
+      return new Response('{}')
+    })
+    // curl pelado, o la URL escrita en la barra del navegador.
+    expect((await call('movie/603', { headers: {} })).status).toBe(403)
+    expect((await call('movie/603', { headers: { 'Sec-Fetch-Site': 'none' } })).status).toBe(403)
+    expect((await call('movie/603', { headers: { Referer: 'https://otro.com/x' } })).status).toBe(403)
+    expect(asked).toBe(0)
+    // Navegadores de TV viejos (sin Sec-Fetch-Site): alcanza con el Referer o el Origin del sitio.
+    expect((await call('movie/603', { headers: { Referer: `${SITE}/detail/movie/tt0133093` } })).status).toBe(200)
+    expect((await call('movie/603', { headers: { Origin: SITE } })).status).toBe(200)
+    // _status sigue contestando a cualquiera que no sea otro sitio (no usa la key).
+    expect((await call('_status', { headers: {} })).status).toBe(200)
+  })
+
+  it('corta con 429 cuando una IP pasa el tope por minuto', async () => {
+    vi.stubGlobal('fetch', async () => new Response('{}'))
+    const headers = { ...FROM_APP, 'CF-Connecting-IP': '203.0.113.9' }
+    for (let i = 0; i < TMDB_RATE_LIMIT; i++) expect((await call('movie/603', { headers })).status).toBe(200)
+    const over = await call('movie/603', { headers })
+    expect(over.status).toBe(429)
+    expect(over.headers.get('Retry-After')).toBe('60')
+    // Otra IP no se ve afectada.
+    expect((await call('movie/603', { headers: { ...FROM_APP, 'CF-Connecting-IP': '203.0.113.10' } })).status).toBe(200)
   })
 
   it('_status dice si el sitio tiene TMDB sin mostrar la key', async () => {

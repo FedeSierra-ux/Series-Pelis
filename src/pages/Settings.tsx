@@ -2,7 +2,8 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import { Link, useLocation } from 'react-router-dom'
 import { Advanced } from '../components/Advanced'
 import { AddonUrlForm } from '../components/AddonUrlForm'
-import { CINEMETA_URL } from '../lib/addons'
+import { addonName, CINEMETA_URL } from '../lib/addons'
+import { fetchWithTimeout } from '../lib/abort'
 import { clearCache } from '../lib/cache'
 import { useAddons, useTitle } from '../lib/hooks'
 import {
@@ -26,10 +27,22 @@ import { ShortcutsSettings } from './settings/ShortcutsSettings'
 import { DiagnosticsSettings } from './settings/DiagnosticsSettings'
 import { useReportsEnabled } from '../lib/diagnostics'
 import { SettingsBlock, SettingsIndex, WIDE_QUERY, goToSection, useActiveSection, useMediaQuery, type SettingsSectionDef } from './settings/SettingsLayout'
-import { errorText } from '../lib/errors'
+import { importErrorText } from '../lib/errors'
 import './settings/settings-layout.css'
 
 const DEFAULT_SERVER = 'http://127.0.0.1:11470'
+
+/** Solo el dominio de cada addon: la URL completa puede traer la key del debrid y es larguísima. */
+function hostList(urls: string[]): string {
+  const hosts = urls.map((u) => {
+    try {
+      return new URL(u).host
+    } catch {
+      return u.slice(0, 40)
+    }
+  })
+  return hosts.join(', ')
+}
 
 function AddonsSection() {
   const addons = useAddons()
@@ -45,14 +58,15 @@ function AddonsSection() {
       <ul className="addon-list">
         {addons.map((a, i) => {
           const m = a.manifest
-          const resources = m.resources.map((r) => (typeof r === 'string' ? r : r.name))
+          const name = addonName(m)
+          const resources = (m.resources ?? []).map((r) => (typeof r === 'string' ? r : r.name))
           const configurable = m.behaviorHints?.configurable
           return (
             <li key={a.transportUrl} className={`addon-item${a.disabled ? ' addon-off' : ''}`}>
-              {m.logo ? <img src={m.logo} alt="" className="addon-logo" /> : <div className="addon-logo placeholder">{m.name[0]}</div>}
+              {m.logo ? <img src={m.logo} alt="" className="addon-logo" /> : <div className="addon-logo placeholder">{name[0]}</div>}
               <div className="addon-text">
                 <strong>
-                  {m.name} <span className="muted small">v{m.version}</span>
+                  {name} <span className="muted small">v{m.version}</span>
                   {a.disabled && <span className="chip small">Desactivado</span>}
                 </strong>
                 {m.description && <span className="muted small addon-desc">{m.description}</span>}
@@ -69,7 +83,7 @@ function AddonsSection() {
                   className={`btn btn-ghost addon-switch${a.disabled ? '' : ' on'}`}
                   role="switch"
                   aria-checked={!a.disabled}
-                  aria-label={`${a.disabled ? 'Activar' : 'Desactivar'} ${m.name}`}
+                  aria-label={`${a.disabled ? 'Activar' : 'Desactivar'} ${name}`}
                   title={a.disabled ? 'Desactivado: no se consulta' : 'Activo'}
                   onClick={() => setAddonEnabled(a.transportUrl, !!a.disabled)}
                 >
@@ -91,7 +105,7 @@ function AddonsSection() {
                   className="btn btn-ghost danger"
                   onClick={() => {
                     const warn = a.transportUrl === CINEMETA_URL ? '\nCinemeta da el catálogo y los puntajes de IMDb.' : ''
-                    if (confirm(`¿Quitar “${m.name}”?${warn}`)) removeAddon(a.transportUrl)
+                    if (confirm(`¿Quitar “${name}”?${warn}`)) removeAddon(a.transportUrl)
                   }}
                 >
                   Quitar
@@ -124,7 +138,8 @@ function PlaybackSection() {
     const server = settings.streamingServerUrl || DEFAULT_SERVER
     setTest('Probando…')
     try {
-      const res = await fetch(`${server.replace(/\/+$/, '')}/settings`, { signal: AbortSignal.timeout(4000) })
+      // Sin `AbortSignal.timeout`: en las TVs viejas no existe y siempre decía "No responde" (auditoría #9).
+      const res = await fetchWithTimeout(`${server.replace(/\/+$/, '')}/settings`, { timeoutMs: 4000 })
       setTest(res.ok ? '✓ Conectado al servidor de Stremio' : `Respondió ${res.status}`)
       if (res.ok && !settings.streamingServerUrl) settingsStore.set((s) => ({ ...s, streamingServerUrl: server }))
     } catch {
@@ -184,11 +199,20 @@ function DataSection() {
   }
 
   const upload = async (file: File) => {
+    setMsg('Importando…')
     try {
-      await importData(JSON.parse(await file.text()))
-      setMsg('✓ Datos importados')
+      const report = await importData(JSON.parse(await file.text()))
+      const notes: string[] = []
+      // Auditoría #10: antes un addon que no respondía justo en ese momento se perdía sin aviso.
+      if (report.offlineAddons.length) {
+        notes.push(`${hostList(report.offlineAddons)} no ${report.offlineAddons.length === 1 ? 'respondió' : 'respondieron'}: se ${report.offlineAddons.length === 1 ? 'agregó' : 'agregaron'} con los datos de la copia.`)
+      }
+      if (report.failedAddons.length) {
+        notes.push(`No se pudieron agregar ${hostList(report.failedAddons)} (no ${report.failedAddons.length === 1 ? 'respondió' : 'respondieron'}). Volvé a importar la copia más tarde o pegá su URL en Addons.`)
+      }
+      setMsg(['✓ Datos importados.', ...notes].join(' '))
     } catch (err) {
-      setMsg(`No se pudo importar: ${errorText(err)}`)
+      setMsg(`No se pudo importar: ${importErrorText(err)}`)
     }
   }
 
@@ -229,7 +253,7 @@ function DataSection() {
           }}
         />
       </div>
-      {msg && <p className="muted">{msg}</p>}
+      {msg && <p className="muted" role="status">{msg}</p>}
     </section>
   )
 }

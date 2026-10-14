@@ -5136,6 +5136,14 @@ input[type='password']:focus-visible {
 .ltv-note.warn {
   color: #f0c36a;
 }
+/* Canales que este navegador no puede reproducir (sin CORS): atenuados, pero en su lugar y con su número. */
+.ltv-row.is-blocked .ltv-ch {
+  opacity: 0.55;
+}
+.ltv-row.is-blocked .ltv-ch:focus-visible,
+.ltv-row.is-blocked .ltv-ch[aria-current='true'] {
+  opacity: 1;
+}
 .ltv-fav {
   flex: none;
   width: 48px;

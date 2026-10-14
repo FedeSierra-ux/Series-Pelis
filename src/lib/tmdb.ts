@@ -349,10 +349,13 @@ export function pickTrailer(videos: TmdbVideo[] | undefined): TmdbVideo | undefi
   return yt.sort((a, b) => score(b) - score(a))[0]
 }
 
-/** Logo del título (PNG transparente): español, inglés o sin idioma. */
+/**
+ * Logo del título (PNG transparente) con su nombre original: inglés, sin idioma, otro y el doblado al
+ * español al final (el usuario no quiere los títulos traducidos, solo la sinopsis y los datos).
+ */
 export function pickLogo(d: TmdbDetails | undefined): string | undefined {
   const logos = d?.images?.logos ?? []
-  const rank = (l: { iso_639_1: string | null }) => (l.iso_639_1 === 'es' ? 0 : l.iso_639_1 === 'en' ? 1 : l.iso_639_1 === null ? 2 : 3)
+  const rank = (l: { iso_639_1: string | null }) => (l.iso_639_1 === 'en' ? 0 : l.iso_639_1 === null ? 1 : l.iso_639_1 === 'es' ? 3 : 2)
   return [...logos].sort((a, b) => rank(a) - rank(b))[0]?.file_path
 }
 

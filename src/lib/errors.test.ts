@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { HttpError } from './cache'
-import { addonUrlProblem, errorText, isChunkLoadError } from './errors'
+import { addonUrlProblem, errorText, importErrorText, isChunkLoadError } from './errors'
 
 afterEach(() => vi.unstubAllGlobals())
 
@@ -56,5 +56,20 @@ describe('isChunkLoadError', () => {
     expect(isChunkLoadError(new TypeError('error loading dynamically imported module: https://x/a.js'))).toBe(true)
     expect(isChunkLoadError(new TypeError('Failed to fetch'))).toBe(false)
     expect(isChunkLoadError(new Error("Cannot read properties of undefined (reading 'x')"))).toBe(false)
+  })
+})
+
+describe('importErrorText (auditoría de uso #7)', () => {
+  it('un archivo roto habla del archivo, no de "la respuesta"', () => {
+    let err: unknown
+    try {
+      JSON.parse('{"app": "series-pelis", "progress": {')
+    } catch (e) {
+      err = e
+    }
+    const text = importErrorText(err)
+    expect(text).toMatch(/archivo/)
+    expect(text).not.toMatch(/respuesta/)
+    expect(importErrorText(new Error('El archivo no es una copia de Series-Pelis'))).toBe('El archivo no es una copia de Series-Pelis')
   })
 })

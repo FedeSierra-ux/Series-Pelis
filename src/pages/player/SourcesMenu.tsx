@@ -3,7 +3,7 @@ import { useLocation, useNavigate } from 'react-router-dom'
 import { getStreams } from '../../lib/addons'
 import { useAddons } from '../../lib/hooks'
 import { lastSourceStore, settingsStore, useStore } from '../../lib/store'
-import { playable } from '../../lib/streamPicker'
+import { lastSourceOf, playable } from '../../lib/streamPicker'
 import type { AddonStreams, InstalledAddon, Stream } from '../../lib/types'
 import type { PlayState } from '../Detail'
 
@@ -13,6 +13,8 @@ export interface Resume {
   at: number
   /** url del subtítulo activo ('' = sin subtítulos) */
   sub?: string
+  /** Nombre del subtítulo activo: la pista nueva lo necesita antes de que llegue la lista. */
+  subLabel?: string
   subDelay?: number
   /** idioma de la pista de audio activa */
   audioLang?: string
@@ -35,12 +37,7 @@ export function useSwitchSource(state: PlayState) {
       if (settingsStore.get().sourceRules.rememberLast) {
         lastSourceStore.set((all) => ({
           ...all,
-          [state.meta.id]: {
-            addonUrl: pick.addon.transportUrl,
-            bingeGroup: pick.stream.behaviorHints?.bingeGroup,
-            streamName: pick.stream.name,
-            at: Date.now(),
-          },
+          [state.meta.id]: lastSourceOf(pick.addon.transportUrl, pick.stream),
         }))
       }
       const next: SwitchState = {

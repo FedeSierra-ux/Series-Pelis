@@ -1,6 +1,9 @@
 import { useSyncExternalStore } from 'react'
-import { createStore, get, set } from 'idb-keyval'
-import { CINEMETA_ADDON, fetchManifest } from './addons'
+import { createStore, get, update } from 'idb-keyval'
+import { clearCache, dropLegacySwCaches, isQuotaError } from './cache'
+import { announce, applyPatch, diffPatch, newestUpdate, onRemoteChange, type Patch, type Resolver } from './storeSync'
+import { CINEMETA_ADDON, cleanManifest, fetchManifest } from './addons'
+import { mergeProgress, mergeWatchlist } from './stremioLibrary'
 import { DEFAULT_CATALOG_PREFS, normalizePrefs, type CatalogPrefs } from './catalogPrefs'
 import { crossedFinish, diaryEntryFrom, isDuplicate, missingFromProgress, rebuildFromProgress, withoutLatest, withoutVideos, type DiaryEntry, type DiaryState } from './diary'
 import type { GoalsState } from './goals'
@@ -25,18 +28,54 @@ function withDefaults<T>(defaults: T, stored: T): T {
   return out as T
 }
 
+export interface StoreOptions {
+  /** Hasta qué nivel se mezcla con lo de otras pestañas (1: por clave; 2: también un nivel adentro). */
+  depth?: number
+  /** Para una misma clave cambiada en dos pestañas, cuál queda (ver storeSync.ts). */
+  resolve?: Resolver
+}
+
+// ---------- Problemas al guardar (cuota llena) ----------
+
+let storageIssue: string | undefined
+const issueListeners = new Set<() => void>()
+
+function setStorageIssue(text: string | undefined) {
+  if (storageIssue === text) return
+  storageIssue = text
+  issueListeners.forEach((l) => l())
+}
+
+export const storageIssueStore = {
+  get: () => storageIssue,
+  subscribe: (l: () => void) => {
+    issueListeners.add(l)
+    return () => issueListeners.delete(l)
+  },
+  dismiss: () => setStorageIssue(undefined),
+}
+
+export function useStorageIssue(): string | undefined {
+  return useSyncExternalStore(storageIssueStore.subscribe, storageIssueStore.get, storageIssueStore.get)
+}
+
 export class PersistedStore<T> {
   private initial: T
 
   private value: T
   private listeners = new Set<() => void>()
+  /** Sube con cada cambio local: si cambió mientras se releía de IndexedDB, se vuelve a leer. */
+  private seq = 0
 
   constructor(
     private key: string,
     initial: T,
+    private opts: StoreOptions = {},
   ) {
     this.value = initial
     this.initial = initial
+    // Otra pestaña guardó esta clave: se relee (auditoría #2).
+    onRemoteChange(key, () => void this.refresh())
   }
 
   /** Valores por defecto con lo que haya en `stored` encima (para importar copias viejas). */
@@ -56,14 +95,68 @@ export class PersistedStore<T> {
     }
   }
 
+  /** Relee de IndexedDB lo que guardó otra pestaña. */
+  async refresh(): Promise<void> {
+    const seq = this.seq
+    let stored: T | undefined
+    try {
+      stored = await get<T>(this.key, idb)
+    } catch {
+      return
+    }
+    // Hubo un cambio acá mientras tanto: su escritura va después de esta lectura, así que se relee.
+    if (seq !== this.seq) return this.refresh()
+    if (stored === undefined) return
+    this.value = withDefaults(this.initial, stored)
+    this.emit()
+  }
+
   get = () => this.value
 
   set(next: T | ((prev: T) => T)) {
-    this.value = typeof next === 'function' ? (next as (prev: T) => T)(this.value) : next
-    this.listeners.forEach((l) => l())
+    const prev = this.value
+    const value = typeof next === 'function' ? (next as (prev: T) => T)(prev) : next
+    if (Object.is(value, prev)) return
+    this.value = value
+    this.seq++
+    this.emit()
     // Se escribe enseguida: los cambios son pocos (el progreso se guarda cada 5 s) y así
     // no se pierde nada si se cierra la app justo después.
-    set(this.key, this.value, idb).catch((err) => console.warn(`No se pudo guardar "${this.key}"`, err))
+    this.write(diffPatch(prev, value, this.opts.depth ?? 1), value, false)
+  }
+
+  /**
+   * Guarda solo lo que cambió, mezclado con lo que haya en IndexedDB en una sola transacción
+   * (`update` de idb-keyval): lo que guardó otra pestaña mientras tanto no se pisa.
+   */
+  private write(patch: Patch, value: T, retried: boolean) {
+    const fail = (err: unknown) => void this.writeFailed(err, patch, value, retried)
+    try {
+      update<unknown>(this.key, (stored) => (stored === undefined ? value : applyPatch(stored, patch, value, this.opts.resolve)), idb).then(() => {
+        if (retried) setStorageIssue(undefined)
+        announce(this.key)
+      }, fail)
+    } catch (err) {
+      fail(err)
+    }
+  }
+
+  private async writeFailed(err: unknown, patch: Patch, value: T, retried: boolean) {
+    if (!isQuotaError(err)) {
+      console.warn(`No se pudo guardar "${this.key}"`, err)
+      return
+    }
+    if (!retried) {
+      // Cuota llena (auditoría #5): la caché de catálogos y fichas se puede volver a bajar; el progreso no.
+      await clearCache().catch(() => {})
+      this.write(patch, value, true)
+      return
+    }
+    setStorageIssue('El navegador se quedó sin espacio y no se pudo guardar tu progreso. Liberá espacio (o borrá datos de otros sitios) y volvé a abrir la app.')
+  }
+
+  private emit() {
+    this.listeners.forEach((l) => l())
   }
 
   subscribe = (listener: () => void) => {
@@ -83,22 +176,9 @@ export const addonsStore = new PersistedStore<InstalledAddon[]>('addons', [CINEM
 /** `updated`: ya estaba y se actualizó; `disabled`: ya estaba apagado y sigue apagado. */
 export type InstallStatus = 'new' | 'updated' | 'disabled'
 
-/**
- * Identidad de un addon instalado: su URL (sin mayúsculas en el dominio ni barra final). El mismo addon
- * con otra configuración (Torrentio con TorBox y Torrentio con Real-Debrid) tiene el mismo `manifest.id`
- * pero otra URL, y son dos addons distintos.
- */
-export function addonKey(transportUrl: string): string {
-  try {
-    const u = new URL(transportUrl.trim())
-    u.hash = ''
-    return `${u.protocol.toLowerCase()}//${u.host.toLowerCase()}${u.pathname.replace(/\/+$/, '')}${u.search}`
-  } catch {
-    return transportUrl.trim()
-  }
-}
-
-export const sameAddon = (a: string, b: string) => addonKey(a) === addonKey(b)
+// Identidad de un addon: su URL (ver addonKey.ts).
+export { addonKey, sameAddon } from './addonKey'
+import { addonKey, sameAddon } from './addonKey'
 
 export async function installAddon(manifestUrl: string): Promise<{ manifest: Manifest; status: InstallStatus }> {
   const manifest = await fetchManifest(manifestUrl)
@@ -240,7 +320,7 @@ export interface WatchEntry {
   hidden?: boolean
 }
 
-export const progressStore = new PersistedStore<Record<string, WatchEntry>>('progress', {})
+export const progressStore = new PersistedStore<Record<string, WatchEntry>>('progress', {}, { resolve: newestUpdate })
 
 const WATCHED_RATIO = 0.9
 /** Retroceder más que esto respecto de donde iba cuenta como "lo empezó de nuevo". */
@@ -382,7 +462,7 @@ export function hideFromContinue(metaId: string) {
 // ---------- Diario y metas (v0.5) ----------
 
 /** Cada vez que se terminó algo (ver `lib/diary.ts`). */
-export const diaryStore = new PersistedStore<DiaryState>('diary', { v: 0, entries: {} })
+export const diaryStore = new PersistedStore<DiaryState>('diary', { v: 0, entries: {} }, { depth: 2 })
 
 function logDiary(e: Parameters<typeof diaryEntryFrom>[0], source: DiaryEntry['source']) {
   const at = Date.now()
@@ -401,7 +481,7 @@ export function removeDiaryEntry(id: string) {
 }
 
 /** Metas anuales y logros ya vistos (ver `lib/goals.ts`). */
-export const goalsStore = new PersistedStore<GoalsState>('goals', { byYear: {}, seen: [] })
+export const goalsStore = new PersistedStore<GoalsState>('goals', { byYear: {}, seen: [] }, { depth: 2 })
 
 // ---------- Última fuente elegida por título ----------
 
@@ -411,6 +491,8 @@ export interface LastSource {
   bingeGroup?: string
   /** `name` del stream, para reconocerlo si no hay bingeGroup */
   streamName?: string
+  /** v0.14: título o archivo del stream, para seguir en el mismo idioma y release (ver `lastSourceOf`). */
+  streamTitle?: string
   at: number
 }
 
@@ -608,6 +690,8 @@ export interface Settings {
   sendReports: boolean
   /** v0.12.2: ya se prendieron una vez los subtítulos automáticos (antes venían apagados de fábrica). */
   autoSubsMigrated: boolean
+  /** v0.14: tamaño de la interfaz en % (90, 100, 115 o 130). Ver lib/tv.ts (`UI_SCALES`). */
+  uiScale: number
 }
 
 export const settingsStore = new PersistedStore<Settings>('settings', {
@@ -645,6 +729,7 @@ export const settingsStore = new PersistedStore<Settings>('settings', {
   hintsSeen: false,
   sendReports: false,
   autoSubsMigrated: false,
+  uiScale: 100,
 })
 
 // ---------- Copia de seguridad ----------
@@ -652,11 +737,15 @@ export const settingsStore = new PersistedStore<Settings>('settings', {
 export function exportData() {
   // La key de TMDB es personal y no va en la copia (se comparte entre casas y se manda por chat).
   const { tmdbKey: _tmdbKey, ...settings } = settingsStore.get()
+  const addons = addonsStore.get()
   return {
     app: 'series-pelis',
     version: 1,
     exportedAt: new Date().toISOString(),
-    addons: addonsStore.get().map((a) => a.transportUrl),
+    addons: addons.map((a) => a.transportUrl),
+    // Los manifests van también: si al restaurar un addon no responde, se instala igual con esto
+    // (auditoría #10) y el manifest se actualiza solo en el próximo arranque.
+    addonManifests: Object.fromEntries(addons.map((a) => [a.transportUrl, a.manifest])),
     progress: progressStore.get(),
     watchlist: watchlistStore.get(),
     settings,
@@ -666,7 +755,7 @@ export function exportData() {
     diary: diaryStore.get().entries,
     goals: goalsStore.get(),
     recentSearches: recentSearchesStore.get(),
-    disabledAddons: addonsStore.get().filter((a) => a.disabled).map((a) => a.transportUrl),
+    disabledAddons: addons.filter((a) => a.disabled).map((a) => a.transportUrl),
     catalogPrefs: catalogPrefsStore.get(),
     liveTv: liveTvStore.get(),
   }
@@ -682,8 +771,71 @@ function plainRecord<T>(v: unknown): Record<string, T> | undefined {
 
 const stringList = (v: unknown): string[] => (Array.isArray(v) ? v.filter((x): x is string => typeof x === 'string') : [])
 
-/** Importa una copia. Lo que no tenga la forma esperada (por ejemplo, `progress` como texto) se ignora. */
-export async function importData(raw: unknown) {
+const num = (v: unknown): number | undefined => (typeof v === 'number' && Number.isFinite(v) ? v : undefined)
+
+/** Entradas de progreso de una copia, con los campos que usa la mezcla (las rotas se descartan). */
+function progressEntries(record: Record<string, WatchEntry>): WatchEntry[] {
+  const out: WatchEntry[] = []
+  for (const [key, e] of Object.entries(record)) {
+    const videoId = typeof e.videoId === 'string' && e.videoId ? e.videoId : key
+    if (typeof e.metaId !== 'string' || !e.metaId) continue
+    const updatedAt = num(e.updatedAt) ?? 0
+    out.push({
+      ...e,
+      videoId,
+      position: num(e.position) ?? 0,
+      duration: num(e.duration) ?? 0,
+      watched: e.watched === true,
+      updatedAt,
+      firstWatchedAt: num(e.firstWatchedAt) ?? updatedAt,
+    })
+  }
+  return out
+}
+
+/**
+ * Suma progreso de otro lado (una copia o la cuenta de Stremio) sin pisar lo más nuevo de acá
+ * (auditoría #3): por cada video gana el de `updatedAt` más reciente, y "visto" no se pierde.
+ * Lo terminado que llega va también al diario (auditoría #8), así Diario, Metas y "Tu año" lo cuentan.
+ * Devuelve cuántas entradas cambiaron.
+ */
+export function importProgress(entries: WatchEntry[]): number {
+  const { result, changed } = mergeProgress(progressStore.get(), entries)
+  if (changed === 0) return 0
+  progressStore.set(result)
+  const touched: Record<string, WatchEntry> = {}
+  for (const e of entries) if (result[e.videoId] === e || result[e.videoId]?.updatedAt === e.updatedAt) touched[e.videoId] = result[e.videoId]
+  diaryStore.set((d) => {
+    const missing = missingFromProgress(d.entries, touched)
+    return Object.keys(missing).length ? { ...d, v: 1, entries: { ...d.entries, ...missing } } : d
+  })
+  return changed
+}
+
+/** Por cada id queda la entrada con el campo `at` más nuevo (puntajes, idiomas elegidos, "Ya no me interesa"). */
+export function newestByAt<T extends { at?: number }>(current: Record<string, T>, incoming: Record<string, T>): Record<string, T> {
+  let out = current
+  for (const [id, e] of Object.entries(incoming)) {
+    const cur = current[id]
+    if (cur && (num(cur.at) ?? 0) >= (num(e.at) ?? 0)) continue
+    if (out === current) out = { ...current }
+    out[id] = e
+  }
+  return out
+}
+
+export interface ImportReport {
+  /** Addons que no respondieron y no se pudieron agregar (copias viejas, sin los manifests). */
+  failedAddons: string[]
+  /** Addons que no respondieron pero se agregaron con el manifest de la copia. */
+  offlineAddons: string[]
+}
+
+/**
+ * Importa una copia y la mezcla con lo de acá. Lo que no tenga la forma esperada (por ejemplo,
+ * `progress` como texto) se ignora.
+ */
+export async function importData(raw: unknown): Promise<ImportReport> {
   if (!isPlain(raw) || raw.app !== 'series-pelis') throw new Error('El archivo no es una copia de Series-Pelis')
   const data = raw as Partial<Record<keyof ReturnType<typeof exportData>, unknown>>
   const progress = plainRecord<WatchEntry>(data.progress)
@@ -692,27 +844,44 @@ export async function importData(raw: unknown) {
   const ratings = plainRecord<RatingEntry>(data.ratings)
   const notInterested = plainRecord<NotInterestedEntry>(data.notInterested)
   const diary = plainRecord<DiaryEntry>(data.diary)
-  if (progress) progressStore.set((all) => ({ ...all, ...progress }))
-  if (watchlist) watchlistStore.set((all) => ({ ...all, ...watchlist }))
+  if (diary) diaryStore.set((d) => ({ v: 1, entries: { ...diary, ...d.entries } }))
+  // Después del diario: lo terminado que el diario de la copia no tenía se anota (copias viejas sin diario).
+  if (progress) importProgress(progressEntries(progress))
+  if (watchlist) watchlistStore.set((all) => mergeWatchlist(all, Object.values(watchlist).filter((it) => typeof it.id === 'string')).result)
   if (isPlain(data.settings)) {
     // La key de TMDB de otra persona no se pisa con la copia (las copias nuevas ya no la traen).
     const { tmdbKey: _tmdbKey, ...settings } = data.settings as Partial<Settings>
     settingsStore.merge({ ...settingsStore.get(), ...settings })
   }
-  if (trackPrefs) trackPrefsStore.set((all) => ({ ...all, ...trackPrefs }))
-  if (ratings) ratingsStore.set((all) => ({ ...all, ...ratings }))
-  if (notInterested) notInterestedStore.set((all) => ({ ...all, ...notInterested }))
-  if (diary) diaryStore.set((d) => ({ v: 1, entries: { ...d.entries, ...diary } }))
-  else if (progress) diaryStore.set((d) => ({ v: 1, entries: { ...d.entries, ...missingFromProgress(d.entries, progress) } }))
+  if (trackPrefs) trackPrefsStore.set((all) => newestByAt(all, trackPrefs))
+  if (ratings) ratingsStore.set((all) => newestByAt(all, ratings))
+  if (notInterested) notInterestedStore.set((all) => newestByAt(all, notInterested))
   if (isPlain(data.goals)) {
     const goals = data.goals
     const byYear = plainRecord<GoalsState['byYear'][string]>(goals.byYear) ?? {}
     goalsStore.set((g) => ({ byYear: { ...g.byYear, ...byYear }, seen: [...new Set([...g.seen, ...stringList(goals.seen)])] }))
   }
   if (Array.isArray(data.recentSearches)) recentSearchesStore.set(stringList(data.recentSearches).slice(0, 10))
+  const report: ImportReport = { failedAddons: [], offlineAddons: [] }
+  const manifests = isPlain(data.addonManifests) ? data.addonManifests : {}
   const installed = new Set(addonsStore.get().map((a) => addonKey(a.transportUrl)))
   for (const url of stringList(data.addons)) {
-    if (!installed.has(addonKey(url))) await installAddon(url).catch(() => {})
+    if (installed.has(addonKey(url))) continue
+    try {
+      await installAddon(url)
+    } catch {
+      // No responde ahora (rate limit, caído): con el manifest de la copia se instala igual.
+      let manifest: Manifest | undefined
+      try {
+        manifest = cleanManifest(manifests[url])
+      } catch {
+        manifest = undefined
+      }
+      if (manifest) {
+        addInstalledAddons([{ transportUrl: url, manifest }])
+        report.offlineAddons.push(url)
+      } else report.failedAddons.push(url)
+    }
   }
   stringList(data.disabledAddons).forEach((url) => setAddonEnabled(url, false))
   if (isPlain(data.catalogPrefs)) catalogPrefsStore.set(normalizePrefs(data.catalogPrefs as Partial<CatalogPrefs>))
@@ -720,6 +889,7 @@ export async function importData(raw: unknown) {
     const favorites = stringList(data.liveTv.favorites)
     liveTvStore.set((s) => ({ ...s, favorites: [...new Set([...s.favorites, ...favorites])] }))
   }
+  return report
 }
 
 // ---------- Arranque ----------
@@ -746,6 +916,22 @@ export async function hydrateStores() {
   // La primera vez el diario se arma con lo que ya estaba marcado como visto.
   if (diaryStore.get().v === 0) diaryStore.set({ v: 1, entries: rebuildFromProgress(progressStore.get()) })
   if (addonsStore.get().length === 0) addonsStore.set([CINEMETA_ADDON])
+  // Addons guardados antes de validar los manifests (auditoría #14): uno sin nombre rompía Ajustes entero.
+  const stored = addonsStore.get()
+  const broken = (a: InstalledAddon) =>
+    !isPlain(a?.manifest) || typeof a.manifest.name !== 'string' || !a.manifest.name.trim() || !Array.isArray(a.manifest.resources) || !Array.isArray(a.manifest.catalogs) || !Array.isArray(a.manifest.types)
+  if (stored.some(broken)) {
+    addonsStore.set(
+      stored.flatMap((a) => {
+        if (!broken(a)) return [a]
+        try {
+          return [{ ...a, manifest: cleanManifest(a.manifest) }]
+        } catch {
+          return []
+        }
+      }),
+    )
+  }
   // v0.12.2: los subtítulos en el idioma preferido vienen prendidos. A quien ya tenía la app se le prenden una
   // sola vez (casi nadie los había tocado: venían apagados); si después los apaga, queda apagado.
   if (!settingsStore.get().autoSubsMigrated) settingsStore.set((s) => ({ ...s, autoSubtitles: true, autoSubsMigrated: true }))
@@ -754,4 +940,6 @@ export async function hydrateStores() {
   if (rows.some(isRemovedList)) settingsStore.set((s) => ({ ...s, curatedRows: rows.filter((id) => !isRemovedList(id)) }))
   // No bloquea el arranque.
   setTimeout(() => refreshManifests().catch(() => {}), 2000)
+  // La caché de Cinemeta del service worker se sacó en la v0.14 (auditoría #6): se libera su lugar.
+  setTimeout(() => void dropLegacySwCaches().catch(() => {}), 5000)
 }

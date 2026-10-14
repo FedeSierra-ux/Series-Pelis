@@ -41,7 +41,37 @@ export function episodeToContinue(videos: Video[], progress: Record<string, Watc
     .sort((a, b) => b.updatedAt - a.updatedAt)[0]
   const lastVideo = last && videos.find((v) => v.id === last.videoId)
   if (lastVideo) return last.watched ? nextReleased(videos, lastVideo, now) : lastVideo
-  return videos.find((v) => isReleased(v, now) && !progress[v.id]?.watched) ?? firstEpisode(videos, now)
+  // Sin progreso: el primero sin ver de las temporadas normales. Los especiales (temporada 0) van
+  // primero en la lista ordenada, pero "Ver ahora" tiene que ser el piloto, no un especial.
+  const unseen = (v: Video) => isReleased(v, now) && !progress[v.id]?.watched
+  return videos.find((v) => (v.season ?? 0) !== 0 && unseen(v)) ?? videos.find(unseen) ?? firstEpisode(videos, now)
+}
+
+/** Con más de estas temporadas (sin contar los especiales), las pestañas pasan a un desplegable. */
+export const SEASON_TABS_MAX = 6
+
+/** ¿Las temporadas van en un desplegable ("Temporada 3 ▾") en vez de pestañas? */
+export function seasonsAsDropdown(seasons: number[]): boolean {
+  return seasons.filter((s) => s !== 0).length > SEASON_TABS_MAX
+}
+
+export function seasonLabel(season: number): string {
+  return season === 0 ? 'Especiales' : `Temporada ${season}`
+}
+
+/**
+ * Marca del episodio sugerido: "Continuar" si quedó a medias, "Siguiente" si es el que sigue a lo
+ * último que viste. Sin nada visto de la serie no se marca nada (sería siempre el primero).
+ */
+export function episodeBadge(
+  v: Video,
+  suggested: Video | undefined,
+  progress: Record<string, WatchEntry>,
+  started: boolean,
+): 'Continuar' | 'Siguiente' | undefined {
+  if (!started || !suggested || v.id !== suggested.id) return undefined
+  const p = progress[v.id]
+  return p && !p.watched && p.position > 0 ? 'Continuar' : 'Siguiente'
 }
 
 /** Fecha de estreno para mostrar ("13 oct 2026"), respetando el día tal como lo manda Cinemeta. */

@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import { browsableCatalogs, getCatalog, resourceUrl } from './addons'
 import { cached, peekMemory } from './cache'
-import { arrangeCatalogs, interleaveMetas, normalizePrefs, type CatalogPrefs, type CatalogRowDef, type CatalogSource } from './catalogPrefs'
+import { arrangeCatalogs, HOME_VIRTUAL_ROWS, interleaveMetas, normalizePrefs, type CatalogPrefs, type CatalogRowDef, type CatalogSource } from './catalogPrefs'
 import { useAddons } from './hooks'
 import { catalogLabel } from './i18n'
 import { catalogPrefsStore, useStore } from './store'
@@ -12,11 +12,17 @@ import { errorText } from './errors'
 
 export const defaultCatalogLabel = (s: CatalogSource) => catalogLabel(s.catalog.name, s.catalog.type, s.addon.manifest.name)
 
-/** Todas las filas (también las ocultas) en el orden elegido. Los addons desactivados no aparecen. */
-export function useCatalogRows(): CatalogRowDef[] {
+/**
+ * Todas las filas (también las ocultas) en el orden elegido. Los addons desactivados no aparecen.
+ * Con `withHome`, también las filas propias de Inicio ("Mi lista"), para Inicio y el gestor.
+ */
+export function useCatalogRows(withHome = false): CatalogRowDef[] {
   const addons = useAddons()
   const prefs = useStore(catalogPrefsStore)
-  return useMemo(() => arrangeCatalogs(browsableCatalogs(addons), prefs, defaultCatalogLabel), [addons, prefs])
+  return useMemo(
+    () => arrangeCatalogs(browsableCatalogs(addons), prefs, defaultCatalogLabel, withHome ? HOME_VIRTUAL_ROWS : []),
+    [addons, prefs, withHome],
+  )
 }
 
 export function updateCatalogPrefs(fn: (prefs: CatalogPrefs) => CatalogPrefs) {

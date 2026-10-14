@@ -1,18 +1,18 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { backdropFor, ContinueCard, LandscapeCard } from '../components/ContinueCard'
+import { FocusBillboard } from '../components/FocusBillboard'
 import { PosterCard } from '../components/PosterCard'
 import { Row } from '../components/Row'
-import { visibleRows } from '../lib/catalogPrefs'
+import { splitLeadingVirtual, visibleRows, WATCHLIST_ROW_KEY, type CatalogRowDef } from '../lib/catalogPrefs'
 import { useCatalogRows } from '../lib/catalogRows'
-import { episodeLabel } from '../lib/format'
 import { useCatalog, useTitle } from '../lib/hooks'
 import { catalogLabel, genreLabel } from '../lib/i18n'
 import { useHiddenIds } from '../lib/ratings'
 import { withoutHidden } from '../lib/recommend'
 import { continueWatching, hideFromContinue, progressStore, toggleWatchlist, useStore, watchlistStore, type WatchEntry } from '../lib/store'
 import { useTmdbKey } from '../lib/tmdb'
-import { episodeLink, useUpNext } from '../lib/upNext'
+import { continueRowItems, episodeLink, unstartedWatchlist, useUpNext, type ContinueItem } from '../lib/upNext'
 import type { CatalogDef, InstalledAddon, MetaPreview } from '../lib/types'
 import { ForYouRow } from './home/ForYouRow'
 import { HeroCarousel } from './home/HeroCarousel'
@@ -20,6 +20,8 @@ import { HeroInfo } from './home/HeroInfo'
 import { useNearViewport } from './home/lazy'
 import { MergedCatalogRow } from './home/MergedCatalogRow'
 import { TmdbHero } from './home/TmdbHero'
+import { resumeLabel, useDirectPlay } from './home/useDirectPlay'
+import './home/home-v14.css'
 import { BecauseRow, Top10Row, TrendingWeekRow, useNowPlaying, useTrending, type Seed } from './home/TmdbRows'
 import { CuratedRows } from './lists/CuratedRows'
 
@@ -54,6 +56,8 @@ function CatalogRow({ addon, catalog, eager, title }: { addon: InstalledAddon; c
 function Hero({ addon, catalog }: { addon: InstalledAddon; catalog: CatalogDef }) {
   const { data, loading } = useCatalog(addon, catalog)
   const watchlist = useStore(watchlistStore)
+  const progress = useStore(progressStore)
+  const { pending, play, cancel } = useDirectPlay()
   const [index, setIndex] = useState(0)
   const hidden = useHiddenIds()
   const pool = useMemo(
@@ -66,6 +70,11 @@ function Hero({ addon, catalog }: { addon: InstalledAddon; catalog: CatalogDef }
   )
 
   const meta: MetaPreview | undefined = pool[index % (pool.length || 1)]
+  // Si la portada pasa a otro título mientras busca la fuente, se cancela.
+  const metaId = meta?.id
+  useEffect(() => {
+    cancel()
+  }, [metaId, cancel])
   // Catálogo vacío, sin fondos o sin conexión y sin nada guardado: sin portada (no un esqueleto para siempre).
   if (!meta) return loading ? <div className="portada portada--compact portada-skeleton skeleton" /> : null
   const genres = (meta.genre ?? meta.genres ?? []).slice(0, 2).map(genreLabel)
@@ -83,6 +92,11 @@ function Hero({ addon, catalog }: { addon: InstalledAddon; catalog: CatalogDef }
         overview={meta.description}
         to={`/detail/${type}/${encodeURIComponent(meta.id)}`}
         list={{ inList: !!watchlist[meta.id], onToggle: () => toggleWatchlist({ ...meta, type }) }}
+        play={{
+          label: resumeLabel(meta.id, type, progress),
+          busy: pending === meta.id,
+          onPlay: () => play(meta.id, { type, metaId: meta.id }, `/detail/${type}/${encodeURIComponent(meta.id)}`),
+        }}
       />
     </HeroCarousel>
   )
@@ -125,28 +139,88 @@ function useUndoHide() {
   return { undo, hide, restore }
 }
 
-function UpNextRow() {
+/** Ficha de lo que está en "Seguir viendo", en la temporada y el episodio que corresponde. */
+const resumeLink = (e: WatchEntry) =>
+  `/detail/${e.type}/${encodeURIComponent(e.metaId)}${e.season !== undefined ? `?season=${e.season}&video=${encodeURIComponent(e.videoId)}` : ''}`
+
+/**
+ * "Seguir viendo" (U6): lo empezado y, cuando terminaste un episodio, el siguiente con la etiqueta
+ * "Siguiente" o "Episodio nuevo", todo en una fila y lo más reciente primero. OK / clic reproduce
+ * directo (U5); la ⓘ abre la ficha y el ✕ lo saca de la fila (con "Deshacer").
+ */
+function ContinueRow({ onHide }: { onHide: (metaId: string, name: string) => void }) {
+  const progress = useStore(progressStore)
   const { data } = useUpNext()
-  // Mismas tarjetas apaisadas que "Seguir viendo".
-  const items = data?.next ?? []
+  const { pending, play } = useDirectPlay()
+  const items: ContinueItem[] = useMemo(() => continueRowItems(continueWatching(progress), data?.next ?? []), [progress, data])
   if (items.length === 0) return null
   return (
-    <Row title="Tus series: siguiente episodio">
-      {items.map((it) => (
-        <LandscapeCard
-          key={it.videoId}
-          metaId={it.metaId}
-          type="series"
-          name={it.seriesName}
-          subtitle={[episodeLabel(it.season, it.episode) || 'Siguiente', it.title].filter(Boolean).join(' · ')}
-          backdrop={it.thumbnail ?? backdropFor(it.metaId)}
-          poster={it.poster}
-          progress={it.progress}
-          to={episodeLink(it.metaId, it.season, it.videoId)}
+    <Row title="Seguir viendo" moreTo="/history">
+      {items.map((it) => {
+        if (it.kind === 'resume') {
+          const e = it.entry
+          const to = resumeLink(e)
+          return (
+            <ContinueCard
+              key={it.key}
+              entry={e}
+              to={to}
+              infoTo={to}
+              busy={pending === it.key}
+              onPlay={() => play(it.key, { type: e.type, metaId: e.metaId, videoId: e.videoId }, to)}
+              onRemove={() => onHide(e.metaId, e.name)}
+            />
+          )
+        }
+        const ep = it.episode
+        const to = episodeLink(ep.metaId, ep.season, ep.videoId)
+        return (
+          <LandscapeCard
+            key={it.key}
+            metaId={ep.metaId}
+            type="series"
+            name={ep.seriesName}
+            // Mismo formato que lo empezado ("T1 E3 · …").
+            subtitle={[ep.episode !== undefined ? `T${ep.season} E${ep.episode}` : '', ep.title].filter(Boolean).join(' · ')}
+            backdrop={ep.thumbnail ?? backdropFor(ep.metaId)}
+            poster={ep.poster}
+            progress={ep.progress}
+            badge={it.label}
+            to={to}
+            infoTo={to}
+            busy={pending === it.key}
+            onPlay={() => play(it.key, { type: 'series', metaId: ep.metaId, videoId: ep.videoId }, to)}
+            onRemove={() => onHide(ep.metaId, ep.seriesName)}
+            removeLabel="Quitar de Seguir viendo"
+          />
+        )
+      })}
+    </Row>
+  )
+}
+
+/** Fila "Mi lista" de Inicio (U7). Se oculta, mueve y renombra desde el gestor de catálogos. */
+function WatchlistRow({ title }: { title: string }) {
+  const watchlist = useStore(watchlistStore)
+  const progress = useStore(progressStore)
+  const items = useMemo(() => unstartedWatchlist(watchlist, progress, ROW_LIMIT), [watchlist, progress])
+  if (items.length === 0) return null
+  return (
+    <Row title={title} moreTo="/list">
+      {items.map((item) => (
+        <PosterCard
+          key={item.id}
+          meta={{ id: item.id, type: item.type as MetaPreview['type'], name: item.name, poster: item.poster, releaseInfo: item.year, imdbRating: item.imdbRating }}
         />
       ))}
     </Row>
   )
+}
+
+/** Una fila propia de Inicio (no de un addon) según su clave del gestor de catálogos. */
+function VirtualRow({ row }: { row: CatalogRowDef }) {
+  if (row.key === WATCHLIST_ROW_KEY) return <WatchlistRow title={row.name} />
+  return null
 }
 
 /** Los 2 títulos distintos vistos más recientemente (para "Porque viste…"). */
@@ -166,9 +240,10 @@ function recentSeeds(progress: Record<string, WatchEntry>): Seed[] {
 export function Home() {
   useTitle(undefined)
   const progress = useStore(progressStore)
-  // Filas con lo elegido en el gestor de catálogos (orden, nombres, ocultas, fusionadas).
-  const catalogs = visibleRows(useCatalogRows())
-  const resume = continueWatching(progress)
+  // Filas con lo elegido en el gestor de catálogos (orden, nombres, ocultas, fusionadas), con "Mi lista".
+  const rows = visibleRows(useCatalogRows(true))
+  const { lead, rest } = splitLeadingVirtual(rows)
+  const catalogs = rows.filter((r) => !r.virtual)
   const heroSource = (catalogs.find((c) => c.type === 'movie') ?? catalogs[0])?.sources[0]
   const { undo, hide, restore } = useUndoHide()
   // TMDB es opcional: sin key, Inicio queda igual que siempre.
@@ -186,6 +261,7 @@ export function Home() {
 
   return (
     <div className="page home" data-nav-root>
+      <FocusBillboard />
       {tmdbKey && heroItems.length > 0 ? (
         <TmdbHero items={heroItems} variant="compact" fallbackType="movie" eyebrow="Estrenos en cines" />
       ) : tmdbKey && nowPlaying.loading ? (
@@ -194,16 +270,11 @@ export function Home() {
         heroSource && <Hero addon={heroSource.addon} catalog={heroSource.catalog} />
       )}
 
-      {resume.length > 0 && (
-        <Row title="Seguir viendo" moreTo="/history">
-          {resume.map((e) => {
-            const to = `/detail/${e.type}/${encodeURIComponent(e.metaId)}${e.season !== undefined ? `?season=${e.season}&video=${encodeURIComponent(e.videoId)}` : ''}`
-            return <ContinueCard key={e.videoId} entry={e} to={to} onRemove={() => hide(e.metaId, e.name)} />
-          })}
-        </Row>
-      )}
+      <ContinueRow onHide={hide} />
 
-      <UpNextRow />
+      {lead.map((row) => (
+        <VirtualRow key={row.key} row={row} />
+      ))}
 
       {tmdbKey && (
         <>
@@ -218,8 +289,10 @@ export function Home() {
 
       <CuratedRows />
 
-      {catalogs.map((row, i) =>
-        row.merged ? (
+      {rest.map((row, i) =>
+        row.virtual ? (
+          <VirtualRow key={row.key} row={row} />
+        ) : row.merged ? (
           <MergedCatalogRow key={row.key} row={row} eager={i < 3} />
         ) : (
           <CatalogRow key={row.key} addon={row.sources[0].addon} catalog={row.sources[0].catalog} title={row.name} eager={i < 3} />

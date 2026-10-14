@@ -57,10 +57,16 @@ export interface HeroInfoProps {
   /** Ficha del título. */
   to: string
   list: { inList: boolean; busy?: boolean; unavailable?: boolean; onToggle: () => void }
+  /**
+   * Botón principal "▶ Reproducir" / "Continuar": reproduce directo (busca la fuente sin pasar por la
+   * ficha). Sin esto, el botón es "Ver ahora" y abre la ficha. El enlace sigue apuntando a la ficha
+   * (abrir en otra pestaña, y es a donde va si no encuentra nada reproducible).
+   */
+  play?: { label: string; busy?: boolean; onPlay: () => void }
 }
 
 /** Lo de adentro de la portada: logo, IMDb y datos, sinopsis, reparto y botones. */
-export function HeroInfo({ eyebrow, title, logo, titleReady = true, rating, facts, genres, overview, cast, to, list }: HeroInfoProps) {
+export function HeroInfo({ eyebrow, title, logo, titleReady = true, rating, facts, genres, overview, cast, to, list, play }: HeroInfoProps) {
   const [brokenLogo, setBrokenLogo] = useState<string>()
   // Si el logo no carga, volvemos al título en texto.
   const showLogo = logo && logo !== brokenLogo ? logo : undefined
@@ -92,9 +98,19 @@ export function HeroInfo({ eyebrow, title, logo, titleReady = true, rating, fact
         </ul>
       )}
       <div className="portada-actions">
-        <Link className="portada-btn is-play" data-autofocus to={to}>
-          <HeroIcon name="play" />
-          <span>Ver ahora</span>
+        <Link
+          className="portada-btn is-play"
+          data-autofocus
+          to={to}
+          aria-busy={play?.busy || undefined}
+          onClick={(e) => {
+            if (!play || e.button !== 0 || e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) return
+            e.preventDefault()
+            play.onPlay()
+          }}
+        >
+          {play?.busy ? <span className="portada-btn-spinner" aria-hidden /> : <HeroIcon name="play" />}
+          <span>{play ? (play.busy ? 'Buscando fuente…' : play.label) : 'Ver ahora'}</span>
         </Link>
         {/* aria-disabled en vez de disabled: así el control remoto no pierde el foco mientras resuelve. */}
         <button

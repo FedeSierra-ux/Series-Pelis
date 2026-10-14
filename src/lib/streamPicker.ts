@@ -1,4 +1,5 @@
 import { streamingServerUrl } from './addons'
+import { sameAddon } from './addonKey'
 import { effectiveQualityCap, type QualityCap } from './network'
 import type { LastSource, SourceRules } from './store'
 import type { AddonStreams, InstalledAddon, Stream } from './types'
@@ -84,13 +85,84 @@ export interface RankedStream {
 }
 
 function sourceMatch(addon: InstalledAddon, s: Stream, last?: LastSource): SourceMatch {
-  if (!last || addon.transportUrl !== last.addonUrl) return 'none'
+  if (!last || !sameAddon(addon.transportUrl, last.addonUrl)) return 'none'
   const group = s.behaviorHints?.bingeGroup
   if (group && last.bingeGroup && group === last.bingeGroup) return 'binge'
   const a = nameKey(s.name)
   const b = nameKey(last.streamName)
   if (a.length >= 2 && b.length >= 2 && (a.startsWith(b) || b.startsWith(a))) return 'name'
   return 'addon'
+}
+
+// ---------- Idioma del audio (auditoría #7) ----------
+// Torrentio llama a todos sus streams "Torrentio\n1080p": por el nombre, uno en inglés y uno latino son
+// "la misma fuente". El idioma va en el título (banderas o palabras). Si venías viendo en latino, el
+// siguiente episodio tiene que seguir en latino aunque haya uno en inglés de mejor calidad.
+
+export type AudioLang = 'lat' | 'cas' | 'spa' | 'eng' | 'por' | 'ita' | 'fre' | 'ger' | 'rus' | 'jpn' | 'kor' | 'multi'
+
+/**
+ * Palabra suelta (sin letras pegadas a los costados, también con tildes: "inglés"). Se evitan las
+ * abreviaturas que son palabras comunes en los títulos ("por", "cast"): "Amor.Por.Siempre" no es portugués.
+ */
+const word = (alts: string) => new RegExp(`(^|[^\\p{L}\\p{N}])(${alts})($|[^\\p{L}\\p{N}])`, 'iu')
+
+const LANG_PATTERNS: [AudioLang, RegExp[]][] = [
+  ['lat', [/🇲🇽|🇦🇷|🇨🇴|🇨🇱|🇵🇪|🇻🇪/u, word('latino|latina|latam|lat|esp[ ._-]?lat|spanish[ ._-]?lat(?:in|am)?|castellano[ ._-]?lat(?:ino)?|audio[ ._-]?latino')]],
+  ['cas', [/🇪🇸/u, word('castellano|castilian|español[ ._-]?\\(?españa\\)?|spanish[ ._-]?\\(?spain\\)?|esp[ ._-]?esp')]],
+  ['spa', [word('español|espanol|spanish|spa|esp')]],
+  ['eng', [/🇬🇧|🇺🇸/u, word('english|eng|inglés|ingles')]],
+  ['por', [/🇧🇷|🇵🇹/u, word('portugu[eê]s|portuguese|dublado|pt-br')]],
+  ['ita', [/🇮🇹/u, word('italian|italiano|ita')]],
+  ['fre', [/🇫🇷/u, word('french|français|francais|truefrench|vff|vf')]],
+  ['ger', [/🇩🇪/u, word('german|deutsch|ger')]],
+  ['rus', [/🇷🇺/u, word('russian|rus')]],
+  ['jpn', [/🇯🇵/u, word('japanese|jpn')]],
+  ['kor', [/🇰🇷/u, word('korean|kor')]],
+  ['multi', [word('multi|dual|multi[ ._-]?audio|dual[ ._-]?audio')]],
+]
+
+/** Idiomas de audio que anuncia el texto de un stream (vacío si no dice nada: suele ser el original). */
+export function audioLangs(text: string): Set<AudioLang> {
+  const out = new Set<AudioLang>()
+  for (const [lang, res] of LANG_PATTERNS) if (res.some((re) => re.test(text))) out.add(lang)
+  // "Castellano latino" o "Español latino" es latino, no castellano.
+  if (out.has('lat')) out.delete('cas')
+  if (out.has('lat') || out.has('cas')) out.delete('spa')
+  return out
+}
+
+/**
+ * ¿El candidato está en el mismo idioma que la fuente anterior? `undefined` si la anterior no decía
+ * nada (no hay con qué comparar). Un "Español" sin variante sirve para latino y para castellano.
+ */
+export function sameLanguage(prev: Set<AudioLang>, cand: Set<AudioLang>): boolean | undefined {
+  const audio = [...prev].filter((l) => l !== 'multi')
+  if (audio.length === 0) return prev.has('multi') && cand.has('multi') ? true : undefined
+  return audio.some((l) => cand.has(l) || (l === 'spa' && (cand.has('lat') || cand.has('cas'))) || ((l === 'lat' || l === 'cas') && cand.has('spa')))
+}
+
+const LANG_BONUS = 1500
+const LANG_PENALTY = 1500
+
+/** Grupo del release ("…x264-NTb.mkv" → "ntb"), para preferir la misma versión del episodio anterior. */
+export function releaseGroup(text: string | undefined): string | undefined {
+  const line = (text ?? '').split('\n')[0].trim()
+  const m = /-([a-z0-9]{2,15})(?:\.(?:mkv|mp4|m4v|avi|webm|ts))?$/i.exec(line)
+  return m && !/^(dl|web|rip|hd|sd)$/i.test(m[1]) ? m[1].toLowerCase() : undefined
+}
+
+const RELEASE_BONUS = 120
+
+/** Texto de la fuente anterior (nombre y título guardados) para comparar idioma y release. */
+const lastText = (last: LastSource) => [last.streamName, last.streamTitle].filter(Boolean).join(' ')
+
+const firstTitleLine = (s: Stream) => s.behaviorHints?.filename ?? (s.title ?? s.description ?? '').split('\n')[0]
+
+/** Lo que se guarda de la fuente elegida para reconocerla en el siguiente episodio. */
+export function lastSourceOf(addonUrl: string, s: Stream, at = Date.now()): LastSource {
+  const title = [s.title ?? s.description, s.behaviorHints?.filename].filter(Boolean).join('\n').slice(0, 400)
+  return { addonUrl, bingeGroup: s.behaviorHints?.bingeGroup, streamName: s.name, ...(title ? { streamTitle: title } : {}), at }
 }
 
 const MATCH_SCORE: Record<SourceMatch, number> = { binge: 10000, name: 5000, addon: 1000, none: 0 }
@@ -224,7 +296,11 @@ export function analyzeStreams(groups: AddonStreams[], rules: SourceRules, last:
   // Con 3G o ahorro de datos no sirve de nada "preferir 1080p": se busca como máximo lo que la conexión aguanta.
   const preferred = effectivePreferredQuality(rules)
   const cap = preferred !== rules.preferredQuality ? (preferred as QualityCap) : undefined
+  const prevLangs = last ? audioLangs(lastText(last)) : undefined
+  const prevGroup = last ? releaseGroup(last.streamTitle) : undefined
   groups.forEach((g, addonIndex) => {
+    // Un addon que mandó algo que no es una lista no tumba el resto (auditoría #14).
+    if (!Array.isArray(g.streams)) return
     g.streams.forEach((stream, streamIndex) => {
       const reason = filterReason(stream, rules)
       if (reason) {
@@ -234,9 +310,16 @@ export function analyzeStreams(groups: AddonStreams[], rules: SourceRules, last:
       const url = playable(stream, server).url
       const text = streamText(stream)
       const quality = parseQuality(stream)
-      const match = sourceMatch(g.addon, stream, last)
+      let match = sourceMatch(g.addon, stream, last)
+      // Mismo idioma que la fuente anterior: suma; otro idioma: resta y deja de contar como "la misma
+      // fuente" (en modo manual el siguiente episodio no arranca solo en otro idioma).
+      const lang = prevLangs ? sameLanguage(prevLangs, audioLangs(text)) : undefined
+      if (lang === false && match !== 'binge') match = 'none'
       // Los que no se pueden reproducir en la app quedan al final (solo cuentan para los repetidos).
       let score = url ? MATCH_SCORE[match] + qualityScore(quality, preferred) : -Infinity
+      if (lang === true) score += LANG_BONUS
+      else if (lang === false) score -= LANG_PENALTY
+      if (prevGroup && releaseGroup(firstTitleLine(stream)) === prevGroup) score += RELEASE_BONUS
       score += 80 * rules.preferKeywords.filter((kw) => hasKeyword(text, kw)).length
       if (rules.hdr === 'prefer' && isHdr(stream)) score += 80
       if (CACHED_MARKERS.test(text)) score += 20

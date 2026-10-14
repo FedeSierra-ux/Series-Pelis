@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState, type ReactNode } from 'react'
 import { getMeta } from '../../lib/addons'
-import { addonsStore, toggleWatchlist, useStore, watchlistStore } from '../../lib/store'
+import { addonsStore, progressStore, toggleWatchlist, useStore, watchlistStore } from '../../lib/store'
 import {
   formatRuntime,
   getDetails,
@@ -16,6 +16,7 @@ import {
 } from '../../lib/tmdb'
 import { HeroCarousel } from './HeroCarousel'
 import { HeroInfo } from './HeroInfo'
+import { resumeLabel, useDirectPlay } from './useDirectPlay'
 
 const CAST_SHOWN = 3
 
@@ -55,6 +56,8 @@ interface Props {
  */
 export function TmdbHero({ items, variant = 'compact', fallbackType = 'movie', eyebrow, children }: Props) {
   const watchlist = useStore(watchlistStore)
+  const progress = useStore(progressStore)
+  const { pending, play, cancel } = useDirectPlay()
   const [index, setIndex] = useState(0)
   const [details, setDetails] = useState<{ key: string; data?: TmdbDetails }>()
   const [resolving, setResolving] = useState(false)
@@ -145,6 +148,27 @@ export function TmdbHero({ items, variant = 'compact', fallbackType = 'movie', e
           .map((c) => ({ id: c.id, name: c.name, photo: tmdbImg(c.profile_path, 'w185') }))
       : undefined
   const inList = !!(imdbId && watchlist[imdbId])
+  const appType = toAppType(type)
+
+  // Si pasa a otro título mientras busca la fuente, la búsqueda del anterior ya no sirve.
+  useEffect(() => {
+    cancel()
+  }, [itemKey, cancel])
+
+  // "▶ Reproducir" / "Continuar": directo al reproductor; si no hay fuente, a la ficha como antes.
+  const onPlay = () =>
+    play(
+      itemKey,
+      async () => {
+        let tt = imdbId
+        if (!tt) {
+          tt = await imdbFromTmdb(item.id, type).catch(() => undefined)
+          setResolved({ key: itemKey, imdb: tt })
+        }
+        return tt ? { type: appType, metaId: tt } : undefined
+      },
+      tmdbDetailPath(item, fallbackType),
+    )
   const notFound = resolved?.key === itemKey && !resolved.imdb
 
   // "Mi lista" guarda por id de IMDb: si los detalles todavía no lo trajeron, lo pedimos al tocar.
@@ -183,6 +207,7 @@ export function TmdbHero({ items, variant = 'compact', fallbackType = 'movie', e
         cast={cast}
         to={tmdbDetailPath(item, fallbackType)}
         list={{ inList, busy: resolving, unavailable: notFound, onToggle: onList }}
+        play={{ label: imdbId ? resumeLabel(imdbId, appType, progress) : 'Reproducir', busy: pending === itemKey, onPlay }}
       />
     </HeroCarousel>
   )

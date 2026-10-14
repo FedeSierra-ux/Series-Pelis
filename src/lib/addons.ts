@@ -1,5 +1,5 @@
 import { cached, fetchJson, load } from './cache'
-import type { AddonStreams, CatalogDef, InstalledAddon, Manifest, Meta, MetaPreview, ResourceDef, Stream, Subtitle } from './types'
+import type { AddonStreams, CatalogDef, ExtraProp, InstalledAddon, Manifest, Meta, MetaPreview, ResourceDef, Stream, Subtitle, Video } from './types'
 import { errorText } from './errors'
 
 // Cliente del protocolo de addons de Stremio. Un addon es un servidor HTTP que expone
@@ -52,7 +52,10 @@ export function normalizeManifestUrl(input: string): string {
   url = url.replace(/#.*$/, '')
   // La página de configuración del addon (…/configure) no es el manifest: el manifest está al lado.
   url = url.replace(/\/configure\/?(\?.*)?$/i, '')
-  if (!/manifest\.json(\?.*)?$/.test(url)) url = url.replace(/\/+$/, '') + '/manifest.json'
+  // Al copiar de la barra del navegador o de un chat suele quedar una barra al final
+  // (`…/manifest.json/`): sin sacarla, se armaba `…/manifest.json/manifest.json` y daba 404.
+  url = url.replace(/(manifest\.json)\/+(?=\?|$)/, '$1')
+  if (!/manifest\.json(\?.*)?$/.test(url)) url = url.replace(/\/+(?=\?|$)/, '').replace(/(\?.*)?$/, (q) => '/manifest.json' + q)
   return url
 }
 
@@ -97,14 +100,128 @@ export function enabledAddons(addons: InstalledAddon[]): InstalledAddon[] {
   return addons.filter(isAddonEnabled)
 }
 
-export async function fetchManifest(url: string): Promise<Manifest> {
-  const manifest = await fetchJson<Manifest>(url)
-  if (!manifest || !manifest.id || !Array.isArray(manifest.resources)) {
-    throw new Error('La URL no devolvió un manifest de addon válido')
+// ---------- Validación de lo que responden los addons (auditoría #14) ----------
+// Un addon de la comunidad con un bug puede mandar `{"streams": {"error": "rate limited"}}` o un manifest sin
+// nombre. Antes eso tiraba un TypeError que se llevaba puesta la ficha entera (o Ajustes, sin forma de quitar
+// el addon). Acá se normaliza en el borde: lo que no tiene la forma esperada es un error de ESE addon.
+
+const isObj = (v: unknown): v is Record<string, unknown> => !!v && typeof v === 'object' && !Array.isArray(v)
+const str = (v: unknown): string | undefined => (typeof v === 'string' ? v : undefined)
+const strList = (v: unknown): string[] | undefined => (Array.isArray(v) ? v.filter((x): x is string => typeof x === 'string') : undefined)
+
+/** La respuesta de un addon no tiene la forma del protocolo. */
+export class AddonFormatError extends Error {
+  constructor(what: string) {
+    super(`El addon respondió ${what} con un formato inválido`)
+    this.name = 'AddonFormatError'
   }
-  manifest.catalogs ??= []
-  manifest.types ??= []
-  return manifest
+}
+
+/**
+ * Lista `field` de una respuesta: si falta, vacía; si viene pero no es una lista, error del addon.
+ * Solo quedan los elementos que pasan `clean` (los que devuelven `undefined` se descartan).
+ */
+export function listField<T>(res: unknown, field: string, clean: (x: Record<string, unknown>) => T | undefined): T[] {
+  if (!isObj(res)) throw new AddonFormatError(field)
+  const raw = res[field]
+  if (raw === undefined || raw === null) return []
+  if (!Array.isArray(raw)) throw new AddonFormatError(field)
+  const out: T[] = []
+  for (const x of raw) {
+    if (!isObj(x)) continue
+    const v = clean(x)
+    if (v !== undefined) out.push(v)
+  }
+  return out
+}
+
+/** Campos de texto que la interfaz parte o compara: si no son texto, se sacan. */
+function textFields<T extends Record<string, unknown>>(x: T, fields: string[]): T {
+  const out: Record<string, unknown> = { ...x }
+  for (const f of fields) if (out[f] !== undefined && typeof out[f] !== 'string') delete out[f]
+  return out as T
+}
+
+export function cleanStream(x: Record<string, unknown>): Stream | undefined {
+  const s = textFields(x, ['url', 'ytId', 'infoHash', 'externalUrl', 'name', 'title', 'description'])
+  if (s.behaviorHints !== undefined && !isObj(s.behaviorHints)) delete s.behaviorHints
+  if (s.fileIdx !== undefined && typeof s.fileIdx !== 'number') delete s.fileIdx
+  if (s.subtitles !== undefined) s.subtitles = Array.isArray(s.subtitles) ? s.subtitles.filter(isObj).map(cleanSubtitle).filter(Boolean) : undefined
+  // Sin nada para reproducir no sirve ni para mostrarlo.
+  if (!s.url && !s.ytId && !s.infoHash && !s.externalUrl) return undefined
+  return s as Stream
+}
+
+export function cleanSubtitle(x: Record<string, unknown>): Subtitle | undefined {
+  const url = str(x.url)
+  if (!url) return undefined
+  return { ...(str(x.id) ? { id: str(x.id) } : {}), url, lang: str(x.lang) ?? 'und' }
+}
+
+export function cleanMetaPreview(x: Record<string, unknown>): MetaPreview | undefined {
+  const id = str(x.id)
+  if (!id) return undefined
+  const m = textFields(x, ['poster', 'background', 'logo', 'description', 'releaseInfo', 'imdbRating', 'released']) as Record<string, unknown>
+  m.id = id
+  m.type = str(x.type) ?? ''
+  m.name = str(x.name) ?? ''
+  for (const f of ['genre', 'genres']) if (m[f] !== undefined) m[f] = strList(m[f])
+  if (typeof m.year === 'number') m.year = String(m.year)
+  else if (m.year !== undefined && typeof m.year !== 'string') delete m.year
+  return m as unknown as MetaPreview
+}
+
+export function cleanMeta(x: unknown): Meta | undefined {
+  if (!isObj(x)) return undefined
+  const base = cleanMetaPreview(x) as (Meta & Record<string, unknown>) | undefined
+  if (!base) return undefined
+  if (base.videos !== undefined) {
+    base.videos = Array.isArray(base.videos)
+      ? base.videos.filter((v): v is Video => isObj(v) && typeof v.id === 'string' && !!v.id).map((v) => textFields(v as unknown as Record<string, unknown>, ['title', 'name', 'released', 'firstAired', 'overview', 'description', 'thumbnail']) as unknown as Video)
+      : []
+  }
+  for (const f of ['cast', 'director', 'writer']) if (base[f] !== undefined) base[f] = strList(base[f])
+  for (const f of ['trailers', 'trailerStreams', 'links']) if (base[f] !== undefined && !Array.isArray(base[f])) delete base[f]
+  return base
+}
+
+function cleanCatalog(x: Record<string, unknown>): CatalogDef | undefined {
+  const id = str(x.id)
+  const type = str(x.type)
+  if (!id || !type) return undefined
+  const c = { ...x, id, type } as unknown as CatalogDef & Record<string, unknown>
+  if (c.name !== undefined && typeof c.name !== 'string') delete c.name
+  if (c.extra !== undefined) c.extra = Array.isArray(c.extra) ? c.extra.filter((e): e is ExtraProp => isObj(e) && typeof e.name === 'string') : undefined
+  for (const f of ['genres', 'extraRequired', 'extraSupported']) if (c[f] !== undefined) c[f] = strList(c[f])
+  return c
+}
+
+/** Manifest con los campos que la app usa siempre presentes y del tipo correcto. Sin `id` o `resources`, error. */
+export function cleanManifest(raw: unknown): Manifest {
+  if (!isObj(raw) || !str(raw.id) || !Array.isArray(raw.resources)) throw new Error('La URL no devolvió un manifest de addon válido')
+  const id = str(raw.id)!
+  const resources = raw.resources.filter(
+    (r): r is ResourceDef => typeof r === 'string' || (isObj(r) && typeof r.name === 'string'),
+  )
+  const m = { ...raw } as unknown as Manifest & Record<string, unknown>
+  m.id = id
+  // Un manifest sin nombre rompía Ajustes (`name[0]`): se muestra el id.
+  m.name = str(raw.name)?.trim() || id
+  m.version = str(raw.version) ?? (typeof raw.version === 'number' ? String(raw.version) : '0')
+  m.resources = resources
+  m.types = strList(raw.types) ?? []
+  m.catalogs = Array.isArray(raw.catalogs) ? raw.catalogs.filter(isObj).map(cleanCatalog).filter((c): c is CatalogDef => !!c) : []
+  if (raw.idPrefixes !== undefined) m.idPrefixes = strList(raw.idPrefixes)
+  for (const f of ['description', 'logo']) if (m[f] !== undefined && typeof m[f] !== 'string') delete m[f]
+  if (m.behaviorHints !== undefined && !isObj(m.behaviorHints)) delete m.behaviorHints
+  return m
+}
+
+/** Nombre para mostrar de un addon (los guardados antes de la validación pueden no tenerlo). */
+export const addonName = (m: Partial<Manifest> | undefined) => (typeof m?.name === 'string' && m.name.trim()) || m?.id || 'Addon'
+
+export async function fetchManifest(url: string): Promise<Manifest> {
+  return cleanManifest(await fetchJson<unknown>(url))
 }
 
 export const catalogKey = (addon: InstalledAddon, c: CatalogDef, extra?: Record<string, string | undefined>) =>
@@ -119,7 +236,7 @@ export function getCatalog(
   const isSearch = !!extra?.search
   return cached(
     `catalog:${url}`,
-    async () => (await fetchJson<{ metas?: MetaPreview[] }>(url)).metas ?? [],
+    async (signal) => listField(await fetchJson<unknown>(url, undefined, signal), 'metas', cleanMetaPreview),
     isSearch ? HOUR : CATALOG_TTL,
     !isSearch,
   )
@@ -158,8 +275,10 @@ export function getMeta(addons: InstalledAddon[], type: string, id: string): Pro
       let lastError: unknown = new Error('Ningún addon instalado da información de este título')
       for (const addon of candidates) {
         try {
-          const res = await fetchJson<{ meta?: Meta }>(resourceUrl(addon, 'meta', type, id))
-          if (res.meta) return res.meta
+          const res = await fetchJson<unknown>(resourceUrl(addon, 'meta', type, id))
+          const meta = isObj(res) ? cleanMeta(res.meta) : undefined
+          if (meta) return meta
+          if (isObj(res) && res.meta !== undefined && res.meta !== null) lastError = new AddonFormatError('meta')
         } catch (err) {
           lastError = err
         }
@@ -170,14 +289,27 @@ export function getMeta(addons: InstalledAddon[], type: string, id: string): Pro
   )
 }
 
-/** Precarga la ficha de un título (por ejemplo al pasar el foco por un póster). */
+/** Cuánto tiene que quedarse el foco en un póster para precargar su ficha. */
+export const PREFETCH_DELAY_MS = 400
+let prefetchTimer: ReturnType<typeof setTimeout> | undefined
+
+/**
+ * Precarga la ficha de un título (por ejemplo al pasar el foco por un póster). Con un respiro: al
+ * recorrer una fila con las flechas en la TV, solo se pide la del póster donde el foco se queda quieto
+ * (antes se pedían las 20 de la fila, de cientos de kB cada una).
+ */
 export function prefetchMeta(addons: InstalledAddon[], type: string, id: string) {
-  getMeta(addons, type, id).catch(() => {})
+  clearTimeout(prefetchTimer)
+  prefetchTimer = setTimeout(() => {
+    getMeta(addons, type, id).catch(() => {})
+  }, PREFETCH_DELAY_MS)
 }
 
 /**
  * Pide streams a todos los addons compatibles en paralelo y avisa a medida que
  * cada uno responde, así los primeros resultados aparecen sin esperar al más lento.
+ * La función que devuelve corta los pedidos que nadie más espera (auditoría #15): con un debrid
+ * compartido entre varias casas, los pedidos huérfanos sumaban consultas a TorBox hasta el rate limit.
  */
 export function getStreams(
   addons: InstalledAddon[],
@@ -186,13 +318,20 @@ export function getStreams(
   onUpdate: (groups: AddonStreams[]) => void,
 ): () => void {
   let cancelled = false
+  const ctrl = new AbortController()
   const targets = enabledAddons(addons).filter((a) => supportsResource(a.manifest, 'stream', type, videoId))
   const groups: AddonStreams[] = targets.map((addon) => ({ addon, streams: [], loading: true }))
   onUpdate([...groups])
 
   targets.forEach((addon, i) => {
     const url = resourceUrl(addon, 'stream', type, videoId)
-    cached(`stream:${url}`, async () => (await fetchJson<{ streams?: Stream[] }>(url, STREAM_TIMEOUT)).streams ?? [], STREAM_TTL, false)
+    cached(
+      `stream:${url}`,
+      async (signal) => listField(await fetchJson<unknown>(url, STREAM_TIMEOUT, signal), 'streams', cleanStream),
+      STREAM_TTL,
+      false,
+      ctrl.signal,
+    )
       .then((streams) => {
         groups[i] = { addon, streams, loading: false }
       })
@@ -206,6 +345,15 @@ export function getStreams(
 
   return () => {
     cancelled = true
+    ctrl.abort()
+  }
+}
+
+/** Precarga los streams (quedan 10 min en caché) sin cortarlos: alguien los va a usar enseguida. */
+export function prefetchStreams(addons: InstalledAddon[], type: string, videoId: string) {
+  for (const addon of enabledAddons(addons).filter((a) => supportsResource(a.manifest, 'stream', type, videoId))) {
+    const url = resourceUrl(addon, 'stream', type, videoId)
+    cached(`stream:${url}`, async (signal) => listField(await fetchJson<unknown>(url, STREAM_TIMEOUT, signal), 'streams', cleanStream), STREAM_TTL, false).catch(() => {})
   }
 }
 
@@ -214,7 +362,7 @@ export async function getSubtitles(addons: InstalledAddon[], type: string, video
   const results = await Promise.allSettled(
     targets.map((addon) => {
       const url = resourceUrl(addon, 'subtitles', type, videoId)
-      return load(`subs:${url}`, async () => (await fetchJson<{ subtitles?: Subtitle[] }>(url, STREAM_TIMEOUT)).subtitles ?? [], false)
+      return load(`subs:${url}`, async (signal) => listField(await fetchJson<unknown>(url, STREAM_TIMEOUT, signal), 'subtitles', cleanSubtitle), false)
     }),
   )
   return results.flatMap((r) => (r.status === 'fulfilled' ? r.value : []))

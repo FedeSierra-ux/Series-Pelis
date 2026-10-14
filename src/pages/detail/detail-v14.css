@@ -1,0 +1,585 @@
+/* v0.14: ficha con pestañas, botón principal + íconos, tráiler de fondo, extras y episodios.
+   Todo con las variables del tema (--accent, --surface-2, --radius…) para seguir a la paleta. */
+
+.d-sr-only {
+  position: absolute !important;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+/* ---------- Título (h1 siempre; con logo, el logo va adentro) ---------- */
+
+.detail-info .detail-title {
+  margin: 0;
+  font-size: clamp(1.7rem, 4vw, 3rem);
+  font-weight: 900;
+  line-height: 1.1;
+}
+.detail-title .detail-logo {
+  display: block;
+}
+
+/* ---------- Botón principal + fila de íconos ---------- */
+
+.d-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin-top: 4px;
+  /* Lugar reservado: la ficha no salta cuando llega el progreso o el tráiler. */
+  min-height: 64px;
+}
+.d-actions-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 14px 22px;
+}
+.btn.d-play {
+  display: inline-flex;
+  align-items: center;
+  gap: 12px;
+  min-height: 56px;
+  padding: 8px 28px 8px 22px;
+  border-radius: 999px;
+  font-size: 1.08rem;
+  text-align: left;
+}
+.d-play-spinner {
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  border: 3px solid currentColor;
+  border-right-color: transparent;
+  animation: d-spin 0.8s linear infinite;
+}
+@keyframes d-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .d-play-spinner {
+    animation-duration: 2.4s;
+  }
+}
+.d-play-text {
+  display: flex;
+  flex-direction: column;
+  line-height: 1.15;
+  min-width: 0;
+}
+.d-play-label {
+  font-weight: 800;
+  white-space: nowrap;
+}
+.d-play-sub {
+  font-size: 0.78rem;
+  font-weight: 600;
+  opacity: 0.8;
+  max-width: 26ch;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.d-icons {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+}
+.d-icon-btn {
+  display: inline-flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 5px;
+  min-width: 64px;
+  padding: 4px 2px;
+  border: 0;
+  border-radius: var(--radius-sm, 12px);
+  background: none;
+  color: var(--text);
+  font: inherit;
+  cursor: pointer;
+}
+.d-icon-circle {
+  display: grid;
+  place-items: center;
+  width: 46px;
+  height: 46px;
+  border-radius: 50%;
+  border: 2px solid var(--outline, var(--line));
+  background: rgba(11, 11, 16, 0.45);
+  transition: background 0.15s, border-color 0.15s, transform 0.15s;
+}
+.d-icon-label {
+  font-size: 0.74rem;
+  font-weight: 600;
+  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.85);
+  color: var(--text-soft, var(--text));
+  white-space: nowrap;
+}
+.d-icon-btn:hover .d-icon-circle {
+  background: var(--surface-2, var(--bg-3));
+  border-color: var(--text);
+}
+.d-icon-btn.on .d-icon-circle {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+/* El anillo de foco va en el círculo (más claro de lejos que alrededor del rótulo). */
+.d-actions .d-icon-btn:focus-visible {
+  outline: none;
+}
+.d-icon-btn:focus-visible .d-icon-circle {
+  outline: var(--focus-ring, 3px solid var(--accent));
+  outline-offset: 3px;
+  background: var(--tonal, var(--bg-3));
+  transform: scale(1.06);
+}
+.d-icon-btn:focus-visible .d-icon-label {
+  color: var(--text);
+}
+
+/* Las estrellas al tocar "Calificar". */
+.d-rate {
+  align-self: flex-start;
+  padding: 10px 16px;
+  border-radius: var(--radius);
+  background: rgba(11, 11, 16, 0.7);
+  border: 1px solid var(--outline, var(--line));
+}
+.d-rate .star-rating {
+  min-height: 0;
+}
+
+/* ---------- Menú ⋯ ---------- */
+
+.d-menu {
+  position: fixed;
+  z-index: 900;
+  width: max-content;
+  min-width: 240px;
+  max-width: calc(100vw - 16px);
+  padding: 8px;
+  border-radius: var(--radius);
+  background: var(--surface-1, var(--bg-2));
+  border: 1px solid var(--outline, var(--line));
+  box-shadow: 0 18px 50px rgba(0, 0, 0, 0.55);
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.d-menu-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-height: 46px;
+  padding: 8px 12px;
+  border: 0;
+  border-radius: var(--radius-sm, 10px);
+  background: none;
+  color: var(--text);
+  font: inherit;
+  font-weight: 600;
+  text-align: left;
+  text-decoration: none;
+  cursor: pointer;
+}
+.d-menu-item:hover,
+.d-menu-item:focus-visible {
+  background: var(--tonal, var(--bg-3));
+}
+.d-menu .d-menu-item:focus-visible {
+  outline: 3px solid var(--accent);
+  outline-offset: -3px;
+}
+.d-menu-item > span:not(.d-menu-check) {
+  flex: 1;
+}
+.d-menu-check {
+  color: var(--accent);
+  font-weight: 800;
+}
+
+/* ---------- Tráiler de fondo ---------- */
+
+.hero-trailer {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  opacity: 0;
+  transition: opacity 0.8s ease;
+  pointer-events: none;
+  container-type: size;
+}
+.hero-trailer.ready {
+  opacity: 1;
+}
+.hero-trailer iframe {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  border: 0;
+  width: 100%;
+  height: 100%;
+  /* Que cubra todo (como background-size: cover) sin dejar franjas negras. */
+  width: max(100%, 100cqh * 16 / 9);
+  height: max(100%, 100cqw * 9 / 16);
+  transform: translate(-50%, -50%) scale(1.02);
+}
+.hero-trailer-controls {
+  position: absolute;
+  top: 16px;
+  right: 16px;
+  z-index: 2;
+  display: flex;
+  gap: 8px;
+}
+.ht-ctrl {
+  display: grid;
+  place-items: center;
+  width: 42px;
+  height: 42px;
+  border-radius: 50%;
+  border: 1px solid rgba(255, 255, 255, 0.35);
+  background: rgba(11, 11, 16, 0.55);
+  color: #fff;
+  cursor: pointer;
+}
+.ht-ctrl:hover,
+.ht-ctrl:focus-visible {
+  background: rgba(11, 11, 16, 0.85);
+  border-color: #fff;
+}
+/* La sombra y el texto quedan arriba del video. */
+.detail-hero .hero-shade,
+.detail-hero .detail-head {
+  z-index: 1;
+}
+
+/* ---------- Pestañas de la ficha ---------- */
+
+.dt {
+  margin-top: 8px;
+}
+.dt-tabs {
+  display: flex;
+  gap: 4px;
+  margin: 0 var(--gutter);
+  padding: 0 2px;
+  border-bottom: 1px solid var(--line);
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+.dt-tab {
+  position: relative;
+  flex: 0 0 auto;
+  padding: 14px 16px 12px;
+  border: 0;
+  border-radius: var(--radius-sm, 10px) var(--radius-sm, 10px) 0 0;
+  background: none;
+  color: var(--muted);
+  font: inherit;
+  font-family: var(--font-display, inherit);
+  font-size: 1.02rem;
+  font-weight: 700;
+  white-space: nowrap;
+  cursor: pointer;
+}
+.dt-tab::after {
+  content: '';
+  position: absolute;
+  left: 12px;
+  right: 12px;
+  bottom: -1px;
+  height: 3px;
+  border-radius: 3px 3px 0 0;
+  background: transparent;
+}
+.dt-tab:hover {
+  color: var(--text);
+}
+.dt-tab.active {
+  color: var(--text);
+}
+.dt-tab.active::after {
+  background: var(--accent);
+}
+/* Con el control remoto: píldora resaltada (un outline se recortaría por el scroll de la fila). */
+.dt-tabs .dt-tab:focus-visible {
+  outline: none;
+  color: var(--text);
+  background: var(--tonal, var(--bg-3));
+  box-shadow: inset 0 0 0 3px var(--accent);
+  border-radius: var(--radius-sm, 12px);
+}
+.dt-panel {
+  padding-top: 12px;
+  /* Cambiar de pestaña no hace saltar la página hacia arriba. */
+  min-height: 240px;
+}
+.dt-panel[hidden] {
+  display: none;
+}
+.dt-panel > .row:first-child,
+.dt-panel > section > .row:first-child {
+  margin-top: 8px;
+}
+
+/* ---------- Episodios ---------- */
+
+/* Al elegir en el celular, el episodio queda arriba con sus fuentes debajo. */
+.episodes .episode {
+  scroll-margin-top: 12px;
+}
+
+.season-picker {
+  flex: 1 1 auto;
+  min-width: 0;
+  padding: 6px 2px 16px;
+}
+.season-picker .picker-btn {
+  min-height: 44px;
+  padding: 8px 16px;
+  border-radius: 999px;
+  font-size: 1rem;
+}
+.season-picker .picker-label {
+  display: none;
+}
+.ep-badge {
+  position: absolute;
+  top: 6px;
+  left: 6px;
+  padding: 2px 8px;
+  border-radius: 999px;
+  background: rgba(11, 11, 16, 0.82);
+  color: var(--text);
+  font-size: 0.72rem;
+  font-weight: 800;
+  letter-spacing: 0.02em;
+}
+.ep-badge.next {
+  background: var(--accent-fill, var(--accent));
+  color: var(--on-accent);
+}
+.ep-left {
+  font-size: 0.8rem;
+  font-weight: 700;
+  color: var(--accent);
+}
+
+/* ---------- Extras ---------- */
+
+.d-extras {
+  padding: 4px var(--gutter) 8px;
+}
+.d-extras-grid {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 260px), 1fr));
+  gap: 16px;
+}
+.d-extra {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  width: 100%;
+  padding: 0 0 6px;
+  border: 0;
+  background: none;
+  color: var(--text);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+  border-radius: var(--radius);
+}
+.d-extra-thumb {
+  position: relative;
+  display: block;
+  aspect-ratio: 16 / 9;
+  border-radius: var(--radius);
+  overflow: hidden;
+  background: var(--surface-1, var(--bg-2));
+}
+.d-extra-thumb img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  transition: transform 0.25s;
+}
+.d-extra-play {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  display: grid;
+  place-items: center;
+  width: 48px;
+  height: 48px;
+  margin: -24px 0 0 -24px;
+  border-radius: 50%;
+  background: rgba(11, 11, 16, 0.7);
+  color: #fff;
+  font-size: 1.1rem;
+}
+.d-extra:hover .d-extra-thumb img,
+.d-extra:focus-visible .d-extra-thumb img {
+  transform: scale(1.04);
+}
+.d-extras-grid .d-extra:focus-visible {
+  outline: none;
+}
+.d-extra:focus-visible .d-extra-thumb {
+  outline: var(--focus-ring, 3px solid var(--accent));
+  outline-offset: 3px;
+}
+.d-extra-text {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 0 4px;
+}
+.d-extra-name {
+  font-weight: 700;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+.d-extra-meta {
+  font-size: 0.8rem;
+  color: var(--muted);
+}
+
+/* ---------- Detalles ---------- */
+
+.d-details {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.d-facts,
+.d-keywords {
+  padding: 8px var(--gutter);
+}
+.d-facts .credits {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 8px 16px;
+  max-width: 80ch;
+}
+.d-fact {
+  display: contents;
+}
+.d-details .wiki-trivia,
+.d-details .providers {
+  margin-top: 8px;
+}
+
+/* ---------- Errores ---------- */
+
+.d-section-error {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px 16px;
+  padding: 14px 16px;
+  border-radius: var(--radius);
+  background: var(--surface-1, var(--bg-2));
+  border: 1px solid var(--outline, var(--line));
+}
+.d-section-error p {
+  margin: 0;
+}
+.detail-error-hint {
+  padding: 0 var(--gutter);
+}
+
+/* ---------- Celular (UX 10): chips y nombres con un blanco táctil de 32 px o más y buen contraste ---------- */
+
+@media (max-width: 760px), (pointer: coarse) {
+  .detail-info .chips .chip-link {
+    display: inline-flex;
+    align-items: center;
+    min-height: 34px;
+    padding: 4px 14px;
+    color: var(--text);
+    border-color: var(--outline, rgba(255, 255, 255, 0.4));
+    background: rgba(11, 11, 16, 0.55);
+  }
+  .detail-info .credits .person-link {
+    display: inline-block;
+    padding: 8px 2px;
+    margin: -8px 0;
+    color: var(--text);
+    text-decoration-color: rgba(255, 255, 255, 0.55);
+  }
+  .detail-info .credits {
+    row-gap: 10px;
+  }
+}
+
+@media (max-width: 760px) {
+  .d-actions-row {
+    gap: 14px;
+  }
+  .btn.d-play {
+    flex: 1 1 100%;
+    justify-content: center;
+  }
+  .d-icons {
+    width: 100%;
+    justify-content: space-around;
+  }
+  .dt-tabs {
+    margin: 0 12px;
+  }
+  .dt-tab {
+    padding: 12px 9px 10px;
+    font-size: 0.92rem;
+  }
+  .dt-tab::after {
+    left: 6px;
+    right: 6px;
+  }
+}
+
+/* ---------- TV ---------- */
+
+html[data-tv] .btn.d-play {
+  min-height: 64px;
+  font-size: 1.2rem;
+}
+html[data-tv] .d-icon-circle {
+  width: 54px;
+  height: 54px;
+}
+html[data-tv] .d-icon-label {
+  font-size: 0.85rem;
+}
+html[data-tv] .d-icons {
+  gap: 20px;
+}
+html[data-tv] .d-icon-btn {
+  min-width: 76px;
+}
+html[data-tv] .dt-tab {
+  font-size: 1.15rem;
+  padding: 16px 20px 14px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .hero-trailer,
+  .d-icon-circle,
+  .d-extra-thumb img {
+    transition: none;
+  }
+}

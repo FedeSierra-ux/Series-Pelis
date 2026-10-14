@@ -124,11 +124,91 @@ function decode(buffer: ArrayBuffer): string {
   return text.includes('�') ? new TextDecoder('windows-1252').decode(buffer) : text
 }
 
+// ---------- Caché de subtítulos ----------
+// Cada episodio suma un texto y una URL blob: en una tanda larga en la TV eso no tiene que crecer sin fin.
+// Se guardan los últimos SUB_CACHE_MAX y al desalojar uno se libera su URL blob (`revokeObjectURL`).
+// Los archivos propios no se desalojan: su URL blob es lo único que hay (no se pueden volver a bajar).
+
+/** Cuánto se espera un subtítulo antes de darlo por caído. */
+export const SUB_TIMEOUT_MS = 15_000
+/** Más que esto no es un subtítulo (o es uno roto): se rechaza antes de convertirlo. */
+export const SUB_MAX_BYTES = 5 * 1024 * 1024
+export const SUB_CACHE_MAX = 20
+
 /** VTT ya convertido, por URL original (o por la URL local de un archivo cargado). */
 const vttTexts = new Map<string, string>()
 const blobUrls = new Map<string, string>()
+/** Claves de los archivos propios: no se desalojan. */
+const pinned = new Set<string>()
 
 const toBlobUrl = (vtt: string) => URL.createObjectURL(new Blob([vtt], { type: 'text/vtt' }))
+
+function revoke(url: string) {
+  try {
+    URL.revokeObjectURL(url)
+  } catch {
+    // nada
+  }
+}
+
+/** Marca `key` como recién usada (un Map conserva el orden de inserción: el primero es el más viejo). */
+function touch<T>(map: Map<string, T>, key: string, value: T) {
+  map.delete(key)
+  map.set(key, value)
+}
+
+/** Deja como mucho SUB_CACHE_MAX entradas (sin contar las fijas), liberando las URL blob desalojadas. */
+function trim() {
+  for (const map of [vttTexts, blobUrls] as Map<string, string>[]) {
+    let extra = [...map.keys()].filter((k) => !pinned.has(k)).length - SUB_CACHE_MAX
+    for (const key of map.keys()) {
+      if (extra <= 0) break
+      if (pinned.has(key)) continue
+      if (map === blobUrls) revoke(map.get(key)!)
+      map.delete(key)
+      extra--
+    }
+  }
+}
+
+/** Cuántas entradas hay en la caché (para los tests). */
+export function subtitleCacheSize() {
+  return { texts: vttTexts.size, blobs: blobUrls.size }
+}
+
+/** Vacía la caché y libera todas las URL blob (incluidas las de archivos propios). */
+export function clearSubtitleCache() {
+  for (const url of blobUrls.values()) revoke(url)
+  vttTexts.clear()
+  blobUrls.clear()
+  pinned.clear()
+}
+
+/**
+ * Baja el archivo con tiempo límite y tope de tamaño. `AbortController` + `setTimeout` en vez de
+ * `AbortSignal.timeout`, que no existe en navegadores de TV viejos.
+ */
+async function fetchLimited(url: string): Promise<ArrayBuffer> {
+  const ctrl = typeof AbortController === 'function' ? new AbortController() : undefined
+  const timer = setTimeout(() => ctrl?.abort(), SUB_TIMEOUT_MS)
+  try {
+    const res = await fetch(url, ctrl ? { signal: ctrl.signal } : undefined)
+    if (!res.ok) throw new Error(`HTTP ${res.status}`)
+    const declared = Number(res.headers?.get?.('content-length'))
+    if (declared > SUB_MAX_BYTES) {
+      ctrl?.abort()
+      throw new Error('Subtítulo demasiado grande')
+    }
+    const buffer = await res.arrayBuffer()
+    if (buffer.byteLength > SUB_MAX_BYTES) throw new Error('Subtítulo demasiado grande')
+    return buffer
+  } catch (err) {
+    if (ctrl?.signal.aborted && !(err instanceof Error && err.message === 'Subtítulo demasiado grande')) throw new Error('El subtítulo tardó demasiado')
+    throw err
+  } finally {
+    clearTimeout(timer)
+  }
+}
 
 /**
  * Descarga el subtítulo, lo convierte a VTT si hace falta y devuelve una URL local.
@@ -137,16 +217,18 @@ const toBlobUrl = (vtt: string) => URL.createObjectURL(new Blob([vtt], { type: '
 export async function loadSubtitle(url: string, opts: { stripSdh?: boolean } = {}): Promise<string> {
   const key = opts.stripSdh ? `${url}#sin-sdh` : url
   const hit = blobUrls.get(key)
-  if (hit) return hit
+  if (hit) {
+    touch(blobUrls, key, hit)
+    return hit
+  }
   let vtt = vttTexts.get(url)
   if (vtt === undefined) {
-    const res = await fetch(url)
-    if (!res.ok) throw new Error(`HTTP ${res.status}`)
-    vtt = toVtt(decode(await res.arrayBuffer()), new URL(url, location.href).pathname)
-    vttTexts.set(url, vtt)
+    vtt = toVtt(decode(await fetchLimited(url)), new URL(url, location.href).pathname)
   }
+  touch(vttTexts, url, vtt)
   const blobUrl = toBlobUrl(opts.stripSdh ? stripSdh(vtt) : vtt)
-  blobUrls.set(key, blobUrl)
+  touch(blobUrls, key, blobUrl)
+  trim()
   return blobUrl
 }
 
@@ -155,9 +237,11 @@ export const SUBTITLE_FILE_RE = /\.(srt|vtt|ass|ssa)$/i
 /** Subtítulo propio (archivo de la compu o el celu): devuelve la URL local para usar como si fuera de un addon. */
 export async function loadSubtitleFile(file: File): Promise<string> {
   if (!SUBTITLE_FILE_RE.test(file.name)) throw new Error('Formato no soportado')
+  if (file.size > SUB_MAX_BYTES) throw new Error('Archivo demasiado grande')
   const vtt = toVtt(decode(await file.arrayBuffer()), file.name)
   if (!vtt.includes('-->')) throw new Error('El archivo no tiene subtítulos')
   const url = toBlobUrl(vtt)
+  pinned.add(url)
   vttTexts.set(url, vtt)
   blobUrls.set(url, url)
   return url

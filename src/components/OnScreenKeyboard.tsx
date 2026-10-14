@@ -12,6 +12,10 @@ interface KeyboardProps {
   /** Enfocar la primera tecla al aparecer (con el control remoto). */
   autoFocus?: boolean
   label?: string
+  /** v0.14: tecla de micrófono (búsqueda por voz). Solo se pasa si el navegador reconoce voz. */
+  onVoice?: () => void
+  /** La voz está escuchando: la tecla del micrófono se marca. */
+  listening?: boolean
 }
 
 function keyText(k: OskKey, layer: OskLayer, upper: boolean, doneLabel: string): string {
@@ -51,7 +55,16 @@ function keyAria(k: OskKey, layer: OskLayer, upper: boolean, doneLabel: string):
 }
 
 /** Teclado en pantalla navegable con las flechas del control remoto. */
-export function OnScreenKeyboard({ value, onChange, onDone, doneLabel = 'Listo', autoFocus, label = 'Teclado en pantalla' }: KeyboardProps) {
+export function OnScreenKeyboard({
+  value,
+  onChange,
+  onDone,
+  doneLabel = 'Listo',
+  autoFocus,
+  label = 'Teclado en pantalla',
+  onVoice,
+  listening,
+}: KeyboardProps) {
   const [layer, setLayer] = useState<OskLayer>('letters')
   const [upper, setUpper] = useState(false)
   const rootRef = useRef<HTMLDivElement>(null)
@@ -102,6 +115,20 @@ export function OnScreenKeyboard({ value, onChange, onDone, doneLabel = 'Listo',
               {keyText(k, layer, upper, doneLabel)}
             </button>
           ))}
+          {r === 4 && onVoice && (
+            // Con el control remoto, hablar es mucho más rápido que tipear letra por letra.
+            <button
+              type="button"
+              className={`osk-key osk-voice${listening ? ' active' : ''}`}
+              aria-pressed={listening}
+              aria-label={listening ? 'Dejar de escuchar' : 'Buscar por voz'}
+              onMouseDown={(e) => e.preventDefault()}
+              onClick={onVoice}
+            >
+              <Theme2Icon name="mic" size={20} />
+              <span>{listening ? 'Escuchando' : 'Voz'}</span>
+            </button>
+          )}
         </div>
       ))}
     </div>

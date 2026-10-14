@@ -4,10 +4,11 @@ import { getStreams } from '../../lib/addons'
 import { useAddons } from '../../lib/hooks'
 import { isOnline } from '../../lib/online'
 import { lastSourceStore, settingsStore, useStore } from '../../lib/store'
-import { analyzeStreams, playable, streamKey, type RankedStream } from '../../lib/streamPicker'
+import { analyzeStreams, lastSourceOf, playable, streamKey, type RankedStream } from '../../lib/streamPicker'
 import type { AddonStreams, InstalledAddon, Meta, Stream, Video } from '../../lib/types'
 import { createRecentSet } from './autoPlayed'
 import { episodeNumber } from './episodes'
+import { pendingNames, safeGroups } from './safeData'
 
 export interface PlayState {
   stream: Stream
@@ -67,7 +68,8 @@ export function StreamList({ meta, video, nextVideoId }: { meta: Meta; video?: V
   )
 
   const fetched = result?.key === fetchKey
-  const groups = useMemo(() => (fetched && result ? result.groups : []), [fetched, result])
+  // Una respuesta malformada de un addon (`streams` que no es una lista) cuenta como error de ese addon.
+  const groups = useMemo(() => (fetched && result ? safeGroups(result.groups) : []), [fetched, result])
   const rules = settings.sourceRules
   const last = rules.rememberLast ? lastSources[meta.id] : undefined
   const { ranked, hidden } = useMemo(
@@ -93,7 +95,7 @@ export function StreamList({ meta, video, nextVideoId }: { meta: Meta; video?: V
     if (rules.rememberLast) {
       lastSourceStore.set((all) => ({
         ...all,
-        [meta.id]: { addonUrl: addon.transportUrl, bingeGroup: s.behaviorHints?.bingeGroup, streamName: s.name, at: Date.now() },
+        [meta.id]: lastSourceOf(addon.transportUrl, s),
       }))
     }
     const state: PlayState & { resume?: { at: number } } = {
@@ -160,6 +162,14 @@ export function StreamList({ meta, video, nextVideoId }: { meta: Meta; video?: V
 
   const total = groups.reduce((n, g) => n + g.streams.length, 0)
   const totalLabel = total === 1 ? '1 fuente' : `${total} fuentes`
+  // Un addon lento no deja la lista "buscando" para siempre: se dice cuál falta y, pasada la espera,
+  // lo que ya llegó se da por bueno (se recomienda y se puede reproducir) mientras ese termina.
+  const waiting = pendingNames(groups)
+  const statusText = !loading
+    ? `${totalLabel} encontrada${total === 1 ? '' : 's'}`
+    : settled
+      ? `${totalLabel} · ${waiting} sigue${groups.filter((g) => g.loading).length > 1 ? 'n' : ''} buscando`
+      : `Buscando fuentes… (${totalLabel} hasta ahora${waiting ? ` · esperando a ${waiting}` : ''})`
 
   /** `hiddenReason`: está en "Ocultos por tus filtros" (se puede reproducir igual). */
   const renderItem = (s: Stream, i: number, addon: InstalledAddon, recommended: boolean, hiddenReason?: string, key: string | number = i) => {
@@ -220,7 +230,7 @@ export function StreamList({ meta, video, nextVideoId }: { meta: Meta; video?: V
           </div>
         </div>
       )}
-      <div className="streams-status muted">{loading ? `Buscando fuentes… (${totalLabel} hasta ahora)` : `${totalLabel} encontrada${total === 1 ? '' : 's'}`}</div>
+      <div className="streams-status muted" aria-live="polite">{statusText}</div>
       {groups.map((g, addonIndex) => {
         const bestIndex = best?.addon.transportUrl === g.addon.transportUrl ? best.streamIndex : -1
         // El recomendado va primero dentro de su addon; los que esconden los filtros van aparte.

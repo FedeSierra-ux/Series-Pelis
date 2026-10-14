@@ -3,6 +3,7 @@ import { ErrorBoundary } from './ErrorBoundary'
 import { HoverTrailerLayer } from './HoverTrailer'
 import { OfflineBanner } from './OfflineBanner'
 import { Theme2Icon, type Theme2IconName } from './Theme2Icons'
+import './layout-v14.css'
 
 // Estructura del Tema 2: riel lateral con íconos en PC/TV y, en el celular, cabecera chica
 // arriba + barra de pestañas abajo. Las dos cosas están siempre en el DOM y el CSS muestra
@@ -15,6 +16,8 @@ interface Item {
   end?: boolean
 }
 
+// v0.14 (U2): menos destinos, como Netflix. Historial y Calendario viven en "Vos" (/me), con Mi lista,
+// Seguir viendo, Te gustaron, Diario, Metas y Tu año. Ajustes va abajo de todo (fuera de esta lista).
 const RAIL: Item[] = [
   { to: '/search', label: 'Buscar', icon: 'search' },
   { to: '/', label: 'Inicio', icon: 'home', end: true },
@@ -22,8 +25,7 @@ const RAIL: Item[] = [
   { to: '/discover/series', label: 'Series', icon: 'series' },
   { to: '/tv', label: 'TV en vivo', icon: 'live' },
   { to: '/list', label: 'Mi lista', icon: 'list' },
-  { to: '/history', label: 'Historial', icon: 'history' },
-  { to: '/calendar', label: 'Calendario', icon: 'calendar' },
+  { to: '/me', label: 'Vos', icon: 'user' },
 ]
 
 const TABS: Item[] = [
@@ -32,13 +34,19 @@ const TABS: Item[] = [
   { to: '/discover/series', label: 'Series', icon: 'series' },
   { to: '/tv', label: 'TV', icon: 'live' },
   { to: '/list', label: 'Mi lista', icon: 'list' },
-  // "Vos": historial, Tu año y calendario (se llega a los dos últimos desde el historial).
-  { to: '/history', label: 'Vos', icon: 'user' },
+  { to: '/me', label: 'Vos', icon: 'user' },
 ]
 
-function RailLink({ item }: { item: Item }) {
+/** "Vos" queda marcado también en lo que se abre desde ahí: historial, calendario, diario, metas y Tu año. */
+const isVosPath = (pathname: string) => /^\/(me|history|calendar)(\/|$)/.test(pathname)
+
+function RailLink({ item, forceActive }: { item: Item; forceActive?: boolean }) {
   return (
-    <NavLink to={item.to} end={item.end} className="t2-rail-link">
+    <NavLink
+      to={item.to}
+      end={item.end}
+      className={({ isActive }) => `t2-rail-link${isActive || forceActive ? ' active' : ''}`}
+    >
       <span className="t2-pill" aria-hidden>
         <Theme2Icon name={item.icon} />
       </span>
@@ -49,7 +57,7 @@ function RailLink({ item }: { item: Item }) {
 
 export function Theme2Layout() {
   const { pathname } = useLocation()
-  const inVos = pathname.startsWith('/history') || pathname.startsWith('/calendar')
+  const inVos = isVosPath(pathname)
   return (
     <div className="app t2-app">
       <nav className="t2-rail" aria-label="Principal">
@@ -57,7 +65,7 @@ export function Theme2Layout() {
           SP
         </Link>
         {RAIL.map((item) => (
-          <RailLink key={item.to} item={item} />
+          <RailLink key={item.to} item={item} forceActive={item.to === '/me' && inVos} />
         ))}
         <span className="t2-rail-spacer" />
         <RailLink item={{ to: '/settings', label: 'Ajustes', icon: 'settings' }} />
@@ -98,7 +106,7 @@ export function Theme2Layout() {
             key={item.to}
             to={item.to}
             end={item.end}
-            className={({ isActive }) => `t2-tab${isActive || (item.icon === 'user' && inVos) ? ' active' : ''}`}
+            className={({ isActive }) => `t2-tab${isActive || (item.to === '/me' && inVos) ? ' active' : ''}`}
           >
             <span className="t2-pill" aria-hidden>
               <Theme2Icon name={item.icon} size={20} />

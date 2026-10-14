@@ -114,8 +114,8 @@ export function Goals() {
     <div className="page goals-page">
       <header className="page-header">
         <div>
-          <Link to="/history" className="year-back">
-            ← Historial
+          <Link to="/me" className="year-back">
+            ← Vos
           </Link>
           <h1>Metas y logros</h1>
         </div>

@@ -8,8 +8,11 @@ import {
   normalizePrefs,
   renameRow,
   setRowHidden,
+  splitLeadingVirtual,
   splitMerge,
   visibleRows,
+  WATCHLIST_ROW_KEY,
+  HOME_VIRTUAL_ROWS,
   type CatalogPrefs,
   type CatalogSource,
 } from './catalogPrefs'
@@ -153,5 +156,44 @@ describe('interleaveMetas', () => {
   it('intercala sin repetir', () => {
     const m = (id: string) => ({ id, type: 'movie', name: id })
     expect(interleaveMetas([[m('1'), m('2'), m('3')], [m('2'), m('4')], []]).map((x) => x.id)).toEqual(['1', '2', '4', '3'])
+  })
+})
+
+describe('filas propias de Inicio ("Mi lista")', () => {
+  const arrange = (prefs: Partial<CatalogPrefs>) => arrangeCatalogs(sources, prefs, label, HOME_VIRTUAL_ROWS)
+
+  it('de entrada va arriba de los catálogos (después de "Seguir viendo")', () => {
+    const rows = arrange(DEFAULT_CATALOG_PREFS)
+    expect(rows[0]).toMatchObject({ key: WATCHLIST_ROW_KEY, name: 'Mi lista', virtual: true, type: 'home', sources: [] })
+    const { lead, rest } = splitLeadingVirtual(rows)
+    expect(lead.map((r) => r.key)).toEqual([WATCHLIST_ROW_KEY])
+    expect(rest.every((r) => !r.virtual)).toBe(true)
+  })
+
+  it('con un orden guardado de antes (sin la fila nueva) también queda arriba', () => {
+    expect(arrange({ order: ['cat:b|movie|new', 'cat:a|movie|top'] }).map((r) => r.key).slice(0, 3)).toEqual([
+      WATCHLIST_ROW_KEY,
+      'cat:b|movie|new',
+      'cat:a|movie|top',
+    ])
+  })
+
+  it('se mueve, se oculta y se renombra como cualquier fila', () => {
+    const rows = arrange(DEFAULT_CATALOG_PREFS)
+    const keys = rows.map((r) => r.key)
+    const moved = moveRow(normalizePrefs(DEFAULT_CATALOG_PREFS), keys, WATCHLIST_ROW_KEY, 1)
+    const after = arrange(moved)
+    expect(after.map((r) => r.key).slice(0, 2)).toEqual(['cat:a|movie|top', WATCHLIST_ROW_KEY])
+    // Ya no está primera: va en su lugar entre los catálogos.
+    expect(splitLeadingVirtual(after).lead).toEqual([])
+    expect(splitLeadingVirtual(after).rest[1].key).toBe(WATCHLIST_ROW_KEY)
+
+    const hidden = arrange(setRowHidden(DEFAULT_CATALOG_PREFS, WATCHLIST_ROW_KEY, true))
+    expect(visibleRows(hidden).map((r) => r.key)).not.toContain(WATCHLIST_ROW_KEY)
+    expect(arrange(renameRow(DEFAULT_CATALOG_PREFS, WATCHLIST_ROW_KEY, 'Para ver'))[0].name).toBe('Para ver')
+  })
+
+  it('Descubrir (sin filas propias) no la ve', () => {
+    expect(arrangeCatalogs(sources, DEFAULT_CATALOG_PREFS, label).some((r) => r.virtual)).toBe(false)
   })
 })

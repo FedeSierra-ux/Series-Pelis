@@ -39,8 +39,23 @@ export interface CatalogRowDef {
   renamed: boolean
   hidden: boolean
   merged: boolean
+  /** Fila propia de Inicio que no sale de un addon (ej. "Mi lista"): `sources` va vacío. */
+  virtual?: boolean
   sources: CatalogSource[]
 }
+
+/**
+ * Filas de Inicio que no son catálogos de addons pero se ocultan, mueven y renombran igual desde el
+ * gestor. Tipo `home`: Descubrir (que filtra por película / serie) nunca las muestra.
+ */
+export interface VirtualRowDef {
+  key: string
+  name: string
+}
+
+export const VIRTUAL_TYPE = 'home'
+export const WATCHLIST_ROW_KEY = 'home:watchlist'
+export const HOME_VIRTUAL_ROWS: VirtualRowDef[] = [{ key: WATCHLIST_ROW_KEY, name: 'Mi lista' }]
 
 /**
  * Clave estable de un catálogo. Usa el id del manifest (no la URL) para que sobreviva a
@@ -69,6 +84,7 @@ export function arrangeCatalogs(
   sources: CatalogSource[],
   rawPrefs: Partial<CatalogPrefs> | undefined,
   label: (s: CatalogSource) => string,
+  virtual: VirtualRowDef[] = [],
 ): CatalogRowDef[] {
   const prefs = normalizePrefs(rawPrefs)
   const byId = new Map<string, CatalogSource>()
@@ -77,7 +93,8 @@ export function arrangeCatalogs(
   const owner = new Map<string, CatalogMerge>()
   for (const m of prefs.merges) for (const id of m.members) if (!owner.has(id)) owner.set(id, m)
 
-  const natural: CatalogRowDef[] = []
+  // Las filas virtuales van primero: de entrada "Mi lista" queda arriba, después de "Seguir viendo".
+  const natural: CatalogRowDef[] = virtual.map((v) => ({ ...row(v.key, VIRTUAL_TYPE, v.name, [], false, prefs), virtual: true }))
   const placed = new Set<string>()
   for (const [id, s] of byId) {
     const merge = owner.get(id)
@@ -97,7 +114,8 @@ export function arrangeCatalogs(
   const index = new Map(prefs.order.map((k, i) => [k, i]))
   const known = natural.filter((r) => index.has(r.key)).sort((a, b) => index.get(a.key)! - index.get(b.key)!)
   const unknown = natural.filter((r) => !index.has(r.key))
-  return [...known, ...unknown]
+  // Una fila virtual nueva (que el orden guardado no conoce) va arriba, no al final de todo.
+  return [...unknown.filter((r) => r.virtual), ...known, ...unknown.filter((r) => !r.virtual)]
 }
 
 function row(key: string, type: string, defaultName: string, sources: CatalogSource[], merged: boolean, prefs: CatalogPrefs): CatalogRowDef {
@@ -115,6 +133,16 @@ function row(key: string, type: string, defaultName: string, sources: CatalogSou
 }
 
 export const visibleRows = (rows: CatalogRowDef[]) => rows.filter((r) => !r.hidden)
+
+/**
+ * Reparte las filas de Inicio: las virtuales que quedaron arriba de todos los catálogos van después de
+ * "Seguir viendo" (`lead`); el resto, en su lugar entre los catálogos de los addons (`rest`).
+ */
+export function splitLeadingVirtual(rows: CatalogRowDef[]): { lead: CatalogRowDef[]; rest: CatalogRowDef[] } {
+  const first = rows.findIndex((r) => !r.virtual)
+  const cut = first < 0 ? rows.length : first
+  return { lead: rows.slice(0, cut), rest: rows.slice(cut) }
+}
 
 /**
  * Sube o baja una fila. `viewKeys` es lo que ve el usuario (por ejemplo solo las series):

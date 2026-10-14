@@ -6,7 +6,10 @@ vi.mock('idb-keyval', () => ({
   createStore: () => ({}),
   get: async (key: string) => idbSeed.get(key),
   set: async () => undefined,
+  update: async () => undefined,
   del: async () => undefined,
+  delMany: async () => undefined,
+  keys: async () => [],
   clear: async () => undefined,
 }))
 
@@ -236,6 +239,92 @@ describe('copia de seguridad (B25, B26)', () => {
     await importData({ app: 'series-pelis', progress: { tt1: entry(5900, 6000, { watched: true }), malo: 'x' } })
     expect(Object.keys(progressStore.get())).toEqual(['tt1'])
     expect(Object.values(diaryStore.get().entries).map((d) => d.videoId)).toEqual(['tt1'])
+  })
+})
+
+describe('importar una copia mezcla en vez de pisar (auditoría #3, #8, #10)', () => {
+  it('el progreso más nuevo de acá no vuelve atrás ni pierde el "visto"', async () => {
+    progressStore.set({
+      tt1: entry(5000, 6000, { updatedAt: 2000, watched: true, firstWatchedAt: 500 }),
+      tt2: entry(100, 6000, { videoId: 'tt2', metaId: 'tt2', updatedAt: 1000 }),
+    })
+    await importData({
+      app: 'series-pelis',
+      progress: {
+        tt1: entry(10, 6000, { updatedAt: 1500 }),
+        tt2: entry(3000, 6000, { videoId: 'tt2', metaId: 'tt2', updatedAt: 1800, firstWatchedAt: 300 }),
+        tt3: entry(5900, 6000, { videoId: 'tt3', metaId: 'tt3', updatedAt: 1700, watched: true }),
+      },
+    })
+    const all = progressStore.get()
+    expect(all.tt1).toMatchObject({ position: 5000, watched: true, updatedAt: 2000 })
+    expect(all.tt2).toMatchObject({ position: 3000, updatedAt: 1800, firstWatchedAt: 1 })
+    expect(all.tt3.watched).toBe(true)
+    // Lo terminado que llegó va al diario.
+    expect(Object.values(diaryStore.get().entries).map((d) => d.videoId)).toEqual(['tt3'])
+  })
+
+  it('puntajes e idiomas por título: queda el más nuevo', async () => {
+    const { ratingsStore, trackPrefsStore } = await import('./store')
+    ratingsStore.set({ tt1: { stars: 5, at: 200, type: 'movie', name: 'A' }, tt2: { stars: 1, at: 100, type: 'movie', name: 'B' } })
+    trackPrefsStore.set({ tt1: { subLang: 'spa', at: 50 } })
+    await importData({
+      app: 'series-pelis',
+      ratings: { tt1: { stars: 2, at: 150, type: 'movie', name: 'A' }, tt2: { stars: 4, at: 300, type: 'movie', name: 'B' } },
+      trackPrefs: { tt1: { subLang: 'eng', at: 10 } },
+    })
+    expect(ratingsStore.get().tt1.stars).toBe(5)
+    expect(ratingsStore.get().tt2.stars).toBe(4)
+    expect(trackPrefsStore.get().tt1.subLang).toBe('spa')
+  })
+
+  it('un addon que no responde se agrega con el manifest de la copia; sin manifest, se avisa', async () => {
+    const DOWN = 'https://caido.example/manifest.json'
+    const OLD = 'https://viejo.example/manifest.json'
+    fakeManifests({})
+    const report = await importData({
+      app: 'series-pelis',
+      addons: [CINEMETA_ADDON.transportUrl, DOWN, OLD],
+      addonManifests: { [DOWN]: manifest('org.caido', 'Caído') },
+      disabledAddons: [DOWN],
+    })
+    expect(report).toEqual({ offlineAddons: [DOWN], failedAddons: [OLD] })
+    const added = addonsStore.get().find((a) => a.transportUrl === DOWN)
+    expect(added?.manifest.name).toBe('Caído')
+    expect(added?.disabled).toBe(true)
+  })
+
+  it('la copia exporta los manifests para eso', () => {
+    addonsStore.set([CINEMETA_ADDON])
+    expect(exportData().addonManifests).toEqual({ [CINEMETA_ADDON.transportUrl]: CINEMETA_ADDON.manifest })
+  })
+
+  it('importProgress (Importar desde Stremio) anota en el diario lo terminado que llega', async () => {
+    const { importProgress } = await import('./store')
+    const changed = importProgress([
+      entry(0, 6000, { videoId: 'tt7', metaId: 'tt7', watched: true, updatedAt: 1_700_000_000_000 }),
+      entry(600, 6000, { videoId: 'tt8', metaId: 'tt8', updatedAt: 1_700_000_000_000 }),
+    ])
+    expect(changed).toBe(2)
+    const diary = Object.values(diaryStore.get().entries)
+    expect(diary.map((d) => d.videoId)).toEqual(['tt7'])
+    expect(diary[0].watchedAt).toBe(1_700_000_000_000)
+    // Importar lo mismo otra vez no duplica nada.
+    expect(importProgress([entry(0, 6000, { videoId: 'tt7', metaId: 'tt7', watched: true, updatedAt: 1_700_000_000_000 })])).toBe(0)
+    expect(Object.values(diaryStore.get().entries)).toHaveLength(1)
+  })
+})
+
+describe('manifests guardados sin nombre (auditoría #14)', () => {
+  it('al arrancar se completan con el id, así Ajustes no se rompe', async () => {
+    idbSeed.set('addons', [CINEMETA_ADDON, { transportUrl: 'https://x.example/manifest.json', manifest: { id: 'org.x', resources: ['stream'] } }])
+    try {
+      await hydrateStores()
+      const x = addonsStore.get().find((a) => a.transportUrl === 'https://x.example/manifest.json')
+      expect(x?.manifest).toMatchObject({ name: 'org.x', catalogs: [], types: [] })
+    } finally {
+      idbSeed.delete('addons')
+    }
   })
 })
 

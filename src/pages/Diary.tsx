@@ -95,8 +95,8 @@ export function Diary({ renderRating = (i) => <UserStars id={i.metaId} /> }: Dia
     <div className="page diary-page">
       <header className="page-header">
         <div>
-          <Link to="/history" className="year-back">
-            ← Historial
+          <Link to="/me" className="year-back">
+            ← Vos
           </Link>
           <h1>Diario</h1>
         </div>

@@ -11,9 +11,10 @@ import { typeLabel } from '../lib/i18n'
 /** Gestor de catálogos: renombrar, ocultar, reordenar y fusionar las filas de Inicio y Descubrir. */
 export function CatalogManager() {
   useTitle('Catálogos')
-  const rows = useCatalogRows()
+  // Con las filas propias de Inicio ("Mi lista"), que se ocultan y mueven igual que un catálogo.
+  const rows = useCatalogRows(true)
   const [filter, setFilter] = useState('all')
-  const types = useMemo(() => [...new Set(rows.map((r) => r.type))], [rows])
+  const types = useMemo(() => [...new Set(rows.filter((r) => !r.virtual).map((r) => r.type))], [rows])
   const view = filter === 'all' ? rows : rows.filter((r) => r.type === filter)
   const viewKeys = view.map((r) => r.key)
   const allKeys = rows.map((r) => r.key)
@@ -43,7 +44,8 @@ export function CatalogManager() {
       </header>
       <p className="muted catalog-manager-intro">
         Elegí qué filas ves en Inicio y en Películas/Series, en qué orden y con qué nombre. También podés juntar dos
-        catálogos del mismo tipo en una sola fila. Los addons desactivados no aparecen acá.
+        catálogos del mismo tipo en una sola fila. “Mi lista” es la fila de Inicio con lo que agregaste y todavía
+        no empezaste. Los addons desactivados no aparecen acá.
       </p>
 
       <div className="filters catalog-manager-filters" role="tablist" aria-label="Tipo">
@@ -70,7 +72,7 @@ export function CatalogManager() {
         {status}
       </p>
 
-      {view.length === 0 && <div className="empty">No hay catálogos. Instalá o activá un addon con catálogos en Ajustes.</div>}
+      {view.every((r) => r.virtual) && <div className="empty">No hay catálogos. Instalá o activá un addon con catálogos en Ajustes.</div>}
 
       <ol className="catalog-manager-list" ref={listRef}>
         {view.map((row, i) => (
@@ -159,7 +161,7 @@ function CatalogItem({
             </strong>
           )}
           <span className="muted small">
-            {typeLabel(row.type)} · {addonNames}
+            {row.virtual ? 'Solo en Inicio · lo que agregaste a Mi lista y no empezaste' : `${typeLabel(row.type)} · ${addonNames}`}
             {row.renamed && !editing && <> · antes “{row.defaultName}”</>}
           </span>
           {row.merged && (
