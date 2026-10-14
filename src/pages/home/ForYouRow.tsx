@@ -1,6 +1,8 @@
 import { useEffect, useMemo } from 'react'
 import { PosterCard } from '../../components/PosterCard'
 import { Row } from '../../components/Row'
+import { FORYOU_ROW_KEY } from '../../lib/catalogPrefs'
+import { useRowShape } from '../../lib/catalogRows'
 import { notInterestedStore, ratingsStore, resolveNotInterestedTmdbIds, useHiddenIds } from '../../lib/ratings'
 import {
   applyActors,
@@ -126,6 +128,7 @@ export function ForYouRow({ tmdbKey }: { tmdbKey: string }) {
   const progress = useStore(progressStore)
   const ratings = useStore(ratingsStore)
   const hidden = useHiddenIds()
+  const landscape = useRowShape(FORYOU_ROW_KEY) === 'landscape'
   useEffect(() => {
     resolveNotInterestedTmdbIds().catch(() => {})
   }, [tmdbKey])
@@ -148,10 +151,16 @@ export function ForYouRow({ tmdbKey }: { tmdbKey: string }) {
   return (
     <div ref={ref}>
       {seedsKey && (
-        <Row title="Para vos" loading={state.loading || !visible} error={state.failed ? 'error' : undefined} empty={items.length === 0}>
+        <Row
+          title="Para vos"
+          loading={state.loading || !visible}
+          error={state.failed ? 'error' : undefined}
+          empty={items.length === 0}
+          landscape={landscape}
+        >
           {items.map((it, i) => (
-            <div key={it.meta.id} className="foryou-item">
-              <PosterCard meta={it.meta} eager={i < 6} />
+            <div key={it.meta.id} className={landscape ? 'foryou-item is-landscape' : 'foryou-item'}>
+              <PosterCard meta={it.meta} eager={i < 6} landscape={landscape} />
               <p className="foryou-why" title={it.why}>
                 {it.why}
               </p>

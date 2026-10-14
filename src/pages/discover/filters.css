@@ -539,6 +539,22 @@
   .fb-scroll {
     display: none !important;
   }
+  /* Los activos en una sola tira que se desliza de costado, como los géneros: la grilla no baja. */
+  .fb-active {
+    flex-wrap: nowrap;
+    margin: -4px calc(-1 * var(--gutter)) 12px;
+    padding: 0 var(--gutter);
+    overflow-x: auto;
+    scrollbar-width: none;
+    overscroll-behavior-x: contain;
+  }
+  .fb-active::-webkit-scrollbar {
+    display: none;
+  }
+  .fb-active > * {
+    flex-shrink: 0;
+    white-space: nowrap;
+  }
   /* Catálogo y orden van en la hoja (secciones `.fb-sec-mobile`). */
   .fb-catalog,
   .fb-sort {

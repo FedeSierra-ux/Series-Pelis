@@ -1,5 +1,7 @@
 import { PosterCard } from '../../components/PosterCard'
 import { Row } from '../../components/Row'
+import { BECAUSE_ROW_KEY, TRENDING_WEEK_ROW_KEY } from '../../lib/catalogPrefs'
+import { useRowShape } from '../../lib/catalogRows'
 import { useHiddenIds } from '../../lib/ratings'
 import {
   findByImdb,
@@ -72,12 +74,19 @@ export function TrendingWeekRow({ tmdbKey }: { tmdbKey: string }) {
   const [ref, visible] = useNearViewport<HTMLDivElement>(false)
   const state = useTrending('week', tmdbKey, visible)
   const hidden = useHiddenIds()
+  const landscape = useRowShape(TRENDING_WEEK_ROW_KEY) === 'landscape'
   const items = onlyTitles(state.data?.results).filter((i) => !hidden.has(`tmdb:${i.media_type}:${i.id}`))
   return (
     <div ref={ref}>
-      <Row title="Tendencias de la semana" loading={state.loading || !visible} error={state.failed ? 'error' : undefined} empty={items.length === 0}>
+      <Row
+        title="Tendencias de la semana"
+        loading={state.loading || !visible}
+        error={state.failed ? 'error' : undefined}
+        empty={items.length === 0}
+        landscape={landscape}
+      >
         {items.map((item) => (
-          <PosterCard key={`${item.media_type}:${item.id}`} meta={tmdbToPreview(item)} />
+          <PosterCard key={`${item.media_type}:${item.id}`} meta={tmdbToPreview(item)} landscape={landscape} />
         ))}
       </Row>
     </div>
@@ -102,6 +111,7 @@ export function BecauseRow({ seed, tmdbKey }: { seed: Seed; tmdbKey: string }) {
     },
   )
   const hidden = useHiddenIds()
+  const landscape = useRowShape(BECAUSE_ROW_KEY) === 'landscape'
   const items = (state.data ?? [])
     .filter((i) => (!i.media_type || i.media_type === 'movie' || i.media_type === 'tv') && !hidden.has(`tmdb:${i.media_type ?? tmdbType}:${i.id}`))
     .slice(0, 20)
@@ -112,9 +122,10 @@ export function BecauseRow({ seed, tmdbKey }: { seed: Seed; tmdbKey: string }) {
         loading={state.loading || !visible}
         error={state.failed ? 'error' : undefined}
         empty={items.length === 0}
+        landscape={landscape}
       >
         {items.map((item) => (
-          <PosterCard key={`${item.media_type ?? tmdbType}:${item.id}`} meta={tmdbToPreview(item, tmdbType)} />
+          <PosterCard key={`${item.media_type ?? tmdbType}:${item.id}`} meta={tmdbToPreview(item, tmdbType)} landscape={landscape} />
         ))}
       </Row>
     </div>

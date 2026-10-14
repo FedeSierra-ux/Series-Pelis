@@ -16,6 +16,8 @@ interface Props {
   reportContext?: Record<string, string | undefined>
   /** Muestra lo anterior atenuado mientras carga lo nuevo (ej. resultados de la búsqueda anterior). */
   stale?: boolean
+  /** Fila de tarjetas apaisadas: los esqueletos de carga tienen esa forma. */
+  landscape?: boolean
   children: ReactNode
 }
 
@@ -70,7 +72,7 @@ function useRowPaging(deps: unknown) {
 // Las flechas no se quedan con el foco al tocarlas (si no, el anillo queda pintado).
 const noFocus = (e: React.MouseEvent) => e.preventDefault()
 
-export function Row({ title, moreTo, loading, error, empty, errorNotice, reportContext, stale, children }: Props) {
+export function Row({ title, moreTo, loading, error, empty, errorNotice, reportContext, stale, landscape, children }: Props) {
   const showSkeleton = !!(loading && empty)
   const { ref, edges, page } = useRowPaging(showSkeleton ? 'skeleton' : children)
 
@@ -100,7 +102,7 @@ export function Row({ title, moreTo, loading, error, empty, errorNotice, reportC
       </header>
       <div className="row-body">
         <div ref={ref} className={stale ? 'row-scroller is-stale' : 'row-scroller'} aria-busy={stale || undefined}>
-          {showSkeleton ? Array.from({ length: 8 }, (_, i) => <PosterSkeleton key={i} />) : children}
+          {showSkeleton ? Array.from({ length: 8 }, (_, i) => <PosterSkeleton key={i} landscape={landscape} />) : children}
         </div>
         {!showSkeleton && (
           <>

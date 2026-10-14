@@ -1,5 +1,6 @@
 import { useSyncExternalStore } from 'react'
 import { cached, HttpError, peekMemory } from './cache'
+import { tmdbGenreName } from './discoverFilters'
 import { settingsStore, useStore } from './store'
 import type { MetaPreview } from './types'
 
@@ -375,6 +376,8 @@ export function tmdbToPreview(item: TmdbListItem, fallbackType?: TmdbType): Meta
     description: item.overview,
     releaseInfo: itemYear(item),
     released: item.release_date || item.first_air_date || undefined,
+    // Para la tarjeta apaisada ("2024 · Ciencia ficción"). Ya vienen en español.
+    genres: item.genre_ids?.flatMap((g) => tmdbGenreName(String(g), toAppType(type)) ?? []),
   }
 }
 

@@ -7,12 +7,16 @@ import {
   moveRow,
   normalizePrefs,
   renameRow,
+  rowShape,
   setRowHidden,
+  setRowShape,
   splitLeadingVirtual,
   splitMerge,
   visibleRows,
   WATCHLIST_ROW_KEY,
   HOME_VIRTUAL_ROWS,
+  FORYOU_ROW_KEY,
+  TRENDING_WEEK_ROW_KEY,
   type CatalogPrefs,
   type CatalogSource,
 } from './catalogPrefs'
@@ -149,6 +153,36 @@ describe('mergeRows / splitMerge', () => {
     const split = splitMerge(merged, rows, 'merge:m1')
     expect(split.merges).toEqual([])
     expect(keys(split)).toEqual(['cat:a|movie|top', 'cat:b|movie|new', 'cat:a|series|top', 'cat:b|series|trending'])
+  })
+})
+
+describe('forma de las filas (U10)', () => {
+  it('de fábrica: TMDB apaisada, addons y Mi lista con póster', () => {
+    expect(rowShape(DEFAULT_CATALOG_PREFS, FORYOU_ROW_KEY)).toBe('landscape')
+    expect(rowShape(DEFAULT_CATALOG_PREFS, TRENDING_WEEK_ROW_KEY)).toBe('landscape')
+    expect(rowShape(DEFAULT_CATALOG_PREFS, 'cat:a|movie|top')).toBe('poster')
+    expect(rowShape(DEFAULT_CATALOG_PREFS, WATCHLIST_ROW_KEY)).toBe('poster')
+    // Prefs viejas sin el campo.
+    expect(rowShape({ order: [] }, FORYOU_ROW_KEY)).toBe('landscape')
+    expect(normalizePrefs({ order: [] }).shapes).toEqual({})
+  })
+
+  it('solo guarda lo que difiere de fábrica', () => {
+    const p = setRowShape(DEFAULT_CATALOG_PREFS, 'cat:a|movie|top', 'landscape')
+    expect(p.shapes).toEqual({ 'cat:a|movie|top': 'landscape' })
+    expect(setRowShape(p, 'cat:a|movie|top', 'poster').shapes).toEqual({})
+    expect(setRowShape(DEFAULT_CATALOG_PREFS, FORYOU_ROW_KEY, 'poster').shapes).toEqual({ [FORYOU_ROW_KEY]: 'poster' })
+    expect(rowShape({ shapes: { x: 'raro' as never } }, 'x')).toBe('poster')
+  })
+
+  it('fusionar conserva la forma de la primera y no pierde las demás', () => {
+    let prefs = setRowShape(DEFAULT_CATALOG_PREFS, 'cat:a|movie|top', 'landscape')
+    prefs = setRowShape(prefs, 'cat:a|series|top', 'landscape')
+    const rows = arrangeCatalogs(sources, prefs, label)
+    const merged = mergeRows(prefs, rows, 'cat:a|movie|top', 'cat:b|movie|new', 'm1').prefs
+    expect(merged.shapes).toEqual({ 'merge:m1': 'landscape', 'cat:a|series|top': 'landscape' })
+    const split = splitMerge(merged, arrangeCatalogs(sources, merged, label), 'merge:m1')
+    expect(split.shapes).toEqual({ 'cat:a|series|top': 'landscape' })
   })
 })
 

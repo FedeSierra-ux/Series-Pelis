@@ -3,10 +3,22 @@ import { createPortal } from 'react-dom'
 import { Link } from 'react-router-dom'
 import { Picker } from '../components/Picker'
 import { Theme2Icon } from '../components/Theme2Icons'
-import { DEFAULT_CATALOG_PREFS, mergeRows, moveRow, renameRow, setRowHidden, splitMerge, type CatalogRowDef } from '../lib/catalogPrefs'
-import { defaultCatalogLabel, updateCatalogPrefs, useCatalogRows } from '../lib/catalogRows'
+import {
+  DEFAULT_CATALOG_PREFS,
+  mergeRows,
+  moveRow,
+  renameRow,
+  setRowHidden,
+  setRowShape,
+  splitMerge,
+  TMDB_HOME_ROWS,
+  type CatalogRowDef,
+  type VirtualRowDef,
+} from '../lib/catalogPrefs'
+import { defaultCatalogLabel, updateCatalogPrefs, useCatalogRows, useRowShape } from '../lib/catalogRows'
 import { useTitle } from '../lib/hooks'
 import { typeLabel } from '../lib/i18n'
+import { useTmdbKey } from '../lib/tmdb'
 
 /** Gestor de catálogos: renombrar, ocultar, reordenar y fusionar las filas de Inicio y Descubrir. */
 export function CatalogManager() {
@@ -20,6 +32,7 @@ export function CatalogManager() {
   const allKeys = rows.map((r) => r.key)
   const [status, setStatus] = useState<string>()
   const listRef = useRef<HTMLOListElement>(null)
+  const tmdbOn = !!useTmdbKey()
 
   /** Después de subir/bajar, el foco sigue al mismo botón de la fila movida (para el control remoto). */
   const move = (key: string, delta: -1 | 1, name: string) => {
@@ -45,7 +58,8 @@ export function CatalogManager() {
       <p className="muted catalog-manager-intro">
         Elegí qué filas ves en Inicio y en Películas/Series, en qué orden y con qué nombre. También podés juntar dos
         catálogos del mismo tipo en una sola fila. “Mi lista” es la fila de Inicio con lo que agregaste y todavía
-        no empezaste. Los addons desactivados no aparecen acá.
+        no empezaste. Con “Apaisada” la fila de Inicio muestra tarjetas anchas con el fondo y el logo del título.
+        Los addons desactivados no aparecen acá.
       </p>
 
       <div className="filters catalog-manager-filters" role="tablist" aria-label="Tipo">
@@ -88,7 +102,53 @@ export function CatalogManager() {
           />
         ))}
       </ol>
+
+      {tmdbOn && filter === 'all' && (
+        <section className="catalog-manager-tmdb" aria-labelledby="catalog-tmdb-title">
+          <h2 id="catalog-tmdb-title">Filas de TMDB en Inicio</h2>
+          <p className="muted small">Estas filas no se mueven ni se ocultan: solo elegís la forma de las tarjetas.</p>
+          <ol className="catalog-manager-list">
+            {TMDB_HOME_ROWS.map((row) => (
+              <TmdbRowItem key={row.key} row={row} onStatus={setStatus} />
+            ))}
+          </ol>
+        </section>
+      )}
     </div>
+  )
+}
+
+/** Botón "Apaisada": cambia la forma de las tarjetas de la fila en Inicio (póster ↔ apaisada). */
+function ShapeToggle({ rowKey, name, onStatus }: { rowKey: string; name: string; onStatus: (s: string) => void }) {
+  const landscape = useRowShape(rowKey) === 'landscape'
+  return (
+    <button
+      className="btn btn-ghost btn-text"
+      aria-pressed={landscape}
+      title={landscape ? 'Tarjetas apaisadas con logo. Tocá para volver al póster.' : 'Tarjetas con póster. Tocá para pasar a apaisadas con logo.'}
+      onClick={() => {
+        updateCatalogPrefs((p) => setRowShape(p, rowKey, landscape ? 'poster' : 'landscape'))
+        onStatus(`“${name}” con ${landscape ? 'pósters' : 'tarjetas apaisadas'}`)
+      }}
+    >
+      Apaisada
+    </button>
+  )
+}
+
+function TmdbRowItem({ row, onStatus }: { row: VirtualRowDef; onStatus: (s: string) => void }) {
+  return (
+    <li className="catalog-item" data-row-key={row.key}>
+      <div className="catalog-item-main">
+        <div className="catalog-item-text">
+          <strong className="catalog-item-name">{row.name}</strong>
+          <span className="muted small">Solo en Inicio · TMDB</span>
+        </div>
+        <div className="catalog-item-actions is-shape-only">
+          <ShapeToggle rowKey={row.key} name={row.name} onStatus={onStatus} />
+        </div>
+      </div>
+    </li>
   )
 }
 
@@ -141,6 +201,11 @@ function CatalogItem({
   }
   const restoreName = () => updateCatalogPrefs((p) => renameRow(p, row.key, ''))
   const split = () => updateCatalogPrefs((p) => splitMerge(p, rows, row.key))
+  const landscape = useRowShape(row.key) === 'landscape'
+  const toggleShape = () => {
+    updateCatalogPrefs((p) => setRowShape(p, row.key, landscape ? 'poster' : 'landscape'))
+    onStatus(`“${row.name}” con ${landscape ? 'pósters' : 'tarjetas apaisadas'}`)
+  }
 
   return (
     <li className={`catalog-item${row.hidden ? ' is-hidden' : ''}`} data-row-key={row.key}>
@@ -185,6 +250,7 @@ function CatalogItem({
           <button className="btn btn-ghost btn-text" aria-pressed={!row.hidden} onClick={toggleHidden}>
             {row.hidden ? 'Mostrar' : 'Ocultar'}
           </button>
+          <ShapeToggle rowKey={row.key} name={row.name} onStatus={onStatus} />
           {!editing && (
             <button className="btn btn-ghost btn-text" onClick={startRename}>
               Renombrar
@@ -211,6 +277,7 @@ function CatalogItem({
             label={`Más acciones de “${row.name}”`}
             actions={[
               { id: 'hidden', label: row.hidden ? 'Mostrar en Inicio' : 'Ocultar de Inicio', run: toggleHidden },
+              { id: 'shape', label: landscape ? 'Tarjetas con póster en Inicio' : 'Tarjetas apaisadas en Inicio', run: toggleShape },
               ...(!editing ? [{ id: 'rename', label: 'Renombrar', run: startRename, refocus: false }] : []),
               ...(row.renamed && !editing ? [{ id: 'restore', label: 'Volver al nombre original', run: restoreName }] : []),
               ...(row.merged

@@ -1,7 +1,7 @@
 import { PosterCard } from '../../components/PosterCard'
 import { Row } from '../../components/Row'
 import type { CatalogRowDef } from '../../lib/catalogPrefs'
-import { useMergedCatalog } from '../../lib/catalogRows'
+import { useMergedCatalog, useRowShape } from '../../lib/catalogRows'
 import { useHiddenIds } from '../../lib/ratings'
 import { withoutHidden } from '../../lib/recommend'
 import { useNearViewport } from './lazy'
@@ -18,6 +18,7 @@ export function MergedCatalogRow({ row, eager }: { row: CatalogRowDef; eager: bo
   const [ref, visible] = useNearViewport<HTMLDivElement>(eager)
   const { data, loading, error } = useMergedCatalog(visible ? row.sources : undefined)
   const hidden = useHiddenIds()
+  const landscape = useRowShape(row.key) === 'landscape'
   // Sin lo marcado "Ya no me interesa", igual que las otras filas.
   const items = withoutHidden(data?.slice(0, ROW_LIMIT) ?? [], hidden)
   return (
@@ -29,9 +30,10 @@ export function MergedCatalogRow({ row, eager }: { row: CatalogRowDef; eager: bo
         error={error}
         errorNotice={downNotice(row)}
         empty={items.length === 0}
+        landscape={landscape}
       >
         {items.map((m, i) => (
-          <PosterCard key={m.id} meta={{ ...m, type: m.type ?? row.type }} eager={eager && i < 6} />
+          <PosterCard key={m.id} meta={{ ...m, type: m.type ?? row.type }} eager={eager && i < 6} landscape={landscape} />
         ))}
       </Row>
     </div>

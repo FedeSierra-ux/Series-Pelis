@@ -28,6 +28,8 @@ interface Props {
   providers: ProviderOption[]
   ratingSource: string
   count: number
+  /** En PC el orden está en la barra ("Ordenar"): "Limpiar todo" no lo toca. */
+  keepSort?: boolean
   /** El selector de catálogo de la barra (solo si hay más de uno para elegir). */
   catalog?: { options: PickerOption[]; value: string; onPick: (value: string) => void }
   onChange: (next: DiscoverFilters) => void
@@ -45,7 +47,7 @@ const TOP_PROVIDERS = 12
 const focusables = (root: Element | null | undefined) =>
   Array.from(root?.querySelectorAll<HTMLElement>(FOCUSABLE) ?? []).filter((el) => el.getClientRects().length > 0)
 
-export function FilterPanel({ filters, useTmdb, tmdbOn, providers, ratingSource, count, catalog, onChange, toTmdb, onClose }: Props) {
+export function FilterPanel({ filters, useTmdb, tmdbOn, providers, ratingSource, count, keepSort, catalog, onChange, toTmdb, onClose }: Props) {
   const panel = useRef<HTMLDivElement>(null)
   const done = useRef<HTMLButtonElement>(null)
   const titleId = useId()
@@ -243,7 +245,7 @@ export function FilterPanel({ filters, useTmdb, tmdbOn, providers, ratingSource,
             className="btn btn-ghost"
             disabled={count === 0}
             onClick={() => {
-              onChange(clearPanel(filters))
+              onChange(keepSort ? { ...clearPanel(filters), sort: filters.sort } : clearPanel(filters))
               // El botón queda deshabilitado: el foco pasa a "Ver resultados" en vez de perderse.
               done.current?.focus()
             }}

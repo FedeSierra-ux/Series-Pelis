@@ -1,7 +1,17 @@
 import { useEffect, useMemo, useState } from 'react'
 import { browsableCatalogs, getCatalog, resourceUrl } from './addons'
 import { cached, peekMemory } from './cache'
-import { arrangeCatalogs, HOME_VIRTUAL_ROWS, interleaveMetas, normalizePrefs, type CatalogPrefs, type CatalogRowDef, type CatalogSource } from './catalogPrefs'
+import {
+  arrangeCatalogs,
+  HOME_VIRTUAL_ROWS,
+  interleaveMetas,
+  normalizePrefs,
+  rowShape,
+  type CatalogPrefs,
+  type CatalogRowDef,
+  type CatalogSource,
+  type RowShape,
+} from './catalogPrefs'
 import { useAddons } from './hooks'
 import { catalogLabel } from './i18n'
 import { catalogPrefsStore, useStore } from './store'
@@ -23,6 +33,11 @@ export function useCatalogRows(withHome = false): CatalogRowDef[] {
     () => arrangeCatalogs(browsableCatalogs(addons), prefs, defaultCatalogLabel, withHome ? HOME_VIRTUAL_ROWS : []),
     [addons, prefs, withHome],
   )
+}
+
+/** Forma de las tarjetas de una fila de Inicio (póster o apaisada), elegida en el gestor de catálogos. */
+export function useRowShape(key: string): RowShape {
+  return rowShape(useStore(catalogPrefsStore), key)
 }
 
 export function updateCatalogPrefs(fn: (prefs: CatalogPrefs) => CatalogPrefs) {

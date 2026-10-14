@@ -27,7 +27,7 @@ import './filters.css'
 // Barra de filtros de Descubrir: pegada arriba al bajar, con lo que más se usa a mano (catálogo,
 // géneros como chips y orden) y un botón "Filtros" que abre el panel con todo (en el celular la
 // barra deja solo "Filtros" y los géneros; catálogo y orden quedan en el panel). Lo puesto se ve
-// abajo como chips removibles.
+// abajo como chips removibles; el orden, solo en el celular (en PC ya lo dice el botón "Ordenar").
 // Todo cambio va a la URL (Discover lo lee de ahí), así que al volver atrás desde una ficha los
 // filtros siguen puestos.
 
@@ -52,6 +52,21 @@ interface Props {
 }
 
 const TMDB_VALUE = 'tmdb'
+/** Mismo corte que `filters.css`: hasta acá "Ordenar" se va de la barra al panel. */
+const NARROW = '(max-width: 760px)'
+
+function useNarrow(): boolean {
+  const [narrow, setNarrow] = useState(() => typeof matchMedia === 'function' && matchMedia(NARROW).matches)
+  useEffect(() => {
+    if (typeof matchMedia !== 'function') return
+    const mq = matchMedia(NARROW)
+    const on = () => setNarrow(mq.matches)
+    on()
+    mq.addEventListener('change', on)
+    return () => mq.removeEventListener('change', on)
+  }, [])
+  return narrow
+}
 const catalogValue = (o: CatalogOption) => o.rowKey ?? `${o.addon.transportUrl}|${o.catalog.id}`
 
 export function FilterBar({ type, filters, options, selected, useTmdb, tmdbOn, keywordLabel, onChange }: Props) {
@@ -67,6 +82,11 @@ export function FilterBar({ type, filters, options, selected, useTmdb, tmdbOn, k
   // Lo que solo sabe TMDB no cuenta (ni se muestra) cuando se mira un catálogo de addon.
   const effective: DiscoverFilters = useTmdb ? filters : { ...filters, lang: undefined, country: undefined, provider: undefined, keyword: undefined, kw: undefined }
   const active = panelFilters(effective)
+  // En PC el botón "Ordenar" ya muestra el orden elegido (resaltado): no se repite como chip ni cuenta
+  // en "Filtros". En el celular ese botón no está, así que ahí sí va el chip.
+  const narrow = useNarrow()
+  const chips = narrow ? active : active.filter((k) => k !== 'sort')
+  const clearChips = () => (narrow ? clearPanel(filters) : { ...clearPanel(filters), sort: filters.sort })
   const ratingSource = useTmdb ? 'TMDB' : 'IMDb'
 
   // Las plataformas se piden al abrir el panel o si la URL ya trae una (para el nombre del chip).
@@ -95,10 +115,10 @@ export function FilterBar({ type, filters, options, selected, useTmdb, tmdbOn, k
     const i = refocus.current
     if (i === null) return
     refocus.current = null
-    const chips = activeRow.current?.querySelectorAll<HTMLElement>('.fb-active-chip')
-    const target = chips && chips.length > 0 ? chips[Math.min(i, chips.length - 1)] : moreBtn.current
+    const els = activeRow.current?.querySelectorAll<HTMLElement>('.fb-active-chip')
+    const target = els && els.length > 0 ? els[Math.min(i, els.length - 1)] : moreBtn.current
     target?.focus({ preventScroll: true })
-  }, [active.join()])
+  }, [chips.join()])
 
   /** Pasar a TMDB conservando el género (Cinemeta usa nombres en inglés, TMDB ids). */
   const toTmdb = (patch: Partial<DiscoverFilters>): DiscoverFilters => ({
@@ -212,22 +232,22 @@ export function FilterBar({ type, filters, options, selected, useTmdb, tmdbOn, k
           <button
             ref={moreBtn}
             type="button"
-            className={`fb-more${active.length > 0 ? ' fb-on' : ''}`}
+            className={`fb-more${chips.length > 0 ? ' fb-on' : ''}`}
             aria-haspopup="dialog"
             aria-expanded={open}
-            aria-label={active.length > 0 ? `Filtros, ${active.length} ${active.length === 1 ? 'activo' : 'activos'}` : 'Filtros'}
+            aria-label={chips.length > 0 ? `Filtros, ${chips.length} ${chips.length === 1 ? 'activo' : 'activos'}` : 'Filtros'}
             onClick={() => setOpen(true)}
           >
             <FilterIcon name="sliders" size={18} />
             <span className="fb-more-text">Filtros</span>
-            {active.length > 0 && <span className="fb-badge">{active.length}</span>}
+            {chips.length > 0 && <span className="fb-badge">{chips.length}</span>}
           </button>
         </div>
       </div>
 
-      {active.length > 0 && (
+      {chips.length > 0 && (
         <div ref={activeRow} className="fb-active" role="group" aria-label="Filtros activos">
-          {active.map((k, i) => (
+          {chips.map((k, i) => (
             <button
               key={k}
               type="button"
@@ -253,7 +273,7 @@ export function FilterBar({ type, filters, options, selected, useTmdb, tmdbOn, k
             className="fb-clear"
             onClick={() => {
               refocus.current = 0
-              onChange(clearPanel(filters))
+              onChange(clearChips())
             }}
           >
             Limpiar todo
@@ -268,7 +288,8 @@ export function FilterBar({ type, filters, options, selected, useTmdb, tmdbOn, k
           tmdbOn={tmdbOn}
           providers={providers}
           ratingSource={ratingSource}
-          count={active.length}
+          count={chips.length}
+          keepSort={!narrow}
           catalog={
             catalogOptions.length > 1
               ? { options: catalogOptions, value: useTmdb ? TMDB_VALUE : selected ? catalogValue(selected) : '', onPick: pickCatalog }

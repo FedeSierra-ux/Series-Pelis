@@ -5,7 +5,7 @@ import { FocusBillboard } from '../components/FocusBillboard'
 import { PosterCard } from '../components/PosterCard'
 import { Row } from '../components/Row'
 import { splitLeadingVirtual, visibleRows, WATCHLIST_ROW_KEY, type CatalogRowDef } from '../lib/catalogPrefs'
-import { useCatalogRows } from '../lib/catalogRows'
+import { useCatalogRows, useRowShape } from '../lib/catalogRows'
 import { useCatalog, useTitle } from '../lib/hooks'
 import { catalogLabel, genreLabel } from '../lib/i18n'
 import { useHiddenIds } from '../lib/ratings'
@@ -27,8 +27,9 @@ import { CuratedRows } from './lists/CuratedRows'
 
 const ROW_LIMIT = 30
 
-function CatalogRow({ addon, catalog, eager, title }: { addon: InstalledAddon; catalog: CatalogDef; eager: boolean; title?: string }) {
+function CatalogRow({ rowKey, addon, catalog, eager, title }: { rowKey: string; addon: InstalledAddon; catalog: CatalogDef; eager: boolean; title?: string }) {
   const [ref, visible] = useNearViewport<HTMLDivElement>(eager)
+  const landscape = useRowShape(rowKey) === 'landscape'
   const { data, loading, error } = useCatalog(visible ? addon : undefined, visible ? catalog : undefined)
   const hidden = useHiddenIds()
   const items = withoutHidden(data?.slice(0, ROW_LIMIT) ?? [], hidden)
@@ -43,9 +44,10 @@ function CatalogRow({ addon, catalog, eager, title }: { addon: InstalledAddon; c
         errorNotice={`${addon.manifest.name} no responde ahora. Probá de nuevo en un rato.`}
         reportContext={{ addon: addon.transportUrl }}
         empty={items.length === 0}
+        landscape={landscape}
       >
         {items.map((m, i) => (
-          <PosterCard key={m.id} meta={{ ...m, type: m.type ?? catalog.type }} eager={eager && i < 6} />
+          <PosterCard key={m.id} meta={{ ...m, type: m.type ?? catalog.type }} eager={eager && i < 6} landscape={landscape} />
         ))}
       </Row>
     </div>
@@ -201,16 +203,18 @@ function ContinueRow({ onHide }: { onHide: (metaId: string, name: string) => voi
 
 /** Fila "Mi lista" de Inicio (U7). Se oculta, mueve y renombra desde el gestor de catálogos. */
 function WatchlistRow({ title }: { title: string }) {
+  const landscape = useRowShape(WATCHLIST_ROW_KEY) === 'landscape'
   const watchlist = useStore(watchlistStore)
   const progress = useStore(progressStore)
   const items = useMemo(() => unstartedWatchlist(watchlist, progress, ROW_LIMIT), [watchlist, progress])
   if (items.length === 0) return null
   return (
-    <Row title={title} moreTo="/list">
+    <Row title={title} moreTo="/list" landscape={landscape}>
       {items.map((item) => (
         <PosterCard
           key={item.id}
           meta={{ id: item.id, type: item.type as MetaPreview['type'], name: item.name, poster: item.poster, releaseInfo: item.year, imdbRating: item.imdbRating }}
+          landscape={landscape}
         />
       ))}
     </Row>
@@ -295,7 +299,7 @@ export function Home() {
         ) : row.merged ? (
           <MergedCatalogRow key={row.key} row={row} eager={i < 3} />
         ) : (
-          <CatalogRow key={row.key} addon={row.sources[0].addon} catalog={row.sources[0].catalog} title={row.name} eager={i < 3} />
+          <CatalogRow key={row.key} rowKey={row.key} addon={row.sources[0].addon} catalog={row.sources[0].catalog} title={row.name} eager={i < 3} />
         ),
       )}
 
