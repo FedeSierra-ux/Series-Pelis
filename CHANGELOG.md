@@ -1,5 +1,26 @@
 # Changelog
 
+## [0.13.0] - 2026-10-14
+
+### Cambiado
+- **Portada nueva estilo Netflix / Disney+, sin tráiler**: la portada ya no reproduce el tráiler (sigue
+  apareciendo al pasar por los pósters). Se mantienen el logo, el puntaje de IMDb, el año, la duración, los
+  géneros y la sinopsis.
+  - **Inicio**: carrusel tipo Disney+ en un banner redondeado que avanza solo cada 8 segundos, con indicadores,
+    flechas al pasar el mouse y botón de pausa. Se frena al pasar el mouse o con el foco del control remoto.
+  - **Películas y Series**: portada a todo el ancho tipo Netflix, con el "Top 10 de hoy" montado abajo.
+  - Botones "Ver ahora", "Mi lista" y "Más info" (abre la ficha sin arrancar solo). En el celular se puede
+    deslizar con el dedo; en la TV se recorren los indicadores con ←/→.
+  - Se va la opción "Reproducir el tráiler sin sonido en la portada de Inicio" (Ajustes → TMDB).
+- **Filtros de Películas y Series más prácticos**: barra que queda pegada arriba con el catálogo, los géneros como
+  chips, "Ordenar" y un botón "Filtros" con la cantidad de filtros puestos. Los filtros activos se ven como chips
+  que se sacan con la ×, con "Limpiar todo". El resto (décadas, puntaje mínimo, idioma, país y plataformas con
+  logo) está en un panel lateral, que en el celular es una hoja desde abajo. Todo se aplica al instante.
+
+### Quitado
+- **Listas "Mejor puntaje IMDb"** (películas y series). Si estaban como filas de Inicio, se sacan solas. El
+  puntaje de IMDb en pósters y portada queda.
+
 ## [0.12.2] - 2026-10-14
 
 ### Cambiado
