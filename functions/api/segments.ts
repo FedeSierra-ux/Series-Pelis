@@ -1,23 +1,10 @@
 // Cloudflare Pages Function: /api/segments → IntroDB (intro, resumen y créditos).
 // IntroDB solo permite CORS desde introdb.app, por eso pasamos por acá.
 
+import { crossSite, json } from '../_lib'
+
 const UPSTREAM = 'https://api.introdb.app/segments'
 const INT = /^\d{1,4}$/
-
-function json(body: unknown, status: number) {
-  return new Response(JSON.stringify(body), {
-    status,
-    headers: { 'Content-Type': 'application/json; charset=utf-8', 'Cache-Control': 'no-store' },
-  })
-}
-
-/** Rechaza pedidos de otros sitios (que no se use como proxy abierto). Sin Origin ni Sec-Fetch-Site (curl, navegadores viejos) se deja pasar. */
-function crossSite(request: Request): boolean {
-  const site = request.headers.get('Sec-Fetch-Site')
-  if (site && site !== 'same-origin' && site !== 'none') return true
-  const origin = request.headers.get('Origin')
-  return !!origin && origin !== new URL(request.url).origin
-}
 
 export const onRequestGet = async (context: { request: Request }): Promise<Response> => {
   if (crossSite(context.request)) return json({ error: 'Solo desde la app' }, 403)

@@ -1,7 +1,9 @@
-import { describe, expect, it } from 'vitest'
+import { afterEach, describe, expect, it, vi } from 'vitest'
 import type { LastSource, SourceRules } from './store'
 import {
   analyzeStreams,
+  capQuality,
+  effectivePreferredQuality,
   filterReason,
   hasKeyword,
   isHdr,
@@ -38,8 +40,11 @@ const rules = (over: Partial<SourceRules> = {}): SourceRules => ({
   excludeCodecs: [],
   hdr: 'allow',
   dedupe: true,
+  adaptQuality: true,
   ...over,
 })
+
+afterEach(() => vi.unstubAllGlobals())
 
 const s = (name: string, extra: Partial<Stream> = {}): Stream => ({ name, url: `https://cdn.example/${encodeURIComponent(name)}`, ...extra })
 
@@ -252,5 +257,67 @@ describe('filtros avanzados', () => {
     const { ranked, hidden } = analyzeStreams(groups, rules(), undefined, '')
     expect(ranked[0]?.addon).toBe(B)
     expect(hidden.get(streamKey(0, 0))).toBe('Repetido')
+  })
+})
+
+describe('calidad según la conexión', () => {
+  const slow = (effectiveType: string, extra: Record<string, unknown> = {}) =>
+    vi.stubGlobal('navigator', { userAgent: 'test', connection: { effectiveType, ...extra } })
+
+  it('capQuality devuelve la menor entre la preferida y el tope', () => {
+    expect(capQuality('1080p', undefined)).toBe('1080p')
+    expect(capQuality('1080p', '720p')).toBe('720p')
+    expect(capQuality('2160p', '480p')).toBe('480p')
+    expect(capQuality('720p', '720p')).toBe('720p')
+    expect(capQuality('any', '720p')).toBe('720p')
+    expect(capQuality('any', undefined)).toBe('any')
+  })
+
+  it('con 3G se busca 720p aunque la preferencia sea 1080p', () => {
+    slow('3g')
+    expect(effectivePreferredQuality(rules())).toBe('720p')
+    const groups = [group(A, [s('4k'), s('1080p'), s('720p'), s('480p')])]
+    const { ranked, cap } = analyzeStreams(groups, rules(), undefined, '')
+    expect(cap).toBe('720p')
+    expect(ranked.map((r) => r.stream.name)).toEqual(['720p', '480p', '1080p', '4k'])
+    expect(pickBest(groups, rules({ preferredQuality: 'any' }), undefined, '')?.stream.name).toBe('720p')
+  })
+
+  it('con 2G o un 4G muy lento se busca 480p', () => {
+    slow('2g')
+    const groups = [group(A, [s('1080p'), s('720p'), s('480p')])]
+    expect(pickBest(groups, rules(), undefined, '')?.stream.name).toBe('480p')
+    slow('4g', { downlink: 0.5 })
+    expect(pickBest(groups, rules(), undefined, '')?.stream.name).toBe('480p')
+  })
+
+  it('el ahorro de datos también baja la calidad', () => {
+    slow('4g', { saveData: true })
+    const groups = [group(A, [s('1080p'), s('720p')])]
+    expect(pickBest(groups, rules(), undefined, '')?.stream.name).toBe('720p')
+  })
+
+  it('no toca nada si la preferencia ya es más baja que el tope, o si no hay tope', () => {
+    slow('3g')
+    const groups = [group(A, [s('1080p'), s('720p'), s('480p')])]
+    expect(analyzeStreams(groups, rules({ preferredQuality: '720p' }), undefined, '').cap).toBeUndefined()
+    slow('4g', { downlink: 10 })
+    const { ranked, cap } = analyzeStreams(groups, rules(), undefined, '')
+    expect(cap).toBeUndefined()
+    expect(ranked[0]?.stream.name).toBe('1080p')
+  })
+
+  it('con el ajuste apagado se respeta la preferencia', () => {
+    slow('2g')
+    const groups = [group(A, [s('1080p'), s('480p')])]
+    expect(pickBest(groups, rules({ adaptQuality: false }), undefined, '')?.stream.name).toBe('1080p')
+    expect(analyzeStreams(groups, rules({ adaptQuality: false }), undefined, '').cap).toBeUndefined()
+  })
+
+  it('la última fuente le sigue ganando al tope', () => {
+    slow('3g')
+    const last: LastSource = { addonUrl: A.transportUrl, streamName: 'Uno\n1080p', at: 0 }
+    const groups = [group(A, [s('Uno\n1080p'), s('Otro\n720p')])]
+    expect(pickBest(groups, rules(), last, '')?.stream.name).toBe('Uno\n1080p')
   })
 })

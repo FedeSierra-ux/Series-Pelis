@@ -93,7 +93,24 @@ npm run preview    # sirve dist/ en http://localhost:4173
   APIs del navegador que dan promesas. El `ErrorBoundary` de afuera (App) va con `keepMounted`: al navegar solo saca
   el error, no remonta Layout/menú. Los de adentro (alrededor del `Outlet` y del Player) remontan por `pathname`.
   El usuario NO quiere sumar otro puntaje cuando falta el de IMDb (se deja como está).
-- v0.10.0 hecha: **se sacó el Tema 1**. `data-theme="2"` va fijo en `index.html`; `Layout.tsx`, Apariencia y el campo
+- Debrid: el usuario va a pagar **un TorBox (Standard)** para 3-4 casas cercanas; el resto de las ~10 casas usa su
+  propio debrid. Real-Debrid no sirve para compartir (una IP a la vez). Todavía no quiere login/perfiles ni asistente.
+- v0.9.0 hecha: auditoría de la v0.8 (43 bugs, 16 ítems visuales), modo TV con `html[data-tv]` (`syncTvAttr()` en
+  `lib/tv.ts`), `UpdateToast` (SW con `registerType: 'prompt'`), `lib/focusMemory.ts` + `ScrollMemory`, `EmptyState`,
+  `setWatchedMany`, identidad de addons por URL (`addonKey`), `refreshManifests` con TTL de 24 h, CI en GitHub Actions.
+  El acento del Tema 1 como texto chico queda en 4,33:1: el usuario decidió **dejarlo así**; `--accent-fill` es para
+  rellenos con texto blanco.
+- v0.10.0 hecha: reproductor (`pages/player/useMediaSession.ts`: Media Session, Wake Lock, PiP; `SpeedMenu.tsx`,
+  velocidad en sessionStorage `sp-rate`; botones de menús con `data-menu` para los atajos), `lib/network.ts` +
+  `sourceRules.adaptQuality` (tope de calidad por `navigator.connection`), `lib/shortcuts.ts` (tabla única de
+  atajos; `ShortcutsHelp` con `?`, `TvHints` con `settings.hintsSeen`), informes de errores opt-in
+  (`lib/diagnostics.ts`, `components/ReportButton.tsx`, `functions/api/report/[[path]].ts` con KV `REPORTS` y
+  secreto `REPORT_ADMIN_KEY`; marca `sp-report-server`; `settings.sendReports`), `functions/_lib.ts` (`crossSite`),
+  CSP en `public/_headers` (desde la v0.11 no hay scripts inline y `script-src` es solo `'self'`; lo vigila
+  `lib/securityHeaders.test.ts`), Ajustes con `SECTIONS` en `pages/Settings.tsx` +
+  `settings/SettingsLayout.tsx` (una sección nueva = una línea en `SECTIONS`), barra inferior del Tema 1 con
+  "Más" (`BAR`/`MORE` en `Layout.tsx`, se fue con el Tema 1 en la v0.11), menú ⋯ en `CatalogManager`.
+- v0.11.0 hecha: **se sacó el Tema 1**. `data-theme="2"` va fijo en `index.html`; `Layout.tsx`, Apariencia y el campo
   `theme` del store ya no existen; `lib/theme.ts` solo tiene `loadThemeFonts`. Los estilos nuevos siguen en
   `theme2.css` con `[data-theme='2']`. Portada estilo Stremio (`pages/home/TmdbHero.tsx`, variantes `compact` y
   `full`): logo, IMDb, `formatRuntime`, géneros y reparto. Inicio = `compact` con `getNowPlaying`/`useNowPlaying`
@@ -101,10 +118,11 @@ npm run preview    # sirve dist/ en http://localhost:4173
   y su prop `title` encimado). Tráileres sin interfaz de YouTube: `ytPlayerState` (`lib/hoverTrailer.ts`) y el
   iframe se muestra recién con estado 1 (reproduciendo). Click/OK en `.hero-pause` pausa; `.hero-actions` tiene un
   `onKeyDown` que manda ↑ a la pausa (si no, ganaba el riel). En Chromium headless el tráiler no llega a reproducir.
-  Pendiente preguntar si Series lleva la misma portada grande.
-- Debrid: el usuario va a pagar **un TorBox (Standard)** para 3-4 casas cercanas; el resto de las ~10 casas usa su
-  propio debrid. Real-Debrid no sirve para compartir (una IP a la vez). Todavía no quiere login/perfiles ni asistente.
-- Función 137 (temas OLED / acento / color del póster): preview en el canvas, **esperando respuesta del usuario**.
+  Con el Tema 1 se fueron el atajo `T` y la barra inferior con "Más" (`BAR`/`MORE`); `diagnostics` manda `theme: '2'`
+  fijo porque el servidor espera el campo. Pendiente preguntar si Series lleva la misma portada grande y si el
+  celular del Tema 2 quiere la hoja "Más".
+- Función 137 (temas OLED / acento / color del póster): el usuario pidió **ver el preview antes/después primero**
+  (v0.10, página en el scratchpad de la sesión); después decide. Perfiles locales (109): **todavía no**.
 - **Cuestionario de funciones (140)** — decisiones del usuario y plan por versiones:
   - v0.4: 9, 16, 17, 20, 27, 28, 30, 31, 33, 37, 103 (hecha).
   - v0.5 (descubrir/ficha/biblioteca, hecha): 51, 52, 56, 58, 60, 62, 66, 67, 77, 80, 89 (puntaje con **estrellas**),

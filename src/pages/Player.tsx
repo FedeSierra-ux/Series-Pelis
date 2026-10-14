@@ -2,6 +2,7 @@ import type Hls from 'hls.js'
 import { useCallback, useEffect, useRef, useState, type MouseEvent } from 'react'
 import { Navigate, useLocation, useNavigate } from 'react-router-dom'
 import { PauseCast } from '../components/PauseCast'
+import { getStreams } from '../lib/addons'
 import { creditsPlan } from '../lib/credits'
 import { saveDataOn } from '../lib/dataSaver'
 import { androidIntent, externalLaunch } from '../lib/externalPlayers'
@@ -12,18 +13,23 @@ import { findNextStream, nextEpisodeSeason, prefetchNextStreams } from '../lib/n
 import { setReturnVideo } from '../lib/returnVideo'
 import { currentPlatform } from '../lib/platform'
 import { getSegments, imdbIdOf, type Segment, type Segments } from '../lib/segments'
-import { progressStore, rememberTracks, saveProgress, settingsStore, trackPrefsStore, useStore } from '../lib/store'
+import { addonsStore, lastSourceStore, progressStore, rememberTracks, saveProgress, settingsStore, trackPrefsStore, useStore } from '../lib/store'
+import { capQuality, qualityCapFor, rankStreams } from '../lib/streamPicker'
 import { audioPrefs, guessAudioLang, lang3, langRank, subtitleClasses } from '../lib/subtitlePrefs'
 import { useTvMode } from '../lib/tv'
 import type { PlayState } from './Detail'
 import './player/player-fixes.css'
+import './player/player-extras.css'
 import { CreditsNotice } from './player/CreditsNotice'
 import { RateAtEnd } from './player/RateAtEnd'
 import { daysAway, RECAP_AFTER_DAYS, RecapOffer } from './player/RecapOffer'
 import { SeekPreview } from './player/SeekPreview'
 import { SourcesMenu, useSwitchSource, type Resume, type SwitchState } from './player/SourcesMenu'
+import { ReportButton } from '../components/ReportButton'
 import { PlayerIcon } from './player/PlayerIcons'
+import { formatRate, readRate, SpeedMenu, stepRate, storeRate, type Rate } from './player/SpeedMenu'
 import { SubtitleMenu } from './player/SubtitleMenu'
+import { useMediaSession, usePictureInPicture, useWakeLock } from './player/useMediaSession'
 import { useSubtitles } from './player/useSubtitles'
 
 const SAVE_EVERY_MS = 5000
@@ -41,8 +47,11 @@ const HLS_RETRY_MS = 1000
 /** Episodios seguidos que pasaron solos, sin que nadie toque nada (para el "¿Seguís viendo?"). */
 const AUTONEXT_KEY = 'sp-autonext-count'
 const SLEEP_KEY = 'sp-sleep-at'
+const VOLUME_STEP = 0.1
+/** Cuánto dura el aviso "Conexión lenta: se eligió 720p". */
+const NET_NOTE_MS = 6000
 
-type Menu = 'subs' | 'audio' | 'sleep' | 'sources'
+type Menu = 'subs' | 'audio' | 'sleep' | 'sources' | 'speed'
 type Sleep = { kind: 'off' } | { kind: 'time'; at: number } | { kind: 'episode' }
 
 // sessionStorage puede estar bloqueado (modo privado en algunos navegadores de TV).
@@ -167,6 +176,15 @@ function PlayerView({ state, resume }: { state: PlayState; resume?: Resume }) {
     return at > Date.now() ? { kind: 'time', at } : { kind: 'off' }
   })
   const [sleepFired, setSleepFired] = useState(false)
+  // Velocidad de reproducción: se recuerda mientras dure la sesión (pasa al siguiente episodio), no más.
+  const [rate, setRate] = useState<Rate>(readRate)
+  const rateRef = useRef(rate)
+  rateRef.current = rate
+  // "Conexión lenta: se eligió 720p" (aparte del toast, que lo pisarían los otros avisos).
+  const [netNote, setNetNote] = useState<string>()
+  const netTimer = useRef<ReturnType<typeof setTimeout>>(undefined)
+  // Último subtítulo activo, para que la tecla C lo vuelva a prender.
+  const lastSub = useRef<string>('')
   // Después de N episodios seguidos sin tocar nada, el siguiente arranca en pausa y pregunta.
   const [askStill, setAskStill] = useState(() => settings.stillWatchingAfter > 0 && readAutoCount() >= settings.stillWatchingAfter)
   const askStillRef = useRef(askStill)
@@ -191,6 +209,47 @@ function PlayerView({ state, resume }: { state: PlayState; resume?: Resume }) {
     setControlsClear(controls && root && bar && root.clientHeight ? Math.ceil((bar.offsetHeight / root.clientHeight) * 100) : 0)
   }, [controls])
   const subs = useSubtitles({ videoRef, hlsRef, state, audioLang, flash, closeMenu: () => setMenu(null), controlsClear })
+  const pip = usePictureInPicture(videoRef)
+  // Pantalla prendida mientras se reproduce; se suelta en pausa y al salir.
+  useWakeLock(playing)
+
+  // ---------- Velocidad ----------
+  useEffect(() => {
+    const el = videoRef.current
+    if (el && el.playbackRate !== rate) el.playbackRate = rate
+  }, [rate, state.playUrl])
+
+  const changeRate = (next: Rate, announce = true) => {
+    setRate(next)
+    storeRate(next)
+    if (announce) flash(next === 1 ? 'Velocidad normal' : `Velocidad: ${formatRate(next)}`)
+    showControls()
+  }
+
+  // ---------- Calidad según la conexión ----------
+  // Si el tope de la conexión (3G, ahorro de datos) hizo elegir una fuente distinta de la que
+  // hubiera salido con la preferencia del usuario, se avisa una vez. Los streams ya están en caché.
+  useEffect(() => {
+    const { sourceRules: rules, streamingServerUrl: server } = settingsStore.get()
+    const cap = qualityCapFor(rules)
+    if (!cap || capQuality(rules.preferredQuality, cap) === rules.preferredQuality) return
+    const last = rules.rememberLast ? lastSourceStore.get()[meta.id] : undefined
+    let done = false
+    const cancel = getStreams(addonsStore.get(), meta.type, videoId, (groups) => {
+      if (done || groups.some((g) => g.loading)) return
+      done = true
+      const capped = rankStreams(groups, rules, last, server)[0]
+      const free = rankStreams(groups, { ...rules, adaptQuality: false }, last, server)[0]
+      if (capped?.url !== state.playUrl || !free || free.url === state.playUrl) return
+      setNetNote(`Conexión lenta: se eligió ${cap}`)
+      clearTimeout(netTimer.current)
+      netTimer.current = setTimeout(() => setNetNote(undefined), NET_NOTE_MS)
+    })
+    return () => {
+      cancel()
+      clearTimeout(netTimer.current)
+    }
+  }, [state.playUrl])
 
   // ---------- Carga del video ----------
   useEffect(() => {
@@ -364,6 +423,8 @@ function PlayerView({ state, resume }: { state: PlayState; resume?: Resume }) {
     const el = videoRef.current
     if (!el) return
     setDuration(el.duration)
+    // Algunos navegadores vuelven a 1× al cargar otra fuente.
+    if (el.playbackRate !== rateRef.current) el.playbackRate = rateRef.current
     const saved = progressStore.get()[videoId]
     // `resume.at === 0` es "sin posición" (se cambió de fuente antes de que cargara el video): vale lo guardado.
     if (resume && resume.at > 0) el.currentTime = Math.min(resume.at, Math.max(0, el.duration - 1))
@@ -441,6 +502,54 @@ function PlayerView({ state, resume }: { state: PlayState; resume?: Resume }) {
     navigate(`/detail/${meta.type}/${encodeURIComponent(meta.id)}?season=${season}&video=${encodeURIComponent(state.nextVideoId)}`, {
       replace: true,
     })
+  }
+
+  // Notificación y teclas multimedia del sistema (pantalla de bloqueo, auriculares, Android Auto…).
+  useMediaSession({ videoRef, state, playing, onNext: state.nextVideoId ? () => goNext() : undefined })
+
+  // ---------- Sonido, subtítulos y ventana flotante por teclado ----------
+  const changeVolume = (delta: number) => {
+    const el = videoRef.current
+    if (!el) return
+    el.volume = Math.round(Math.max(0, Math.min(1, el.volume + delta)) * 100) / 100
+    if (delta > 0 && el.muted) el.muted = false
+    flash(el.muted ? 'Silenciado' : `Volumen: ${Math.round(el.volume * 100)} %`)
+    showControls()
+  }
+
+  const toggleMute = () => {
+    const el = videoRef.current
+    if (!el) return
+    el.muted = !el.muted
+    flash(el.muted ? 'Silenciado' : `Sonido: ${Math.round(el.volume * 100)} %`)
+    showControls()
+  }
+
+  /** Tecla C: apaga los subtítulos o vuelve a prender el último (o el primero que haya). */
+  const toggleSubs = () => {
+    if (subs.active) {
+      lastSub.current = subs.active
+      subs.select('')
+      flash('Subtítulos desactivados')
+      return
+    }
+    const pick = subs.options.find((s) => s.url === lastSub.current)?.url ?? subs.options[0]?.url
+    if (pick) subs.select(pick)
+    else flash('No hay subtítulos para esta fuente')
+  }
+
+  const togglePip = () => {
+    showControls()
+    pip.toggle().then((ok) => {
+      if (!ok) flash('No se pudo abrir la ventana flotante')
+    })
+  }
+
+  /** Atajos S / A / V: abren el menú como si se hubiera tocado su botón (el foco vuelve ahí al cerrar). */
+  const toggleMenuKey = (kind: Menu) => {
+    menuOpener.current = rootRef.current?.querySelector<HTMLElement>(`.player-controls button[data-menu="${kind}"]`) ?? null
+    setMenu(menu === kind ? null : kind)
+    showControls()
   }
 
   // Al cambiar de fuente se vuelve a poner el subtítulo (y el retraso) que estaba activo.
@@ -631,11 +740,27 @@ function PlayerView({ state, resume }: { state: PlayState; resume?: Resume }) {
   // Teclado y control remoto.
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
+      // Los atajos del navegador (Ctrl+F, Cmd+R…) y lo que se escribe en un campo no son para el reproductor.
+      if (e.ctrlKey || e.metaKey || e.altKey) return
+      const target = e.target as HTMLElement | null
+      if (target?.closest?.('input:not([type="range"]), textarea, [contenteditable="true"]')) return
       const active = document.activeElement as HTMLElement | null
       const focusedControl = active?.closest('.player-controls button, .player-menu button')
       // Botones flotantes (saltar intro, siguiente episodio) y carteles (error, temporizador, ¿seguís viendo?).
       const floating = active?.closest('.player-float')
-      switch (e.key) {
+      // Las letras valen con mayúscula o Bloq Mayús; los símbolos (< >) ya vienen con Shift.
+      const key = e.key.length === 1 ? e.key.toLowerCase() : e.key
+      // 0–9: saltar al 0–90 % (no con un cartel abierto, que ahí se navega con los botones).
+      if (key >= '0' && key <= '9' && !floating && !menu) {
+        const el = videoRef.current
+        if (el && Number.isFinite(el.duration) && el.duration > 0) {
+          e.preventDefault()
+          el.currentTime = (el.duration * Number(key)) / 10
+          showControls()
+        }
+        return
+      }
+      switch (key) {
         case 'Escape':
         case 'GoBack':
         case 'BrowserBack':
@@ -687,6 +812,14 @@ function PlayerView({ state, resume }: { state: PlayState; resume?: Resume }) {
         case 'MediaRewind':
           seek(-SEEK_STEP * 3)
           return
+        case 'j':
+          e.preventDefault()
+          seek(-SEEK_STEP)
+          return
+        case 'l':
+          e.preventDefault()
+          seek(SEEK_STEP)
+          return
         case 'ArrowUp':
         case 'ArrowDown': {
           e.preventDefault()
@@ -695,9 +828,15 @@ function PlayerView({ state, resume }: { state: PlayState; resume?: Resume }) {
             if (floating.classList.contains('player-error')) moveFocus(floating, 'button:not([disabled]), a[href]', active, e.key === 'ArrowDown' ? 1 : -1)
             return
           }
+          const menuEl = active?.closest('.player-menu')
+          // Con teclado (no en la TV) y sin nada enfocado, ↑/↓ es el volumen. En la TV las flechas
+          // mueven el foco por los controles, como siempre.
+          if (!tvMode && !menuEl && !focusedControl && !floating) {
+            changeVolume(e.key === 'ArrowUp' ? VOLUME_STEP : -VOLUME_STEP)
+            return
+          }
           showControls()
           const delta = e.key === 'ArrowDown' ? 1 : -1
-          const menuEl = active?.closest('.player-menu')
           if (menuEl) {
             moveFocus(menuEl, 'button', active, delta)
             return
@@ -709,6 +848,41 @@ function PlayerView({ state, resume }: { state: PlayState; resume?: Resume }) {
         }
         case 'f':
           toggleFullscreen()
+          return
+        case 'm':
+          toggleMute()
+          return
+        case 'c':
+          toggleSubs()
+          return
+        case 's':
+          toggleMenuKey('subs')
+          return
+        case 'a':
+        case 'v':
+          toggleMenuKey('sources')
+          return
+        case 'n':
+        case 'MediaTrackNext':
+          if (state.nextVideoId) goNext()
+          return
+        case 'p':
+          if (pip.supported) togglePip()
+          return
+        case '<':
+        case ',':
+          changeRate(stepRate(rate, -1))
+          return
+        case '>':
+        case '.':
+          changeRate(stepRate(rate, 1))
+          return
+        case 'i':
+          // Saltar intro / resumen (o los créditos) cuando hay segmento.
+          if (skipKind) {
+            setRecapChoice('done')
+            skipTo(segments?.[skipKind])
+          } else if (inCredits) skipTo(plan.credits)
           return
       }
     }
@@ -812,6 +986,12 @@ function PlayerView({ state, resume }: { state: PlayState; resume?: Resume }) {
         </div>
       )}
 
+      {netNote && !error && (
+        <div className="player-net-note" role="status">
+          {netNote}
+        </div>
+      )}
+
       {error && (
         <div
           className={`player-error player-float player-modal ${tvMode ? 'player-error-tv' : ''}`}
@@ -850,6 +1030,16 @@ function PlayerView({ state, resume }: { state: PlayState; resume?: Resume }) {
                   Abrir en otro reproductor
                 </a>
               )}
+              <ReportButton
+                kind="player"
+                error={error}
+                addons={state.addonUrl ? [state.addonUrl] : []}
+                stream={{
+                  url: state.playUrl,
+                  type: state.stream.behaviorHints?.notWebReady ? 'external' : state.playUrl.includes('.m3u8') ? 'hls' : 'direct',
+                }}
+                context={{ addon: state.addonName, titulo: state.meta.name, episodio: state.video?.id }}
+              />
               {/* En la TV no hay dónde pegar el enlace. */}
               {!tvMode && (
                 <button className="btn" onClick={() => copyText(state.playUrl).then((ok) => flash(ok ? 'Enlace copiado' : 'No se pudo copiar el enlace'))}>
@@ -960,6 +1150,15 @@ function PlayerView({ state, resume }: { state: PlayState; resume?: Resume }) {
               </button>
             ))}
           {menu === 'sources' && <SourcesMenu state={state} onPick={changeSource} />}
+          {menu === 'speed' && (
+            <SpeedMenu
+              rate={rate}
+              onPick={(r) => {
+                changeRate(r, false)
+                setMenu(null)
+              }}
+            />
+          )}
           {menu === 'sleep' && (
             <>
               <span className="player-menu-title muted small">Temporizador</span>
@@ -1011,7 +1210,7 @@ function PlayerView({ state, resume }: { state: PlayState; resume?: Resume }) {
             {formatTime(time)} / {formatTime(duration)}
           </span>
           <span className="spacer" />
-          <button onClick={(e) => toggleMenu('subs', e)} aria-label="Subtítulos" aria-expanded={menu === 'subs'}>
+          <button onClick={(e) => toggleMenu('subs', e)} data-menu="subs" aria-label="Subtítulos" aria-expanded={menu === 'subs'}>
             CC
           </button>
           {audioTracks.length > 1 && (
@@ -1019,8 +1218,17 @@ function PlayerView({ state, resume }: { state: PlayState; resume?: Resume }) {
               Audio
             </button>
           )}
-          <button onClick={(e) => toggleMenu('sources', e)} aria-label="Fuentes" aria-expanded={menu === 'sources'}>
+          <button onClick={(e) => toggleMenu('sources', e)} data-menu="sources" aria-label="Fuentes" aria-expanded={menu === 'sources'}>
             Fuentes
+          </button>
+          <button
+            onClick={(e) => toggleMenu('speed', e)}
+            data-menu="speed"
+            aria-label={`Velocidad de reproducción: ${formatRate(rate)}`}
+            aria-expanded={menu === 'speed'}
+            className={`speed-btn ${rate !== 1 ? 'active' : ''}`}
+          >
+            {formatRate(rate)}
           </button>
           <button
             onClick={(e) => toggleMenu('sleep', e)}
@@ -1039,6 +1247,16 @@ function PlayerView({ state, resume }: { state: PlayState; resume?: Resume }) {
           {state.nextVideoId && (
             <button onClick={() => goNext()} disabled={nextLoading} aria-label="Siguiente episodio">
               {nextLoading ? '…' : '⏭ Siguiente'}
+            </button>
+          )}
+          {pip.supported && (
+            <button
+              onClick={togglePip}
+              aria-label={pip.active ? 'Cerrar la ventana flotante' : 'Ventana flotante (picture-in-picture)'}
+              aria-pressed={pip.active}
+              className={pip.active ? 'active' : ''}
+            >
+              <PlayerIcon name="pip" />
             </button>
           )}
           <button onClick={toggleFullscreen} aria-label="Pantalla completa">

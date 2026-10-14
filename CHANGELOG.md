@@ -1,10 +1,12 @@
 # Changelog
 
-## [0.10.0] - 2026-10-14
+## [0.11.0] - 2026-10-14
 
 ### Cambiado
 - **Un solo diseño**: los colores del Tema 2 quedan como los de toda la app y se saca el Tema 1 (y la sección
-  Ajustes → Apariencia). Ya no hay parpadeo al abrir: el tema va marcado en el HTML.
+  Ajustes → Apariencia). Ya no hay parpadeo al abrir: el tema va marcado en el HTML. Con el Tema 1 se van también
+  el atajo `T` (cambiar el tema) y la barra inferior con "Más" que tenía ese tema en el celular; en el celular queda
+  la barra del Tema 2.
 - **Portada nueva estilo Stremio** (con TMDB): logo del título, puntaje de IMDb, año, duración, géneros, sinopsis
   y las caras del reparto principal, con la imagen de fondo de la peli completa.
   - **Películas**: portada grande a todo el ancho con las películas en tendencia y el "Top 10 películas de hoy"
@@ -18,6 +20,69 @@
 ### Agregado
 - **Pausar el tráiler tocando la portada**: un click (o OK en la TV) pausa y otro lo sigue. Con el control remoto,
   ↑ desde "Ver ahora" o "Mi lista" va a la portada (antes se iba al menú lateral).
+
+## [0.10.0] - 2026-10-14
+
+Lo que quedó afuera de la v0.9: reproductor con controles del sistema y velocidad, atajos y ayuda, guía del control
+remoto, informes de errores opt-in, cabeceras de seguridad, y las tres pantallas pendientes (Ajustes, barra inferior
+del Tema 1 y gestor de catálogos en el celular).
+
+### Agregado
+Reproductor:
+- Controles del sistema (pantalla de bloqueo, auriculares, notificación de Android) con título, episodio y póster, y
+  botones de play/pausa, ±10 s y siguiente episodio.
+- La pantalla no se apaga mientras se reproduce; se libera en pausa y al salir.
+- Ventana flotante (picture-in-picture) con botón nuevo y tecla P; en Safari también. Se oculta si el navegador no lo
+  soporta.
+- Velocidad de reproducción de 0,5× a 2× desde el botón "1×" (menú navegable con el control remoto) o con las teclas
+  < y >. Se recuerda durante la sesión.
+- Atajos nuevos: J/L (±10 s), ↑/↓ (volumen, con teclado), M (mudo), C (subtítulos sí/no), S (menú de subtítulos),
+  A/V (fuentes), N (siguiente episodio), P (ventana flotante), 0–9 (saltar al 0–90 %), I (saltar intro/resumen).
+- Calidad según la conexión: con 3G o ahorro de datos se elige como máximo 720p, con 2G 480p, combinado con la calidad
+  preferida (el menor de los dos). Ajuste "Ajustar la calidad a la conexión" en Ajustes → Reproductor (activado por
+  defecto) y aviso "Conexión lenta: se eligió 720p" cuando eso cambió la elección.
+
+Atajos y ayuda:
+- Atajos en toda la app: `/` va a Buscar, `?` abre la ayuda, `T` cambia el tema y `G` seguido de H/D/B/L/I/C/A va a
+  Inicio, Descubrir, Buscar, Mi lista, Historial, Calendario o Ajustes.
+- Ventana de ayuda con todos los atajos (app, reproductor y control remoto), navegable con el control y accesible
+  desde Ajustes → Teclado y ayuda → "Ver atajos".
+- Guía del control remoto la primera vez en la TV (flechas, OK, Atrás y el reproductor), con "Ver la guía del control
+  remoto" en Ajustes para repasarla.
+
+Diagnóstico y seguridad:
+- Informes de errores opt-in: botón "Enviar informe" en la pantalla de error de la app, en el error del reproductor y
+  en el aviso "no responde" de las filas (en la TV se manda con OK, sin teclado). Ajustes → Diagnóstico con envío
+  automático (apagado por defecto), explicación de qué se manda y "Enviar un informe ahora". Los informes nunca llevan
+  URLs de addons ni de streams (solo el host) ni keys; se encolan sin conexión y se mandan al volver.
+- `POST /api/report` (Pages Function + KV `REPORTS`, 16 kB, 20 por hora por IP, 30 días) y lectura con el secreto
+  `REPORT_ADMIN_KEY`. Sin el KV configurado, la sección y los botones no aparecen.
+- Cabeceras de seguridad: Content-Security-Policy, Referrer-Policy, X-Frame-Options y Permissions-Policy, probadas en
+  Inicio, ficha, Buscar, Ajustes y reproductor sin ninguna violación. Un test vigila que el hash del script inline de
+  `index.html` siga coincidiendo con la CSP.
+
+Pantallas:
+- Ajustes con índice lateral fijo en PC y TV (resalta la sección que se está leyendo; con el control remoto, elegir una
+  sección pasa el foco a su primer control) y enlaces `/settings#sección`.
+- En el celular, el menú del Tema 1 tiene "Más": una hoja con TV en vivo, Historial, Calendario, Listas, Juntos,
+  Diario, Metas y Ajustes (Listas, Juntos, Diario y Metas antes no estaban en ningún menú).
+- Menú "⋯" por catálogo en el celular (mostrar/ocultar en Inicio, renombrar, nombre original, fusionar/separar).
+
+### Cambiado
+- Ajustes en el celular: secciones plegables, la primera abierta (de 7,9–8,9 k px a 2,5–2,6 k px de alto).
+- Barra inferior del Tema 1 en el celular: 6 ítems (Inicio, Películas, Series, Buscar, Mi lista, Más) con etiquetas de
+  12 px y 48 px de alto, en vez de 8 ítems de 9,9 px.
+- Gestor de catálogos en el celular: flechas ↑/↓ de 44 px y el resto de las acciones en "⋯"; en PC y TV la fila sigue
+  igual.
+- Calendario vuelve a la barra de arriba en todos los anchos de PC.
+- Reproductor: las teclas con Ctrl/Cmd/Alt ya no disparan atajos (F, K…) y las letras funcionan también con Bloq Mayús.
+- Las Pages Functions comparten `crossSite()` / `json()` en `functions/_lib.ts`. En dev y preview, `/api/report`
+  responde "desactivado" en vez de 404.
+
+### Arreglado
+- "Restablecer" (catálogos) y "Quitar" (addons) se ven en rojo también en el Tema 2.
+- "Mi lista" ya no queda marcado en el menú al estar en "Listas".
+- La pantalla de error de la app ya no depende de "Copiar detalle" (inútil en una TV).
 
 ## [0.9.1] - 2026-10-13
 

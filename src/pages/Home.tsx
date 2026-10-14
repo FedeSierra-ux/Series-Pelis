@@ -38,6 +38,7 @@ function CatalogRow({ addon, catalog, eager, title }: { addon: InstalledAddon; c
         loading={loading || !visible}
         error={error}
         errorNotice={`${addon.manifest.name} no responde ahora. Probá de nuevo en un rato.`}
+        reportContext={{ addon: addon.transportUrl }}
         empty={items.length === 0}
       >
         {items.map((m, i) => (

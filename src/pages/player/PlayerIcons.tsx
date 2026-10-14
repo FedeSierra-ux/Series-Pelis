@@ -30,6 +30,13 @@ const PATHS = {
   ),
   moon: <path d="M20 14.5A8 8 0 1 1 9.5 4a6.5 6.5 0 0 0 10.5 10.5z" />,
   fullscreen: <path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5" />,
+  /** Picture-in-Picture: pantalla con una ventanita abajo a la derecha. */
+  pip: (
+    <>
+      <path d="M21 11V6a2 2 0 0 0-2-2H5a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h5" />
+      <rect x="13" y="13" width="9" height="7" rx="1.5" fill="currentColor" stroke="none" />
+    </>
+  ),
   alert: (
     <>
       <path d="M12 3l10 18H2z" />

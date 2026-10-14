@@ -28,11 +28,35 @@ const tmdbStatus: Connect.SimpleHandleFunction = (_req, res) => {
   res.end(JSON.stringify({ enabled: false }))
 }
 
+// Lo mismo para los informes de errores (functions/api/report): en local no hay KV, así que _status dice
+// "no está activado" y un POST contesta 503 como lo haría la función sin el binding.
+const reportStub: Plugin = {
+  name: 'report-stub',
+  configureServer: (server) => {
+    server.middlewares.use('/api/report', reportStatus)
+  },
+  configurePreviewServer: (server) => {
+    server.middlewares.use('/api/report', reportStatus)
+  },
+}
+const reportStatus: Connect.SimpleHandleFunction = (req, res) => {
+  res.setHeader('Content-Type', 'application/json; charset=utf-8')
+  res.setHeader('Cache-Control', 'no-store')
+  // Connect ya sacó el prefijo /api/report de req.url.
+  if (((req as { url?: string }).url ?? '').split('?')[0] === '/_status') {
+    res.end(JSON.stringify({ enabled: false }))
+    return
+  }
+  res.statusCode = 503
+  res.end(JSON.stringify({ ok: false, reason: 'disabled' }))
+}
+
 export default defineConfig({
   define: { __APP_VERSION__: JSON.stringify(pkg.version) },
   plugins: [
     react(),
     tmdbStatusStub,
+    reportStub,
     VitePWA({
       registerType: 'prompt',
       includeAssets: ['favicon.svg', 'icon-192.png', 'icon-512.png'],

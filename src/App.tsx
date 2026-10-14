@@ -4,6 +4,8 @@ import { ErrorBoundary } from './components/ErrorBoundary'
 import { Theme2Layout as Layout } from './components/Theme2Layout'
 import { Onboarding } from './components/Onboarding'
 import { Screensaver } from './components/Screensaver'
+import { ShortcutsHelp, useGlobalShortcuts } from './components/ShortcutsHelp'
+import { TvHints } from './components/TvHints'
 import { UpdateToast } from './components/UpdateToast'
 import { resetFocus, restoreFocus, saveFocus, trackFocus } from './lib/focusMemory'
 import { initSpatialNav } from './lib/spatialNav'
@@ -34,6 +36,12 @@ function SpatialNav() {
   const navigate = useNavigate()
   const location = useLocation()
   useEffect(() => initSpatialNav(() => location.pathname !== '/' && navigate(-1)), [navigate, location.pathname])
+  return null
+}
+
+/** Atajos de teclado globales ("/", "?", "G" + letra); necesita el router, por eso es un componente. */
+function GlobalShortcuts() {
+  useGlobalShortcuts()
   return null
 }
 
@@ -68,10 +76,14 @@ export function App() {
   return (
     <BrowserRouter>
       <SpatialNav />
+      <GlobalShortcuts />
       <ScrollMemory />
       <ErrorBoundary keepMounted>
         <Screensaver />
         <Onboarding />
+        {/* Después del asistente: la guía de la TV espera a que cierre y la ayuda "?" va encima de todo. */}
+        <TvHints />
+        <ShortcutsHelp />
         <UpdateToast />
         <Routes>
           <Route
