@@ -11,15 +11,17 @@ const segmentsProxy = {
   },
 }
 
-// En local no existe la Pages Function de TMDB (functions/api/tmdb): `probeServerTmdb()` pregunta
-// /api/tmdb/_status al arrancar y recibía un 404 en cada carga. Acá se contesta "no está activado".
+// En local no existen las Pages Functions de TMDB ni de subtítulos (functions/api/tmdb, functions/api/subs):
+// la app pregunta /api/…/_status y recibía un 404 en cada carga. Acá se contesta "no está activado".
 const tmdbStatusStub: Plugin = {
   name: 'tmdb-status-stub',
   configureServer: (server) => {
     server.middlewares.use('/api/tmdb/_status', tmdbStatus)
+    server.middlewares.use('/api/subs/_status', tmdbStatus)
   },
   configurePreviewServer: (server) => {
     server.middlewares.use('/api/tmdb/_status', tmdbStatus)
+    server.middlewares.use('/api/subs/_status', tmdbStatus)
   },
 }
 const tmdbStatus: Connect.SimpleHandleFunction = (_req, res) => {

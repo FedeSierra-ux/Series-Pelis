@@ -132,3 +132,26 @@ describe('marcas de los subtítulos', () => {
     expect(guessAudioLang({ name: 'Addon', title: 'Peli 1080p' })).toBeUndefined()
   })
 })
+
+describe('autoSubtitle con español latino', () => {
+  it('entre dos en español, gana el latino aunque llegue después', () => {
+    const plain = sub('spa')
+    const latino: SubOption = { ...sub('spl', { id: 'lat' }), latino: true }
+    const found = autoSubtitle([plain, latino], ctx({ autoSubtitles: true }))
+    expect(found?.option).toBe(latino)
+    // Mejor puesto que el español común: el reproductor lo cambia si ya había activado el otro.
+    expect(found!.rank).toBeLessThan(autoSubtitle([plain], ctx({ autoSubtitles: true }))!.rank)
+  })
+
+  it('con el idioma elegido para el título también prefiere el latino', () => {
+    const plain = sub('spa')
+    const latino = addonSubOption({ id: 'lat', url: 'https://x/lat.srt', lang: 'es-419' })
+    const found = autoSubtitle([plain, latino], ctx({ pref: { subLang: 'spa', subOff: false, at: 0 } }))
+    expect(found?.option).toBe(latino)
+    expect(found!.rank).toBeLessThan(0)
+  })
+
+  it('el español de España no se activa solo', () => {
+    expect(autoSubtitle([sub('spn')], ctx({ autoSubtitles: true }))).toBeUndefined()
+  })
+})

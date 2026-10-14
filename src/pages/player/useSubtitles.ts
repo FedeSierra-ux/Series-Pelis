@@ -4,6 +4,7 @@ import { useCallback, useEffect, useMemo, useRef, useState, type DragEvent, type
 import { getSubtitles } from '../../lib/addons'
 import { useAddons } from '../../lib/hooks'
 import { langLabel } from '../../lib/i18n'
+import { fetchOnlineSubs, streamText } from '../../lib/onlineSubs'
 import { forgetTracks, rememberTracks, settingsStore, trackPrefsStore, useStore } from '../../lib/store'
 import {
   FORCED_RANK,
@@ -97,6 +98,24 @@ export function useSubtitles({
       alive = false
     }
   }, [addons, state.meta.type, videoId])
+
+  // Subtítulos online en español (SubDL / OpenSubtitles por /api/subs), si el español está entre los idiomas.
+  const wantsSpanish = langRank('spa', settings.subtitleLangs) < 99 || pref?.subLang === 'spa'
+  const hint = streamText(state.stream)
+  useEffect(() => {
+    if (!wantsSpanish) return
+    let alive = true
+    fetchOnlineSubs(state.meta.type, videoId, hint).then((found) => {
+      if (!alive || found.length === 0) return
+      setSubs((prev) => {
+        const seen = new Set(prev.map((s) => s.url))
+        return [...prev, ...found.filter((s) => !seen.has(s.url))]
+      })
+    })
+    return () => {
+      alive = false
+    }
+  }, [wantsSpanish, state.meta.type, videoId, hint])
 
   /** Retraso (positivo = los subtítulos aparecen más tarde) y altura de los cues de la pista activa. */
   const adjustCues = useCallback(() => {

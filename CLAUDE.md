@@ -178,11 +178,23 @@ npm run preview    # sirve dist/ en http://localhost:4173
   (localStorage `sp-browse-muted`). `suppressHoverTrailer()` (`lib/hoverTrailer.ts`) apaga el tráiler chico de
   los pósters mientras está la página. Se borró `DiscoverHero.tsx`; `TmdbHero` variante `full` quedó sin uso.
 - v0.15.1 hecha: `.dev.vars` / `.env` en `.gitignore` (keys locales de wrangler).
-- **Subtítulos online (25), pendiente**: el usuario los quiere **en latino** (español latinoamericano). SubDL como fuente principal (tiene el archivo de Subscene, fuerte en español
-  latino) y OpenSubtitles de respaldo, con una Pages Function `/api/subs` igual que la de TMDB (secretos de
-  Cloudflare, lista blanca, solo mismo sitio, caché para que cada episodio se baje una vez para todas las casas;
-  los .zip de SubDL se pasan a VTT). SubDL ya está: secreto `SUBDL_KEY` cargado en Cloudflare y probado (plan
-  Free, 2000 búsquedas y 50 descargas por día). `/api/subs` tiene que tener `/_status`. Falta decidir en qué versión; las keys nunca en el código ni en el chat.
+- v0.16.0 hecha: **subtítulos online en latino (25)**. `functions/api/subs/[[path]].ts` (rutas `_status`,
+  `search?imdb&type[&s&e]`, `sd/<id>` y `os/<id>`; devuelve el archivo crudo y el cliente lo pasa a VTT con
+  `loadSubtitle`), `functions/_zip.ts` (lector de zip con tope contra zip bomba). SubDL primero (el código `ES` no
+  distingue latino: `spanishVariant` mira release/comentario/autor → `spl`/`spa`/`spn`; packs de temporada con
+  `pickEntry`); los archivos se piden primero sin key (300/día por IP) y con key si da 429/403. OpenSubtitles solo si
+  SubDL no trae nada (`ea` = latino). Caché de Cloudflare: búsquedas 12 h, archivos 30 días. Cliente:
+  `lib/onlineSubs.ts` (`fetchOnlineSubs`, `ONLINE_MAX = 4`, `releaseScore`), efecto en `useSubtitles.ts` solo si
+  el español está en los idiomas. `SubOption.latino` + `isLatino`/`latinoBonus` en `subtitlePrefs.ts`: el latino
+  gana la elección automática; el de España (`spn`) nunca se elige solo. Secretos: `SUBDL_KEY` (ya cargado) y
+  opcionales `OPENSUBTITLES_KEY`/`_USER`/`_PASS`. Las keys nunca en el código ni en el chat.
+- **Plan acordado (pedido "1, 2 y 3")**: v0.17.0 login "Código de casa" (opción A) + sincronización en D1
+  (investigación en `scratchpad/v15/login.md`); v0.18.0 perfiles variante D (investigación en
+  `scratchpad/v15/perfiles.md`): en la TV "¿Quién está mirando?" al abrir y tras el protector (entra solo a los 10 s),
+  en PC/celular recuerda el último; con un solo perfil, igual que hoy; avatar = inicial + color o fondo de una peli.
+  Compartido por casa: addons, debrid y demás. Por perfil: historial, seguir viendo, lista, estrellas, no me interesa.
+  Por aparato: idiomas, subtítulos, autoplay, sin spoilers, búsquedas, favoritos de TV en vivo, reglas de fuentes,
+  filas de Inicio. Sin perfil de chicos ni invitado.
 - Modo TV automático (128): ya existe desde v0.6/v0.9 (`detectPlatform`, `tvMode: 'auto'`). Pendiente que el
   usuario diga si su TV muestra "Este dispositivo parece una TV" y qué TV/navegador usa antes de tocar nada.
 - Función 137 (temas OLED / acento / color del póster): el usuario pidió **ver el preview antes/después primero**
