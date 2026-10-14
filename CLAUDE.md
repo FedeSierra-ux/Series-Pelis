@@ -64,7 +64,7 @@ npm run preview    # sirve dist/ en http://localhost:4173
   Idioma por título en `trackPrefsStore`. Cambiar de fuente = `navigate` con `replace` + `resume` en `location.state`.
 - v0.5.0 hecha: `lib/` searchHistory, discoverFilters, curated, discoverApi, posterLabels, hoverTrailer, wikiTrivia,
   stars, recommend, spoilers, ratings, diary, goals, yearStory. Páginas Lists, Together, Diary, Goals.
-  Las listas "Top IMDb" son una aproximación (Cinemeta no tiene el Top 250). Wikipedia limita pedidos (429).
+  Las listas "Top IMDb" se sacaron en la v0.13 (pedido del usuario). Wikipedia limita pedidos (429).
   La caché de imágenes del SW solo guarda respuestas CORS (las opacas llenaban la cuota de Chrome).
 - v0.6.0 hecha: Tema 1 / Tema 2 (`lib/theme.ts`, `theme2.css`, `components/Theme2Layout.tsx`; `data-theme="2"`
   en `<html>`, espejo en localStorage `sp-theme`). Lo nuevo tiene que usar las variables CSS (`--bg-2`, `--accent`,
@@ -129,6 +129,16 @@ npm run preview    # sirve dist/ en http://localhost:4173
   Queda un solo corrimiento inevitable: cuando la búsqueda nueva no tiene personas, la fila se cierra.
 - v0.12.2 hecha: **subtítulos automáticos prendidos de fábrica** (`autoSubtitles: true`). Migración de una sola vez
   en `hydrateStores` con la marca `settings.autoSubsMigrated` (si el usuario los apaga después, se respeta).
+- v0.13.0 hecha: **portada sin tráiler** (el usuario lo quiere solo al pasar por los pósters) estilo Netflix/Disney+:
+  `pages/home/HeroCarousel.tsx` + `HeroInfo.tsx`, estilos en `pages/home/hero.css` (clase `.portada`). Inicio =
+  banner redondeado tipo Disney+; Películas/Series = billboard a todo el ancho con el Top 10 encimado. Avanza cada
+  8 s (reloj = animación CSS del indicador), se frena con hover/foco/pausa/reduced-motion. Logo de la portada en idioma
+  original. Se fue el ajuste `heroTrailer`. **Filtros** nuevos: `pages/discover/FilterBar.tsx` (barra pegajosa,
+  géneros en chips, chips activos), `FilterPanel.tsx` (panel lateral / hoja en celular, `role="dialog"`, `#root`
+  inert), `filters.css`; helpers `panelFilters`/`withoutFilter`/`clearAll` en `lib/discoverFilters.ts` (misma URL).
+  Se sacaron las listas curadas "Mejor puntaje IMDb" (`isRemovedList` limpia filas viejas de Inicio).
+  Pendiente: el usuario elige 1 de 5 paletas (Función/Netflix, Órbita/Stremio, Medianoche/Disney+, Butaca, Marea;
+  preview en un artifact, tokens en el scratchpad de la sesión) y qué arreglar de las auditorías / qué mejoras hacer.
 - **Subtítulos online (25), pendiente**: SubDL como fuente principal (tiene el archivo de Subscene, fuerte en español
   latino) y OpenSubtitles de respaldo, con una Pages Function `/api/subs` igual que la de TMDB (secretos de
   Cloudflare, lista blanca, solo mismo sitio, caché para que cada episodio se baje una vez para todas las casas;

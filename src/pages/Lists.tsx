@@ -109,7 +109,6 @@ export function ListPage() {
     )
 
   const items = current?.data?.items
-  const ranked = def.kind === 'imdb-top'
 
   return (
     <div className="page lists-page">
@@ -151,7 +150,6 @@ export function ListPage() {
                 meta={m}
                 eager={i < 12}
                 to={curatedItemPath(m)}
-                subtitle={ranked ? [`#${i + 1}`, m.releaseInfo].filter(Boolean).join(' · ') : undefined}
               />
             ))
           : pending && Array.from({ length: 18 }, (_, i) => <PosterSkeleton key={i} />)}

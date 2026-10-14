@@ -1,16 +1,21 @@
 import { describe, expect, it } from 'vitest'
 import {
-  activeCount,
   applyClientFilters,
   cinemetaToTmdbGenre,
-  clearAdvanced,
+  clearAll,
+  clearPanel,
+  decades,
   filtersToParams,
   needsTmdb,
+  panelFilters,
   parseFilters,
+  ratingLabel,
   tmdbDiscoverParams,
   tmdbToCinemetaGenre,
+  withoutFilter,
   yearOf,
   yearOptions,
+  yearsLabel,
 } from './discoverFilters'
 import type { MetaPreview } from './types'
 
@@ -63,12 +68,56 @@ describe('filtros ↔ URL', () => {
     expect(filtersToParams({ src: 'tmdb', addon: 'x', catalog: 'top', sort: 'popularity', kw: 'suelto' }).toString()).toBe('src=tmdb')
   })
 
-  it('cuenta filtros activos, sabe cuáles necesitan TMDB y los limpia', () => {
-    const f = parse('genre=Drama&from=2000&rating=7&sort=date&lang=en')
-    expect(activeCount(f)).toBe(4)
-    expect(needsTmdb(f)).toBe(true)
+  it('sabe cuáles necesitan TMDB', () => {
+    expect(needsTmdb(parse('genre=Drama&from=2000&rating=7&sort=date&lang=en'))).toBe(true)
     expect(needsTmdb(parse('from=2000&rating=7'))).toBe(false)
-    expect(clearAdvanced(f)).toEqual({ src: undefined, addon: undefined, catalog: undefined, genre: 'Drama', sort: 'popularity' })
+  })
+})
+
+describe('panel "Filtros" y chips', () => {
+  it('lista los filtros puestos: el orden cuenta si no es el de siempre; el género no', () => {
+    expect(panelFilters(parse('genre=Drama&from=2000&rating=7&sort=date&lang=en'))).toEqual(['years', 'rating', 'lang', 'sort'])
+    expect(panelFilters(parse('to=1999&country=AR&provider=8&keyword=5&kw=x'))).toEqual(['years', 'country', 'provider', 'keyword'])
+    expect(panelFilters(parse('genre=Drama&sort=rating'))).toEqual(['sort'])
+    expect(panelFilters(parse('genre=Drama'))).toEqual([])
+  })
+
+  it('saca uno solo: años saca el rango; palabra clave, también su nombre', () => {
+    const f = parse('src=tmdb&genre=28&from=1990&to=1999&rating=7&keyword=5&kw=heist')
+    expect(filtersToParams(withoutFilter(f, 'years')).toString()).toBe('src=tmdb&genre=28&rating=7&keyword=5&kw=heist')
+    expect(filtersToParams(withoutFilter(f, 'keyword')).toString()).toBe('src=tmdb&genre=28&from=1990&to=1999&rating=7')
+    expect(withoutFilter(parse('sort=title'), 'sort').sort).toBe('popularity')
+  })
+
+  it('"Limpiar todo" de los chips deja catálogo y género', () => {
+    const f = parse('addon=x&catalog=top&genre=Drama&from=2000&rating=7&sort=date&lang=en')
+    expect(filtersToParams(clearPanel(f)).toString()).toBe('addon=x&catalog=top&genre=Drama')
+  })
+
+  it('"Limpiar filtros" de la grilla vacía deja solo el catálogo', () => {
+    const f = parse('row=merge:1&genre=Drama&from=2000&sort=date')
+    expect(clearAll(f)).toEqual({ src: undefined, addon: undefined, catalog: undefined, row: 'merge:1', sort: 'popularity' })
+  })
+
+  it('décadas de la más nueva a la más vieja, y "antes de"', () => {
+    const ds = decades(2026)
+    expect(ds[0]).toEqual({ label: 'Años 2020', from: 2020, to: 2029 })
+    expect(ds.find((d) => d.from === 1990)?.label).toBe('Años 90')
+    expect(ds.at(-1)).toEqual({ label: 'Antes de 1970', to: 1969 })
+  })
+
+  it('texto del chip de años', () => {
+    expect(yearsLabel(1990, 1999, 2026)).toBe('Años 90')
+    expect(yearsLabel(undefined, 1969, 2026)).toBe('Antes de 1970')
+    expect(yearsLabel(1995, 2004, 2026)).toBe('1995–2004')
+    expect(yearsLabel(2001, 2001, 2026)).toBe('2001')
+    expect(yearsLabel(2010, undefined, 2026)).toBe('Desde 2010')
+    expect(yearsLabel(undefined, 1980, 2026)).toBe('Hasta 1980')
+  })
+
+  it('puntaje con coma decimal', () => {
+    expect(ratingLabel(7)).toBe('7+')
+    expect(ratingLabel(7.5)).toBe('7,5+')
   })
 })
 

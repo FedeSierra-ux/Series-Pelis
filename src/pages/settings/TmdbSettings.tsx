@@ -72,14 +72,6 @@ export function TmdbSettings() {
       )}
       {!configured && <KeyboardToggle value={draft} onChange={setDraft} onDone={() => save()} doneLabel="Guardar" label="Teclado para la key de TMDB" />}
       {msg && <p className={msg.ok ? 'ok' : 'error-text'}>{msg.text}</p>}
-      <label className="check">
-        <input
-          type="checkbox"
-          checked={settings.heroTrailer}
-          onChange={(e) => settingsStore.set((s) => ({ ...s, heroTrailer: e.target.checked }))}
-        />
-        Reproducir el tráiler sin sonido en la portada de Inicio
-      </label>
       <p className="muted small">Datos e imágenes de TMDB. “Dónde ver” usa datos de JustWatch.</p>
     </section>
   )

@@ -580,8 +580,6 @@ export interface Settings {
   externalPlayer: ExternalPlayerId
   /** API key (v3) o Read Access Token (v4) de TMDB. Vacío = solo Cinemeta. */
   tmdbKey: string
-  /** Reproducir el tráiler sin sonido en la portada de Inicio (necesita TMDB). */
-  heroTrailer: boolean
   /** Modo sin spoilers: difumina miniaturas y oculta sinopsis de los episodios que no viste. */
   spoilerFree: boolean
   /** Con el modo sin spoilers, ocultar también la sinopsis de los títulos que no empezaste. */
@@ -633,7 +631,6 @@ export const settingsStore = new PersistedStore<Settings>('settings', {
   },
   externalPlayer: 'system',
   tmdbKey: '',
-  heroTrailer: true,
   spoilerFree: false,
   spoilerUnstarted: false,
   askRatingAtEnd: true,
@@ -727,6 +724,9 @@ export async function importData(raw: unknown) {
 
 // ---------- Arranque ----------
 
+/** Listas curadas que ya no existen (las de IMDb, v0.13.0). */
+const isRemovedList = (id: string) => id.startsWith('top-imdb-')
+
 export async function hydrateStores() {
   await Promise.all([
     addonsStore.hydrate(),
@@ -749,6 +749,9 @@ export async function hydrateStores() {
   // v0.12.2: los subtítulos en el idioma preferido vienen prendidos. A quien ya tenía la app se le prenden una
   // sola vez (casi nadie los había tocado: venían apagados); si después los apaga, queda apagado.
   if (!settingsStore.get().autoSubsMigrated) settingsStore.set((s) => ({ ...s, autoSubtitles: true, autoSubsMigrated: true }))
+  // v0.13.0: se sacaron las listas "Mejor puntaje IMDb"; si estaban como filas de Inicio, se borran.
+  const rows = settingsStore.get().curatedRows ?? []
+  if (rows.some(isRemovedList)) settingsStore.set((s) => ({ ...s, curatedRows: rows.filter((id) => !isRemovedList(id)) }))
   // No bloquea el arranque.
   setTimeout(() => refreshManifests().catch(() => {}), 2000)
 }

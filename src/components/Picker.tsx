@@ -1,4 +1,4 @@
-import { useEffect, useId, useLayoutEffect, useRef, useState, type KeyboardEvent } from 'react'
+import { useEffect, useId, useLayoutEffect, useRef, useState, type KeyboardEvent, type ReactNode } from 'react'
 import { createPortal } from 'react-dom'
 
 // Selector propio en vez de <select>: con el control remoto un <select> enfocado se "come" las
@@ -24,11 +24,13 @@ interface Props {
   autoOpen?: boolean
   /** Se avisa cada vez que la lista se cierra, se haya elegido algo o no. */
   onClose?: () => void
+  /** Ícono decorativo antes de la etiqueta (lo usan los selectores de la barra de filtros). */
+  icon?: ReactNode
 }
 
 const CLOSE_KEYS = new Set(['Escape', 'GoBack', 'BrowserBack', 'Backspace'])
 
-export function Picker({ label, value, options, onChange, placeholder, disabled, className, autoOpen, onClose }: Props) {
+export function Picker({ label, value, options, onChange, placeholder, disabled, className, autoOpen, onClose, icon }: Props) {
   const [open, setOpen] = useState(!!autoOpen)
   const [pos, setPos] = useState<{ top: number; left: number; minWidth: number; maxHeight: number }>()
   const button = useRef<HTMLButtonElement>(null)
@@ -118,6 +120,11 @@ export function Picker({ label, value, options, onChange, placeholder, disabled,
         disabled={disabled}
         onClick={() => setOpen((v) => !v)}
       >
+        {icon && (
+          <span className="picker-icon" aria-hidden>
+            {icon}
+          </span>
+        )}
         <span className="picker-label">{label}</span>
         <span className="picker-value">{shown}</span>
         <span className="picker-caret" aria-hidden>
