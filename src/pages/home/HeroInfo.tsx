@@ -74,9 +74,10 @@ export function HeroInfo({ eyebrow, title, logo, titleReady = true, rating, fact
   return (
     <div className="portada-content">
       {eyebrow && <span className="portada-eyebrow">{eyebrow}</span>}
-      <h1 className={`portada-title${showLogo ? ' has-logo' : ''}${titleReady ? '' : ' is-pending'}`}>
+      {/* h2: el h1 es el de la página (este título cambia con el carrusel). */}
+      <h2 className={`portada-title${showLogo ? ' has-logo' : ''}${titleReady ? '' : ' is-pending'}`}>
         {showLogo ? <img className="portada-logo" src={showLogo} alt={title} onError={() => setBrokenLogo(showLogo)} /> : <span>{title}</span>}
-      </h1>
+      </h2>
       {(rating || facts.length > 0) && (
         <p className="portada-facts">
           <ImdbRating value={rating} />

@@ -38,7 +38,8 @@
 
 .me-tiles {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(210px, 1fr));
+  /* auto-fit: con pantalla ancha (TV) las 5 tarjetas se estiran en vez de dejar columnas vacías y cortar los textos. */
+  grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
   gap: 12px;
   margin-bottom: 20px;
 }

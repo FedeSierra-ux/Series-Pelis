@@ -107,13 +107,23 @@ export function LiveTv() {
 
   const current = channels?.find((c) => c.id === currentId)
 
-  // Arranca con el último canal que se vio (o el primero de la lista).
-  useEffect(() => {
-    if (channels?.length && !channels.some((c) => c.id === currentId)) setCurrentId(watchable(channels, health)[0].id)
-  }, [channels, currentId, health])
+  // Si el canal lo eligió el usuario (en esta visita) no se cambia solo, aunque no ande.
+  const picked = useRef(false)
 
+  // Arranca con el último canal que se vio (o el primero de la lista). Mientras no se elija uno a mano,
+  // tampoco se queda en uno que se sabe que no anda: si la prueba lo marca después, pasa al primero que sí.
+  useEffect(() => {
+    if (!channels?.length || picked.current || status === 'playing') return
+    const now = channels.find((c) => c.id === currentId)
+    const first = watchable(channels, health)[0]
+    if ((!now || isBad(now)) && first.id !== currentId) setCurrentId(first.id)
+  }, [channels, currentId, health, isBad, status])
+
+  // Solo lo que elige el usuario queda como "último canal" (la sintonía automática no).
   const tune = useCallback((c: LiveChannel | undefined) => {
     if (!c) return
+    picked.current = true
+    setLastChannel(c.id)
     setCurrentId(c.id)
     setRetry(0)
   }, [])
@@ -127,7 +137,6 @@ export function LiveTv() {
   useEffect(() => {
     const el = videoRef.current
     if (!el || !current) return
-    setLastChannel(current.id)
     setStatus('loading')
     let cancelled = false
     const fail = () => !cancelled && setStatus('error')

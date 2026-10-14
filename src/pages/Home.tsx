@@ -265,6 +265,8 @@ export function Home() {
 
   return (
     <div className="page home" data-nav-root>
+      {/* Único h1 de Inicio (el título de la portada es h2 y rota cada 8 s). */}
+      <h1 className="sp-sr-only">Inicio</h1>
       <FocusBillboard />
       {tmdbKey && heroItems.length > 0 ? (
         <TmdbHero items={heroItems} variant="compact" fallbackType="movie" eyebrow="Estrenos en cines" />

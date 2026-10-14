@@ -405,7 +405,15 @@
 }
 .portada--compact .portada-content {
   gap: 12px;
-  max-width: min(560px, 62%);
+  /* Al menos lo que ocupan los tres botones en una línea (con la interfaz al 130 % "Más info" bajaba). */
+  max-width: min(560px, 100%, max(62%, 520px));
+}
+/* Con mouse aparecen las flechas ‹ ›: el texto arranca después de la ‹ (si no, la flecha tapaba el logo y,
+   con la interfaz agrandada, el IMDb y los géneros). 72 px = 14 de margen + 48 de flecha + 10 de aire. */
+@media (hover: hover) and (pointer: fine) and (min-width: 761px) {
+  html:not([data-tv]) .portada--compact .portada-main {
+    padding-left: max(clamp(24px, 3.2vw, 48px), 72px);
+  }
 }
 .portada--compact .portada-desc {
   -webkit-line-clamp: 2;

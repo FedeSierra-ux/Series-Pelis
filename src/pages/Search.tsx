@@ -163,6 +163,17 @@ export function Search() {
   const input = useRef<HTMLInputElement>(null)
   const tv = useTvMode()
   const online = useOnline()
+  // Al volver la conexión se busca de nuevo solo (no hace falta tocar "Reintentar").
+  const wasOffline = useRef(!online)
+  useEffect(() => {
+    if (!online) {
+      wasOffline.current = true
+      return
+    }
+    if (!wasOffline.current) return
+    wasOffline.current = false
+    setRetry((n) => n + 1)
+  }, [online])
   // Resultados mientras escribís: se busca cuando dejás de tipear 300 ms (o ya, con Enter).
   const schedule = useMemo(() => debounce((v: string) => setQuery(normalizeQuery(v)), DEBOUNCE_MS), [])
   useEffect(
@@ -172,7 +183,8 @@ export function Search() {
     [schedule],
   )
 
-  const active = query.length >= MIN_QUERY
+  // Sin conexión no se muestran pestañas ni resultados (todo en 0): solo el aviso de abajo del campo.
+  const active = online && query.length >= MIN_QUERY
   const people = usePeople(query, tmdbOn, retry)
   const together = useTogether(query, tmdbOn)
   const sources = useCatalogSearch(query, retry)
@@ -264,7 +276,7 @@ export function Search() {
         <h1>Buscar</h1>
       </header>
       <form role="search" onSubmit={submit} className="search-form">
-        <div className={`search-field${voice.supported ? ' has-voice' : ''}`}>
+        <div className={`search-field${voice.supported && online ? ' has-voice' : ''}`}>
           <input
             ref={input}
             className="search-input"
@@ -287,7 +299,8 @@ export function Search() {
             }}
             enterKeyHint="search"
           />
-          <VoiceButton voice={voice} />
+          {/* La voz necesita internet (el reconocimiento es en línea): sin conexión no se ofrece. */}
+          {online && <VoiceButton voice={voice} />}
         </div>
       </form>
       <VoiceStatus voice={voice} />
@@ -298,7 +311,7 @@ export function Search() {
         openInTv
         doneLabel="Buscar"
         label="Teclado para buscar"
-        onVoice={voice.supported ? voice.toggle : undefined}
+        onVoice={voice.supported && online ? voice.toggle : undefined}
         listening={voice.listening}
         onDone={() => {
           schedule.flush()
@@ -307,7 +320,14 @@ export function Search() {
           document.querySelector<HTMLElement>(FIRST_RESULT)?.focus()
         }}
       />
-      {!online && <div className="empty muted">Sin conexión: la búsqueda necesita internet. Mientras tanto tenés Mi lista y lo que viste en Vos.</div>}
+      {/* Sin conexión, este es el único aviso (el banner general no se muestra en Buscar). */}
+      {!online && (
+        <EmptyState
+          icon="search"
+          title="Sin conexión"
+          text="La búsqueda necesita internet y se hace sola cuando vuelva. Mientras tanto tenés Mi lista y lo que viste en Vos."
+        />
+      )}
 
       {showRecents && recents.length > 0 && (
         <section className="recent-searches" aria-label="Búsquedas recientes">
@@ -458,16 +478,12 @@ export function Search() {
       {canSearch && outcome === 'error' && (
         <EmptyState
           icon="search"
-          title={online ? `No pudimos buscar “${query}”` : 'Sin conexión'}
-          text={
-            online
-              ? `${failed.length ? `${failed.join(', ')}: ` : ''}${errorOf(sources) ?? 'El servicio de búsqueda no respondió.'}`
-              : 'Revisá internet y probá de nuevo.'
-          }
+          title={`No pudimos buscar “${query}”`}
+          text={`${failed.length ? `${failed.join(', ')}: ` : ''}${errorOf(sources) ?? 'El servicio de búsqueda no respondió.'}`}
           action={{ label: 'Reintentar', onClick: () => setRetry((n) => n + 1) }}
         />
       )}
-      {canSearch && outcome === 'empty' && online && (
+      {canSearch && outcome === 'empty' && (
         <EmptyState icon="search" title={`No encontramos nada para “${query}”`} text="Probá con otro nombre o con menos palabras." />
       )}
     </div>

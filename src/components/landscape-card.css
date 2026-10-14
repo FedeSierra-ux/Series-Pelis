@@ -64,6 +64,10 @@
   flex-basis: var(--cont-w);
   width: var(--cont-w);
 }
+/* El ítem es una columna: el `flex: 0 0 var(--cont-w)` de la tarjeta le daba ese ancho de alto (hueco abajo). */
+.foryou-item.is-landscape .poster-card {
+  flex: none;
+}
 
 /* TV: el foco agranda la tarjeta un poco menos que un póster (es más ancha). */
 html[data-tv] .poster-card.is-landscape:focus-visible .poster-img {
