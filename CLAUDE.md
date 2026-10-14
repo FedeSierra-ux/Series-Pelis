@@ -85,8 +85,7 @@ npm run preview    # sirve dist/ en http://localhost:4173
   Nuevos: `lib/errors.ts` (`errorText`: errores en español), `lib/returnVideo.ts` ("Volver" tras el autoplay deja la
   ficha en el último episodio visto), `components/AddonUrlForm.tsx`, `pages/player/PlayerIcons.tsx`, `LandscapeCard` (en `ContinueCard`),
   prop `errorNotice` de `Row`, parámetro `clear` de `placeCue`, `data-autofocus` para la primera flecha de la TV.
-  Quedó afuera la grilla de Buscar del punto 6 (saltos al cargar). El usuario NO quiere títulos en español:
-  solo sinopsis y datos; el badge de IMDb va arriba a la derecha.
+  El usuario NO quiere títulos en español: solo sinopsis y datos; el badge de IMDb va arriba a la derecha.
 - v0.9.1 hecha: pantalla en negro al navegar en Chrome 150+ (`scrollTo` devuelve una promesa; la v0.8 la devolvía
   como limpieza del efecto). **Un efecto nunca devuelve el resultado de una llamada** (`useEffect(() => algo())`):
   siempre con llaves, salvo que devuelva la función de limpieza a propósito. `lib/effects.test.ts` lo vigila para las
@@ -124,6 +123,10 @@ npm run preview    # sirve dist/ en http://localhost:4173
   `pages/discover/DiscoverHero.tsx` (prop `type`: `movie` | `tv`, con `key` para que reinicie al cambiar de menú) y
   `useTrendingMovies` a `useTrendingOf(type, …)`. La duración de una serie sale de `last_episode_to_air.runtime`
   (TMDB deja `episode_run_time` vacío). A las series muy nuevas a veces les falta el IMDb en Cinemeta: se deja así.
+- v0.12.1 hecha: **Buscar sin saltos**. Cada grupo conserva los resultados anteriores mientras carga (`.is-stale`,
+  atenuado, `aria-busy`); esqueletos solo en la primera búsqueda (`SKELETONS = 12`). `usePeople` devuelve `stale` y
+  `PeopleRow` tiene su propio esqueleto redondo (`CastSkeleton`, mismo alto que `.cast-card`); `Row` acepta `stale`.
+  Queda un solo corrimiento inevitable: cuando la búsqueda nueva no tiene personas, la fila se cierra.
 - Función 137 (temas OLED / acento / color del póster): el usuario pidió **ver el preview antes/después primero**
   (v0.10, página en el scratchpad de la sesión); después decide. Perfiles locales (109): **todavía no**.
 - **Cuestionario de funciones (140)** — decisiones del usuario y plan por versiones:

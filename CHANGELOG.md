@@ -1,5 +1,14 @@
 # Changelog
 
+## [0.12.1] - 2026-10-14
+
+### Arreglado
+- **Buscar ya no salta mientras carga**: al seguir escribiendo, los resultados de la búsqueda anterior quedan
+  atenuados hasta que llegan los nuevos (antes se borraban y volvían los esqueletos con cada letra). Lo mismo con
+  la fila de Personas, que además ya no se cerraba y se volvía a abrir al empezar cada búsqueda. El esqueleto de
+  Personas ahora tiene el tamaño de las caras (antes era de póster, más alto) y la primera búsqueda muestra dos
+  filas de esqueletos. Medido con resultados simulados: el corrimiento de pantalla (CLS) bajó de 0,29 a 0,12.
+
 ## [0.12.0] - 2026-10-14
 
 ### Agregado

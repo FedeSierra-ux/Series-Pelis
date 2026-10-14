@@ -40,9 +40,30 @@ export function PersonAvatar({ person, size = 'w185' }: { person: PersonLike; si
   )
 }
 
-export function PeopleRow({ title, people, loading }: { title: string; people: PersonLike[]; loading?: boolean }) {
+/** Esqueleto con la misma medida que `.cast-card`: al llegar las personas la fila no cambia de alto. */
+function CastSkeleton() {
   return (
-    <Row title={title} loading={loading} empty={people.length === 0}>
+    <div className="cast-card cast-skeleton" aria-hidden>
+      <span className="cast-photo skeleton" />
+      <span className="skeleton skeleton-line" />
+      <span className="skeleton skeleton-line" />
+    </div>
+  )
+}
+
+export function PeopleRow({ title, people, loading, stale }: { title: string; people: PersonLike[]; loading?: boolean; stale?: boolean }) {
+  // Row pinta esqueletos de póster (más altos): se le pasan los nuestros como contenido.
+  if (loading && people.length === 0) {
+    return (
+      <Row title={title}>
+        {Array.from({ length: 8 }, (_, i) => (
+          <CastSkeleton key={i} />
+        ))}
+      </Row>
+    )
+  }
+  return (
+    <Row title={title} empty={people.length === 0} stale={stale}>
       {people.map((p) => (
         <Link key={p.id} to={`/person/${p.id}`} className="cast-card" title={p.name}>
           <PersonAvatar person={p} />

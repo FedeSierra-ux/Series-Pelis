@@ -23,6 +23,8 @@ interface Group {
 }
 
 const DEBOUNCE_MS = 300
+/** Esqueletos de la primera búsqueda: dos filas en PC, para que al llegar los pósters no empuje tanto lo de abajo. */
+const SKELETONS = 12
 
 const saveRecent = (q: string) => recentSearchesStore.set((list) => pushRecent(list, q))
 
@@ -30,9 +32,14 @@ const saveRecent = (q: string) => recentSearchesStore.set((list) => pushRecent(l
 function usePeople(query: string, enabled: boolean) {
   const [state, setState] = useState<{ q: string; people: TmdbPersonResult[]; loading: boolean }>({ q: '', people: [], loading: false })
   useEffect(() => {
-    if (!enabled || query.length < MIN_QUERY) return
+    if (!enabled || query.length < MIN_QUERY) {
+      // Con el campo vacío se olvida la anterior: la próxima búsqueda no arranca con caras de otra.
+      setState({ q: '', people: [], loading: false })
+      return
+    }
     let alive = true
-    setState({ q: query, people: [], loading: true })
+    // Mientras busca quedan las personas de la búsqueda anterior: la fila no se cierra y se vuelve a abrir.
+    setState((s) => ({ ...s, loading: true }))
     searchPeople(query)
       .then((people) => alive && setState({ q: query, people: people.slice(0, 15), loading: false }))
       .catch(() => alive && setState({ q: query, people: [], loading: false }))
@@ -40,7 +47,10 @@ function usePeople(query: string, enabled: boolean) {
       alive = false
     }
   }, [query, enabled])
-  return enabled && state.q === query ? state : { q: query, people: [], loading: false }
+  if (!enabled || query.length < MIN_QUERY) return { people: [], loading: false, stale: false }
+  // Hasta que llega la respuesta (incluido el primer render de la búsqueda nueva) se muestra la anterior, atenuada.
+  const stale = state.q !== query
+  return { people: state.people, loading: stale || state.loading, stale }
 }
 
 interface TogetherHit {
@@ -101,23 +111,24 @@ export function Search() {
     }
     // Cada letra nueva cancela los pedidos de la anterior.
     const ctrl = new AbortController()
-    const targets = searchableCatalogs(addons)
-    const next: Group[] = targets.map(({ addon, catalog }) => ({
+    const targets = searchableCatalogs(addons).map(({ addon, catalog }, _, all) => ({
+      addon,
+      catalog,
       key: `${addon.transportUrl}|${catalog.type}|${catalog.id}`,
-      title: `${typeLabel(catalog.type)}${targets.length > 2 ? ` · ${addon.manifest.name}` : ''}`,
-      items: [],
-      loading: true,
+      title: `${typeLabel(catalog.type)}${all.length > 2 ? ` · ${addon.manifest.name}` : ''}`,
     }))
-    setGroups(next)
-    targets.forEach(({ addon, catalog }, i) => {
+    // Cada grupo conserva los resultados anteriores (atenuados) hasta que llegan los nuevos: así la grilla no
+    // vuelve a los esqueletos ni salta con cada letra.
+    setGroups((prev) =>
+      targets.map(({ key, title }) => ({ key, title, items: prev.find((g) => g.key === key)?.items ?? [], loading: true })),
+    )
+    targets.forEach(({ addon, catalog, key }) => {
       searchCatalog(addon, catalog, query, ctrl.signal)
+        .then((found) => found.map((m) => ({ ...m, type: m.type ?? catalog.type })))
+        .catch(() => [])
         .then((items) => {
-          next[i] = { ...next[i], items: items.map((m) => ({ ...m, type: m.type ?? catalog.type })), loading: false }
+          if (!ctrl.signal.aborted) setGroups((prev) => prev.map((g) => (g.key === key ? { ...g, items, loading: false } : g)))
         })
-        .catch(() => {
-          next[i] = { ...next[i], loading: false }
-        })
-        .finally(() => !ctrl.signal.aborted && setGroups([...next]))
     })
     return () => ctrl.abort()
   }, [query, addons])
@@ -256,7 +267,7 @@ export function Search() {
 
         {query.length >= MIN_QUERY && (people.loading || people.people.length > 0) && (
           <div className="search-people">
-            <PeopleRow title="Personas" people={people.people} loading={people.loading} />
+            <PeopleRow title="Personas" people={people.people} loading={people.loading} stale={people.stale} />
           </div>
         )}
 
@@ -265,9 +276,9 @@ export function Search() {
           .map((g) => (
             <section key={g.key} className="search-group">
               <h2>{g.title}</h2>
-              <div className="grid">
-                {g.loading
-                  ? Array.from({ length: 6 }, (_, i) => <PosterSkeleton key={i} />)
+              <div className={g.loading && g.items.length > 0 ? 'grid is-stale' : 'grid'} aria-busy={g.loading}>
+                {g.loading && g.items.length === 0
+                  ? Array.from({ length: SKELETONS }, (_, i) => <PosterSkeleton key={i} />)
                   : g.items.map((m) => <PosterCard key={m.id} meta={m} />)}
               </div>
             </section>

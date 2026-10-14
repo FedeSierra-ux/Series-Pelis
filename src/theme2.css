@@ -1298,3 +1298,20 @@ html[data-tv][data-theme='2'] .hero-cast img {
     background: transparent;
   }
 }
+
+/* Buscar: lo de la búsqueda anterior queda atenuado mientras llegan los resultados nuevos (no vuelve a esqueletos). */
+[data-theme='2'] .is-stale {
+  opacity: 0.45;
+  transition: opacity 0.2s;
+}
+/* Esqueleto de persona: mismo alto que la tarjeta real (foto + nombre + rol). */
+[data-theme='2'] .cast-skeleton .skeleton-line {
+  height: 12px;
+  margin: 2px 0;
+}
+[data-theme='2'] .cast-skeleton .skeleton-line:first-of-type {
+  margin-top: 3px;
+}
+[data-theme='2'] .cast-skeleton .skeleton-line + .skeleton-line {
+  width: 55%;
+}
