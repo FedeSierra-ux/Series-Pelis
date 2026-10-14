@@ -1,9 +1,10 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
-// IndexedDB no existe en Node: los stores guardan en memoria y listo.
+// IndexedDB no existe en Node: los stores guardan en memoria y listo. `idbSeed` simula lo guardado de antes.
+const idbSeed = vi.hoisted(() => new Map<string, unknown>())
 vi.mock('idb-keyval', () => ({
   createStore: () => ({}),
-  get: async () => undefined,
+  get: async (key: string) => idbSeed.get(key),
   set: async () => undefined,
   del: async () => undefined,
   clear: async () => undefined,
@@ -17,6 +18,7 @@ import {
   continueWatching,
   diaryStore,
   exportData,
+  hydrateStores,
   importData,
   installAddon,
   MANIFEST_TTL_MS,
@@ -234,5 +236,24 @@ describe('copia de seguridad (B25, B26)', () => {
     await importData({ app: 'series-pelis', progress: { tt1: entry(5900, 6000, { watched: true }), malo: 'x' } })
     expect(Object.keys(progressStore.get())).toEqual(['tt1'])
     expect(Object.values(diaryStore.get().entries).map((d) => d.videoId)).toEqual(['tt1'])
+  })
+})
+
+describe('subtítulos automáticos de fábrica (v0.12.2)', () => {
+  afterEach(() => {
+    idbSeed.clear()
+    vi.useRealTimers()
+  })
+
+  it('a quien ya tenía la app con los subtítulos apagados se le prenden una sola vez', async () => {
+    vi.useFakeTimers()
+    idbSeed.set('settings', { ...settingsStore.get(), autoSubtitles: false, autoSubsMigrated: undefined })
+    await hydrateStores()
+    expect(settingsStore.get()).toMatchObject({ autoSubtitles: true, autoSubsMigrated: true })
+
+    // Si después los apaga, la próxima vez que abre la app quedan apagados.
+    idbSeed.set('settings', { ...settingsStore.get(), autoSubtitles: false })
+    await hydrateStores()
+    expect(settingsStore.get().autoSubtitles).toBe(false)
   })
 })
