@@ -137,8 +137,30 @@ npm run preview    # sirve dist/ en http://localhost:4173
   géneros en chips, chips activos), `FilterPanel.tsx` (panel lateral / hoja en celular, `role="dialog"`, `#root`
   inert), `filters.css`; helpers `panelFilters`/`withoutFilter`/`clearAll` en `lib/discoverFilters.ts` (misma URL).
   Se sacaron las listas curadas "Mejor puntaje IMDb" (`isRemovedList` limpia filas viejas de Inicio).
-  Pendiente: el usuario elige 1 de 5 paletas (Función/Netflix, Órbita/Stremio, Medianoche/Disney+, Butaca, Marea;
-  preview en un artifact, tokens en el scratchpad de la sesión) y qué arreglar de las auditorías / qué mejoras hacer.
+- v0.14.0 hecha: mejoras de UX de `research/ux-funciones.md` (en el scratchpad de la sesión) y arreglos de las
+  auditorías. **Paleta: se queda la actual** (el usuario no quiso ninguna de las 5). Hechas U1–U8, U10, U12–U17,
+  U20, U23–U26, U29–U31, U34, U35, F5, F13 y F17.
+  - U11 (Películas/Series como página de filas) queda para más adelante.
+  - Descartadas: U9, U18, U19, U21, U22, U27, U28, U32, U33 y el resto de las F. En la ficha (U16) **sin
+    "Compartir"**. Los actores quedan donde estaban (U15 solo pasa a pestañas el resto).
+  - Ficha: `pages/detail/` (DetailTabs con `?tab=`, DetailActions + MoreMenu, EpisodesPanel, HeroTrailer +
+    `useYtPlayer`, TrailerPlayer). Las pelis abren en la pestaña "Fuentes". El tráiler de fondo usa el ajuste
+    `hoverTrailer` y solo se muestra con estado real de YouTube.
+  - Reproductor: `pages/player/` (VolumeControl, SeekPreview/`scrub`, NextCard con imagen, QuickSettings,
+    `videoFit` con la tecla Z, PostPlay "Más como esto", `useTouchGestures`, `fullscreen`).
+  - Inicio/TV: `home/useDirectPlay` (play directo), `FocusBillboard`, `layout-v14.css`, `rows.css`. U26 = hub "Vos"
+    (`pages/Me.tsx`, `me.css`) con historial, Tu año, Diario, Metas y Calendario.
+  - Buscar: `search/` (sugerencias, BestResult) y `lib/voice`, `lib/searchResults`.
+  - Interfaz: `lib/viewTransition`, y `uiScale` (zoom de CSS; no se aplica al reproductor).
+  - Datos: `lib/storeSync` (pestañas), `lib/abort`, `lib/watchStats`, `lib/addonKey`.
+  - **Filas apaisadas (U10)**: `catalogPrefs.shapes` (`rowShape`/`setRowShape`, solo se guarda lo que difiere de
+    fábrica; las de TMDB `tmdb:foryou`/`tmdb:because`/`tmdb:trending-week` son apaisadas de fábrica), `useRowShape`,
+    `PosterCard landscape`, `components/landscape-card.css`, `lib/titleArt.ts` (logo de metahub, `useNearOnce`).
+    Se cambia en Ajustes → Catálogos (botón "Apaisada").
+  - Filtros (U12): en PC el orden no va como chip (solo el botón "Ordenar"; `keepSort` en el panel); en el
+    celular sí, porque ahí el botón no está.
+  - **Typecheck con `npx tsc --noEmit`, nunca `tsc -b`**: emitía `.js` al lado de los `.tsx` y Vite/vitest los
+    tomaban primero. Ahora `tsconfig.json` tiene `noEmit`.
 - **Subtítulos online (25), pendiente**: SubDL como fuente principal (tiene el archivo de Subscene, fuerte en español
   latino) y OpenSubtitles de respaldo, con una Pages Function `/api/subs` igual que la de TMDB (secretos de
   Cloudflare, lista blanca, solo mismo sitio, caché para que cada episodio se baje una vez para todas las casas;

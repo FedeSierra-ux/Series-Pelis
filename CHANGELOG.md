@@ -1,5 +1,79 @@
 # Changelog
 
+## [0.14.0] - 2026-10-14
+
+### Agregado
+- **Inicio**:
+  - "Seguir viendo" y "Tus series: siguiente episodio" quedan en una sola fila.
+  - Fila nueva "Mi lista".
+  - Flechas ‹ › para pasar de página en las filas con el mouse.
+  - Desde Seguir viendo y desde la portada se puede **reproducir directo**, sin pasar por la ficha.
+- **Filas apaisadas con logo**: "Para vos", "Porque viste…" y "Tendencias de la semana" muestran la imagen de
+  fondo con el logo del título y "año · género". Cada fila se puede pasar a póster o a apaisada en Ajustes →
+  Catálogos (botón "Apaisada"); los catálogos de los addons y Mi lista siguen con póster.
+- **TV**:
+  - "Atrás" en escalera: primero vuelve al principio de la fila, después arriba de todo y después al menú.
+  - El fondo de Inicio cambia según el título enfocado.
+  - Las filas se desplazan con el foco anclado a la izquierda.
+- **Ficha**:
+  - Pestañas debajo de la portada (Episodios / Fuentes, Más como esto, Detalles); el reparto queda donde estaba.
+  - Un botón principal más íconos y un menú ⋯.
+  - Tráiler dentro de la app.
+  - Selector de temporada desplegable y "quedan X min" en el episodio empezado.
+- **Reproductor**:
+  - Volumen con el mouse.
+  - Adelantar con miniatura desde el control de la TV y el teclado.
+  - Tarjeta del siguiente episodio con imagen.
+  - Ajustes rápidos (⚙).
+  - Ajustar, llenar o estirar el video (tecla Z).
+  - "Más como esto" al terminar una película.
+  - En el celular: horizontal y pantalla completa al reproducir, doble toque para ±10 s, un toque muestra los
+    controles y bloqueo de pantalla.
+- **Buscar**:
+  - Sugerencias con el campo vacío.
+  - Pestañas por tipo y "Mejor resultado".
+  - Búsqueda por voz.
+- **"Vos"**: un lugar estilo "Mi Netflix" con tu historial, Tu año, Diario, Metas y Calendario.
+- **Interfaz**:
+  - Riel con la sección activa marcada.
+  - Transiciones suaves entre pantallas.
+  - Tamaño de la interfaz en Ajustes (zoom).
+
+### Cambiado
+- **Filtros de Películas y Series**:
+  - En PC el orden se ve solo en el botón "Ordenar", sin repetirlo como chip, y "Limpiar todo" no lo toca.
+  - En el celular los filtros activos van en una sola tira que se desliza de costado.
+  - Los chips de "Listas" tienen el mismo estilo que los de género.
+- Las pestañas abiertas se sincronizan solas (progreso, Mi lista, ajustes).
+- Importar una copia mezcla con lo que hay, sin pisar lo más nuevo ni perder addons caídos.
+- La caché de fichas tiene tope.
+- El siguiente episodio automático mantiene el idioma y la versión de la fuente.
+
+### Arreglado
+- **Ficha**:
+  - En una serie sin ver, "Ver ahora" iba a los especiales (T0) en vez de T1 · E1.
+  - Al recargar el reproductor se iba a Inicio; ahora vuelve a la ficha.
+  - Si falla la carga, ahora hay "Reintentar".
+  - Si YouTube no carga, la portada ya no queda tapada por un tráiler roto.
+  - Una fuente recordada ya no le gana a la recomendada de mejor calidad.
+- **Buscar**: ya no dice "No encontramos nada" cuando falló un addon, y sin conexión muestra un solo aviso y
+  reintenta al volver la red.
+- **Reproductor**:
+  - "Abrir en otro reproductor" en PC estaba bloqueado.
+  - El botón de pantalla completa quedaba afuera en el celular apaisado.
+  - El menú de subtítulos mostraba códigos internos.
+  - Los subtítulos tocaban los bordes en el celular.
+  - El panel de ajustes rápidos quedaba debajo de la barra de progreso.
+  - En la TV, "Más como esto" no tomaba el foco.
+- **Addons**: una URL con barra final duplicaba el manifest; ahora se valida lo que mandan los addons y la
+  importación desde Stremio distingue addons con el mismo id.
+- **TV en vivo**: ya no arranca en un canal que no se puede ver desde el navegador.
+- "Seguir viendo" y la ficha usan el mismo criterio de "empezado".
+- El Historial ya no dice "1 películas".
+- Los episodios que todavía no salieron no aparecen como "Siguiente".
+- Varios arreglos de accesibilidad (un solo título principal por página, etiquetas) y de compatibilidad con
+  navegadores de TV viejos.
+
 ## [0.13.0] - 2026-10-14
 
 ### Cambiado
