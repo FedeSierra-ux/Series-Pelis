@@ -2,7 +2,7 @@ import type { ReactNode, RefObject } from 'react'
 import { Picker } from '../../components/Picker'
 import { ImdbRating } from '../../components/Rating'
 import { remainingLabel } from '../../lib/remaining'
-import { setWatched, setWatchedMany, type WatchEntry } from '../../lib/store'
+import { RESUME_MIN_S, setWatched, setWatchedMany, type WatchEntry } from '../../lib/store'
 import type { Video } from '../../lib/types'
 import {
   episodeBadge,
@@ -102,7 +102,7 @@ export function EpisodesPanel(p: Props) {
             const selected = v.id === selectedVideoId
             // Sin spoilers: lo que no viste va difuminado hasta que lo elegís.
             const spoil = !selected && p.hideSpoiler(v)
-            const started = !!w && w.duration > 0 && !w.watched && w.position > 0
+            const started = !!w && w.duration > 0 && !w.watched && w.position > RESUME_MIN_S
             const left = started ? remainingLabel(w.position, w.duration) : ''
             const badge = episodeBadge(v, p.suggested, progress, p.started)
             const title = v.title ?? v.name ?? `Episodio ${episodeNumber(v)}`

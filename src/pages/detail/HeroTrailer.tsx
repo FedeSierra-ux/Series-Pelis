@@ -50,7 +50,8 @@ export function HeroTrailer({ ytId, title, suspended }: Props) {
 }
 
 function HeroTrailerFrame({ ytId, title, suspended }: Props) {
-  const yt = useYtPlayer(true)
+  // Sin "mostrar igual": sin un estado real de YouTube queda la imagen de la portada.
+  const yt = useYtPlayer(true, false)
   const box = useRef<HTMLDivElement>(null)
   // Pausado a pedido del usuario (el botón): no se reanuda solo al volver a la pantalla.
   const [userPaused, setUserPaused] = useState(false)

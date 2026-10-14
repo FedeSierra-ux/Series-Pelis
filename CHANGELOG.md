@@ -55,7 +55,6 @@
   - Al recargar el reproductor se iba a Inicio; ahora vuelve a la ficha.
   - Si falla la carga, ahora hay "Reintentar".
   - Si YouTube no carga, la portada ya no queda tapada por un tráiler roto.
-  - Una fuente recordada ya no le gana a la recomendada de mejor calidad.
 - **Buscar**: ya no dice "No encontramos nada" cuando falló un addon, y sin conexión muestra un solo aviso y
   reintenta al volver la red.
 - **Reproductor**:

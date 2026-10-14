@@ -16,7 +16,7 @@ import { remainingLabel } from '../lib/remaining'
 import { takeReturnVideo } from '../lib/returnVideo'
 import { hideTitleSynopsis } from '../lib/spoilers'
 import { findResumeStream } from '../lib/nextEpisode'
-import { lastSourceStore, progressStore, setWatched, settingsStore, toggleWatchlist, useStore, watchlistStore } from '../lib/store'
+import { lastSourceStore, progressStore, RESUME_MIN_S, setWatched, settingsStore, toggleWatchlist, useStore, watchlistStore } from '../lib/store'
 import {
   getDetails,
   imdbFromTmdb,
@@ -372,13 +372,14 @@ function DetailPage({ type, id, onRetry }: { type: string; id: string; onRetry: 
   }
 
   // ---------- Botón principal y menú ⋯ ----------
-  const movieStarted = !isSeries && !!movieProgress && !movieProgress.watched && movieProgress.position > 30
+  const movieStarted = !isSeries && !!movieProgress && !movieProgress.watched && movieProgress.position > RESUME_MIN_S
   let primary: PrimaryAction | undefined
   if (isSeries) {
     const ep = continueEp ?? firstEp
     if (ep) {
       const w = progress[ep.id]
-      const midway = !!w && !w.watched && w.position > 0
+      // Mismo umbral que Seguir viendo y el reproductor: con 18 s vistos no dice "quedan…" (arranca de cero).
+      const midway = !!w && !w.watched && w.position > RESUME_MIN_S
       const epTitle = ep.title ?? ep.name
       primary = {
         label: continueEp ? `${seriesProgress ? 'Continuar' : 'Reproducir'} ${shortEp(ep)}` : `Volver a ver ${shortEp(ep)}`,

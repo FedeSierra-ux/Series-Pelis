@@ -27,11 +27,13 @@ interface Props {
   due: boolean
   onOpen: (pick: PostPlayPick) => void
   onClose: () => void
+  /** Enfocar el primer título al aparecer (en la TV, como "Ver ahora" en la tarjeta del siguiente). */
+  autoFocus?: boolean
   /** Lo que va en la esquina si no hay recomendaciones (sin TMDB): el botón "Saltar créditos". */
   children?: ReactNode
 }
 
-export function PostPlay({ imdbId, due, onOpen, onClose, children }: Props) {
+export function PostPlay({ imdbId, due, onOpen, onClose, autoFocus, children }: Props) {
   const notInterested = useStore(notInterestedStore)
   const [details, setDetails] = useState<TmdbDetails>()
 
@@ -61,8 +63,15 @@ export function PostPlay({ imdbId, due, onOpen, onClose, children }: Props) {
         </button>
       </div>
       <div className="postplay-items">
-        {picks.map((p) => (
-          <button key={p.id} type="button" className="postplay-item" onClick={() => onOpen(p)} aria-label={`${p.name}${p.releaseInfo ? ` (${p.releaseInfo})` : ''}: ver la ficha`}>
+        {picks.map((p, i) => (
+          <button
+            key={p.id}
+            type="button"
+            className="postplay-item"
+            autoFocus={autoFocus && i === 0}
+            onClick={() => onOpen(p)}
+            aria-label={`${p.name}${p.releaseInfo ? ` (${p.releaseInfo})` : ''}: ver la ficha`}
+          >
             {p.still || p.poster ? <img src={p.still ?? p.poster} alt="" loading="lazy" decoding="async" /> : <span className="postplay-ph" aria-hidden />}
             <span className="postplay-name">{p.name}</span>
             {p.releaseInfo && <span className="postplay-year muted small">{p.releaseInfo}</span>}

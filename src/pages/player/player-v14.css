@@ -510,6 +510,30 @@ html[data-tv] .next-thumb {
   }
 }
 
+/* Celular vertical: la barra ocupa varios renglones (154 a 242 px según el ancho) y los menús con un
+   `bottom` fijo quedaban encima de la línea de tiempo. Se apoyan arriba de la barra medida
+   (`--controls-h`, lo pone el reproductor) sin tapar el título ni "Volver". */
+@media (max-width: 760px) and (min-height: 501px) {
+  .player-menu {
+    bottom: calc(var(--controls-h, 150px) + 4px);
+    max-height: calc(100% - var(--controls-h, 150px) - 120px);
+  }
+  .player-menu.player-menu-quick {
+    max-height: min(78vh, calc(100% - var(--controls-h, 150px) - 100px));
+  }
+}
+
+/* Celular vertical: los subtítulos no partían la línea (Chromium) y tocaban los bordes de la pantalla.
+   Van en reglas separadas: si el navegador no conoce el pseudoelemento de -webkit, descarta solo esa. */
+@media (max-width: 760px) {
+  .player-video::cue {
+    white-space: pre-wrap;
+  }
+  .player-video::-webkit-media-text-track-display {
+    padding-inline: max(16px, env(safe-area-inset-left), env(safe-area-inset-right));
+  }
+}
+
 /* Celular vertical: la tarjeta del siguiente va con la imagen arriba. */
 @media (max-width: 520px) {
   .next-card.next-card-v14 {

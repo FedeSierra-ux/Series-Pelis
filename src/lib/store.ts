@@ -438,6 +438,13 @@ export function removeHistory(videoIds: string[]) {
   })
 }
 
+/**
+ * Segundos vistos para que algo cuente como "empezado": Seguir viendo, "Continuar · quedan…" en la
+ * ficha y el reproductor (que retoma desde ahí) usan este mismo umbral. Menos es un arranque y se
+ * vuelve a empezar de cero.
+ */
+export const RESUME_MIN_S = 30
+
 /** Lo empezado y no terminado, uno por título (el episodio más reciente de cada serie). */
 export function continueWatching(all: Record<string, WatchEntry>): WatchEntry[] {
   const byMeta = new Map<string, WatchEntry>()
@@ -446,7 +453,7 @@ export function continueWatching(all: Record<string, WatchEntry>): WatchEntry[] 
     if (!cur || e.updatedAt > cur.updatedAt) byMeta.set(e.metaId, e)
   }
   return [...byMeta.values()]
-    .filter((e) => !e.hidden && !e.watched && e.duration > 0 && e.position > 30)
+    .filter((e) => !e.hidden && !e.watched && e.duration > 0 && e.position > RESUME_MIN_S)
     .sort((a, b) => b.updatedAt - a.updatedAt)
 }
 

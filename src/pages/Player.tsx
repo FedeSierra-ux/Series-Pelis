@@ -13,7 +13,7 @@ import { findNextStream, nextEpisodeSeason, prefetchNextStreams } from '../lib/n
 import { setReturnVideo } from '../lib/returnVideo'
 import { currentPlatform } from '../lib/platform'
 import { getSegments, imdbIdOf, type Segment, type Segments } from '../lib/segments'
-import { addonsStore, lastSourceStore, progressStore, rememberTracks, saveProgress, settingsStore, trackPrefsStore, useStore } from '../lib/store'
+import { addonsStore, lastSourceStore, progressStore, rememberTracks, RESUME_MIN_S, saveProgress, settingsStore, trackPrefsStore, useStore } from '../lib/store'
 import { capQuality, qualityCapFor, rankStreams } from '../lib/streamPicker'
 import { audioPrefs, guessAudioLang, lang3, langRank, subtitleClasses } from '../lib/subtitlePrefs'
 import { useTvMode } from '../lib/tv'
@@ -266,6 +266,20 @@ function PlayerView({ state, resume }: { state: PlayState; resume?: Resume }) {
     const bar = root?.querySelector<HTMLElement>('.player-controls')
     setControlsClear(controls && root && bar && root.clientHeight ? Math.ceil((bar.offsetHeight / root.clientHeight) * 100) : 0)
   }, [controls])
+  // Alto real de la barra (en el celular vertical va en varios renglones y cambia con el ancho): los menús
+  // se apoyan arriba de ella con `--controls-h` en vez de un `bottom` fijo que la tapaba.
+  useEffect(() => {
+    const root = rootRef.current
+    const bar = root?.querySelector<HTMLElement>('.player-controls')
+    if (!root || !bar || typeof ResizeObserver === 'undefined') return
+    const ro = new ResizeObserver(() => {
+      root.style.setProperty('--controls-h', `${bar.offsetHeight}px`)
+    })
+    ro.observe(bar)
+    return () => {
+      ro.disconnect()
+    }
+  }, [])
   const subs = useSubtitles({ videoRef, hlsRef, state, audioLang, flash, closeMenu: () => setMenu(null), controlsClear })
   const pip = usePictureInPicture(videoRef)
   // Pantalla prendida mientras se reproduce; se suelta en pausa y al salir.
@@ -489,7 +503,7 @@ function PlayerView({ state, resume }: { state: PlayState; resume?: Resume }) {
     const saved = progressStore.get()[videoId]
     // `resume.at === 0` es "sin posición" (se cambió de fuente antes de que cargara el video): vale lo guardado.
     if (resume && resume.at > 0) el.currentTime = Math.min(resume.at, Math.max(0, el.duration - 1))
-    else if (saved && !saved.watched && saved.position > 30 && saved.position < el.duration - 30) {
+    else if (saved && !saved.watched && saved.position > RESUME_MIN_S && saved.position < el.duration - 30) {
       el.currentTime = saved.position
       setResumedFrom(saved.position)
       setTimeout(() => setResumedFrom(undefined), 8000)
@@ -1051,8 +1065,11 @@ function PlayerView({ state, resume }: { state: PlayState; resume?: Resume }) {
             return
           }
           // Entre "¿Qué te pareció?" (arriba) y la esquina (siguiente, "Más como esto"): ↓ baja, ↑ sube.
+          // En "Más como esto" se entra por el primer título, no por "Cerrar".
           const rateEl = rootRef.current?.querySelector<HTMLElement>('.player-rate [role="slider"]')
-          const cornerBtn = rootRef.current?.querySelector<HTMLElement>('.player-corner button:not([disabled])')
+          const cornerBtn =
+            rootRef.current?.querySelector<HTMLElement>('.player-corner .postplay-item') ??
+            rootRef.current?.querySelector<HTMLElement>('.player-corner button:not([disabled])')
           if (floating?.classList.contains('player-rate') && e.key === 'ArrowDown' && cornerBtn) {
             cornerBtn.focus()
             return
@@ -1061,7 +1078,8 @@ function PlayerView({ state, resume }: { state: PlayState; resume?: Resume }) {
             rateEl.focus()
             return
           }
-          const corner = rootRef.current?.querySelector<HTMLElement>('.player-corner button, .player-rate [role="slider"]')
+          // Desde los controles, ↑ va primero a la esquina (justo arriba de la barra) y si no hay, al puntaje.
+          const corner = cornerBtn ?? rateEl
           if (e.key === 'ArrowUp' && focusedControl && corner) corner.focus()
           else if (floating || !focusedControl) playBtnRef.current?.focus()
           return
@@ -1385,7 +1403,7 @@ function PlayerView({ state, resume }: { state: PlayState; resume?: Resume }) {
               onCancel={() => setNextDismissed(true)}
             />
           ) : postPlayDue ? (
-            <PostPlay imdbId={meta.id} due={postPlayDue} onOpen={openPick} onClose={() => setPostPlayClosed(true)}>
+            <PostPlay imdbId={meta.id} due={postPlayDue} autoFocus={tvMode} onOpen={openPick} onClose={() => setPostPlayClosed(true)}>
               {skipButton}
             </PostPlay>
           ) : (

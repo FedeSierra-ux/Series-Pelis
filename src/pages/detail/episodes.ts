@@ -1,5 +1,5 @@
 import { episodeNumber, releaseDate } from '../../lib/upNext'
-import type { WatchEntry } from '../../lib/store'
+import { RESUME_MIN_S, type WatchEntry } from '../../lib/store'
 import type { Video } from '../../lib/types'
 
 // Lógica pura de la lista de episodios de la ficha (orden, estrenos, siguiente, fechas).
@@ -71,7 +71,7 @@ export function episodeBadge(
 ): 'Continuar' | 'Siguiente' | undefined {
   if (!started || !suggested || v.id !== suggested.id) return undefined
   const p = progress[v.id]
-  return p && !p.watched && p.position > 0 ? 'Continuar' : 'Siguiente'
+  return p && !p.watched && p.position > RESUME_MIN_S ? 'Continuar' : 'Siguiente'
 }
 
 /** Fecha de estreno para mostrar ("13 oct 2026"), respetando el día tal como lo manda Cinemeta. */

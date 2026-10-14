@@ -106,7 +106,12 @@ export function usePlayerScreen(phone: boolean) {
     const retry = () => {
       if (!disposed) enterFullscreen().then((ok) => ok && lockLandscape())
     }
-    if (phone) {
+    // Sin un toque reciente el navegador la rechaza y deja un aviso en la consola: directo al primer toque.
+    // Donde no se puede saber (navegadores sin `userActivation`) se prueba igual, como antes.
+    const activation = (navigator as Navigator & { userActivation?: { isActive: boolean } }).userActivation
+    if (phone && activation && !activation.isActive) {
+      window.addEventListener('pointerup', retry, { once: true })
+    } else if (phone) {
       enterFullscreen().then((ok) => {
         if (disposed) return
         if (ok) lockLandscape()

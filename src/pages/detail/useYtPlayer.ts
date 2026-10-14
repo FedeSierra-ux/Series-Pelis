@@ -4,7 +4,10 @@ import { YT_LISTEN, YT_ORIGIN, ytCommand, ytPlayerState } from '../../lib/hoverT
 // Control del iframe de YouTube por postMessage (la API de iframes sin cargar su script): lo usan
 // el tráiler a pantalla completa y el tráiler de fondo de la ficha.
 
-/** Si YouTube no manda su estado (la API de mensajes no responde), mostramos el video igual pasado esto. */
+/**
+ * Si YouTube no manda su estado (la API de mensajes no responde), el tráiler a pantalla completa se
+ * muestra igual pasado esto: lo abrió el usuario y es mejor que vea el video que "Cargando" para siempre.
+ */
 const STATE_FALLBACK_MS = 6000
 
 export interface YtPlayer {
@@ -23,8 +26,11 @@ export interface YtPlayer {
 /**
  * `startMuted`: cómo arranca el video (el de fondo, sin sonido). Si arranca con sonido y el navegador
  * lo frena (sin un clic previo no deja), se pasa a sin sonido para que al menos se vea.
+ * `stateFallback`: mostrarlo igual si YouTube no confirma que reproduce. El de fondo va sin esto: si
+ * YouTube no carga (sin red, filtrado o una TV donde el embed no anda) quedaría un iframe roto encima
+ * de la portada, así que se muestra recién con el estado 1 (reproduciendo), como la portada de Inicio.
  */
-export function useYtPlayer(startMuted: boolean): YtPlayer {
+export function useYtPlayer(startMuted: boolean, stateFallback = true): YtPlayer {
   const frame = useRef<HTMLIFrameElement>(null)
   const [ready, setReady] = useState(false)
   const [playing, setPlaying] = useState(false)
@@ -77,6 +83,7 @@ export function useYtPlayer(startMuted: boolean): YtPlayer {
   const onLoad = () => {
     // Pedimos los eventos del reproductor (listo, estado, silencio).
     frame.current?.contentWindow?.postMessage(YT_LISTEN, YT_ORIGIN)
+    if (!stateFallback) return
     timers.current.push(
       setTimeout(() => {
         if (!gotState.current) {
