@@ -145,6 +145,8 @@ interface SubdlSub {
 }
 
 class QuotaError extends Error {}
+/** Error de la fuente que se puede mostrar (nunca lleva la key). */
+class SourceError extends Error {}
 
 async function subdlSearch(key: string, imdb: string, series: boolean, s?: number, e?: number): Promise<OnlineSub[]> {
   const ask = async (extra: Record<string, string>) => {
@@ -159,9 +161,14 @@ async function subdlSearch(key: string, imdb: string, series: boolean, s?: numbe
     for (const [k, v] of Object.entries(extra)) url.searchParams.set(k, v)
     const res = await fetch(url, { headers: { Accept: 'application/json' } })
     if (res.status === 429) throw new QuotaError('subdl')
-    if (!res.ok) throw new Error(`SubDL ${res.status}`)
-    const body = (await res.json()) as { status?: boolean; subtitles?: SubdlSub[] }
-    return body.status && Array.isArray(body.subtitles) ? body.subtitles : []
+    const body = (await res.json().catch(() => ({}))) as { status?: boolean; error?: string; subtitles?: SubdlSub[] }
+    // SubDL avisa los errores con `status: false` (a veces con HTTP 200). No es "sin resultados": no se guarda vacío.
+    // Solo se muestra el código (`not_authorized`…), recortado y sin nada que no sea texto simple.
+    if (!res.ok || body.status === false) {
+      const code = String(body.error ?? 'error').replace(/[^\w.-]/g, '').slice(0, 40)
+      throw new SourceError(`SubDL ${res.status} ${code}`)
+    }
+    return Array.isArray(body.subtitles) ? body.subtitles : []
   }
   let found = series && s !== undefined && e !== undefined ? await ask({ season_number: String(s), episode_number: String(e) }) : await ask({})
   // Muchas series solo tienen el pack de la temporada.
@@ -170,7 +177,8 @@ async function subdlSearch(key: string, imdb: string, series: boolean, s?: numbe
   const out: OnlineSub[] = []
   const seen = new Set<string>()
   for (const x of found) {
-    const id = /\/subtitle\/(\d+-\d+)\.zip$/.exec(x.url ?? '')?.[1]
+    // La url viene como `/subtitle/123-456.zip?api_key=…`: solo se toma el id (la key nunca sale de acá).
+    const id = /\/subtitle\/(\d+-\d+)\.zip(?:[?#]|$)/.exec(x.url ?? '')?.[1]
     if (!id || seen.has(id)) continue
     // SubDL a veces mezcla otros idiomas aunque se pida ES.
     if (x.language && x.language.toUpperCase() !== 'ES') continue
@@ -194,7 +202,7 @@ async function subdlFile(key: string | undefined, id: string, s?: number, e?: nu
   // Primero sin key (cupo por IP de SubDL) y, si ese se terminó, con la key (50 por día en el plan gratis).
   // Cada archivo queda en la caché, así que casi no se repite.
   let res = await fetch(`${SUBDL_DL}${id}.zip`)
-  if ((res.status === 429 || res.status === 403) && key) res = await fetch(`${SUBDL_DL}${id}.zip`, { headers: { 'x-api-key': key } })
+  if ((res.status === 429 || res.status === 403) && key) res = await fetch(`${SUBDL_DL}${id}.zip?api_key=${encodeURIComponent(key)}`)
   if (res.status === 429) throw new QuotaError('subdl')
   if (!res.ok) return undefined
   const buf = await res.arrayBuffer()
@@ -309,16 +317,17 @@ function fileResponse(data: Uint8Array<ArrayBuffer>): Response {
 
 export const onRequestGet = async (ctx: Context): Promise<Response> => {
   const { request, env } = ctx
-  if (crossSite(request)) return json({ error: 'Solo desde la app' }, 403)
   const raw = ctx.params.path
   const parts = Array.isArray(raw) ? raw : raw ? [raw] : []
   const subdl = env.SUBDL_KEY?.trim()
   const os = env.OPENSUBTITLES_KEY?.trim()
 
+  // `_status` no gasta cupo ni muestra keys: responde también si se abre desde un link (chat, WhatsApp).
   if (parts.length === 1 && parts[0] === '_status') {
     const sources = [subdl ? 'subdl' : '', os ? 'opensubtitles' : ''].filter(Boolean)
     return json({ enabled: sources.length > 0, sources }, 200, { 'Cache-Control': 'public, max-age=300' })
   }
+  if (crossSite(request)) return json({ error: 'Solo desde la app' }, 403)
 
   if (!subdl && !os) return json({ error: 'Los subtítulos online no están configurados en el sitio' }, 503)
   // Las keys del sitio solo se usan desde la app.
@@ -334,29 +343,35 @@ export const onRequestGet = async (ctx: Context): Promise<Response> => {
     const series = type === 'series'
     const s = series ? intParam(url.searchParams, 's') : undefined
     const e = series ? intParam(url.searchParams, 'e') : undefined
-    const cacheKey = `${url.origin}/api/subs/__cache/search/${imdb}/${type}/${s ?? ''}/${e ?? ''}`
+    const cacheKey = `${url.origin}/api/subs/__cache/search/v2/${imdb}/${type}/${s ?? ''}/${e ?? ''}`
     const hit = await fromCache(cacheKey)
     if (hit) return hit
     if (searchLimiter.over(ip)) return json({ error: 'Demasiados pedidos' }, 429, { 'Retry-After': '60' })
 
     let subs: OnlineSub[] = []
     let failed = false
+    let detail: string | undefined
+    const note = (err: unknown) => {
+      failed = true
+      if (err instanceof SourceError) detail = err.message
+    }
     if (subdl) {
       try {
         subs = await subdlSearch(subdl, imdb, series, s, e)
-      } catch {
-        failed = true
+      } catch (err) {
+        note(err)
       }
     }
     if (subs.length === 0 && os) {
       try {
         subs = await osSearch(env, imdb, series, s, e)
         failed = false
-      } catch {
-        failed = true
+      } catch (err) {
+        note(err)
       }
     }
-    if (failed && subs.length === 0) return json({ error: 'Los servicios de subtítulos no responden' }, 502)
+    // Sin `Cache-Control`: un error no queda guardado como "no hay subtítulos".
+    if (failed && subs.length === 0) return json({ error: 'Los servicios de subtítulos no responden', detail }, 502)
     const res = json({ subs: sortSpanish(subs) }, 200, { 'Cache-Control': `public, max-age=${subs.length ? SEARCH_TTL : EMPTY_TTL}` })
     toCache(ctx, cacheKey, res)
     return res
