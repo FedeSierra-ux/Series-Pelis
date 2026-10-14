@@ -2,7 +2,6 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { backdropFor, ContinueCard, LandscapeCard } from '../components/ContinueCard'
 import { PosterCard } from '../components/PosterCard'
-import { ImdbRating } from '../components/Rating'
 import { Row } from '../components/Row'
 import { visibleRows } from '../lib/catalogPrefs'
 import { useCatalogRows } from '../lib/catalogRows'
@@ -16,6 +15,8 @@ import { useTmdbKey } from '../lib/tmdb'
 import { episodeLink, useUpNext } from '../lib/upNext'
 import type { CatalogDef, InstalledAddon, MetaPreview } from '../lib/types'
 import { ForYouRow } from './home/ForYouRow'
+import { HeroCarousel } from './home/HeroCarousel'
+import { HeroInfo } from './home/HeroInfo'
 import { useNearViewport } from './home/lazy'
 import { MergedCatalogRow } from './home/MergedCatalogRow'
 import { TmdbHero } from './home/TmdbHero'
@@ -49,53 +50,41 @@ function CatalogRow({ addon, catalog, eager, title }: { addon: InstalledAddon; c
   )
 }
 
+/** Portada sin TMDB: el catálogo del primer addon, con el mismo carrusel que la de TMDB. */
 function Hero({ addon, catalog }: { addon: InstalledAddon; catalog: CatalogDef }) {
   const { data, loading } = useCatalog(addon, catalog)
   const watchlist = useStore(watchlistStore)
   const [index, setIndex] = useState(0)
   const hidden = useHiddenIds()
-  const pool = withoutHidden(data ?? [], hidden).filter((m) => m.background || m.id.startsWith('tt')).slice(0, 8)
+  const pool = useMemo(
+    () => withoutHidden(data ?? [], hidden).filter((m) => m.background || m.id.startsWith('tt')).slice(0, 8),
+    [data, hidden],
+  )
+  const slides = useMemo(
+    () => pool.map((m) => ({ key: m.id, title: m.name, backdrop: m.id.startsWith('tt') ? `https://images.metahub.space/background/medium/${m.id}/img` : m.background })),
+    [pool],
+  )
 
-  useEffect(() => {
-    if (pool.length < 2) return
-    const t = setInterval(() => setIndex((i) => (i + 1) % pool.length), 9000)
-    return () => clearInterval(t)
-  }, [pool.length])
-
-  const meta: MetaPreview | undefined = pool[index]
+  const meta: MetaPreview | undefined = pool[index % (pool.length || 1)]
   // Catálogo vacío, sin fondos o sin conexión y sin nada guardado: sin portada (no un esqueleto para siempre).
-  if (!meta) return loading ? <div className="hero hero-skeleton skeleton" /> : null
-  const bg = meta.id.startsWith('tt') ? `https://images.metahub.space/background/medium/${meta.id}/img` : meta.background
-  const genres = (meta.genre ?? meta.genres ?? []).slice(0, 3).map(genreLabel).join(' · ')
+  if (!meta) return loading ? <div className="portada portada--compact portada-skeleton skeleton" /> : null
+  const genres = (meta.genre ?? meta.genres ?? []).slice(0, 2).map(genreLabel)
   const type = meta.type ?? catalog.type
+  const logo = meta.logo ?? (meta.id.startsWith('tt') ? `https://images.metahub.space/logo/medium/${meta.id}/img` : undefined)
   return (
-    <section className="hero" style={{ backgroundImage: bg ? `url(${bg})` : undefined }}>
-      <div className="hero-shade" />
-      <div className="hero-content">
-        <h1>{meta.name}</h1>
-        <div className="hero-meta">
-          <ImdbRating value={meta.imdbRating} />
-          {meta.releaseInfo && <span>{meta.releaseInfo}</span>}
-          {genres && <span>{genres}</span>}
-        </div>
-        {meta.description && <p className="hero-desc">{meta.description}</p>}
-        <div className="hero-actions">
-          <Link className="btn btn-primary" to={`/detail/${type}/${encodeURIComponent(meta.id)}`} data-autofocus>
-            ▶ Ver ahora
-          </Link>
-          <button className="btn" onClick={() => toggleWatchlist({ ...meta, type })}>
-            {watchlist[meta.id] ? '✓ En mi lista' : '+ Mi lista'}
-          </button>
-        </div>
-      </div>
-      {pool.length > 1 && (
-        <div className="hero-dots" aria-hidden>
-          {pool.map((m, i) => (
-            <span key={m.id} className={i === index ? 'active' : ''} />
-          ))}
-        </div>
-      )}
-    </section>
+    <HeroCarousel slides={slides} index={index % pool.length} onIndex={setIndex} variant="compact" label="Destacados">
+      <HeroInfo
+        key={meta.id}
+        title={meta.name}
+        logo={logo}
+        rating={meta.imdbRating}
+        facts={[meta.releaseInfo ?? '', type === 'movie' ? 'Película' : type === 'series' ? 'Serie' : ''].filter(Boolean)}
+        genres={genres}
+        overview={meta.description}
+        to={`/detail/${type}/${encodeURIComponent(meta.id)}`}
+        list={{ inList: !!watchlist[meta.id], onToggle: () => toggleWatchlist({ ...meta, type }) }}
+      />
+    </HeroCarousel>
   )
 }
 
@@ -200,7 +189,7 @@ export function Home() {
       {tmdbKey && heroItems.length > 0 ? (
         <TmdbHero items={heroItems} variant="compact" fallbackType="movie" eyebrow="Estrenos en cines" />
       ) : tmdbKey && nowPlaying.loading ? (
-        <div className="hero hero-compact hero-skeleton skeleton" />
+        <div className="portada portada--compact portada-skeleton skeleton" />
       ) : (
         heroSource && <Hero addon={heroSource.addon} catalog={heroSource.catalog} />
       )}

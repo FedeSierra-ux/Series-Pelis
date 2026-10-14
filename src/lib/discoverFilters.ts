@@ -99,15 +99,78 @@ export function needsTmdb(f: DiscoverFilters): boolean {
   return !!(f.lang || f.country || f.provider || f.keyword)
 }
 
-/** Cuántos filtros "avanzados" hay puestos (para el botón "Filtros (n)"). */
-export function activeCount(f: DiscoverFilters): number {
-  return [f.from || f.to, f.rating, f.lang, f.country, f.provider, f.sort !== 'popularity', f.keyword].filter(Boolean).length
+// ---------- Panel "Filtros" y chips de filtros activos ----------
+
+/**
+ * Lo que se muestra como chip removible y cuenta en el botón "Filtros": todo lo del panel y el
+ * orden si no es el de siempre (en el celular el orden va en el panel). El género no cuenta: está
+ * a la vista en la barra; el catálogo tampoco (es de dónde se mira, no un filtro).
+ */
+export type PanelFilter = 'years' | 'rating' | 'lang' | 'country' | 'provider' | 'keyword' | 'sort'
+
+/** Los filtros puestos, en el orden en que se muestran los chips. */
+export function panelFilters(f: DiscoverFilters): PanelFilter[] {
+  const out: PanelFilter[] = []
+  if (f.from || f.to) out.push('years')
+  if (f.rating) out.push('rating')
+  if (f.lang) out.push('lang')
+  if (f.country) out.push('country')
+  if (f.provider) out.push('provider')
+  if (f.keyword) out.push('keyword')
+  if (f.sort !== 'popularity') out.push('sort')
+  return out
 }
 
-/** Saca los filtros avanzados y deja catálogo y género. */
-export function clearAdvanced(f: DiscoverFilters): DiscoverFilters {
-  return { src: f.src, addon: f.addon, catalog: f.catalog, row: f.row, genre: f.genre, sort: 'popularity' }
+/** Saca un filtro del panel (el chip ✕). */
+export function withoutFilter(f: DiscoverFilters, key: PanelFilter): DiscoverFilters {
+  switch (key) {
+    case 'years':
+      return { ...f, from: undefined, to: undefined }
+    case 'keyword':
+      return { ...f, keyword: undefined, kw: undefined }
+    case 'sort':
+      return { ...f, sort: 'popularity' }
+    default:
+      return { ...f, [key]: undefined }
+  }
 }
+
+/** "Limpiar todo" de los chips: deja catálogo y género. */
+export function clearPanel(f: DiscoverFilters): DiscoverFilters {
+  return panelFilters(f).reduce(withoutFilter, f)
+}
+
+/** Sin ningún filtro (el "Limpiar filtros" de la grilla vacía): solo queda de dónde se mira. */
+export function clearAll(f: DiscoverFilters): DiscoverFilters {
+  return { src: f.src, addon: f.addon, catalog: f.catalog, row: f.row, sort: 'popularity' }
+}
+
+export interface Decade {
+  label: string
+  from?: number
+  to?: number
+}
+
+/** Atajos por década para el panel (rellenan "Desde" y "Hasta"). La más nueva primero. */
+export function decades(now = new Date().getFullYear(), oldest = 1970): Decade[] {
+  const out: Decade[] = []
+  for (let d = Math.floor(now / 10) * 10; d >= oldest; d -= 10) {
+    out.push({ label: d >= 2000 ? `Años ${d}` : `Años ${String(d).slice(2)}`, from: d, to: d + 9 })
+  }
+  out.push({ label: `Antes de ${oldest}`, to: oldest - 1 })
+  return out
+}
+
+/** Texto del chip de años: "Años 90", "1995–2004", "Desde 2010", "Hasta 1969". */
+export function yearsLabel(from?: number, to?: number, now = new Date().getFullYear()): string {
+  const decade = decades(now).find((d) => d.from === from && d.to === to)
+  if (decade) return decade.label
+  if (from && to) return from === to ? String(from) : `${from}–${to}`
+  return from ? `Desde ${from}` : `Hasta ${to}`
+}
+
+/** "7+", "7,5+" (coma decimal, como se escribe acá). */
+export const ratingLabel = (r: number) => `${String(r).replace('.', ',')}+`
 
 // ---------- Géneros ----------
 

@@ -8,6 +8,7 @@ import { useCatalogRows } from '../lib/catalogRows'
 import { getKeywordName, tmdbDiscover } from '../lib/discoverApi'
 import {
   applyClientFilters,
+  clearAll,
   filtersToParams,
   hasClientFilters,
   needsTmdb,
@@ -257,7 +258,7 @@ export function Discover() {
       {(emptyAfterFilters || noneAtAll) && (
         <div className="empty">
           No hay títulos con estos filtros.{' '}
-          <button type="button" className="btn btn-small" onClick={() => apply({ src: filters.src, addon: filters.addon, catalog: filters.catalog, row: filters.row, sort: 'popularity' })}>
+          <button type="button" className="btn btn-small" onClick={() => apply(clearAll(filters))}>
             Limpiar filtros
           </button>
         </div>

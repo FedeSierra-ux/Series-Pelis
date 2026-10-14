@@ -1,0 +1,660 @@
+/* ---------- Portada (v0.13): Inicio estilo Disney+ y Películas / Series estilo Netflix ---------- */
+
+/* Solo variables del tema (--bg, --bg-2, --text, --accent, --radius…): al cambiar la paleta, la
+   portada la sigue sola. Todo cuelga de .portada para ganarle a las reglas generales de theme2.css,
+   que se carga después. `--portada-ink` es el color sobre el que va el texto (el degradé se funde en él). */
+
+.portada {
+  --portada-ink: var(--bg);
+  --portada-logo-h: clamp(64px, 12vh, 130px);
+  --portada-soft: var(--text-soft, var(--text));
+  position: relative;
+  isolation: isolate;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  color: var(--text);
+  container-type: inline-size;
+}
+
+/* ---- Fondos: uno por título, se funden al cambiar ---- */
+
+.portada .portada-bgs {
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  overflow: hidden;
+  border-radius: inherit;
+  background: var(--bg-2);
+}
+.portada .portada-bg {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: center 22%;
+  opacity: 0;
+  transform: scale(1.04);
+  transition: opacity 0.9s ease, transform 8s ease-out;
+  user-select: none;
+}
+.portada .portada-bg.is-active {
+  opacity: 1;
+  transform: scale(1);
+}
+/* Viñeta desde la izquierda (ahí va el texto) y fundido abajo. */
+.portada .portada-shade {
+  position: absolute;
+  inset: 0;
+  background:
+    linear-gradient(90deg, var(--portada-ink) 0%, color-mix(in srgb, var(--portada-ink) 78%, transparent) 26%, color-mix(in srgb, var(--portada-ink) 20%, transparent) 58%, transparent 78%),
+    linear-gradient(0deg, color-mix(in srgb, var(--portada-ink) 70%, transparent) 0%, transparent 38%);
+}
+
+/* ---- Cuerpo: texto a la izquierda, indicadores a la derecha ---- */
+
+.portada .portada-main {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 24px;
+  /* El dedo puede seguir scrolleando la página; lo horizontal es para cambiar de título. */
+  touch-action: pan-y;
+}
+.portada .portada-slot {
+  flex: 1;
+  min-width: 0;
+}
+.portada .portada-content {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 14px;
+  max-width: min(620px, 100%);
+  animation: portada-in 0.6s ease both;
+}
+@keyframes portada-in {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+}
+
+.portada .portada-eyebrow {
+  padding: 4px 10px;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--accent) 22%, transparent);
+  color: var(--accent);
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+/* Lugar fijo para el título: el logo llega después que el texto y así no empuja nada. */
+.portada .portada-title {
+  display: flex;
+  align-items: flex-end;
+  min-height: var(--portada-logo-h);
+  margin: 0;
+  font-family: var(--font-display, inherit);
+  font-size: clamp(1.9rem, 4vw, 3.4rem);
+  font-weight: 800;
+  line-height: 1.05;
+  letter-spacing: -0.02em;
+  text-shadow: 0 2px 18px color-mix(in srgb, var(--bg) 70%, transparent);
+}
+.portada .portada-title > span {
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+.portada .portada-title.is-pending {
+  visibility: hidden;
+}
+.portada .portada-logo {
+  display: block;
+  max-width: min(480px, 90%);
+  max-height: var(--portada-logo-h);
+  width: auto;
+  height: auto;
+  object-fit: contain;
+  object-position: left bottom;
+  filter: drop-shadow(0 2px 14px color-mix(in srgb, var(--bg) 65%, transparent));
+}
+
+/* IMDb y datos en una línea, separados por puntos (sin chips). */
+.portada .portada-facts {
+  display: flex;
+  flex-wrap: wrap;
+  row-gap: 6px;
+  align-items: center;
+  margin: 0;
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: var(--portada-soft);
+}
+.portada .portada-facts > span + span::before {
+  content: '·';
+  margin: 0 9px;
+  color: var(--muted);
+}
+.portada .portada-facts > .imdb {
+  gap: 6px;
+  color: var(--text);
+  font-weight: 800;
+}
+.portada .portada-facts > .imdb b {
+  padding: 2px 6px;
+  border-radius: 5px;
+  font-size: 0.78em;
+}
+
+.portada .portada-genres {
+  margin: -6px 0 0;
+  color: var(--muted);
+  font-size: 0.9rem;
+  font-weight: 600;
+}
+
+.portada .portada-desc {
+  margin: 0;
+  max-width: 58ch;
+  color: var(--portada-soft);
+  font-size: 1.02rem;
+  line-height: 1.5;
+  text-shadow: 0 1px 3px color-mix(in srgb, var(--bg) 60%, transparent);
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+/* Reparto: fotos redondas con el nombre al lado. */
+.portada .portada-cast {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 18px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.portada .portada-cast li {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.88rem;
+  font-weight: 600;
+  color: var(--portada-soft);
+}
+.portada .portada-cast img {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  object-fit: cover;
+  background: var(--bg-2);
+}
+
+/* ---- Botones: "Ver ahora" claro y sólido (el protagonista), el resto translúcido ---- */
+
+.portada .portada-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-top: 4px;
+}
+.portada .portada-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 9px;
+  height: 50px;
+  padding: 0 24px;
+  border: 0;
+  border-radius: var(--radius-sm, 10px);
+  font: inherit;
+  font-size: 1rem;
+  font-weight: 700;
+  white-space: nowrap;
+  text-decoration: none;
+  cursor: pointer;
+  transition: background 0.15s, transform 0.15s, box-shadow 0.15s;
+}
+.portada .portada-btn svg {
+  flex: 0 0 auto;
+}
+.portada .portada-btn.is-play {
+  padding: 0 30px 0 24px;
+  background: var(--text);
+  color: var(--bg);
+}
+/* Hover solo con mouse: en el celular quedaba "pegado" después de tocar. */
+@media (hover: hover) {
+  .portada .portada-btn.is-play:hover {
+    background: color-mix(in srgb, var(--text) 82%, transparent);
+  }
+  .portada .portada-btn.is-ghost:hover {
+    background: color-mix(in srgb, var(--text) 32%, transparent);
+  }
+}
+.portada .portada-btn.is-ghost {
+  background: color-mix(in srgb, var(--text) 20%, transparent);
+  color: var(--text);
+  backdrop-filter: blur(12px);
+}
+.portada .portada-btn.is-ghost:focus-visible {
+  background: color-mix(in srgb, var(--text) 32%, transparent);
+}
+.portada .portada-btn.is-ghost.is-on svg {
+  color: var(--accent);
+}
+.portada .portada-btn[aria-disabled] {
+  opacity: 0.7;
+  cursor: progress;
+}
+.portada .portada-btn:active {
+  transform: scale(0.97);
+}
+.portada .portada-btn:focus-visible {
+  outline: var(--focus-ring, 3px solid var(--accent));
+  outline-offset: 3px;
+}
+
+/* ---- Indicadores con barra de progreso y pausa ---- */
+
+.portada .portada-controls {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex: 0 0 auto;
+}
+/* Pastilla translúcida detrás: se ven sobre fondos claros también. */
+.portada .portada-dots {
+  display: flex;
+  align-items: center;
+  padding: 0 6px;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--bg) 40%, transparent);
+  backdrop-filter: blur(8px);
+}
+/* 24 px de alto para tocarlos bien; lo que se ve es la rayita de adentro. */
+.portada .portada-dot {
+  display: grid;
+  place-items: center;
+  min-width: 22px;
+  height: 28px;
+  padding: 0 4px;
+  border: 0;
+  border-radius: 999px;
+  background: transparent;
+  cursor: pointer;
+}
+.portada .portada-dot-track {
+  position: relative;
+  display: block;
+  width: 8px;
+  height: 6px;
+  overflow: hidden;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--text) 38%, transparent);
+  transition: width 0.35s ease, background 0.2s;
+}
+.portada .portada-dot:hover .portada-dot-track {
+  background: color-mix(in srgb, var(--text) 65%, transparent);
+}
+.portada .portada-dot.is-active .portada-dot-track {
+  width: 34px;
+}
+.portada .portada-dot-track > i {
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  background: var(--text);
+  transform-origin: left center;
+  animation: portada-fill var(--portada-ms, 8000ms) linear both;
+}
+.portada.is-held .portada-dot-track > i {
+  animation-play-state: paused;
+}
+@keyframes portada-fill {
+  from {
+    transform: scaleX(0);
+  }
+  to {
+    transform: scaleX(1);
+  }
+}
+.portada .portada-dot:focus-visible {
+  outline: 3px solid var(--accent);
+  outline-offset: 0;
+}
+.portada .portada-pause {
+  display: grid;
+  place-items: center;
+  width: 32px;
+  height: 32px;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  background: color-mix(in srgb, var(--bg) 45%, transparent);
+  color: var(--text);
+  cursor: pointer;
+}
+.portada .portada-pause:hover {
+  background: color-mix(in srgb, var(--bg) 70%, transparent);
+}
+.portada .portada-pause:focus-visible {
+  outline: 3px solid var(--accent);
+  outline-offset: 2px;
+}
+
+/* ---- Flechas: aparecen al pasar el mouse (con teclado o control remoto están los indicadores) ---- */
+
+.portada .portada-arrow {
+  position: absolute;
+  top: 50%;
+  z-index: 1;
+  display: none;
+  place-items: center;
+  width: 48px;
+  height: 48px;
+  margin-top: -24px;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  background: color-mix(in srgb, var(--bg) 55%, transparent);
+  color: var(--text);
+  backdrop-filter: blur(10px);
+  cursor: pointer;
+  animation: portada-arrow-in 0.2s ease both;
+}
+.portada .portada-arrow:hover {
+  background: color-mix(in srgb, var(--bg) 80%, transparent);
+}
+.portada .portada-arrow.is-prev {
+  left: 14px;
+}
+.portada .portada-arrow.is-next {
+  right: 14px;
+}
+@media (hover: hover) and (pointer: fine) {
+  .portada:hover .portada-arrow {
+    display: grid;
+  }
+}
+@keyframes portada-arrow-in {
+  from {
+    opacity: 0;
+  }
+}
+
+/* ---------- Inicio: banner redondeado (Disney+) ---------- */
+
+.portada.portada--compact {
+  --portada-logo-h: clamp(56px, 10vh, 108px);
+  margin: 12px var(--gutter) 8px;
+  min-height: clamp(320px, 48vh, 480px);
+  border-radius: var(--radius-lg, var(--radius));
+  overflow: hidden;
+  box-shadow: 0 18px 40px -24px color-mix(in srgb, var(--bg) 90%, transparent);
+}
+.portada--compact .portada-main {
+  padding: clamp(24px, 3vw, 40px) clamp(24px, 3.2vw, 48px) clamp(22px, 3vw, 36px);
+}
+.portada--compact .portada-content {
+  gap: 12px;
+  max-width: min(560px, 62%);
+}
+.portada--compact .portada-desc {
+  -webkit-line-clamp: 2;
+  font-size: 0.98rem;
+}
+.portada--compact .portada-btn {
+  height: 46px;
+}
+
+/* ---------- Películas / Series: billboard de borde a borde (Netflix) ---------- */
+
+.portada.portada--full {
+  --portada-logo-h: clamp(80px, 17vh, 180px);
+  margin: -24px calc(-1 * var(--gutter)) 8px;
+}
+.portada--full .portada-bg {
+  object-position: center top;
+}
+/* Fundido abajo hasta el fondo de la página: el Top 10 queda montado encima sin corte. */
+.portada--full .portada-shade {
+  background:
+    linear-gradient(90deg, var(--portada-ink) 0%, color-mix(in srgb, var(--portada-ink) 80%, transparent) 24%, color-mix(in srgb, var(--portada-ink) 25%, transparent) 52%, transparent 72%),
+    linear-gradient(0deg, var(--bg) 0%, color-mix(in srgb, var(--bg) 85%, transparent) 14%, color-mix(in srgb, var(--bg) 30%, transparent) 34%, transparent 52%),
+    linear-gradient(180deg, color-mix(in srgb, var(--bg) 55%, transparent) 0%, transparent 18%);
+}
+/* La parte de arriba tiene su alto (la imagen respira sobre el logo) y el Top 10 se suma abajo. */
+.portada--full .portada-main {
+  min-height: clamp(440px, 66vh, 780px);
+  padding: 80px var(--gutter) 6px;
+}
+.portada--full:not(.has-row) .portada-main {
+  padding-bottom: 48px;
+}
+.portada--full .portada-content {
+  max-width: min(640px, 48vw);
+}
+.portada--full .portada-btn {
+  height: 54px;
+  font-size: 1.05rem;
+}
+.portada--full .portada-controls {
+  margin-bottom: 12px;
+}
+.portada .portada-row {
+  position: relative;
+}
+.portada .portada-row .row {
+  margin: 14px 0 0;
+}
+
+/* ---------- Esqueleto mientras llegan los títulos ---------- */
+
+.portada.portada--full.portada-skeleton {
+  min-height: clamp(560px, 90vh, 1000px);
+}
+.portada.portada-skeleton {
+  background: linear-gradient(90deg, var(--bg-2) 0%, var(--bg-3) 50%, var(--bg-2) 100%);
+  background-size: 200% 100%;
+}
+
+/* ---------- Celular: imagen arriba y el texto donde se funde ---------- */
+
+@media (max-width: 760px) {
+  .portada {
+    --portada-logo-h: 64px;
+  }
+  .portada .portada-bgs {
+    inset: 0 0 auto;
+    height: var(--portada-img-h);
+  }
+  .portada .portada-bg {
+    object-position: center top;
+  }
+  .portada .portada-shade,
+  .portada--full .portada-shade {
+    background: linear-gradient(180deg, transparent 0%, transparent 42%, color-mix(in srgb, var(--portada-ink) 70%, transparent) 76%, var(--portada-ink) 100%);
+  }
+  .portada .portada-main,
+  .portada--compact .portada-main,
+  .portada--full .portada-main {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 14px;
+    /* El texto arranca un poco antes del final de la imagen, ya sobre el fundido. */
+    padding: calc(var(--portada-img-h) - 74px) 16px 18px;
+  }
+  .portada .portada-content,
+  .portada--compact .portada-content,
+  .portada--full .portada-content {
+    max-width: none;
+    gap: 10px;
+  }
+  .portada .portada-title {
+    font-size: 1.75rem;
+  }
+  .portada .portada-logo {
+    max-width: 78%;
+  }
+  .portada .portada-facts {
+    font-size: 0.85rem;
+  }
+  .portada .portada-genres {
+    font-size: 0.82rem;
+  }
+  .portada .portada-desc {
+    font-size: 0.92rem;
+    -webkit-line-clamp: 3;
+  }
+  .portada .portada-cast li {
+    font-size: 0.8rem;
+  }
+  .portada .portada-cast img {
+    width: 26px;
+    height: 26px;
+  }
+  .portada .portada-cast li:nth-child(n + 3) {
+    display: none;
+  }
+  /* "Ver ahora" a lo ancho y los otros dos como íconos (el nombre sigue para los lectores de pantalla). */
+  .portada .portada-actions {
+    display: grid;
+    grid-template-columns: 1fr auto auto;
+    width: 100%;
+  }
+  .portada .portada-btn,
+  .portada--compact .portada-btn,
+  .portada--full .portada-btn {
+    height: 48px;
+    font-size: 0.98rem;
+  }
+  .portada .portada-btn.is-ghost {
+    width: 48px;
+    padding: 0;
+  }
+  .portada .portada-btn-label {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
+  }
+  .portada .portada-controls {
+    justify-content: center;
+    margin: 0;
+  }
+
+  /* Inicio: tarjeta redondeada; el texto va sobre el color de la tarjeta. */
+  .portada.portada--compact {
+    --portada-ink: var(--bg-2);
+    --portada-img-h: 64cqw;
+    margin: 6px 12px 6px;
+    min-height: 0;
+    background-color: var(--bg-2);
+  }
+  .portada--compact .portada-bgs {
+    background: var(--bg-3);
+  }
+
+  /* Películas / Series: la imagen ocupa más y se funde en el fondo de la página. */
+  .portada.portada--full {
+    --portada-img-h: min(96cqw, 56vh);
+  }
+  .portada--full .portada-main,
+  .portada--full:not(.has-row) .portada-main {
+    min-height: 0;
+    padding-bottom: 4px;
+  }
+  .portada.portada-skeleton,
+  .portada.portada--full.portada-skeleton {
+    min-height: 460px;
+  }
+}
+
+/* ---------- TV: botones grandes y foco bien visible ---------- */
+
+html[data-tv] .portada {
+  --portada-logo-h: clamp(90px, 16vh, 180px);
+}
+html[data-tv] .portada .portada-arrow {
+  display: none;
+}
+html[data-tv] .portada .portada-btn {
+  height: 62px;
+  padding: 0 34px;
+  font-size: 1.2rem;
+}
+html[data-tv] .portada .portada-btn.is-play {
+  padding: 0 40px 0 30px;
+}
+html[data-tv] .portada .portada-content,
+html[data-tv] .portada--compact .portada-content,
+html[data-tv] .portada--full .portada-content {
+  max-width: min(900px, 58%);
+}
+html[data-tv] .portada .portada-btn:focus-visible {
+  outline-offset: 4px;
+  box-shadow: 0 10px 30px -8px color-mix(in srgb, var(--bg) 80%, transparent);
+}
+html[data-tv] .portada .portada-facts {
+  font-size: 1.1rem;
+}
+html[data-tv] .portada .portada-genres {
+  font-size: 1.05rem;
+}
+html[data-tv] .portada .portada-desc {
+  font-size: 1.15rem;
+}
+html[data-tv] .portada .portada-cast li {
+  font-size: 1rem;
+}
+html[data-tv] .portada .portada-cast img {
+  width: 42px;
+  height: 42px;
+}
+html[data-tv] .portada .portada-dot {
+  min-width: 32px;
+  height: 40px;
+}
+html[data-tv] .portada .portada-dot-track {
+  width: 12px;
+  height: 8px;
+}
+html[data-tv] .portada .portada-dot.is-active .portada-dot-track {
+  width: 48px;
+}
+html[data-tv] .portada .portada-pause {
+  width: 44px;
+  height: 44px;
+}
+
+/* ---------- Reducir movimiento: sin avance automático ni fundidos ---------- */
+
+@media (prefers-reduced-motion: reduce) {
+  .portada .portada-bg,
+  .portada .portada-bg.is-active {
+    transform: none;
+    transition: none;
+  }
+  .portada .portada-content,
+  .portada .portada-arrow {
+    animation: none;
+  }
+  /* Sin barra que corra: el indicador activo queda lleno y la portada no pasa sola. */
+  .portada .portada-dot-track > i {
+    animation: none;
+    transform: none;
+  }
+  .portada .portada-dot-track {
+    transition: none;
+  }
+}

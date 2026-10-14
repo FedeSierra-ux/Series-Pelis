@@ -361,30 +361,11 @@ select option {
   align-items: flex-end;
   margin-bottom: 8px;
 }
-.hero-skeleton {
-  min-height: clamp(360px, 62vh, 640px);
-  /* Brillo de .skeleton: `.hero` pisa el tamaño del fondo con "cover" y el degradé no se movía. */
-  background-image: linear-gradient(90deg, var(--bg-2) 0%, var(--bg-3) 50%, var(--bg-2) 100%);
-  background-size: 200% 100%;
-}
 .hero-shade {
   position: absolute;
   inset: 0;
   background: linear-gradient(to top, var(--bg) 2%, rgba(11, 11, 16, 0.55) 45%, rgba(11, 11, 16, 0.15)),
     linear-gradient(to right, rgba(11, 11, 16, 0.85), transparent 65%);
-}
-.hero-content {
-  position: relative;
-  padding: 0 var(--gutter) 40px;
-  max-width: 720px;
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-}
-.hero-content h1 {
-  font-size: clamp(1.8rem, 4.5vw, 3.4rem);
-  font-weight: 900;
-  letter-spacing: -0.02em;
 }
 .hero-meta {
   display: flex;
@@ -394,38 +375,11 @@ select option {
   color: #ddd;
   font-weight: 500;
 }
-.hero-desc {
-  margin: 0;
-  color: #d4d4dc;
-  line-height: 1.5;
-  display: -webkit-box;
-  -webkit-line-clamp: 3;
-  -webkit-box-orient: vertical;
-  overflow: hidden;
-}
 .hero-actions {
   display: flex;
   flex-wrap: wrap;
   gap: 10px;
   margin-top: 6px;
-}
-.hero-dots {
-  position: absolute;
-  right: var(--gutter);
-  bottom: 44px;
-  display: flex;
-  gap: 6px;
-}
-.hero-dots span {
-  width: 8px;
-  height: 8px;
-  border-radius: 50%;
-  background: rgba(255, 255, 255, 0.35);
-}
-.hero-dots span.active {
-  background: #fff;
-  width: 22px;
-  border-radius: 4px;
 }
 
 /* ---------- Filas y pósters ---------- */
@@ -1255,9 +1209,6 @@ select option {
     font-size: 0.62rem;
     border-radius: 10px;
   }
-  .hero-dots {
-    display: none;
-  }
   .nav-icon {
     font-size: 1.15rem;
   }
@@ -1347,7 +1298,6 @@ html[data-tv] .chip.small {
 }
 /* Pestañas y chips de filtros: se eligen con el control remoto, tienen que verse y enfocarse bien. */
 html[data-tv] .tab,
-html[data-tv] .chip-removable,
 html[data-tv] .ltv-filter,
 html[data-tv] .goal-presets .tab {
   font-size: 1rem;
@@ -1369,9 +1319,6 @@ html[data-tv] .episode-desc {
 }
 html[data-tv] .episode-thumb {
   flex-basis: clamp(140px, 12vw, 220px);
-}
-html[data-tv] .hero-desc {
-  font-size: 1.05rem;
 }
 html[data-tv] .episode-check {
   width: 44px;
@@ -1417,8 +1364,6 @@ html[data-tv] .player-error-sources button {
     height: 44px;
   }
   .ltv-filter,
-  .chip-removable,
-  .filters-toggle,
   .btn-small,
   .tab {
     min-height: 44px;
@@ -1443,23 +1388,6 @@ html[data-tv] .player-error-sources button {
     padding: 4px 6px 4px 4px;
     margin: -4px 0 -4px -4px;
     scroll-padding: 12px 0;
-  }
-}
-
-/* ---------- Portada en celular: "Ver ahora" y "+ Mi lista" del mismo ancho ---------- */
-
-@media (max-width: 480px) {
-  .hero .hero-actions {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 10px;
-  }
-  .hero .hero-actions .btn {
-    width: 100%;
-    min-width: 0;
-    justify-content: center;
-    padding-left: 12px;
-    padding-right: 12px;
   }
 }
 
@@ -2385,49 +2313,6 @@ html[data-tv] .player-error-sources button {
 }
 
 /* ---------- v0.3 inicio TMDB ---------- */
-
-.hero-tmdb {
-  overflow: hidden;
-}
-/* Tráiler silenciado detrás del degradé: nunca recibe foco ni clicks. */
-.hero-trailer {
-  position: absolute;
-  inset: 0;
-  overflow: hidden;
-  pointer-events: none;
-  opacity: 0;
-  transition: opacity 1.2s ease 0.6s;
-  container-type: size;
-}
-.hero-trailer.ready {
-  opacity: 1;
-}
-.hero-trailer iframe {
-  position: absolute;
-  top: 50%;
-  left: 50%;
-  width: 100%;
-  height: 100%;
-  /* "cover" para un 16:9; agrandado un poco para esconder la barra de título de YouTube. */
-  width: max(100cqw, 177.78cqh);
-  height: max(100cqh, 56.25cqw);
-  transform: translate(-50%, -50%) scale(1.2);
-  border: 0;
-  pointer-events: none;
-}
-.hero-logo-title {
-  line-height: 0;
-}
-.hero-logo {
-  display: block;
-  max-width: min(440px, 80%);
-  max-height: clamp(64px, 14vh, 150px);
-  width: auto;
-  height: auto;
-  object-fit: contain;
-  object-position: left bottom;
-  filter: drop-shadow(0 2px 12px rgba(0, 0, 0, 0.6));
-}
 
 /* Top 10: número grande al costado del póster, estilo Netflix. */
 .top10-item {
@@ -4081,30 +3966,7 @@ html[data-tv] .player-error-sources button {
   margin-left: auto;
 }
 
-/* Descubrir: filtros */
-.discover-filters .filters {
-  margin-bottom: 12px;
-}
-.filters-panel {
-  padding: 12px;
-  border-radius: var(--radius);
-  background: var(--bg-2);
-  border: 1px solid var(--line);
-}
-.filters-panel .picker-btn {
-  background: var(--bg);
-}
-.filters-toggle.is-set {
-  border-color: var(--accent);
-}
-.chip-removable {
-  border: 1px solid var(--accent);
-  color: var(--text);
-  font: inherit;
-  font-size: 0.85rem;
-  padding: 6px 12px;
-  cursor: pointer;
-}
+/* Descubrir (los filtros están en src/pages/discover/filters.css) */
 .discover-kw {
   color: var(--muted);
   font-weight: 600;
@@ -4313,11 +4175,6 @@ button.chip-link {
   }
   .picker-title {
     display: block;
-  }
-  .filters-panel .picker-btn,
-  .discover-filters .picker-btn {
-    flex: 1 1 calc(50% - 8px);
-    min-width: 0;
   }
   .together-head .cast-card {
     flex-basis: 88px;

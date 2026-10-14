@@ -580,8 +580,6 @@ export interface Settings {
   externalPlayer: ExternalPlayerId
   /** API key (v3) o Read Access Token (v4) de TMDB. Vacío = solo Cinemeta. */
   tmdbKey: string
-  /** Reproducir el tráiler sin sonido en la portada de Inicio (necesita TMDB). */
-  heroTrailer: boolean
   /** Modo sin spoilers: difumina miniaturas y oculta sinopsis de los episodios que no viste. */
   spoilerFree: boolean
   /** Con el modo sin spoilers, ocultar también la sinopsis de los títulos que no empezaste. */
@@ -633,7 +631,6 @@ export const settingsStore = new PersistedStore<Settings>('settings', {
   },
   externalPlayer: 'system',
   tmdbKey: '',
-  heroTrailer: true,
   spoilerFree: false,
   spoilerUnstarted: false,
   askRatingAtEnd: true,

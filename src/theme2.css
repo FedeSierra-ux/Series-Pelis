@@ -307,9 +307,10 @@
   display: none;
 }
 
-/* ---------- Portada (hero) a todo el ancho, debajo del buscador (v0.7) ---------- */
+/* ---------- Esqueleto de la ficha (.hero) y piezas que comparte con la ficha ---------- */
 
-/* Redondeada y con margen, igual que la portada de la ficha (.detail-hero). */
+/* La portada de Inicio, Películas y Series está en src/pages/home/hero.css (.portada). Lo de acá
+   queda para el esqueleto de la ficha (.hero) y para .hero-shade / .hero-meta / .hero-actions. */
 [data-theme='2'] .hero {
   margin: 12px var(--gutter) 8px;
   min-height: clamp(380px, 66vh, 660px);
@@ -323,43 +324,8 @@
   background: linear-gradient(to top, var(--bg) 2%, rgba(11, 11, 16, 0.55) 45%, rgba(11, 11, 16, 0.15)),
     linear-gradient(to right, rgba(11, 11, 16, 0.88), transparent 65%);
 }
-[data-theme='2'] .hero-content {
-  padding: 0 44px 44px;
-  max-width: 640px;
-  gap: 14px;
-}
-[data-theme='2'] .hero-content h1 {
-  font-size: clamp(1.8rem, 3.6vw, 3rem);
-  font-weight: 800;
-}
-[data-theme='2'] .hero-logo {
-  max-width: min(380px, 80%);
-  max-height: clamp(56px, 11vh, 110px);
-}
-[data-theme='2'] .hero-desc {
-  color: var(--text-soft);
-  font-size: 1rem;
-}
 [data-theme='2'] .hero-actions {
   gap: 10px;
-}
-[data-theme='2'] .hero .hero-actions .btn {
-  height: 50px;
-  padding: 0 26px;
-  font-size: 1rem;
-}
-[data-theme='2'] .hero-dots {
-  right: 28px;
-  bottom: 24px;
-}
-[data-theme='2'] .hero-dots span {
-  width: 6px;
-  height: 6px;
-  border-radius: 3px;
-}
-[data-theme='2'] .hero-dots span.active {
-  width: 22px;
-  border-radius: 3px;
 }
 
 /* Chips de la portada y la ficha: IMDb amarillo, el resto con borde. */
@@ -965,34 +931,14 @@
     bottom: calc(86px + env(safe-area-inset-bottom));
   }
 
-  /* Portada: imagen arriba a todo el ancho y el texto abajo. */
+  /* Esqueleto de la ficha y sombra de su portada (imagen arriba, texto abajo). */
   [data-theme='2'] .hero {
     margin: 0 12px 6px;
     border-radius: 22px;
     min-height: 470px;
-    align-items: flex-end;
-    background-size: max(100%, 534px) auto;
-    background-position: center top;
-    background-repeat: no-repeat;
   }
   [data-theme='2'] .hero-shade {
     background: linear-gradient(to bottom, rgba(11, 11, 16, 0) 110px, var(--bg) 290px);
-  }
-  /* El esqueleto conserva el brillo: el tamaño de fondo de arriba es para la imagen. */
-  [data-theme='2'] .hero-skeleton {
-    background-size: 200% 100%;
-  }
-  [data-theme='2'] .hero-content {
-    padding: 0 16px 20px;
-    gap: 12px;
-    width: 100%;
-  }
-  [data-theme='2'] .hero-content h1 {
-    font-size: 1.7rem;
-  }
-  [data-theme='2'] .hero-logo {
-    max-height: 56px;
-    max-width: 75%;
   }
   [data-theme='2'] .hero-meta {
     font-size: 0.78rem;
@@ -1000,21 +946,6 @@
   }
   [data-theme='2'] .hero-meta > span {
     padding: 3px 8px;
-  }
-  [data-theme='2'] .hero-desc {
-    font-size: 0.9rem;
-  }
-  [data-theme='2'] .hero .hero-actions {
-    flex-wrap: nowrap;
-  }
-  [data-theme='2'] .hero .hero-actions .btn {
-    height: 48px;
-    padding: 0 18px;
-    font-size: 0.95rem;
-  }
-  [data-theme='2'] .hero .hero-actions .btn-primary {
-    flex: 1;
-    justify-content: center;
   }
 
   [data-theme='2'] .poster-img {
@@ -1082,11 +1013,6 @@
     font-size: 1rem;
   }
 }
-html[data-tv][data-theme='2'] .hero .hero-actions .btn {
-  height: 58px;
-  padding: 0 30px;
-  font-size: 1.1rem;
-}
 html[data-tv][data-theme='2'] .hero-meta {
   font-size: 1rem;
 }
@@ -1095,174 +1021,6 @@ html[data-tv][data-theme='2'] .row-more {
 }
 html[data-tv][data-theme='2'] .btn-small {
   padding: 10px 18px;
-}
-
-/* ---------- Portadas v0.10: compacta (Inicio, estrenos) y completa (Películas) ---------- */
-
-[data-theme='2'] .hero-eyebrow {
-  align-self: flex-start;
-  padding: 4px 10px;
-  border-radius: 999px;
-  background: color-mix(in srgb, var(--accent) 18%, transparent);
-  color: var(--accent);
-  font-size: 0.75rem;
-  font-weight: 700;
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
-}
-
-/* Inicio: no ocupa toda la parte de arriba. */
-[data-theme='2'] .hero.hero-compact {
-  min-height: clamp(280px, 44vh, 430px);
-}
-[data-theme='2'] .hero-compact .hero-content {
-  padding: 0 36px 30px;
-  gap: 10px;
-}
-[data-theme='2'] .hero-compact .hero-logo {
-  max-height: clamp(44px, 8vh, 84px);
-}
-[data-theme='2'] .hero-compact .hero-desc {
-  -webkit-line-clamp: 2;
-  font-size: 0.95rem;
-}
-[data-theme='2'] .hero-compact .hero-actions .btn {
-  height: 46px;
-  padding: 0 22px;
-}
-
-/* Películas: de borde a borde, con el fondo de la peli entero y el Top 10 encima del borde de abajo. */
-[data-theme='2'] .hero.hero-full {
-  margin: -24px calc(-1 * var(--gutter)) 8px;
-  min-height: clamp(520px, 88vh, 980px);
-  border-radius: 0;
-  flex-direction: column;
-  justify-content: flex-end;
-  align-items: stretch;
-  background-position: center top;
-}
-[data-theme='2'] .hero-full .hero-shade {
-  background: linear-gradient(to top, var(--bg) 4%, rgba(11, 11, 16, 0.6) 34%, rgba(11, 11, 16, 0.05) 62%),
-    linear-gradient(to right, rgba(11, 11, 16, 0.9), rgba(11, 11, 16, 0.35) 45%, transparent 70%);
-}
-[data-theme='2'] .hero-full .hero-content {
-  padding: 0 var(--gutter) 8px;
-  max-width: 680px;
-}
-[data-theme='2'] .hero-full .hero-logo {
-  max-width: min(460px, 80%);
-  max-height: clamp(70px, 15vh, 160px);
-}
-[data-theme='2'] .hero-with-row .hero-dots {
-  position: relative;
-  right: auto;
-  bottom: auto;
-  align-self: flex-end;
-  margin: -14px var(--gutter) 0 0;
-}
-[data-theme='2'] .hero-row {
-  position: relative;
-}
-[data-theme='2'] .hero-row .row {
-  margin: 10px 0 0;
-}
-
-/* Reparto: fotos redondas con el nombre al lado. */
-[data-theme='2'] .hero-cast {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px 18px;
-  margin: 0;
-  padding: 0;
-  list-style: none;
-}
-[data-theme='2'] .hero-cast li {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  font-size: 0.88rem;
-  font-weight: 600;
-}
-[data-theme='2'] .hero-cast img {
-  width: 34px;
-  height: 34px;
-  border-radius: 50%;
-  object-fit: cover;
-  background: var(--surface-1);
-  border: 1px solid var(--outline);
-}
-
-/* Pausa del tráiler sin ícono: toda la franja de arriba. Con el control remoto se ve el aviso al enfocarla. */
-[data-theme='2'] .hero-pause {
-  position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  height: 40%;
-  padding: 0;
-  border: 0;
-  background: transparent;
-  cursor: pointer;
-  border-radius: inherit;
-}
-[data-theme='2'] .hero-pause:focus-visible {
-  outline: none;
-  box-shadow: inset 0 0 0 3px var(--accent);
-}
-[data-theme='2'] .hero-pause-hint {
-  position: absolute;
-  top: 16px;
-  right: var(--gutter);
-  padding: 6px 12px;
-  border-radius: 999px;
-  background: rgba(11, 11, 16, 0.72);
-  color: var(--text);
-  font-size: 0.85rem;
-  font-weight: 600;
-  opacity: 0;
-  transition: opacity 0.2s;
-}
-[data-theme='2'] .hero-pause:focus-visible .hero-pause-hint {
-  opacity: 1;
-}
-
-@media (max-width: 760px) {
-  [data-theme='2'] .hero.hero-compact {
-    min-height: 400px;
-  }
-  [data-theme='2'] .hero-compact .hero-content {
-    padding: 0 16px 18px;
-  }
-  /* En el celu la imagen va arriba y el texto empieza donde se funde, no encima de lo más claro. */
-  [data-theme='2'] .hero.hero-full {
-    margin: -24px -16px 8px;
-    min-height: 600px;
-    background-size: max(100%, 600px) auto;
-  }
-  [data-theme='2'] .hero-full .hero-shade {
-    background: linear-gradient(to bottom, rgba(11, 11, 16, 0) 150px, var(--bg) 330px);
-  }
-  [data-theme='2'] .hero-full .hero-content {
-    padding: 200px 16px 6px;
-  }
-  [data-theme='2'] .hero-cast {
-    gap: 6px 12px;
-  }
-  [data-theme='2'] .hero-cast li {
-    font-size: 0.8rem;
-  }
-  [data-theme='2'] .hero-cast img {
-    width: 28px;
-    height: 28px;
-  }
-}
-
-html[data-tv][data-theme='2'] .hero-cast li {
-  font-size: 1rem;
-}
-html[data-tv][data-theme='2'] .hero-cast img {
-  width: 42px;
-  height: 42px;
 }
 
 /* ---------- v0.10 pantallas ---------- */

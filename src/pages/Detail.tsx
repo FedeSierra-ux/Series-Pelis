@@ -87,7 +87,8 @@ function TmdbResolver({ type, tmdbType, tmdbId }: { type: string; tmdbType: Tmdb
     imdbFromTmdb(tmdbId, tmdbType)
       .then(async (tt) => {
         if (!alive) return
-        if (tt) return navigate(`/detail/${type}/${tt}${location.search}`, { replace: true })
+        // Con el estado: "Más info" de la portada llega con `noAuto` y no tiene que perderse acá.
+        if (tt) return navigate(`/detail/${type}/${tt}${location.search}`, { replace: true, state: location.state })
         const details = await getDetails(tmdbType, tmdbId)
         if (alive) setState({ details })
       })
