@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { Link, useLocation } from 'react-router-dom'
 import { Advanced } from '../components/Advanced'
 import { AddonUrlForm } from '../components/AddonUrlForm'
@@ -23,6 +23,9 @@ import { TasteSettings } from './settings/TasteSettings'
 import { StremioImport } from './settings/StremioImport'
 import { TmdbSettings } from './settings/TmdbSettings'
 import { TvSettings } from './settings/TvSettings'
+import { ShortcutsSettings } from './settings/ShortcutsSettings'
+import { DiagnosticsSettings } from './settings/DiagnosticsSettings'
+import { useReportsEnabled } from '../lib/diagnostics'
 import { SettingsBlock, SettingsIndex, WIDE_QUERY, goToSection, useActiveSection, useMediaQuery, type SettingsSectionDef } from './settings/SettingsLayout'
 import { errorText } from '../lib/errors'
 import './settings/settings-layout.css'
@@ -237,7 +240,7 @@ function DataSection() {
  * (PC/TV), los plegables (celular) y las anclas `#id`. Para agregar una sección nueva alcanza con
  * una línea acá; el `id` es el ancla y `title` lo que dice el índice.
  */
-const SECTIONS: SettingsSectionDef[] = [
+const ALL_SECTIONS: SettingsSectionDef[] = [
   { id: 'addons', title: 'Addons de Stremio', element: <AddonsSection /> },
   { id: 'stremio', title: 'Importar desde Stremio', element: <StremioImport /> },
   { id: 'tmdb', title: 'TMDB', element: <TmdbSettings /> },
@@ -248,17 +251,20 @@ const SECTIONS: SettingsSectionDef[] = [
   { id: 'sources', title: 'Elección de fuente', element: <SourceSettings /> },
   { id: 'taste', title: 'Gustos y spoilers', element: <TasteSettings /> },
   { id: 'tv', title: 'Pantalla y control remoto', element: <TvSettings /> },
-  // TODO v0.10: ShortcutsSettings — { id: 'shortcuts', title: 'Atajos y ayuda', element: <ShortcutsSettings /> },
+  { id: 'shortcuts', title: 'Teclado y ayuda', element: <ShortcutsSettings /> },
   { id: 'data', title: 'Tus datos', element: <DataSection /> },
-  // TODO v0.10: DiagnosticsSettings — { id: 'diagnostics', title: 'Diagnóstico', element: <DiagnosticsSettings /> },
+  { id: 'diagnostics', title: 'Diagnóstico', element: <DiagnosticsSettings /> },
 ]
-const SECTION_IDS = SECTIONS.map((s) => s.id)
 
 export function Settings() {
   useTitle('Ajustes')
   const { showAdvanced } = useStore(settingsStore)
   const { hash } = useLocation()
   const wide = useMediaQuery(WIDE_QUERY)
+  // "Diagnóstico" solo existe si el sitio publicado acepta informes (si no, la sección no dibuja nada).
+  const reports = useReportsEnabled()
+  const SECTIONS = useMemo(() => ALL_SECTIONS.filter((s) => s.id !== 'diagnostics' || reports), [reports])
+  const SECTION_IDS = useMemo(() => SECTIONS.map((s) => s.id), [SECTIONS])
   const [active, setActive] = useActiveSection(SECTION_IDS, wide)
 
   // `/settings#tmdb` abre y muestra esa sección (sirve para enlazar desde otras pantallas).
