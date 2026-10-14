@@ -1,0 +1,41 @@
+/* Botón "Enviar informe" (ReportButton.tsx): usa las variables del tema para heredar el Tema 2. */
+.report {
+  display: inline-flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 12px;
+}
+.report-form input {
+  flex: 1 1 220px;
+  min-width: 0;
+  padding: 8px 12px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: var(--bg-2);
+  color: var(--text);
+  font: inherit;
+}
+.report-form input:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 1px;
+}
+.report-status {
+  color: var(--muted);
+  font-size: 0.9rem;
+}
+.report-ok {
+  padding: 6px 12px;
+  border-radius: var(--radius);
+  background: var(--accent);
+  color: var(--on-accent, #fff);
+  font-weight: 600;
+}
+
+/* Aviso "el addon no responde" de una fila (Row.tsx) con el botón al lado del texto. */
+.row-notice.has-report {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px 16px;
+}

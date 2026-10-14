@@ -608,6 +608,8 @@ export interface Settings {
   hintsSeen: boolean
   /** Apariencia: '1' clásico (por defecto) o '2' nuevo (riel lateral, tonos violáceos, Sora/DM Sans). */
   theme: '1' | '2'
+  /** v0.10: mandar solos los errores de la app al sitio (sin URLs de addons ni keys; ver lib/diagnostics.ts). */
+  sendReports: boolean
 }
 
 export const settingsStore = new PersistedStore<Settings>('settings', {
@@ -645,6 +647,7 @@ export const settingsStore = new PersistedStore<Settings>('settings', {
   onboardingDone: false,
   hintsSeen: false,
   theme: '1',
+  sendReports: false,
 })
 
 // ---------- Copia de seguridad ----------
