@@ -86,6 +86,8 @@ El repo ya trae todo lo que necesita Cloudflare:
 - `functions/api/segments.ts`: el proxy `/api/segments` para saltar intros (se publica solo).
 - `functions/api/tmdb/[[path]].ts`: `/api/tmdb/*` pide a TMDB con la key del secreto `TMDB_KEY`, así nadie tiene
   que cargar su propia key. Solo responde a la app (mismo sitio) y a las rutas que usa.
+- `functions/api/subs/[[path]].ts`: `/api/subs/*` busca subtítulos en español (latino primero) en SubDL, con
+  OpenSubtitles de respaldo, y guarda cada archivo en la caché de Cloudflare para que se baje una sola vez.
 - `public/_headers`: los archivos de `/assets` (con hash en el nombre) se guardan un año; el service worker y el
   manifiesto se revisan en cada visita, así las actualizaciones llegan enseguida.
 - `.node-version`: Node 22 para el build.
@@ -109,6 +111,15 @@ El repo ya trae todo lo que necesita Cloudflare:
 Desde la PC también se puede con `npx wrangler pages secret put TMDB_KEY` (te pide el valor; no queda en ningún archivo).
 
 La key nunca va en el repo ni llega al navegador. Si alguien carga su propia key en **Ajustes → TMDB**, se usa la suya.
+
+### Subtítulos online en latino (secreto `SUBDL_KEY`)
+
+Igual que `TMDB_KEY`: un secreto `SUBDL_KEY` con la key de https://subdl.com/panel/api. Para probarlo, abrí
+`https://<tu-sitio>/api/subs/_status`: tiene que decir `"enabled":true`. Desde ahí, el reproductor suma solo los
+subtítulos en español que encuentre (los que dicen "latino" primero; los de España quedan en "Otros idiomas").
+
+Respaldo opcional: `OPENSUBTITLES_KEY` (un "API consumer" de opensubtitles.com) y, para pasar de 5 a 20 descargas
+por día, `OPENSUBTITLES_USER` y `OPENSUBTITLES_PASS` de una cuenta aparte para la app.
 
 ### Opción B — a mano desde la PC
 

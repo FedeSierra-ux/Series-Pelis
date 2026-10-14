@@ -4,7 +4,7 @@ import type { Stream, Subtitle } from './types'
 // Qué subtítulo activar solo y cómo se ven: funciones puras que usa el reproductor.
 
 // Los addons y las pistas HLS mezclan códigos de 2 y 3 letras.
-const LANG3: Record<string, string> = { es: 'spa', spl: 'spa', en: 'eng', pt: 'por', pob: 'por', fr: 'fre', fra: 'fre', de: 'ger', deu: 'ger', it: 'ita', ja: 'jpn', ko: 'kor' }
+const LANG3: Record<string, string> = { es: 'spa', spl: 'spa', ea: 'spa', en: 'eng', pt: 'por', pob: 'por', fr: 'fre', fra: 'fre', de: 'ger', deu: 'ger', it: 'ita', ja: 'jpn', ko: 'kor' }
 export function lang3(code?: string) {
   const c = (code ?? '').toLowerCase()
   return LANG3[c] ?? LANG3[c.split(/[-_]/)[0]] ?? c.split(/[-_]/)[0]
@@ -24,7 +24,19 @@ export interface SubOption extends Subtitle {
   /** Índice en `hls.subtitleTracks`. */
   hls?: number
   file?: boolean
+  /** Español latino: le gana a otro español del mismo puesto. */
+  latino?: boolean
 }
+
+/** Códigos de español latino que usan los addons (OpenSubtitles `spl`/`ea`, BCP 47 `es-419`). */
+const LATINO_CODES = /^(spl|ea|es[-_](419|la|mx|ar))$/i
+
+export function isLatino(o: { lang?: string; latino?: boolean; label?: string }) {
+  return !!o.latino || LATINO_CODES.test(o.lang ?? '') || /latino/i.test(o.label ?? '')
+}
+
+/** Medio puesto menos para el latino: entre dos subtítulos en español del mismo puesto, gana el latino. */
+const latinoBonus = (o: SubOption) => (isLatino(o) ? 0.5 : 0)
 
 const SDH_RE = /(^|[^a-z0-9])(sdh|cc|hearing[ ._-]?impaired|sordos)([^a-z0-9]|$)/i
 /** "HI" solo en nombres: en una URL puede ser el código del hindi. */
@@ -40,7 +52,7 @@ export function looksForced(...texts: (string | undefined)[]) {
 
 /** Subtítulo de un addon con las marcas de forzado y SDH que se deducen del id o la URL. */
 export function addonSubOption(s: Subtitle): SubOption {
-  return { ...s, forced: looksForced(s.id, s.url), sdh: looksSdh(s.id, s.url) }
+  return { ...s, forced: looksForced(s.id, s.url), sdh: looksSdh(s.id, s.url), latino: LATINO_CODES.test(s.lang ?? '') || undefined }
 }
 
 export interface AutoSubContext {
@@ -71,9 +83,9 @@ export function autoSubtitle(options: SubOption[], ctx: AutoSubContext): { optio
   const { pref } = ctx
 
   if (pref?.subLang && !pref.subOff) {
-    const same = usable.filter((o) => lang3(o.lang) === pref.subLang)
+    const same = usable.filter((o) => lang3(o.lang) === pref.subLang).sort((a, b) => latinoBonus(b) - latinoBonus(a))
     const pick = same.find((o) => !!o.forced === !!pref.subForced) ?? same[0]
-    if (pick) return { option: pick, rank: 0 }
+    if (pick) return { option: pick, rank: -latinoBonus(pick) }
   }
 
   if (ctx.autoSubtitles && !pref?.subOff) {
@@ -82,7 +94,7 @@ export function autoSubtitle(options: SubOption[], ctx: AutoSubContext): { optio
       const i = langRank(o.lang, ctx.subtitleLangs)
       if (i === 99) continue
       // Entre dos del mismo idioma, el completo antes que el forzado.
-      const rank = 1 + i * 2 + (o.forced ? 1 : 0)
+      const rank = 1 + i * 2 + (o.forced ? 1 : 0) - latinoBonus(o)
       if (!best || rank < best.rank) best = { option: o, rank }
     }
     if (best) return best

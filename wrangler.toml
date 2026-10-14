@@ -1,5 +1,5 @@
 # Cloudflare Pages: `npx wrangler pages deploy` toma de acá el nombre y la carpeta del build.
-# La carpeta functions/ (los proxys /api/segments y /api/tmdb, y /api/report) se sube sola.
+# La carpeta functions/ (los proxys /api/segments, /api/tmdb y /api/subs, y /api/report) se sube sola.
 name = "series-pelis"
 pages_build_output_dir = "dist"
 compatibility_date = "2026-10-01"
@@ -23,3 +23,6 @@ compatibility_date = "2026-10-01"
 # Secretos del sitio (se cargan con `npx wrangler pages secret put <NOMBRE>`, nunca van acá):
 #   TMDB_KEY          key v3 o token v4 de TMDB para /api/tmdb (opcional).
 #   REPORT_ADMIN_KEY  clave para listar los informes de /api/report (opcional; sin ella el GET devuelve 404).
+#   SUBDL_KEY         key de SubDL para los subtítulos online de /api/subs (opcional; ver /api/subs/_status).
+#   OPENSUBTITLES_KEY respaldo de /api/subs cuando SubDL no trae nada (opcional). Con OPENSUBTITLES_USER y
+#                     OPENSUBTITLES_PASS (una cuenta aparte para la app) pasa de 5 a 20 descargas por día.

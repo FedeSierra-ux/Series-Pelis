@@ -1,5 +1,19 @@
 # Changelog
 
+## [0.16.0] - 2026-10-14
+
+### Agregado
+- **Subtítulos online en español latino**: si los subtítulos en español están entre tus idiomas, el reproductor
+  busca subtítulos online además de los de los addons. La fuente principal es **SubDL** y, si no encuentra nada,
+  **OpenSubtitles** (opcional).
+  - Los latinos van primero y se eligen solos; los de España quedan en "Otros idiomas" y nunca se ponen solos.
+  - Se muestran hasta 4, los más parecidos al archivo que se está viendo (resolución, origen, grupo).
+  - Las series encuentran el episodio aunque el subtítulo venga en un pack de toda la temporada.
+- **Función `/api/subs`** en Cloudflare: las keys quedan como secretos (`SUBDL_KEY` y, opcional,
+  `OPENSUBTITLES_KEY` / `OPENSUBTITLES_USER` / `OPENSUBTITLES_PASS`), solo responde al propio sitio, tiene límite
+  por IP y guarda en caché las búsquedas (12 h) y los archivos (30 días), así cada episodio se baja una vez para
+  todas las casas. `/api/subs/_status` dice si está activa.
+
 ## [0.15.1] - 2026-10-14
 
 ### Seguridad
