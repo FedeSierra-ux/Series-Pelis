@@ -1,11 +1,11 @@
 // Listas curadas y "personas juntas" (v0.5). Lógica pura: definiciones de las listas,
-// parseo de la respuesta de Wikidata, ranking del "Top IMDb" aproximado e intersección de
-// créditos de dos personas. Lo que pide a la red está en `discoverApi.ts`.
+// parseo de la respuesta de Wikidata e intersección de créditos de dos personas. Lo que pide a
+// la red está en `discoverApi.ts`.
 
 import type { TmdbListItem } from './tmdb'
 import type { MetaPreview } from './types'
 
-export type CuratedKind = 'imdb-top' | 'oscars' | 'sagas' | 'saga' | 'keyword'
+export type CuratedKind = 'oscars' | 'sagas' | 'saga' | 'keyword'
 
 export interface CuratedDef {
   id: string
@@ -20,28 +20,7 @@ export interface CuratedDef {
   collection?: number
 }
 
-/** Cuántos títulos populares de Cinemeta se miran para armar el "Top IMDb". */
-export const TOP_POOL_PAGES = 20
-export const TOP_PAGE_SIZE = 50
-export const TOP_SIZE = 250
-
 export const CURATED: CuratedDef[] = [
-  {
-    id: 'top-imdb-movie',
-    title: 'Mejor puntaje IMDb: películas',
-    description: `Aproximación al Top 250: las ${TOP_SIZE} con mejor puntaje de IMDb entre las ${TOP_POOL_PAGES * TOP_PAGE_SIZE} películas más populares de Cinemeta. No es la lista oficial.`,
-    kind: 'imdb-top',
-    type: 'movie',
-    needsTmdb: false,
-  },
-  {
-    id: 'top-imdb-series',
-    title: 'Mejor puntaje IMDb: series',
-    description: `Aproximación al Top 250: las ${TOP_SIZE} con mejor puntaje de IMDb entre las ${TOP_POOL_PAGES * TOP_PAGE_SIZE} series más populares de Cinemeta. No es la lista oficial.`,
-    kind: 'imdb-top',
-    type: 'series',
-    needsTmdb: false,
-  },
   {
     id: 'oscars',
     title: 'Ganadoras del Oscar a Mejor película',
@@ -154,27 +133,6 @@ export function parseOscars(res: SparqlResponse): MetaPreview[] {
     })
   }
   return out
-}
-
-// ---------- "Top IMDb" aproximado ----------
-
-/** Une las páginas de populares, saca repetidos y ordena por puntaje de IMDb. */
-export function rankByImdb(pages: readonly (readonly MetaPreview[])[], limit = TOP_SIZE): MetaPreview[] {
-  const byId = new Map<string, MetaPreview>()
-  for (const page of pages) for (const m of page) if (!byId.has(m.id)) byId.set(m.id, m)
-  const rating = (m: MetaPreview) => parseFloat(m.imdbRating ?? '') || 0
-  return [...byId.values()]
-    .filter((m) => rating(m) > 0)
-    .sort((a, b) => rating(b) - rating(a))
-    .slice(0, limit)
-    .map((m) => ({
-      id: m.id,
-      type: m.type,
-      name: m.name,
-      poster: m.poster,
-      releaseInfo: m.releaseInfo ?? m.year,
-      imdbRating: m.imdbRating,
-    }))
 }
 
 // ---------- Dos personas juntas ----------

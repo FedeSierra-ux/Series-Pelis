@@ -257,3 +257,17 @@ describe('subtítulos automáticos de fábrica (v0.12.2)', () => {
     expect(settingsStore.get().autoSubtitles).toBe(false)
   })
 })
+
+describe('listas de IMDb sacadas (v0.13.0)', () => {
+  afterEach(() => {
+    idbSeed.clear()
+    vi.useRealTimers()
+  })
+
+  it('si estaban como filas de Inicio se borran; las demás quedan', async () => {
+    vi.useFakeTimers()
+    idbSeed.set('settings', { ...settingsStore.get(), curatedRows: ['top-imdb-movie', 'oscars', 'top-imdb-series', 'kw-heist'] })
+    await hydrateStores()
+    expect(settingsStore.get().curatedRows).toEqual(['oscars', 'kw-heist'])
+  })
+})

@@ -1,19 +1,15 @@
-import { CINEMETA_URL, resourceUrl } from './addons'
+import { resourceUrl } from './addons'
 import { cached, fetchJson, HttpError, isFresh, load, peek } from './cache'
 import {
   curatedById,
   oscarsUrl,
   parseOscars,
-  rankByImdb,
   SAGA_IDS,
-  TOP_PAGE_SIZE,
-  TOP_POOL_PAGES,
   intersectCredits,
   type SparqlResponse,
   type TogetherItem,
 } from './curated'
 import { tmdbDiscoverParams, tmdbKind, type DiscoverFilters } from './discoverFilters'
-import { addonsStore } from './store'
 import {
   getCollection,
   getPerson,
@@ -189,32 +185,6 @@ export interface CuratedResult {
   items: MetaPreview[]
 }
 
-function cinemetaAddon(): InstalledAddon | undefined {
-  return addonsStore.get().find((a) => a.transportUrl === CINEMETA_URL)
-}
-
-/** Las N páginas de "Populares" de Cinemeta, ordenadas por IMDb. Se guarda solo el resultado (liviano). */
-function imdbTop(type: 'movie' | 'series'): Promise<MetaPreview[]> {
-  return cached(
-    `curated:imdb-top:${type}`,
-    async () => {
-      const base = cinemetaAddon()?.transportUrl.replace(/\/manifest\.json$/, '') ?? 'https://v3-cinemeta.strem.io'
-      const urls = Array.from({ length: TOP_POOL_PAGES }, (_, i) =>
-        i === 0 ? `${base}/catalog/${type}/top.json` : `${base}/catalog/${type}/top/skip=${i * TOP_PAGE_SIZE}.json`,
-      )
-      // De a 5 para no saturar la conexión del celular.
-      const pages: MetaPreview[][] = []
-      for (let i = 0; i < urls.length; i += 5) {
-        const chunk = await Promise.allSettled(urls.slice(i, i + 5).map((u) => fetchJson<{ metas?: MetaPreview[] }>(u, 20000)))
-        for (const r of chunk) if (r.status === 'fulfilled') pages.push((r.value.metas ?? []).map((m) => ({ ...m, type: m.type ?? type })))
-      }
-      if (pages.length === 0) throw new Error('Cinemeta no respondió')
-      return rankByImdb(pages)
-    },
-    3 * DAY,
-  )
-}
-
 function oscars(): Promise<MetaPreview[]> {
   return cached('curated:oscars', async () => parseOscars(await fetchJson<SparqlResponse>(oscarsUrl(), 30000)), 7 * DAY)
 }
@@ -251,8 +221,6 @@ export async function loadCurated(id: string): Promise<CuratedResult> {
   const def = curatedById(id)
   if (!def) throw new Error('No existe esa lista')
   switch (def.kind) {
-    case 'imdb-top':
-      return { items: await imdbTop(def.type) }
     case 'oscars':
       return { items: await oscars() }
     case 'sagas':

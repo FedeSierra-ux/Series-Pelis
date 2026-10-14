@@ -1,7 +1,6 @@
 import { describe, expect, it } from 'vitest'
-import { CURATED, curatedById, curatedPath, intersectCredits, parseOscars, rankByImdb } from './curated'
+import { CURATED, curatedById, curatedPath, intersectCredits, parseOscars } from './curated'
 import type { TmdbListItem } from './tmdb'
-import type { MetaPreview } from './types'
 
 describe('listas curadas', () => {
   it('ids únicos', () => {
@@ -18,6 +17,11 @@ describe('listas curadas', () => {
   it('una saga se arma desde su id', () => {
     expect(curatedById('saga-1241')).toMatchObject({ kind: 'saga', collection: 1241, needsTmdb: true })
     expect(curatedById('no-existe')).toBeUndefined()
+  })
+
+  it('las listas "Mejor puntaje IMDb" ya no existen (v0.13.0)', () => {
+    expect(curatedById('top-imdb-movie')).toBeUndefined()
+    expect(curatedById('top-imdb-series')).toBeUndefined()
   })
 })
 
@@ -52,16 +56,6 @@ describe('Wikidata: ganadoras del Oscar', () => {
 
   it('respuesta vacía', () => {
     expect(parseOscars({})).toEqual([])
-  })
-})
-
-describe('Top IMDb aproximado', () => {
-  const m = (id: string, imdbRating?: string): MetaPreview => ({ id, type: 'movie', name: id, imdbRating, year: '2000' })
-
-  it('une páginas, saca repetidos y ordena por puntaje', () => {
-    const top = rankByImdb([[m('a', '8.1'), m('b', '9.3'), m('c', '')], [m('b', '9.3'), m('d', '8.8')]], 2)
-    expect(top.map((x) => x.id)).toEqual(['b', 'd'])
-    expect(top[0]).toEqual({ id: 'b', type: 'movie', name: 'b', poster: undefined, releaseInfo: '2000', imdbRating: '9.3' })
   })
 })
 
