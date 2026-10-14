@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useState, type ReactNode } from 'react'
 import { useTvMode } from '../lib/tv'
 import { loadBillboard, parseDetailHref, type BillboardInfo, type BillboardTarget } from './focusBillboardData'
 import { ImdbRating } from './Rating'
@@ -10,12 +10,12 @@ import './focus-billboard.css'
 // enfocada justo debajo (lee el alto de `[data-focus-billboard]`).
 
 /** Espera a que el foco se quede quieto antes de pedir los datos (las flechas mantenidas pasan de largo). */
-const DEBOUNCE_MS = 300
+export const DEBOUNCE_MS = 300
 /** Lo que dura el fundido (el mismo valor está en el CSS). */
-const FADE_MS = 250
+export const FADE_MS = 250
 
 /** El póster o tarjeta enfocada, si está en una fila o grilla de la página. */
-function cardTarget(el: Element | null): BillboardTarget | undefined {
+export function cardTarget(el: Element | null): BillboardTarget | undefined {
   const card = el?.closest?.('a[href^="/detail/"]')
   if (!card || !card.closest('main') || !card.closest('.row-scroller, .grid')) return undefined
   const t = parseDetailHref(card.getAttribute('href'))
@@ -100,13 +100,18 @@ function Billboard() {
   )
 }
 
-function Layer({ info }: { info: BillboardInfo }) {
+/**
+ * Una capa del fondo: imagen, sombra y datos. `media` va entre la imagen y la sombra (el tráiler de la
+ * portada de Películas y Series), así el texto queda siempre encima y legible.
+ */
+export function Layer({ info, media }: { info: BillboardInfo; media?: ReactNode }) {
   const [brokenLogo, setBrokenLogo] = useState(false)
   const [brokenBg, setBrokenBg] = useState(false)
   const logo = info.logo && !brokenLogo ? info.logo : undefined
   return (
     <div className="fbb-layer">
       {info.background && !brokenBg && <img className="fbb-bg" src={info.background} alt="" decoding="async" onError={() => setBrokenBg(true)} />}
+      {media}
       <div className="fbb-shade" />
       <div className="fbb-info">
         {logo ? <img className="fbb-logo" src={logo} alt="" onError={() => setBrokenLogo(true)} /> : <p className="fbb-title">{info.name}</p>}

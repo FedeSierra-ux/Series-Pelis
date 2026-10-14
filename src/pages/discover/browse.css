@@ -1,0 +1,195 @@
+/* ---------- v0.15 Películas y Series como página de filas (U11) ---------- */
+
+.page.browse {
+  padding: 0 0 64px;
+}
+
+/* Portada fija arriba: muestra el póster que estás mirando y, a los segundos, su tráiler.
+   El alto es el mismo que el fondo de la TV (`--billboard-h`): la fila enfocada entra entera debajo. */
+.browse-hero {
+  position: sticky;
+  top: 0;
+  /* Arriba de las filas, debajo del riel (20). */
+  z-index: 18;
+  height: var(--billboard-h);
+  min-height: 300px;
+  overflow: hidden;
+  background: var(--bg);
+}
+.bh-layers {
+  position: absolute;
+  inset: 0;
+}
+.bh-empty {
+  position: absolute;
+  inset: 0 0 0 auto;
+  width: 78%;
+  border-radius: 0;
+  opacity: 0.5;
+}
+
+/* El tráiler va entre la imagen y la sombra (lo pone `Layer` con `media`). */
+.bh-trailer {
+  position: absolute;
+  inset: 0 0 0 auto;
+  width: 78%;
+  overflow: hidden;
+  opacity: 0;
+  transition: opacity 0.8s ease;
+  pointer-events: none;
+  container-type: size;
+}
+.bh-trailer.ready {
+  opacity: 1;
+}
+.bh-trailer iframe {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  border: 0;
+  /* Que cubra todo (como background-size: cover); el zoom esconde los bordes de YouTube. */
+  width: max(100%, 100cqh * 16 / 9);
+  height: max(100%, 100cqw * 9 / 16);
+  transform: translate(-50%, -50%) scale(1.12);
+}
+
+.bh-top {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 2;
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 20px var(--gutter) 0;
+  pointer-events: none;
+}
+.bh-top h1 {
+  margin: 0;
+  font-family: var(--font-display, inherit);
+  font-size: clamp(1.3rem, 2.2vw, 1.8rem);
+  font-weight: 800;
+  letter-spacing: -0.01em;
+  text-shadow: 0 1px 12px color-mix(in srgb, var(--bg) 80%, transparent);
+}
+.bh-explore {
+  pointer-events: auto;
+  padding: 7px 16px;
+  border-radius: 999px;
+  border: 1px solid color-mix(in srgb, var(--text) 35%, transparent);
+  background: color-mix(in srgb, var(--bg) 55%, transparent);
+  color: var(--text);
+  font-size: 0.92rem;
+  font-weight: 600;
+  backdrop-filter: blur(6px);
+}
+.bh-explore:hover,
+.bh-explore:focus-visible {
+  border-color: var(--accent);
+  color: var(--accent);
+  outline: none;
+}
+
+.bh-controls {
+  position: absolute;
+  right: var(--gutter);
+  bottom: clamp(14px, 4vh, 40px);
+  z-index: 3;
+  display: flex;
+  gap: 8px;
+}
+.bh-ctrl {
+  display: grid;
+  place-items: center;
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  border: 1px solid rgba(255, 255, 255, 0.35);
+  background: rgba(11, 11, 16, 0.55);
+  color: #fff;
+  cursor: pointer;
+}
+.bh-ctrl:hover,
+.bh-ctrl:focus-visible {
+  background: rgba(11, 11, 16, 0.85);
+  border-color: #fff;
+  outline: none;
+}
+
+.browse-rows {
+  padding-top: 4px;
+}
+
+/* "Ver todo" al final de la fila: solo en la TV y el celular (en la PC está el link del título). */
+.row-more-card {
+  display: none;
+}
+html[data-tv] .row-more-card {
+  display: block;
+}
+.row-more-card .poster-img {
+  display: grid;
+  place-content: center;
+  justify-items: center;
+  gap: 6px;
+  border: 1px dashed var(--line);
+  color: var(--muted);
+  font-weight: 600;
+}
+.row-more-icon {
+  font-size: 2.4rem;
+  line-height: 1;
+  color: var(--accent);
+}
+.row-more-card:hover .poster-img,
+.row-more-card:focus-visible .poster-img {
+  color: var(--text);
+  border-color: var(--accent);
+}
+
+/* Pantallas bajas: la portada no tapa media pantalla fija. */
+@media (max-height: 560px) {
+  .browse-hero {
+    position: relative;
+  }
+}
+
+/* Celular: la portada va con la página (no fija), más baja, con la imagen a todo el ancho. */
+@media (max-width: 760px) {
+  .browse-hero {
+    position: relative;
+    height: clamp(240px, 62vw, 420px);
+    min-height: 0;
+  }
+  .browse-hero .fbb-bg,
+  .bh-empty {
+    width: 100%;
+  }
+  .browse-hero .fbb-shade {
+    background: linear-gradient(0deg, var(--bg) 4%, color-mix(in srgb, var(--bg) 55%, transparent) 40%, transparent 70%);
+  }
+  .browse-hero .fbb-info {
+    width: auto;
+    right: var(--gutter);
+    bottom: 14px;
+  }
+  .browse-hero .fbb-desc {
+    display: none;
+  }
+  .browse-hero .fbb-logo {
+    max-height: 64px;
+  }
+  .bh-top {
+    padding-top: calc(14px + env(safe-area-inset-top, 0px));
+  }
+  .row-more-card {
+    display: block;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .bh-trailer {
+    transition: none;
+  }
+}

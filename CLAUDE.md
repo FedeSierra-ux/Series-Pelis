@@ -45,7 +45,7 @@ npm run preview    # sirve dist/ en http://localhost:4173
 - `src/lib/streamPicker.ts` — puntaje de streams y elección automática. `src/lib/nextEpisode.ts` — siguiente episodio y precarga.
 - `src/lib/segments.ts` + `functions/api/segments.ts` — saltar intro (IntroDB vía Pages Function; en dev, proxy de Vite).
 - `src/lib/upNext.ts`, `src/lib/stats.ts` — siguiente episodio de tus series / calendario, y estadísticas de "Tu año".
-- `src/pages/` — Inicio, Descubrir, Buscar, Detalle, Reproductor, Historial, Tu año, Calendario, Mi lista, Ajustes
+- `src/pages/` — Inicio, Películas/Series (`discover/BrowsePage`, filas) y Descubrir (grilla), Buscar, Detalle, Reproductor, Historial, Tu año, Calendario, Mi lista, Ajustes
   (`settings/PlayerSettings.tsx`, `settings/SourceSettings.tsx`).
 - `vite.config.ts` — PWA (Workbox): pósters CacheFirst, Cinemeta StaleWhileRevalidate.
 - `.claude/agents/` — agentes de agency-agents útiles para este proyecto. `.claude/skills/` + `.mcp.json` — rea.
@@ -164,10 +164,24 @@ npm run preview    # sirve dist/ en http://localhost:4173
     tomaban primero. Ahora `tsconfig.json` tiene `noEmit`.
 - v0.14.1 hecha: se sacó "Calidad según la conexión" (`lib/network.ts`, `adaptQuality`, aviso `player-net-note`):
   siempre se recomienda la calidad preferida (el usuario usa siempre 1080p). No volver a agregar un tope por conexión.
+- v0.15.0 hecha: **U11, Películas/Series como página de filas** (Inicio sigue con los catálogos de los addons).
+  `pages/Discover.tsx`: sin parámetros en la URL → `discover/BrowsePage.tsx`; con cualquiera (`wantsGrid`) →
+  `DiscoverGrid` (la grilla con filtros; "Explorar todo" = `?all=1`, y limpiar filtros también deja `all=1`).
+  Lógica pura en `lib/browseRows.ts` (+ test), pedidos en `discover/browseData.ts`. Filas en este orden:
+  Top 10 en Argentina (TMDB `discover` con `watch_region=AR` + plataformas `AR_PROVIDERS`, por popularidad;
+  sin TMDB, "Popular" de Cinemeta y el título cambia a "Top 10 … populares"), Bien calificadas (IMDb ≥ 7, dos
+  páginas de Cinemeta), Drama/Suspenso/Ciencia ficción/Comedias (**Cinemeta**, por el badge de IMDb) y
+  Argentinas (TMDB `with_origin_country=AR`, solo con TMDB). Ningún servicio sabe qué se mira por país: el Top 10
+  es aproximado. `discover/BrowseHero.tsx` + `browse.css`: portada fija (`data-focus-billboard`) que sigue al
+  póster (mouse/foco, reusa `Layer`/`cardTarget` de `FocusBillboard`) y a los 3 s pone el **tráiler con sonido**
+  (pedido del usuario); si el navegador lo bloquea, sigue mudo y el botón / tecla M lo activa
+  (localStorage `sp-browse-muted`). `suppressHoverTrailer()` (`lib/hoverTrailer.ts`) apaga el tráiler chico de
+  los pósters mientras está la página. Se borró `DiscoverHero.tsx`; `TmdbHero` variante `full` quedó sin uso.
 - **Subtítulos online (25), pendiente**: SubDL como fuente principal (tiene el archivo de Subscene, fuerte en español
   latino) y OpenSubtitles de respaldo, con una Pages Function `/api/subs` igual que la de TMDB (secretos de
   Cloudflare, lista blanca, solo mismo sitio, caché para que cada episodio se baje una vez para todas las casas;
-  los .zip de SubDL se pasan a VTT). **Esperar a que el usuario cree las cuentas**; las keys nunca en el código.
+  los .zip de SubDL se pasan a VTT). SubDL ya está: secreto `SUBDL_KEY` cargado en Cloudflare y probado (plan
+  Free, 2000 búsquedas y 50 descargas por día). `/api/subs` tiene que tener `/_status`. Falta decidir en qué versión; las keys nunca en el código ni en el chat.
 - Modo TV automático (128): ya existe desde v0.6/v0.9 (`detectPlatform`, `tvMode: 'auto'`). Pendiente que el
   usuario diga si su TV muestra "Este dispositivo parece una TV" y qué TV/navegador usa antes de tocar nada.
 - Función 137 (temas OLED / acento / color del póster): el usuario pidió **ver el preview antes/después primero**

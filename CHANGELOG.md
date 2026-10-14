@@ -1,5 +1,25 @@
 # Changelog
 
+## [0.15.0] - 2026-10-14
+
+### Agregado
+- **Películas y Series como página de filas** (sin filtros):
+  - **Top 10 en Argentina**: lo más popular de las plataformas de suscripción de Argentina (Netflix, Disney+,
+    Prime Video, Max, Apple TV+ y Paramount+, según TMDB). Ningún servicio publica lo que se mira en cada país,
+    así que es una aproximación. Sin TMDB, la fila pasa a "Top 10 populares" de Cinemeta.
+  - **Bien calificadas**: lo popular con IMDb 7 o más.
+  - **Drama, Suspenso, Ciencia ficción y Comedias** (Cinemeta, con el puntaje de IMDb en el póster).
+  - **Argentinas** (con TMDB).
+  - "Ver todo" en cada fila abre la grilla con ese filtro; en la TV y el celular también va como última tarjeta.
+- **Portada que sigue al póster**: arriba queda fija la imagen del título que estás mirando (mouse o control
+  remoto) y, a los 3 segundos quieto, arranca su **tráiler con sonido**. Si el navegador no deja arrancar con
+  sonido, sigue sin sonido; el botón (o la tecla M) lo activa y la elección se recuerda en el aparato.
+- **Explorar todo**: la grilla con filtros de siempre.
+
+### Cambiado
+- La grilla de Películas y Series ya no tiene la portada grande ni el Top 10 encimado (se fueron a las filas).
+- En la página de filas no se reproduce el tráiler chico de los pósters (va arriba, en la portada).
+
 ## [0.14.1] - 2026-10-14
 
 ### Quitado
