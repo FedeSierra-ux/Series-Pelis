@@ -1,6 +1,8 @@
-import { useMemo, useRef, useState } from 'react'
+import { useEffect, useId, useLayoutEffect, useMemo, useRef, useState, type KeyboardEvent } from 'react'
+import { createPortal } from 'react-dom'
 import { Link } from 'react-router-dom'
 import { Picker } from '../components/Picker'
+import { Theme2Icon } from '../components/Theme2Icons'
 import { DEFAULT_CATALOG_PREFS, mergeRows, moveRow, renameRow, setRowHidden, splitMerge, type CatalogRowDef } from '../lib/catalogPrefs'
 import { defaultCatalogLabel, updateCatalogPrefs, useCatalogRows } from '../lib/catalogRows'
 import { useTitle } from '../lib/hooks'
@@ -126,6 +128,18 @@ function CatalogItem({
 
   const addonNames = [...new Set(row.sources.map((s) => s.addon.manifest.name))].join(', ')
 
+  // Las mismas acciones sirven para los botones de la fila (PC/TV) y para el menú "⋯" (celular).
+  const toggleHidden = () => {
+    updateCatalogPrefs((p) => setRowHidden(p, row.key, !row.hidden))
+    onStatus(row.hidden ? `“${row.name}” visible` : `“${row.name}” oculta`)
+  }
+  const startRename = () => {
+    setDraft(row.name)
+    setEditing(true)
+  }
+  const restoreName = () => updateCatalogPrefs((p) => renameRow(p, row.key, ''))
+  const split = () => updateCatalogPrefs((p) => splitMerge(p, rows, row.key))
+
   return (
     <li className={`catalog-item${row.hidden ? ' is-hidden' : ''}`} data-row-key={row.key}>
       <div className="catalog-item-main">
@@ -158,51 +172,52 @@ function CatalogItem({
             </span>
           )}
         </div>
+        {/* PC y TV: todas las acciones en fila. Celular (CSS ≤ 700 px): solo ↑ ↓ y el menú "⋯" con el resto. */}
         <div ref={actionsRef} className="catalog-item-actions">
-          <button className="btn btn-ghost" data-move="up" disabled={first} onClick={() => onMove(-1)} aria-label={`Subir “${row.name}”`}>
+          <button className="btn btn-ghost btn-icon" data-move="up" disabled={first} onClick={() => onMove(-1)} aria-label={`Subir “${row.name}”`}>
             ↑
           </button>
-          <button className="btn btn-ghost" data-move="down" disabled={last} onClick={() => onMove(1)} aria-label={`Bajar “${row.name}”`}>
+          <button className="btn btn-ghost btn-icon" data-move="down" disabled={last} onClick={() => onMove(1)} aria-label={`Bajar “${row.name}”`}>
             ↓
           </button>
-          <button
-            className="btn btn-ghost"
-            aria-pressed={!row.hidden}
-            onClick={() => {
-              updateCatalogPrefs((p) => setRowHidden(p, row.key, !row.hidden))
-              onStatus(row.hidden ? `“${row.name}” visible` : `“${row.name}” oculta`)
-            }}
-          >
+          <button className="btn btn-ghost btn-text" aria-pressed={!row.hidden} onClick={toggleHidden}>
             {row.hidden ? 'Mostrar' : 'Ocultar'}
           </button>
           {!editing && (
-            <button
-              className="btn btn-ghost"
-              onClick={() => {
-                setDraft(row.name)
-                setEditing(true)
-              }}
-            >
+            <button className="btn btn-ghost btn-text" onClick={startRename}>
               Renombrar
             </button>
           )}
           {row.renamed && !editing && (
-            <button className="btn btn-ghost" onClick={() => updateCatalogPrefs((p) => renameRow(p, row.key, ''))}>
+            <button className="btn btn-ghost btn-text" onClick={restoreName}>
               Nombre original
             </button>
           )}
           {row.merged ? (
-            <button className="btn btn-ghost" data-merge-btn onClick={() => updateCatalogPrefs((p) => splitMerge(p, rows, row.key))}>
+            <button className="btn btn-ghost btn-text" data-merge-btn onClick={split}>
               Separar
             </button>
           ) : (
             candidates.length > 0 &&
             !merging && (
-              <button className="btn btn-ghost" data-merge-btn onClick={() => setMerging(true)}>
+              <button className="btn btn-ghost btn-text" data-merge-btn onClick={() => setMerging(true)}>
                 Fusionar…
               </button>
             )
           )}
+          <ActionMenu
+            label={`Más acciones de “${row.name}”`}
+            actions={[
+              { id: 'hidden', label: row.hidden ? 'Mostrar en Inicio' : 'Ocultar de Inicio', run: toggleHidden },
+              ...(!editing ? [{ id: 'rename', label: 'Renombrar', run: startRename, refocus: false }] : []),
+              ...(row.renamed && !editing ? [{ id: 'restore', label: 'Volver al nombre original', run: restoreName }] : []),
+              ...(row.merged
+                ? [{ id: 'split', label: 'Separar', run: split }]
+                : candidates.length > 0 && !merging
+                  ? [{ id: 'merge', label: 'Fusionar con otra fila…', run: () => setMerging(true), refocus: false }]
+                  : []),
+            ]}
+          />
         </div>
       </div>
       {merging && (
@@ -233,5 +248,117 @@ function CatalogItem({
         </div>
       )}
     </li>
+  )
+}
+
+interface MenuAction {
+  id: string
+  label: string
+  run: () => void
+  /** `false` cuando la acción ya mueve el foco (abre el campo de nombre o el selector de fusión). */
+  refocus?: boolean
+}
+
+const CLOSE_KEYS = new Set(['Escape', 'GoBack', 'BrowserBack', 'Backspace'])
+
+/**
+ * Menú "⋯" de cada catálogo (el CSS lo muestra solo en el celular). Reusa el estilo del Picker:
+ * en el celular se abre como hoja desde abajo; ↑/↓ recorren, Enter elige y Atrás cierra.
+ */
+function ActionMenu({ label, actions }: { label: string; actions: MenuAction[] }) {
+  const [open, setOpen] = useState(false)
+  const [pos, setPos] = useState<{ top: number; left: number }>()
+  const button = useRef<HTMLButtonElement>(null)
+  const list = useRef<HTMLDivElement>(null)
+  const id = useId()
+
+  const close = (refocus = true) => {
+    setOpen(false)
+    if (refocus) requestAnimationFrame(() => button.current?.focus({ preventScroll: true }))
+  }
+
+  useLayoutEffect(() => {
+    if (!open || !button.current) return
+    // Por si se abre en una pantalla ancha (el CSS del celular lo pega abajo de todos modos).
+    const r = button.current.getBoundingClientRect()
+    setPos({ top: Math.min(r.bottom + 6, window.innerHeight - 260), left: Math.max(8, Math.min(r.left, window.innerWidth - 240)) })
+  }, [open])
+
+  useEffect(() => {
+    // Recién con la posición puesta: antes la lista está oculta y no puede recibir el foco
+    // (y Atrás le llegaría a la navegación general, que se va de la página).
+    if (!open || !pos) return
+    list.current?.querySelector<HTMLElement>('button')?.focus({ preventScroll: true })
+  }, [open, pos])
+
+  const moveFocus = (delta: -1 | 1) => {
+    const items = Array.from(list.current?.querySelectorAll<HTMLElement>('[role="menuitem"]') ?? [])
+    if (!items.length) return
+    const i = items.indexOf(document.activeElement as HTMLElement)
+    items[Math.min(items.length - 1, Math.max(0, (i < 0 ? (delta > 0 ? -1 : items.length) : i) + delta))].focus({ preventScroll: true })
+  }
+
+  const onKeyDown = (e: KeyboardEvent) => {
+    if (CLOSE_KEYS.has(e.key)) {
+      e.preventDefault()
+      e.stopPropagation()
+      close()
+    } else if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
+      e.preventDefault()
+      e.stopPropagation()
+      moveFocus(e.key === 'ArrowDown' ? 1 : -1)
+    } else if (e.key === 'ArrowLeft' || e.key === 'ArrowRight' || e.key === 'Tab') {
+      e.preventDefault()
+      e.stopPropagation()
+    }
+  }
+
+  if (!actions.length) return null
+  return (
+    <>
+      <button
+        ref={button}
+        type="button"
+        className="btn btn-ghost btn-icon catalog-item-more"
+        aria-haspopup="menu"
+        aria-expanded={open}
+        aria-controls={open ? id : undefined}
+        aria-label={label}
+        onClick={() => setOpen((v) => !v)}
+      >
+        <Theme2Icon name="more" size={22} />
+      </button>
+      {open &&
+        createPortal(
+          <div className="picker-layer" data-nav-scope onKeyDown={onKeyDown} onClick={() => close()}>
+            <div
+              ref={list}
+              id={id}
+              className="picker-pop catalog-menu"
+              role="menu"
+              aria-label={label}
+              style={pos ? { top: pos.top, left: pos.left } : { visibility: 'hidden' }}
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div className="picker-title">{label}</div>
+              {actions.map((a) => (
+                <button
+                  key={a.id}
+                  type="button"
+                  role="menuitem"
+                  className="picker-opt"
+                  onClick={() => {
+                    close(a.refocus !== false)
+                    a.run()
+                  }}
+                >
+                  {a.label}
+                </button>
+              ))}
+            </div>
+          </div>,
+          document.body,
+        )}
+    </>
   )
 }

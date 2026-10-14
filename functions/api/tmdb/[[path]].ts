@@ -2,27 +2,14 @@
 // La key de TMDB vive como secreto del proyecto (TMDB_KEY), así nadie de la familia tiene que configurarla.
 // Solo GET, solo las rutas que usa la app y solo desde el mismo sitio (que no la use cualquiera).
 
+import { crossSite, json } from '../../_lib'
+
 const API = 'https://api.themoviedb.org/3'
 const ALLOWED = new Set(['configuration', 'find', 'movie', 'tv', 'person', 'collection', 'trending', 'discover', 'search', 'genre', 'watch', 'keyword'])
 const SEGMENT = /^[\w.-]+$/
 
 interface Env {
   TMDB_KEY?: string
-}
-
-function json(body: unknown, status: number) {
-  return new Response(JSON.stringify(body), {
-    status,
-    headers: { 'Content-Type': 'application/json; charset=utf-8', 'Cache-Control': 'no-store' },
-  })
-}
-
-/** Rechaza pedidos de otros sitios. Sin Origin ni Sec-Fetch-Site (curl, navegadores viejos) se deja pasar. */
-function crossSite(request: Request): boolean {
-  const site = request.headers.get('Sec-Fetch-Site')
-  if (site && site !== 'same-origin' && site !== 'none') return true
-  const origin = request.headers.get('Origin')
-  return !!origin && origin !== new URL(request.url).origin
 }
 
 export const onRequestGet = async (context: { request: Request; env: Env; params: { path?: string | string[] } }): Promise<Response> => {

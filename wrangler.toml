@@ -1,5 +1,25 @@
 # Cloudflare Pages: `npx wrangler pages deploy` toma de acá el nombre y la carpeta del build.
-# La carpeta functions/ (el proxy /api/segments) se sube sola.
+# La carpeta functions/ (los proxys /api/segments y /api/tmdb, y /api/report) se sube sola.
 name = "series-pelis"
 pages_build_output_dir = "dist"
 compatibility_date = "2026-10-01"
+
+# ---- Informes de errores (functions/api/report) ----
+# Sin el KV, /api/report/_status contesta { enabled: false } y la app no muestra nada de esto.
+#
+# 1. Crear el namespace:   npx wrangler kv namespace create REPORTS
+#    y enlazarlo en el panel: Pages → series-pelis → Settings → Bindings → KV namespace,
+#    nombre de variable `REPORTS` (o descomentar el bloque de abajo con el id que devuelve el comando).
+# 2. Secreto para leer los informes (una clave larga al azar, ej. `openssl rand -hex 32`):
+#    npx wrangler pages secret put REPORT_ADMIN_KEY
+# 3. Leerlos:  curl -H "Authorization: Bearer $REPORT_ADMIN_KEY" "https://<sitio>/api/report?limit=50"
+#
+# Los informes vencen solos a los 30 días. Nunca contienen URLs de addons ni de streams: solo el host.
+#
+# [[kv_namespaces]]
+# binding = "REPORTS"
+# id = "<id del namespace>"
+
+# Secretos del sitio (se cargan con `npx wrangler pages secret put <NOMBRE>`, nunca van acá):
+#   TMDB_KEY          key v3 o token v4 de TMDB para /api/tmdb (opcional).
+#   REPORT_ADMIN_KEY  clave para listar los informes de /api/report (opcional; sin ella el GET devuelve 404).

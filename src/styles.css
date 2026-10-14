@@ -1912,10 +1912,6 @@ html[data-tv] .player-error-sources button {
 }
 
 @media (max-width: 760px) {
-  /* El menú de abajo ya tiene 7 ítems: el calendario se abre desde Historial. */
-  .nav-link.nav-desktop-only {
-    display: none;
-  }
   .undo-toast {
     bottom: calc(76px + env(safe-area-inset-bottom));
   }
@@ -5514,5 +5510,159 @@ input[type='password']:focus-visible {
   }
   .player-error-card {
     padding: 22px 16px;
+  }
+}
+
+/* ---------- v0.10 pantallas (V7, V13) ---------- */
+
+/* Botón de ícono (↑ ↓ ⋯): cuadrado, con el área táctil de 44 px en el celular. */
+.btn-icon {
+  justify-content: center;
+}
+
+/* Barra inferior del Tema 1 en el celular: 6 ítems y "Más" abre una hoja con el resto.
+   Solo celular: en la TV (html[data-tv]) la barra de arriba sigue igual que antes. */
+.nav-bottom {
+  display: none;
+}
+@media (max-width: 760px) {
+  html:not([data-tv]) .nav-links {
+    display: none;
+  }
+  html:not([data-tv]) .nav-bottom {
+    position: fixed;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    z-index: 30;
+    display: flex;
+    justify-content: space-around;
+    background: var(--bg);
+    border-top: 1px solid var(--line);
+    padding: 4px 4px max(4px, env(safe-area-inset-bottom));
+  }
+  .nav-bottom .nav-link {
+    flex: 1;
+    min-width: 0;
+    min-height: 48px;
+    flex-direction: column;
+    justify-content: center;
+    gap: 3px;
+    padding: 4px 2px;
+    border-radius: 10px;
+    font-size: 0.75rem;
+  }
+  .nav-bottom .nav-label {
+    max-width: 100%;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .nav-more-btn {
+    background: transparent;
+    border: 0;
+    font: inherit;
+    font-weight: 600;
+    cursor: pointer;
+  }
+}
+/* Hoja "Más": desde abajo, con las secciones que no entran en la barra. */
+.nav-sheet-layer {
+  position: fixed;
+  inset: 0;
+  z-index: 60;
+  display: flex;
+  align-items: flex-end;
+  background: rgba(0, 0, 0, 0.55);
+}
+.nav-sheet {
+  width: 100%;
+  max-height: 80vh;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  padding: 8px 12px max(16px, env(safe-area-inset-bottom));
+  background: var(--bg-2);
+  border-radius: var(--radius-lg) var(--radius-lg) 0 0;
+  box-shadow: 0 -12px 40px rgba(0, 0, 0, 0.45);
+}
+.nav-sheet-grip {
+  width: 40px;
+  height: 4px;
+  margin: 4px auto 12px;
+  border-radius: 2px;
+  background: var(--line);
+}
+.nav-sheet ul {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 6px;
+}
+.nav-sheet-link {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  min-height: 76px;
+  padding: 10px 4px;
+  border-radius: var(--radius);
+  color: var(--muted);
+  font-size: 0.75rem;
+  font-weight: 600;
+  text-align: center;
+}
+.nav-sheet-icon {
+  display: grid;
+  place-items: center;
+  width: 44px;
+  height: 44px;
+  border-radius: 14px;
+  background: var(--bg-3);
+}
+.nav-sheet-link:hover,
+.nav-sheet-link:focus-visible {
+  color: var(--text);
+}
+.nav-sheet-link.active {
+  color: var(--text);
+}
+.nav-sheet-link.active .nav-sheet-icon {
+  background: var(--accent-fill);
+  color: #fff;
+}
+
+/* Gestor de catálogos en el celular: flechas de 44 px y el resto en el menú "⋯". */
+.catalog-item-more {
+  display: none;
+}
+.catalog-menu {
+  min-width: 220px;
+}
+@media (max-width: 700px) {
+  .catalog-item-main {
+    flex-direction: row;
+    flex-wrap: wrap;
+    align-items: center;
+  }
+  .catalog-item-text {
+    /* Entra al lado de ↑ ↓ ⋯ en 390 px; si el nombre es muy largo, las acciones bajan de línea. */
+    flex: 1 1 150px;
+  }
+  .catalog-item-actions {
+    flex-wrap: nowrap;
+    justify-content: flex-end;
+    gap: 4px;
+  }
+  .catalog-item-actions .btn-text {
+    display: none;
+  }
+  .catalog-item-actions .btn-icon,
+  .catalog-item-more {
+    display: inline-flex;
+    width: 44px;
+    height: 44px;
+    padding: 0;
+    font-size: 1.1rem;
   }
 }

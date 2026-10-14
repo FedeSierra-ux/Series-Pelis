@@ -95,7 +95,23 @@ npm run preview    # sirve dist/ en http://localhost:4173
   El usuario NO quiere sumar otro puntaje cuando falta el de IMDb (se deja como está).
 - Debrid: el usuario va a pagar **un TorBox (Standard)** para 3-4 casas cercanas; el resto de las ~10 casas usa su
   propio debrid. Real-Debrid no sirve para compartir (una IP a la vez). Todavía no quiere login/perfiles ni asistente.
-- Función 137 (temas OLED / acento / color del póster): preview en el canvas, **esperando respuesta del usuario**.
+- v0.9.0 hecha: auditoría de la v0.8 (43 bugs, 16 ítems visuales), modo TV con `html[data-tv]` (`syncTvAttr()` en
+  `lib/tv.ts`), `UpdateToast` (SW con `registerType: 'prompt'`), `lib/focusMemory.ts` + `ScrollMemory`, `EmptyState`,
+  `setWatchedMany`, identidad de addons por URL (`addonKey`), `refreshManifests` con TTL de 24 h, CI en GitHub Actions.
+  El acento del Tema 1 como texto chico queda en 4,33:1: el usuario decidió **dejarlo así**; `--accent-fill` es para
+  rellenos con texto blanco.
+- v0.10.0 hecha: reproductor (`pages/player/useMediaSession.ts`: Media Session, Wake Lock, PiP; `SpeedMenu.tsx`,
+  velocidad en sessionStorage `sp-rate`; botones de menús con `data-menu` para los atajos), `lib/network.ts` +
+  `sourceRules.adaptQuality` (tope de calidad por `navigator.connection`), `lib/shortcuts.ts` (tabla única de
+  atajos; `ShortcutsHelp` con `?`, `TvHints` con `settings.hintsSeen`), informes de errores opt-in
+  (`lib/diagnostics.ts`, `components/ReportButton.tsx`, `functions/api/report/[[path]].ts` con KV `REPORTS` y
+  secreto `REPORT_ADMIN_KEY`; marca `sp-report-server`; `settings.sendReports`), `functions/_lib.ts` (`crossSite`),
+  CSP en `public/_headers` (el hash del script inline de `index.html` lo vigila `lib/securityHeaders.test.ts`:
+  si cambia ese script hay que actualizar el hash), Ajustes con `SECTIONS` en `pages/Settings.tsx` +
+  `settings/SettingsLayout.tsx` (una sección nueva = una línea en `SECTIONS`), barra inferior del Tema 1 con
+  "Más" (`BAR`/`MORE` en `Layout.tsx`), menú ⋯ en `CatalogManager`.
+- Función 137 (temas OLED / acento / color del póster): el usuario pidió **ver el preview antes/después primero**
+  (v0.10, página en el scratchpad de la sesión); después decide. Perfiles locales (109): **todavía no**.
 - **Cuestionario de funciones (140)** — decisiones del usuario y plan por versiones:
   - v0.4: 9, 16, 17, 20, 27, 28, 30, 31, 33, 37, 103 (hecha).
   - v0.5 (descubrir/ficha/biblioteca, hecha): 51, 52, 56, 58, 60, 62, 66, 67, 77, 80, 89 (puntaje con **estrellas**),

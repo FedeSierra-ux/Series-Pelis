@@ -2,6 +2,7 @@ import { Advanced } from '../../components/Advanced'
 import { saveDataOn } from '../../lib/dataSaver'
 import { effectivePlayer, playersFor } from '../../lib/externalPlayers'
 import { langLabel } from '../../lib/i18n'
+import { connectionInfo, effectiveQualityCap } from '../../lib/network'
 import { currentPlatform } from '../../lib/platform'
 import { settingsStore, useStore, type Settings, type SubtitleStyle } from '../../lib/store'
 import { subtitleClasses } from '../../lib/subtitlePrefs'
@@ -58,6 +59,7 @@ export function PlayerSettings() {
   const style = settings.subtitleStyle
   const setStyle = (patch: Partial<SubtitleStyle>) => settingsStore.set((s) => ({ ...s, subtitleStyle: { ...s.subtitleStyle, ...patch } }))
   const os = currentPlatform().os
+  const netCap = effectiveQualityCap()
 
   return (
     <section className="settings-section">
@@ -160,6 +162,25 @@ export function PlayerSettings() {
       <h3>Idioma de audio preferido</h3>
       <LangChips label="Idiomas de audio preferidos" value={settings.audioLangs} onChange={(audioLangs) => update({ audioLangs })} />
       <p className="muted small">Solo sirve en streams con varias pistas de audio.</p>
+
+      <h3>Calidad según la conexión</h3>
+      <label className="check">
+        <input
+          type="checkbox"
+          checked={settings.sourceRules.adaptQuality !== false}
+          onChange={(e) => settingsStore.set((s) => ({ ...s, sourceRules: { ...s.sourceRules, adaptQuality: e.target.checked } }))}
+        />
+        Ajustar la calidad a la conexión
+      </label>
+      <p className="muted small">
+        {netCap
+          ? `Ahora la conexión es lenta: se elige como máximo ${netCap}. `
+          : connectionInfo()
+            ? 'Ahora la conexión es buena: no cambia nada. '
+            : 'Este navegador no informa la conexión: no cambia nada. '}
+        Con 3G o ahorro de datos se busca como máximo 720p; con 2G, 480p, aunque la calidad preferida sea más alta. Si elegís la
+        fuente a mano, solo cambia el orden de la lista.
+      </p>
 
       <Advanced>
       <h3>¿Seguís viendo?</h3>
