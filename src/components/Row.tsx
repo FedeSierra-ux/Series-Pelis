@@ -13,10 +13,12 @@ interface Props {
   errorNotice?: string
   /** Datos para el informe del aviso (ej. `{ addon: addon.transportUrl }`: se manda solo el host). */
   reportContext?: Record<string, string | undefined>
+  /** Muestra lo anterior atenuado mientras carga lo nuevo (ej. resultados de la búsqueda anterior). */
+  stale?: boolean
   children: ReactNode
 }
 
-export function Row({ title, moreTo, loading, error, empty, errorNotice, reportContext, children }: Props) {
+export function Row({ title, moreTo, loading, error, empty, errorNotice, reportContext, stale, children }: Props) {
   if (!loading && error && empty && errorNotice) {
     return (
       <section className="row">
@@ -41,7 +43,7 @@ export function Row({ title, moreTo, loading, error, empty, errorNotice, reportC
           </Link>
         )}
       </header>
-      <div className="row-scroller">
+      <div className={stale ? 'row-scroller is-stale' : 'row-scroller'} aria-busy={stale || undefined}>
         {loading && empty ? Array.from({ length: 8 }, (_, i) => <PosterSkeleton key={i} />) : children}
       </div>
     </section>
