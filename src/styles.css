@@ -5646,7 +5646,8 @@ input[type='password']:focus-visible {
     align-items: center;
   }
   .catalog-item-text {
-    flex: 1 1 180px;
+    /* Entra al lado de ↑ ↓ ⋯ en 390 px; si el nombre es muy largo, las acciones bajan de línea. */
+    flex: 1 1 150px;
   }
   .catalog-item-actions {
     flex-wrap: nowrap;

@@ -47,36 +47,36 @@ export function goToSection(id: string, focusFirst: boolean) {
   el.scrollIntoView({ block: 'start' })
   if (!focusFirst) return
   requestAnimationFrame(() => {
-    const first = Array.from(el.querySelectorAll<HTMLElement>(FOCUSABLE)).find(isVisible)
+    // Primero un control de verdad (campo, botón, selector); un enlace suelto del texto, solo si no hay otra cosa.
+    const all = Array.from(el.querySelectorAll<HTMLElement>(FOCUSABLE)).filter(isVisible)
+    const first = all.find((c) => !(c instanceof HTMLAnchorElement) || c.classList.contains('btn')) ?? all[0]
     first?.focus({ preventScroll: true })
     first?.scrollIntoView({ block: 'nearest' })
   })
 }
 
-/** Sección que se resalta en el índice: la primera (en orden) que asoma por la franja alta de la pantalla. */
+/** Línea (desde arriba) que una sección tiene que haber pasado para contar como "la que se está leyendo". */
+const READING_LINE = 0.12
+
+/** Sección que se resalta en el índice: la última cuyo título ya pasó la línea de lectura (o la última si se llegó al final). */
 export function useActiveSection(ids: string[], enabled: boolean) {
   const [active, setActive] = useState(ids[0])
   useEffect(() => {
     if (!enabled || typeof IntersectionObserver === 'undefined') return
-    const visible = new Set<string>()
     const update = () => {
-      const atBottom = window.innerHeight + window.scrollY >= document.documentElement.scrollHeight - 2
-      const first = ids.find((id) => visible.has(id))
-      if (atBottom && visible.size) setActive(ids[Math.max(...ids.map((id, i) => (visible.has(id) ? i : -1)))])
-      else if (first) setActive(first)
+      const limit = window.innerHeight * READING_LINE + 8
+      let current = ids[0]
+      for (const id of ids) {
+        const el = document.getElementById(id)
+        if (!el) continue
+        if (el.getBoundingClientRect().top > limit) break
+        current = id
+      }
+      if (window.innerHeight + window.scrollY >= document.documentElement.scrollHeight - 2) current = ids[ids.length - 1]
+      setActive(current)
     }
-    const io = new IntersectionObserver(
-      (entries) => {
-        for (const e of entries) {
-          const id = (e.target as HTMLElement).id
-          if (e.isIntersecting) visible.add(id)
-          else visible.delete(id)
-        }
-        update()
-      },
-      // Franja entre el 12 % y el 45 % de la pantalla: lo que se está leyendo.
-      { rootMargin: '-12% 0px -55% 0px' },
-    )
+    // El observador avisa cuando un título cruza la línea de lectura; el scroll cubre el final de la página.
+    const io = new IntersectionObserver(update, { rootMargin: `-${READING_LINE * 100}% 0px -${100 - READING_LINE * 100 - 1}% 0px` })
     for (const id of ids) {
       const el = document.getElementById(id)
       if (el) io.observe(el)
