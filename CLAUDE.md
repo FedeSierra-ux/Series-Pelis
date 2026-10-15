@@ -260,6 +260,11 @@ npm run preview    # sirve dist/ en http://localhost:4173
   Si Android da `error`, sigue `PlayerView` desde esa posición (prop `notice`). Ajuste `nativePlayer` (por aparato,
   prendido de fábrica, solo se ve en la app). Constantes compartidas y el contador del "¿Seguís viendo?" en
   `pages/player/autoNext.ts`.
+  Android (`tv-app/android/…/tv/`): `NativePlayer.java` (vista encima del WebView; `playerOpen` con uno abierto
+  cambia el video y **borra lo del episodio**: intro, resumen, `nextAt`, `nextLabel`, subtítulos; por eso la web
+  manda todo recién con el `ready`), `VttParser.java`, `SubtitleTextView.java`, `SpNativePlugin` (`player: true` en
+  `getInfo`, métodos `player*`, evento `player`), `MainActivity` (las teclas y Atrás van primero al reproductor),
+  `res/layout/sp_player*.xml`. Sin cabeceras falsas; un `.m3u8` va como HLS. Sin probar todavía en una TV real.
 - **Decisiones para la v0.17 (reemplazan el reparto del plan de abajo)**: addons y TorBox **iguales para todas las
   casas**, solo los cambia el admin (opción A). Ajustes generales (subtítulos, idiomas, autoplay, saltar intro, sin
   spoilers, reglas de fuentes) **iguales en toda la casa**; lo físico (modo TV, tamaño de la interfaz, protector,
