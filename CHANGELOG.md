@@ -1,5 +1,11 @@
 # Changelog
 
+## [0.18.2] - 2026-10-15
+
+### Seguridad
+- El **tope de 6 perfiles por casa** también lo controla el servidor (antes solo la app): un perfil nuevo que no
+  entra se rechaza. Borrar uno libera el lugar, también en la misma subida.
+
 ## [0.18.1] - 2026-10-15
 
 ### Seguridad
