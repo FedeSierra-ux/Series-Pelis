@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { useLocation } from 'react-router-dom'
 import { SCREENSAVER_CLOSED } from '../../lib/idle'
-import { OPEN_PROFILES, profilePicked } from '../../lib/profiles'
+import { OPEN_PROFILES, PROFILE_FROM_LAUNCH, profilePicked } from '../../lib/profiles'
 import { useProfiles } from '../../lib/profileSwitch'
 import { useTvMode } from '../../lib/tv'
 import { WhoIsWatching } from './WhoIsWatching'
@@ -23,8 +23,14 @@ export function ProfileGate() {
 
   useEffect(() => {
     const onOpen = (e: Event) => setOpen({ auto: false, manage: !!(e as CustomEvent<{ manage?: boolean }>).detail?.manage })
+    // Abierta desde una tarjeta del inicio de la TV: el perfil ya viene elegido, no se pregunta.
+    const onLaunch = () => setOpen((o) => (o?.auto ? undefined : o))
     window.addEventListener(OPEN_PROFILES, onOpen)
-    return () => window.removeEventListener(OPEN_PROFILES, onOpen)
+    window.addEventListener(PROFILE_FROM_LAUNCH, onLaunch)
+    return () => {
+      window.removeEventListener(OPEN_PROFILES, onOpen)
+      window.removeEventListener(PROFILE_FROM_LAUNCH, onLaunch)
+    }
   }, [])
 
   useEffect(() => {

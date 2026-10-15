@@ -63,6 +63,8 @@ dependencies {
     implementation "androidx.media3:media3-exoplayer:$media3Version"
     implementation "androidx.media3:media3-exoplayer-hls:$media3Version"
     implementation "androidx.media3:media3-ui:$media3Version"
+    // Filas del inicio de Android TV (v0.21): "A continuación" y el canal "Mi lista".
+    implementation "androidx.tvprovider:tvprovider:$tvproviderVersion"
     testImplementation "junit:junit:$junitVersion"
     androidTestImplementation "androidx.test.ext:junit:$androidxJunitVersion"
     androidTestImplementation "androidx.test.espresso:espresso-core:$androidxEspressoCoreVersion"

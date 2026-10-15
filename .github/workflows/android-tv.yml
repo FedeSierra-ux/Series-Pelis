@@ -51,6 +51,15 @@ jobs:
           java-version: 21
       - uses: gradle/actions/setup-gradle@v4
       - run: npm ci
+      # La app se actualiza sola comparando la etiqueta con su versión (v0.21): tienen que coincidir.
+      - name: Etiqueta = versión de tv-app
+        if: startsWith(github.ref, 'refs/tags/tv-v')
+        run: |
+          want="tv-v$(node -p "require('./package.json').version")"
+          if [ "$GITHUB_REF_NAME" != "$want" ]; then
+            echo "::error::La etiqueta $GITHUB_REF_NAME no coincide con la versión de tv-app/package.json ($want)."
+            exit 1
+          fi
       # Copia la configuración y la página de error al proyecto de Android (no se guardan en el repo).
       - run: npx cap sync android
 

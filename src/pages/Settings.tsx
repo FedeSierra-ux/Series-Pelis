@@ -24,6 +24,7 @@ import { StremioImport } from './settings/StremioImport'
 import { TmdbSettings } from './settings/TmdbSettings'
 import { TvSettings } from './settings/TvSettings'
 import { ShortcutsSettings } from './settings/ShortcutsSettings'
+import { AppSettings } from './settings/AppSettings'
 import { DiagnosticsSettings } from './settings/DiagnosticsSettings'
 import { useReportsEnabled } from '../lib/diagnostics'
 import { useAuth, useCanEditAddons } from '../lib/auth'
@@ -31,6 +32,7 @@ import { HouseSettings } from './settings/HouseSettings'
 import { HousesSettings } from './settings/HousesSettings'
 import { SettingsBlock, SettingsIndex, WIDE_QUERY, goToSection, useActiveSection, useMediaQuery, type SettingsSectionDef } from './settings/SettingsLayout'
 import { importErrorText } from '../lib/errors'
+import { isNativeApp } from '../lib/native'
 import './settings/settings-layout.css'
 
 const DEFAULT_SERVER = 'http://127.0.0.1:11470'
@@ -315,6 +317,7 @@ const ALL_SECTIONS: SettingsSectionDef[] = [
   { id: 'sources', title: 'Elección de fuente', element: <SourceSettings /> },
   { id: 'taste', title: 'Gustos y spoilers', element: <TasteSettings /> },
   { id: 'tv', title: 'Pantalla y control remoto', element: <TvSettings /> },
+  { id: 'app', title: 'App de TV', element: <AppSettings /> },
   { id: 'shortcuts', title: 'Teclado y ayuda', element: <ShortcutsSettings /> },
   { id: 'data', title: 'Tus datos', element: <DataSection /> },
   { id: 'diagnostics', title: 'Diagnóstico', element: <DiagnosticsSettings /> },
@@ -337,6 +340,7 @@ export function Settings() {
         if (s.id === 'diagnostics') return reports
         if (s.id === 'house') return inHouse
         if (s.id === 'houses') return isAdmin
+        if (s.id === 'app') return isNativeApp()
         return true
       }),
     [reports, inHouse, isAdmin],

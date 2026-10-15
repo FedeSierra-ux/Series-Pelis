@@ -266,6 +266,23 @@ npm run preview    # sirve dist/ en http://localhost:4173
   manda todo recién con el `ready`), `VttParser.java`, `SubtitleTextView.java`, `SpNativePlugin` (`player: true` en
   `getInfo`, métodos `player*`, evento `player`), `MainActivity` (las teclas y Atrás van primero al reproductor),
   `res/layout/sp_player*.xml`. Sin cabeceras falsas; un `.m3u8` va como HLS. Sin probar todavía en una TV real.
+- v0.21.0 hecha (rama `claude/android-tv-v0.21`): **actualizador + filas del inicio de Android TV**. Contrato en
+  `src/lib/native.ts` (`getInfo` suma `update`, `home`, `fireTv`; `updateCheck`/`updateInstall` + evento `update`;
+  `homeSync`; `takeLaunch` + evento `open`). Web: `lib/appUpdate.ts` (estado, "Después" = 24 h por versión en
+  `sp-app-update-later`), `components/AppUpdateToast.tsx`, Ajustes → App de TV (`settings/AppSettings.tsx`, solo
+  `isNativeApp()`), `lib/nativeHome.ts` + `components/NativeHomeSync.tsx` (Seguir viendo/siguiente/nuevo y Mi lista
+  sin empezar del perfil activo, cada 5 s como mucho; solo https en imágenes), `lib/nativeLaunch.ts` +
+  `components/NativeLaunch.tsx` (rutas `/detail/<movie|series>/<id>` o `/list`; `play=1` = reproducir; si el perfil
+  del enlace es otro, `sp-pending-launch` en sessionStorage + `switchProfile`; `PROFILE_FROM_LAUNCH` cierra el
+  "¿Quién está mirando?"). Android: `AppUpdater.java` (GitHub `releases/latest` sin token, etiqueta `tv-vX.Y.Z`,
+  asset `series-pelis-tv.apk`, solo hosts de GitHub por https, tope 200 MB, verifica paquete, versionCode y **misma
+  firma**; 6 h de caché, 15 min si falló; instalador clásico ACTION_VIEW + FileProvider `updates/`),
+  `HomeRows.java` (tvprovider 1.1.0: Watch Next CONTINUE/NEXT/NEW + canal "Mi lista"; lo que el usuario saca de la
+  fila no vuelve salvo que avance >30 s o cambie), `DeepLink.java` (`seriespelis://open?path=&profile=`, sin
+  BROWSABLE, sin `..` ni `%2e`/`%2f`). El workflow exige etiqueta = versión de `tv-app/package.json`.
+  **Fire TV**: sin filas (el "Continuar viendo" de Amazon pide integración de catálogo con Amazon); `home` es falso.
+  El canal "Mi lista" lo propuse yo (se puede sacar). El repo era privado: el usuario eligió **hacerlo público** para
+  que el actualizador y Downloader lean Releases. Sin probar todavía en una TV real.
 - **Decisiones para la v0.17 (reemplazan el reparto del plan de abajo)**: addons y TorBox **iguales para todas las
   casas**, solo los cambia el admin (opción A). Ajustes generales (subtítulos, idiomas, autoplay, saltar intro, sin
   spoilers, reglas de fuentes) **iguales en toda la casa**; lo físico (modo TV, tamaño de la interfaz, protector,

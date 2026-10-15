@@ -79,6 +79,9 @@ export function watchProfileChange() {
 /** Evento de `window` para abrir "¿Quién está mirando?" (desde "Vos" o Ajustes). */
 export const OPEN_PROFILES = 'sp-open-profiles'
 
+/** Evento de `window` (v0.21): se abrió la app desde el inicio de la TV, que ya dice el perfil. */
+export const PROFILE_FROM_LAUNCH = 'sp-profile-from-launch'
+
 export function openProfilePicker(manage = false) {
   window.dispatchEvent(new CustomEvent(OPEN_PROFILES, { detail: { manage } }))
 }

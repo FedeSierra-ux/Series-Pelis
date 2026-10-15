@@ -1,5 +1,6 @@
 import { lazy, Suspense, useEffect, useLayoutEffect, useRef } from 'react'
 import { Navigate, Route, Routes, useLocation, useNavigate, useNavigationType } from 'react-router-dom'
+import { AppUpdateToast } from './components/AppUpdateToast'
 import { AuthGate } from './components/AuthGate'
 import { ErrorBoundary } from './components/ErrorBoundary'
 import { Theme2Layout as Layout } from './components/Theme2Layout'
@@ -7,6 +8,8 @@ import { Onboarding } from './components/Onboarding'
 import { Screensaver } from './components/Screensaver'
 import { ShortcutsHelp, useGlobalShortcuts } from './components/ShortcutsHelp'
 import { TvHints } from './components/TvHints'
+import { NativeHomeSync } from './components/NativeHomeSync'
+import { NativeLaunch } from './components/NativeLaunch'
 import { UpdateToast } from './components/UpdateToast'
 import { ViewTransitionRouter } from './components/ViewTransitionRouter'
 import { StorageWarning } from './components/StorageWarning'
@@ -109,6 +112,10 @@ export function App() {
           <TvHints />
           <ShortcutsHelp />
           <UpdateToast />
+          {/* App de Android TV (v0.21): actualizarse sola, filas del inicio de la TV y abrir desde ellas. */}
+          <AppUpdateToast />
+          <NativeHomeSync />
+          <NativeLaunch />
           <StorageWarning />
           <Routes>
             <Route
