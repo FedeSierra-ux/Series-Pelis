@@ -213,6 +213,11 @@ npm run preview    # sirve dist/ en http://localhost:4173
   nuevo borra la sesión vieja, topes de sync (`MAX_VALUE`, `PUSH_LIMIT`, `HOUSE_MAX_ROWS/BYTES`, 507), `readText`
   con tope de bytes, IPv6 por /64 en `clientIp`, `gatePath` en el middleware. Columnas nuevas en tablas que ya
   existen = `ADDED_COLUMNS` (ALTER que ignora "duplicate column"). Los previews de Pages usan la misma D1.
+- v0.17.1 hecha: un aparato **que no es del admin** que sale de la casa o lo sacan (paso de `in` a `out`) pierde los
+  addons: `forgetAddonData()` en `store.ts` (addons → Cinemeta, `lastSource`, `catalogPrefs`, `sp-manifest-checked` y
+  `clearCache()`), llamado desde `onAuth` de `cloudSync.ts` después de frenar el motor (`shouldForgetAddons`). Las
+  **invitaciones no vencen** (decisión del usuario: se dejan como están). Base D1 aparte para las previews: sí
+  (falta el id de la base `series-pelis-preview`).
 - **Decisiones para la v0.17 (reemplazan el reparto del plan de abajo)**: addons y TorBox **iguales para todas las
   casas**, solo los cambia el admin (opción A). Ajustes generales (subtítulos, idiomas, autoplay, saltar intro, sin
   spoilers, reglas de fuentes) **iguales en toda la casa**; lo físico (modo TV, tamaño de la interfaz, protector,

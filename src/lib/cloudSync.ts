@@ -5,6 +5,7 @@ import { getAuth, reportUnauthorized, subscribeAuth, type AuthState } from './au
 import {
   addonsStore,
   diaryStore,
+  forgetAddonData,
   goalsStore,
   notInterestedStore,
   progressStore,
@@ -375,17 +376,33 @@ function startEngine(house: string, isAdmin: boolean): Engine {
 
 let engine: Engine | undefined
 
+/**
+ * Un aparato que no es del admin y sale de la casa (o lo sacan desde otro) se queda sin los addons: sus URLs
+ * llevan la key del debrid. Solo al pasar de "adentro" a "afuera": lo que había antes de entrar por primera
+ * vez (por ejemplo, en la PC del admin) no se toca.
+ */
+export function shouldForgetAddons(prev: AuthState | undefined, next: AuthState): boolean {
+  return prev?.status === 'in' && !prev.house.isAdmin && next.status === 'out'
+}
+
+let lastIn: AuthState | undefined
+
 function onAuth(s: AuthState) {
   if (s.status === 'in') {
+    lastIn = s
     if (engine && engine.house === s.house.id && engine.isAdmin === s.house.isAdmin) return
     engine?.stop()
     engine = startEngine(s.house.id, s.house.isAdmin)
     return
   }
   if (s.status === 'loading') return
+  // Primero se frena el motor: así el borrado no se anota como un cambio para subir.
   engine?.stop()
   engine = undefined
+  const forget = shouldForgetAddons(lastIn, s)
+  lastIn = undefined
   if (s.status === 'out') void forgetSyncState()
+  if (forget) void forgetAddonData()
 }
 
 /** Sube lo pendiente antes de salir (con un tope: sin conexión no frena el "Salir"). */

@@ -18,12 +18,15 @@ import {
   addInstalledAddons,
   addonKey,
   addonsStore,
+  catalogPrefsStore,
   continueWatching,
   diaryStore,
   exportData,
+  forgetAddonData,
   hydrateStores,
   importData,
   installAddon,
+  lastSourceStore,
   MANIFEST_TTL_MS,
   progressStore,
   refreshManifests,
@@ -358,5 +361,27 @@ describe('listas de IMDb sacadas (v0.13.0)', () => {
     idbSeed.set('settings', { ...settingsStore.get(), curatedRows: ['top-imdb-movie', 'oscars', 'top-imdb-series', 'kw-heist'] })
     await hydrateStores()
     expect(settingsStore.get().curatedRows).toEqual(['oscars', 'kw-heist'])
+  })
+})
+
+describe('forgetAddonData (v0.17.1)', () => {
+  it('saca los addons y todo lo que guarda sus URLs; el resto queda', async () => {
+    const ls = fakeLocalStorage()
+    ls.set('sp-manifest-checked', JSON.stringify({ [TORBOX]: 1 }))
+    ls.set('sp-otra', 'x')
+    addonsStore.set([CINEMETA_ADDON, addon(TORBOX, 'torrentio')])
+    lastSourceStore.set({ tt1: { addonUrl: TORBOX, at: 1 } as never })
+    catalogPrefsStore.set((p) => ({ ...p, order: [`${TORBOX}|movie|top`] }))
+    progressStore.set({ tt1: { videoId: 'tt1' } as never })
+    const progress = progressStore.get()
+
+    await forgetAddonData()
+
+    expect(addonsStore.get()).toEqual([CINEMETA_ADDON])
+    expect(lastSourceStore.get()).toEqual({})
+    expect(catalogPrefsStore.get().order).toEqual([])
+    expect(ls.has('sp-manifest-checked')).toBe(false)
+    expect(ls.get('sp-otra')).toBe('x')
+    expect(progressStore.get()).toBe(progress)
   })
 })

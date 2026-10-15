@@ -152,7 +152,11 @@ export function HouseSettings() {
       <div className="hero-actions">
         {confirmOut ? (
           <span className="confirm-inline">
-            <span>¿Salir de la casa en este aparato? Lo guardado acá queda, pero deja de sincronizarse.</span>
+            <span>
+              {auth.house.isAdmin
+                ? '¿Salir de la casa en este aparato? Lo guardado acá queda, pero deja de sincronizarse.'
+                : '¿Salir de la casa en este aparato? Se borran los addons de este aparato; lo demás queda, pero deja de sincronizarse.'}
+            </span>
             <button type="button" className="btn danger" onClick={() => void leave()} disabled={leaving}>
               {leaving ? 'Saliendo…' : 'Sí, salir'}
             </button>
