@@ -234,8 +234,9 @@ npm run preview    # sirve dist/ en http://localhost:4173
   Tras el INSERT se repite el DELETE del perfil subido si tiene lápida (carrera con un borrado). Cliente: para
   cambiar de perfil va `persistProfileChoice` (solo localStorage) + recargar; `setActiveProfileId` es solo para
   `hydrateStores`. `freezeProfileWrites()` frena las escrituras de los stores por perfil mientras se borra el activo.
-  Pendientes que el usuario tiene que decidir: tope de 6 perfiles en el servidor y lista blanca de sitios para la
-  imagen del avatar (hoy cualquier https).
+- v0.18.2 hecha: **tope de 6 perfiles también en el servidor** (`MAX_PROFILES` y `overProfileCap` en `sync.ts`,
+  igual al de `profileModel.ts`; un test vigila que coincidan). La imagen del avatar **no se limita** a ciertos
+  sitios (decisión del usuario: cualquier https).
 - v0.19.0 hecha (rama `claude/android-tv-v0.19`): **app de Android TV / Fire TV** en `tv-app/` (Capacitor 8 con
   `server.url` = el sitio; `package.json` propio, así el build de Cloudflare no cambia). La versión del APK sale de
   `tv-app/package.json` (0.19.0 → versionCode 19000): **subirla junto con la raíz**. Nativo:
