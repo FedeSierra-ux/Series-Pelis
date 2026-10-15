@@ -1,5 +1,19 @@
 # Changelog
 
+## [0.16.2] - 2026-10-14
+
+### Arreglado
+- **Los subtítulos online no aparecían nunca**: SubDL devuelve la dirección de cada archivo con `?api_key=…` al
+  final y la función esperaba que terminara en `.zip`, así que descartaba todos. Ahora toma solo el id (la key no
+  sale del servidor).
+- Un error de SubDL (`status: false`, por ejemplo `not_authorized`) ya no se toma como "no hay subtítulos" ni queda
+  guardado una hora: la búsqueda responde 502 con el código del error (sin la key) y se reintenta la próxima vez.
+- `/api/subs/_status` responde aunque se abra desde un link (chat, WhatsApp); antes daba "Solo desde la app".
+- La caché de búsquedas cambia de clave, así que los resultados vacíos que quedaron guardados no se usan más.
+
+### Cambiado
+- Si la descarga sin key se queda sin cupo, el reintento con key la manda como SubDL la indica (`?api_key=`).
+
 ## [0.16.1] - 2026-10-14
 
 ### Cambiado

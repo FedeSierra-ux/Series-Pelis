@@ -191,6 +191,16 @@ npm run preview    # sirve dist/ en http://localhost:4173
 - v0.16.1 hecha: binding D1 `DB` (base `series-pelis`) en `wrangler.toml`. **Los bindings van en `wrangler.toml`**:
   con ese archivo el panel de Pages desactiva "Add" en Bindings. Los secretos sí van en el panel. El KV `REPORTS`
   nunca se enlazó (está comentado). Secreto `ADMIN_KEY` para arrancar el login (lo carga el usuario).
+- v0.16.2 hecha: SubDL devuelve `url: "/subtitle/<id>.zip?api_key=…"` (con la key): el id se saca con
+  `\.zip(?:[?#]|$)`, nunca se reenvía la url. `status: false` = error (`SourceError`, 502 con `detail`, sin caché).
+  `_status` va antes de `crossSite`. Descarga sin key anda (200); el reintento con key usa `?api_key=`.
+- **Decisiones para la v0.17 (reemplazan el reparto del plan de abajo)**: addons y TorBox **iguales para todas las
+  casas**, solo los cambia el admin (opción A). Ajustes generales (subtítulos, idiomas, autoplay, saltar intro, sin
+  spoilers, reglas de fuentes) **iguales en toda la casa**; lo físico (modo TV, tamaño de la interfaz, protector,
+  reproductor externo, servidor local de Stremio, búsquedas recientes) queda **por aparato** (confirmado). Por perfil (en la v0.17,
+  un perfil "principal" por casa): historial, seguir viendo, mi lista, estrellas, diario y metas. Datos locales:
+  se mezclan solos (gana el más nuevo). Login obligatorio con D1, también para `/api/tmdb` y `/api/subs`. Casas e
+  invitaciones se manejan desde la app (Ajustes → Casas).
 - **Plan acordado (pedido "1, 2 y 3")**: v0.17.0 login "Código de casa" (opción A) + sincronización en D1
   (investigación en `scratchpad/v15/login.md`); v0.18.0 perfiles variante D (investigación en
   `scratchpad/v15/perfiles.md`): en la TV "¿Quién está mirando?" al abrir y tras el protector (entra solo a los 10 s),

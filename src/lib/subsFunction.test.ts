@@ -76,6 +76,18 @@ describe('función /api/subs', () => {
     const body = await (await call('_status', { env: { SUBDL_KEY: FAKE_SUBDL, OPENSUBTITLES_KEY: FAKE_OS } })).json()
     expect(body).toEqual({ enabled: true, sources: ['subdl', 'opensubtitles'] })
     expect(JSON.stringify(body)).not.toContain(FAKE_SUBDL)
+    // Responde aunque se abra desde un link de otro sitio (no gasta cupo ni muestra keys).
+    expect((await call('_status', { headers: { 'Sec-Fetch-Site': 'cross-site' } })).status).toBe(200)
+  })
+
+  it('un error de SubDL (status: false) no queda guardado como "no hay subtítulos"', async () => {
+    vi.stubGlobal('fetch', (async () => Response.json({ status: false, statusCode: 403, error: 'not_authorized' })) as FetchFn)
+    const res = await call('search?imdb=tt0133093&type=movie')
+    expect(res.status).toBe(502)
+    expect(res.headers.get('Cache-Control')).toBe('no-store')
+    const body = (await res.json()) as { detail?: string }
+    expect(body.detail).toBe('SubDL 200 not_authorized')
+    expect(JSON.stringify(body)).not.toContain(FAKE_SUBDL)
   })
 
   it('busca en SubDL en español, saca la key de la respuesta y pone el latino primero', async () => {
@@ -85,9 +97,9 @@ describe('función /api/subs', () => {
       return Response.json({
         status: true,
         subtitles: [
-          { release_name: 'The.Show.S01E02.1080p.WEB-DL.Castellano', url: '/subtitle/111-222.zip', language: 'ES', season: 1, episode: 2 },
+          { release_name: 'The.Show.S01E02.1080p.WEB-DL.Castellano', url: `/subtitle/111-222.zip?api_key=${FAKE_SUBDL}`, language: 'ES', season: 1, episode: 2 },
           { release_name: 'The.Show.S01E02.720p.HDTV', url: '/subtitle/111-333.zip', language: 'ES', season: 1, episode: 2 },
-          { release_name: 'The.Show.S01E02.1080p.WEB-DL', comment: 'Español Latino', url: '/subtitle/111-444.zip', language: 'ES', season: 1, episode: 2, hi: true },
+          { release_name: 'The.Show.S01E02.1080p.WEB-DL', comment: 'Español Latino', url: `/subtitle/111-444.zip?api_key=${FAKE_SUBDL}`, language: 'ES', season: 1, episode: 2, hi: true },
           { release_name: 'The.Show.S01E03', url: '/subtitle/111-555.zip', language: 'ES', season: 1, episode: 3 },
           { release_name: 'Otro idioma', url: '/subtitle/111-666.zip', language: 'EN' },
         ],
