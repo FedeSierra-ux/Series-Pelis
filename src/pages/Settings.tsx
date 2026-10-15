@@ -26,6 +26,9 @@ import { TvSettings } from './settings/TvSettings'
 import { ShortcutsSettings } from './settings/ShortcutsSettings'
 import { DiagnosticsSettings } from './settings/DiagnosticsSettings'
 import { useReportsEnabled } from '../lib/diagnostics'
+import { useAuth, useCanEditAddons } from '../lib/auth'
+import { HouseSettings } from './settings/HouseSettings'
+import { HousesSettings } from './settings/HousesSettings'
 import { SettingsBlock, SettingsIndex, WIDE_QUERY, goToSection, useActiveSection, useMediaQuery, type SettingsSectionDef } from './settings/SettingsLayout'
 import { importErrorText } from '../lib/errors'
 import './settings/settings-layout.css'
@@ -44,8 +47,43 @@ function hostList(urls: string[]): string {
   return hosts.join(', ')
 }
 
+/** Con login, quien no es el administrador ve los addons pero no los cambia (son iguales en todas las casas). */
+function AddonsReadOnly() {
+  const addons = useAddons()
+  return (
+    <section className="settings-section">
+      <h2>Addons de Stremio</h2>
+      <p className="muted">Los addons los maneja el administrador y son los mismos en todas las casas. Si cambia algo, llega solo.</p>
+      <ul className="addon-list">
+        {addons.map((a) => {
+          const name = addonName(a.manifest)
+          return (
+            <li key={a.transportUrl} className={`addon-item${a.disabled ? ' addon-off' : ''}`}>
+              {a.manifest.logo ? <img src={a.manifest.logo} alt="" className="addon-logo" /> : <div className="addon-logo placeholder">{name[0]}</div>}
+              <div className="addon-text">
+                <strong>
+                  {name} <span className="muted small">v{a.manifest.version}</span>
+                  {a.disabled && <span className="chip small">Desactivado</span>}
+                </strong>
+                {a.manifest.description && <span className="muted small addon-desc">{a.manifest.description}</span>}
+              </div>
+            </li>
+          )
+        })}
+      </ul>
+      <div className="hero-actions">
+        <Link className="btn addon-catalogs-link" to="/settings/catalogs">
+          Gestionar catálogos
+        </Link>
+        <span className="muted small">Renombrar, ocultar, ordenar o juntar las filas de Inicio.</span>
+      </div>
+    </section>
+  )
+}
+
 function AddonsSection() {
   const addons = useAddons()
+  if (!useCanEditAddons()) return <AddonsReadOnly />
   return (
     <section className="settings-section">
       <h2>Addons de Stremio</h2>
@@ -186,6 +224,7 @@ function PlaybackSection() {
 }
 
 function DataSection() {
+  const inHouse = useAuth().status === 'in'
   const fileRef = useRef<HTMLInputElement>(null)
   const [msg, setMsg] = useState<string>()
 
@@ -220,8 +259,9 @@ function DataSection() {
     <section className="settings-section">
       <h2>Tus datos</h2>
       <p className="muted">
-        Por ahora el historial, “Mi lista” y los addons se guardan en este navegador. Con una copia los pasás a otro
-        dispositivo. La sincronización automática llega en la próxima versión.
+        {inHouse
+          ? 'Tus datos se sincronizan con la casa (ver “Casa”). Igual podés bajar una copia para guardarla aparte.'
+          : 'El historial, “Mi lista” y los addons se guardan en este navegador. Con una copia los pasás a otro dispositivo.'}
       </p>
       <div className="hero-actions">
         <button className="btn" onClick={download}>
@@ -264,6 +304,8 @@ function DataSection() {
  * una línea acá; el `id` es el ancla y `title` lo que dice el índice.
  */
 const ALL_SECTIONS: SettingsSectionDef[] = [
+  { id: 'house', title: 'Casa', element: <HouseSettings /> },
+  { id: 'houses', title: 'Casas', element: <HousesSettings /> },
   { id: 'addons', title: 'Addons de Stremio', element: <AddonsSection /> },
   { id: 'stremio', title: 'Importar desde Stremio', element: <StremioImport /> },
   { id: 'tmdb', title: 'TMDB', element: <TmdbSettings /> },
@@ -285,7 +327,20 @@ export function Settings() {
   const wide = useMediaQuery(WIDE_QUERY)
   // "Diagnóstico" solo existe si el sitio publicado acepta informes (si no, la sección no dibuja nada).
   const reports = useReportsEnabled()
-  const SECTIONS = useMemo(() => ALL_SECTIONS.filter((s) => s.id !== 'diagnostics' || reports), [reports])
+  // "Casa" solo con login; "Casas", solo para el administrador.
+  const auth = useAuth()
+  const inHouse = auth.status === 'in'
+  const isAdmin = inHouse && auth.house.isAdmin
+  const SECTIONS = useMemo(
+    () =>
+      ALL_SECTIONS.filter((s) => {
+        if (s.id === 'diagnostics') return reports
+        if (s.id === 'house') return inHouse
+        if (s.id === 'houses') return isAdmin
+        return true
+      }),
+    [reports, inHouse, isAdmin],
+  )
   const SECTION_IDS = useMemo(() => SECTIONS.map((s) => s.id), [SECTIONS])
   const [active, setActive] = useActiveSection(SECTION_IDS, wide)
 

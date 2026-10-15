@@ -3,6 +3,7 @@ import { cached, HttpError, peekMemory } from './cache'
 import { tmdbGenreName } from './discoverFilters'
 import { settingsStore, useStore } from './store'
 import type { MetaPreview } from './types'
+import { reportUnauthorized } from './auth'
 
 // Cliente de TMDB (api.themoviedb.org/3). Es opcional: sin key la app sigue con Cinemeta.
 // Acepta la "API Key" (v3, va como ?api_key=) o el "API Read Access Token" (v4, un JWT que
@@ -111,6 +112,8 @@ export async function tmdbFetch<T>(path: string, params: Record<string, string |
       signal: ctrl.signal,
       headers: bearer ? { Authorization: `Bearer ${key}`, Accept: 'application/json' } : { Accept: 'application/json' },
     })
+    // 401 del sitio: la sesión de la casa se cerró (desde otro aparato) y hay que volver a entrar.
+    if (viaServer && res.status === 401) reportUnauthorized()
     if (!res.ok) throw new HttpError(res.status, (viaServer ? SERVER_PROXY : API) + path)
     return (await res.json()) as T
   } finally {

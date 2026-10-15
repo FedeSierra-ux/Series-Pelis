@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react'
 import { stremioAddonCollection, stremioLibrary, stremioLogin, stremioLogout } from '../../lib/stremioApi'
 import { mergeWatchlist, parseStremioJson, planImport, type ImportPlan, type StremioData } from '../../lib/stremioLibrary'
 import { addInstalledAddons, addonsStore, importProgress, progressStore, watchlistStore } from '../../lib/store'
+import { useCanEditAddons } from '../../lib/auth'
 import { errorText } from '../../lib/errors'
 import { addonName } from '../../lib/addons'
 
@@ -32,6 +33,9 @@ export function StremioImport() {
   const [data, setData] = useState<StremioData>()
   const [plan, setPlan] = useState<ImportPlan>()
   const [pick, setPick] = useState({ addons: true, watchlist: true, progress: true })
+  // Con login, los addons los maneja el administrador: los demás importan solo biblioteca e historial.
+  const canAddons = useCanEditAddons()
+  const pickAddons = pick.addons && canAddons
   // La sesión que abrimos para importar: solo en memoria, se cierra al terminar.
   const session = useRef<string>(undefined)
 
@@ -96,7 +100,7 @@ export function StremioImport() {
     // Se recalcula contra lo de ahora por si algo cambió mientras mirabas la vista previa.
     const fresh = planImport(data, currentData())
     const parts: string[] = []
-    if (pick.addons && fresh.addons.fresh.length) {
+    if (pickAddons && fresh.addons.fresh.length) {
       addInstalledAddons(fresh.addons.fresh)
       parts.push(plural(fresh.addons.fresh.length, 'addon', 'addons'))
     }
@@ -227,12 +231,14 @@ export function StremioImport() {
             <strong>{plural(plan.watchlist.total, 'título', 'títulos')}</strong> en tu biblioteca,{' '}
             <strong>{plan.progress.total}</strong> con progreso.
           </p>
-          <label className="check">
-            <input type="checkbox" checked={pick.addons} onChange={(e) => setPick((p) => ({ ...p, addons: e.target.checked }))} />
-            <span>
-              Addons <span className="muted small">· {plan.addons.fresh.length} nuevos{plan.addons.skipped > 0 ? `, ${plan.addons.skipped} no compatibles` : ''}</span>
-            </span>
-          </label>
+          {canAddons && (
+            <label className="check">
+              <input type="checkbox" checked={pick.addons} onChange={(e) => setPick((p) => ({ ...p, addons: e.target.checked }))} />
+              <span>
+                Addons <span className="muted small">· {plan.addons.fresh.length} nuevos{plan.addons.skipped > 0 ? `, ${plan.addons.skipped} no compatibles` : ''}</span>
+              </span>
+            </label>
+          )}
           <label className="check">
             <input type="checkbox" checked={pick.watchlist} onChange={(e) => setPick((p) => ({ ...p, watchlist: e.target.checked }))} />
             <span>
@@ -245,11 +251,11 @@ export function StremioImport() {
               Historial y progreso <span className="muted small">· {plan.progress.fresh} nuevos o más recientes</span>
             </span>
           </label>
-          {plan.addons.fresh.length > 0 && pick.addons && (
+          {plan.addons.fresh.length > 0 && pickAddons && (
             <p className="muted small">Addons nuevos: {plan.addons.fresh.map((a) => addonName(a.manifest)).join(', ')}</p>
           )}
           <div className="hero-actions">
-            <button className="btn btn-primary" onClick={apply} disabled={!pick.addons && !pick.watchlist && !pick.progress}>
+            <button className="btn btn-primary" onClick={apply} disabled={!pickAddons && !pick.watchlist && !pick.progress}>
               Importar
             </button>
             <button className="btn" onClick={cancel}>

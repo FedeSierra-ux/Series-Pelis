@@ -69,4 +69,16 @@ export function memoryRateLimit(limit: number, windowMs: number) {
 }
 
 /** IP del que pide, según Cloudflare (o "?" en local). */
-export const clientIp = (request: Request) => request.headers.get('CF-Connecting-IP') ?? '?'
+/**
+ * IP del cliente para los topes de pedidos. Las IPv6 cuentan por su /64 (cada casa recibe un bloque entero y
+ * rotar direcciones dentro de él no tiene que dar intentos nuevos).
+ */
+export function clientIp(request: Request): string {
+  const ip = request.headers.get('CF-Connecting-IP') ?? '?'
+  if (!ip.includes(':')) return ip
+  const [head, tail = ''] = ip.toLowerCase().split('::')
+  const left = head ? head.split(':') : []
+  const right = tail ? tail.split(':') : []
+  const full = [...left, ...Array(Math.max(0, 8 - left.length - right.length)).fill('0'), ...right]
+  return full.slice(0, 4).map((g) => g.replace(/^0+(?=.)/, '')).join(':') + '::/64'
+}

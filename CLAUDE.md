@@ -194,6 +194,25 @@ npm run preview    # sirve dist/ en http://localhost:4173
 - v0.16.2 hecha: SubDL devuelve `url: "/subtitle/<id>.zip?api_key=…"` (con la key): el id se saca con
   `\.zip(?:[?#]|$)`, nunca se reenvía la url. `status: false` = error (`SourceError`, 502 con `detail`, sin caché).
   `_status` va antes de `crossSite`. Descarga sin key anda (200); el reintento con key usa `?api_key=`.
+- v0.17.0 hecha: **login "Código de casa" + sincronización en D1**. Servidor: `functions/_auth.ts` (tablas que crea
+  la app con `ensureSchema`, sesiones con hash en la cookie `__Host-sp_s`, `sameSecret`, topes `overLimit`),
+  `functions/api/auth/[[path]].ts` (setup del admin con `ADMIN_KEY`, invitaciones, emparejamiento de 6 dígitos,
+  casas y aparatos), `functions/api/sync.ts` (GET con cursor, POST de hasta 300 filas, gana el `u` más nuevo;
+  alcance `global` solo para el admin) y `functions/api/_middleware.ts` (sesión obligatoria en `/api/tmdb` y
+  `/api/subs` salvo `_status`). Cliente: `lib/auth.ts` (`useAuth`, estado inicial desde la caché `sp-auth`;
+  404 o respuesta no JSON en `/me` = `disabled`, así anda `npm run dev`), `lib/syncCore.ts` (lógica pura: sombra +
+  pendientes, `enforceReadOnly` vuelve los addons de un no-admin a lo del servidor), `lib/cloudSync.ts`
+  (`ADAPTERS`: qué se sincroniza y con qué alcance; `flushCloudSync` antes de salir), `components/AuthGate.tsx`,
+  `pages/auth/` (Login, JoinPage `/unirse#código`, LinkDevice `/vincular`), Ajustes → Casa (`HouseSettings`,
+  primera sección) y Casas (`HousesSettings`, solo admin). Tests con un D1 falso de `node:sqlite`
+  (`lib/d1.testutil.ts`, `authFunction.test.ts`, `syncCore.test.ts`). Una tienda nueva que se sincronice = una
+  línea en `ADAPTERS` (y su `store` en `SYNC_STORES` del servidor).
+  Arreglos de la revisión de seguridad: **admin por aparato** (`sessions.is_admin`, solo lo pone `setup`; la casa
+  principal sola no alcanza), vincular en dos pasos (`pair/info` con ciudad/país de `request.cf`, después
+  `pair/approve` atómico con `UPDATE … RETURNING`), sesión de 2 años como máximo (`MAX_SESSION_AGE_MS`), entrar de
+  nuevo borra la sesión vieja, topes de sync (`MAX_VALUE`, `PUSH_LIMIT`, `HOUSE_MAX_ROWS/BYTES`, 507), `readText`
+  con tope de bytes, IPv6 por /64 en `clientIp`, `gatePath` en el middleware. Columnas nuevas en tablas que ya
+  existen = `ADDED_COLUMNS` (ALTER que ignora "duplicate column"). Los previews de Pages usan la misma D1.
 - **Decisiones para la v0.17 (reemplazan el reparto del plan de abajo)**: addons y TorBox **iguales para todas las
   casas**, solo los cambia el admin (opción A). Ajustes generales (subtítulos, idiomas, autoplay, saltar intro, sin
   spoilers, reglas de fuentes) **iguales en toda la casa**; lo físico (modo TV, tamaño de la interfaz, protector,

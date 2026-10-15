@@ -10,6 +10,7 @@ compatibility_date = "2026-10-01"
 
 # ---- Base D1 (login de las casas y sincronización, desde la v0.17) ----
 # Creada en el panel: Storage & Databases → D1 → `series-pelis`. Las tablas las crea la app.
+# Con la base enlazada la app pide entrar con una casa (y /api/tmdb y /api/subs también). Sin ella, todo como antes.
 [[d1_databases]]
 binding = "DB"
 database_name = "series-pelis"
@@ -37,3 +38,6 @@ database_id = "da6e1fd0-df31-46db-a965-d3b74591fe42"
 #   SUBDL_KEY         key de SubDL para los subtítulos online de /api/subs (opcional; ver /api/subs/_status).
 #   OPENSUBTITLES_KEY respaldo de /api/subs cuando SubDL no trae nada (opcional). Con OPENSUBTITLES_USER y
 #                     OPENSUBTITLES_PASS (una cuenta aparte para la app) pasa de 5 a 20 descargas por día.
+#   ADMIN_KEY         clave del administrador (mínimo 32 caracteres, ej. `openssl rand -hex 32`). Con ella se
+#                     entra la primera vez ("Soy el administrador") y se crea la casa principal. Sin ella nadie
+#                     puede arrancar el login.
