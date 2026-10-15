@@ -4,6 +4,7 @@ import { App } from './App'
 import { checkAuth } from './lib/auth'
 import { initCloudSync } from './lib/cloudSync'
 import { initDiagnostics, probeReportServer } from './lib/diagnostics'
+import { initNative } from './lib/native'
 import { hydrateStores } from './lib/store'
 import { initProfileWatch } from './lib/profileSwitch'
 import { watchProfileChange } from './lib/profiles'
@@ -13,6 +14,8 @@ import { syncTvAttr } from './lib/tv'
 import './styles.css'
 import './theme2.css'
 
+// App de Android TV: el botón Atrás del control llega por acá (en el navegador no hace nada).
+initNative()
 // Sora y DM Sans (van empaquetadas): se piden enseguida, en paralelo con IndexedDB.
 loadThemeFonts()
 // ¿El sitio trae TMDB (secreto en Cloudflare)? En paralelo: no frena el arranque.

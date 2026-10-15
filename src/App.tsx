@@ -12,6 +12,7 @@ import { ViewTransitionRouter } from './components/ViewTransitionRouter'
 import { StorageWarning } from './components/StorageWarning'
 import { resetFocus, restoreFocus, saveFocus, trackFocus } from './lib/focusMemory'
 import { initSpatialNav, ladderBack } from './lib/spatialNav'
+import { nativeExit } from './lib/native'
 import { Detail } from './pages/Detail'
 import { Discover } from './pages/Discover'
 import { History } from './pages/History'
@@ -43,12 +44,14 @@ function SpatialNav() {
   const navigate = useNavigate()
   const location = useLocation()
   // "Atrás" en escalera en Inicio, Películas, Series y Mi lista: arriba de la pantalla, después el riel
-  // y recién después lo de siempre (volver; en Inicio, nada). Devuelve la limpieza a propósito.
+  // y recién después lo de siempre (volver; en Inicio, nada, salvo en la app de TV, que se va al fondo).
+  // Devuelve la limpieza a propósito.
   useEffect(
     () =>
       initSpatialNav(() => {
         if (ladderBack(location.pathname)) return
         if (location.pathname !== '/') navigate(-1)
+        else nativeExit()
       }),
     [navigate, location.pathname],
   )

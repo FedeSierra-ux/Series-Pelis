@@ -1,0 +1,116 @@
+# Arma el APK de la app de Android TV / Fire TV (carpeta tv-app/).
+# - En cada push o PR que toque tv-app/: compila y deja el APK como "artifact" de la corrida.
+# - Con una etiqueta tv-v* (por ejemplo tv-v0.19.0): además lo publica en Releases, y queda en
+#   https://github.com/FedeSierra-ux/Series-Pelis/releases/latest/download/series-pelis-tv.apk
+#   (esa dirección es la que se escribe en Downloader, en la TV).
+#
+# Firma: con los secretos ANDROID_KEYSTORE_BASE64, ANDROID_KEYSTORE_PASSWORD, ANDROID_KEY_ALIAS
+# (y opcional ANDROID_KEY_PASSWORD) sale firmado siempre con la misma llave, así las versiones nuevas se
+# instalan encima sin perder el login. Sin esos secretos sale un APK de prueba (debug), que para actualizar
+# hay que desinstalar antes.
+name: App de Android TV
+
+on:
+  push:
+    paths:
+      - 'tv-app/**'
+      - '.github/workflows/android-tv.yml'
+    tags:
+      - 'tv-v*'
+  pull_request:
+    paths:
+      - 'tv-app/**'
+      - '.github/workflows/android-tv.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: android-tv-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  apk:
+    name: Compilar el APK
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    defaults:
+      run:
+        working-directory: tv-app
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: tv-app/package-lock.json
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 21
+      - uses: gradle/actions/setup-gradle@v4
+      - run: npm ci
+      # Copia la configuración y la página de error al proyecto de Android (no se guardan en el repo).
+      - run: npx cap sync android
+
+      - name: Llave de firma
+        id: keystore
+        env:
+          KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+        run: |
+          if [ -n "$KEYSTORE_BASE64" ]; then
+            echo "$KEYSTORE_BASE64" | base64 -d > "$RUNNER_TEMP/release.jks"
+            echo "file=$RUNNER_TEMP/release.jks" >> "$GITHUB_OUTPUT"
+          else
+            echo "::warning::Sin ANDROID_KEYSTORE_BASE64: sale un APK de prueba (debug)."
+          fi
+
+      - name: Compilar (firmado)
+        if: steps.keystore.outputs.file != ''
+        working-directory: tv-app/android
+        env:
+          ANDROID_KEYSTORE_FILE: ${{ steps.keystore.outputs.file }}
+          ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+          ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+        run: |
+          ./gradlew assembleRelease --no-daemon
+          cp app/build/outputs/apk/release/app-release.apk "$RUNNER_TEMP/series-pelis-tv.apk"
+
+      - name: Compilar (prueba)
+        if: steps.keystore.outputs.file == ''
+        working-directory: tv-app/android
+        run: |
+          ./gradlew assembleDebug --no-daemon
+          cp app/build/outputs/apk/debug/app-debug.apk "$RUNNER_TEMP/series-pelis-tv.apk"
+
+      - name: Borrar la llave
+        if: always() && steps.keystore.outputs.file != ''
+        run: rm -f "$RUNNER_TEMP/release.jks"
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: series-pelis-tv
+          path: ${{ runner.temp }}/series-pelis-tv.apk
+          if-no-files-found: error
+
+  release:
+    name: Publicar en Releases
+    needs: apk
+    if: startsWith(github.ref, 'refs/tags/tv-v')
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: series-pelis-tv
+      - uses: softprops/action-gh-release@v2
+        with:
+          name: App de TV ${{ github.ref_name }}
+          files: series-pelis-tv.apk
+          make_latest: true
+          body: |
+            APK de la app de Android TV / Fire TV.
+            Para instalarlo en la TV con Downloader: https://github.com/${{ github.repository }}/releases/latest/download/series-pelis-tv.apk

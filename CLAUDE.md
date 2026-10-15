@@ -229,6 +229,19 @@ npm run preview    # sirve dist/ en http://localhost:4173
   servidor y rechaza lo que suba después. UI: `pages/profiles/` (ProfileGate, WhoIsWatching con
   `AUTO_ENTER_S = 10`, ProfileEditor, `profiles.css`), `components/ProfileAvatar.tsx`, cabecera de Vos, avatar
   en el riel. El protector avisa al cerrarse con `SCREENSAVER_CLOSED`. Sin PIN, sin perfil de chicos ni invitado.
+- v0.19.0 hecha (rama `claude/android-tv-v0.19`): **app de Android TV / Fire TV** en `tv-app/` (Capacitor 8 con
+  `server.url` = el sitio; `package.json` propio, así el build de Cloudflare no cambia). La versión del APK sale de
+  `tv-app/package.json` (0.19.0 → versionCode 19000): **subirla junto con la raíz**. Nativo:
+  `MainActivity.java` (config en `load()`, User-Agent `SeriesPelisApp/<v>` + ` AndroidTV` en televisores,
+  Atrás → `window.__spNativeBack()`, si devuelve falso la app va al fondo; `CookieManager.flush()` en `onPause`) y
+  `SpNativePlugin.java` (`keepAwake`, `exitApp`, y traduce los enlaces `intent:` de `externalPlayers.ts`: solo
+  http/https, sin componentes). Web: `src/lib/native.ts` (`initNative` en `main.tsx`, `nativeExit` en Inicio,
+  `nativeKeepAwake` en `useWakeLock`). Íconos/banner/splash generados del favicon. `android/.gitignore` deja afuera
+  `assets/public` y `capacitor.config.json`: antes de gradle va `npx cap sync android`. APK: workflow
+  `android-tv.yml` (artifact; etiqueta `tv-v*` → Release `series-pelis-tv.apk` para Downloader). Firma con los
+  secretos `ANDROID_KEYSTORE_BASE64` / `_PASSWORD` / `ANDROID_KEY_ALIAS`; **nunca commitear la llave**.
+  v0.20.0 = reproductor nativo integrado (ExoPlayer/Media3) con saltar intro, saltar recap, siguiente episodio,
+  pistas de audio y subs (también los online en latino) y Seguir viendo.
 - **Decisiones para la v0.17 (reemplazan el reparto del plan de abajo)**: addons y TorBox **iguales para todas las
   casas**, solo los cambia el admin (opción A). Ajustes generales (subtítulos, idiomas, autoplay, saltar intro, sin
   spoilers, reglas de fuentes) **iguales en toda la casa**; lo físico (modo TV, tamaño de la interfaz, protector,
@@ -261,5 +274,4 @@ npm run preview    # sirve dist/ en http://localhost:4173
   "Mezcla elegida"; se implementa en v0.6.
 - Login con código de vinculación + sincronización en Cloudflare D1 + Worker de caché.
 - Importar addons directo desde la cuenta de Stremio.
-- Empaquetar para Fire TV / Android TV.
 - Integración opcional con Trakt (por ahora no).
