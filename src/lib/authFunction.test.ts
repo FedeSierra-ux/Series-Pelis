@@ -2,7 +2,8 @@ import { beforeEach, describe, expect, it } from 'vitest'
 import { forgetCachedSessions, normalizeInvite, type AuthEnv } from '../../functions/_auth'
 import { LIMITS, onRequest as auth } from '../../functions/api/auth/[[path]]'
 import { onRequest as middleware } from '../../functions/api/_middleware'
-import { decodeCursor, encodeCursor, HOUSE_MAX_ROWS, onRequestGet as syncGet, onRequestPost as syncPost, PAGE, PUSH_LIMIT } from '../../functions/api/sync'
+import { decodeCursor, encodeCursor, HOUSE_MAX_ROWS, MAX_PROFILES as SERVER_MAX_PROFILES, onRequestGet as syncGet, onRequestPost as syncPost, PAGE, PUSH_LIMIT } from '../../functions/api/sync'
+import { MAX_PROFILES } from './profileModel'
 import { clientIp } from '../../functions/_lib'
 import { fakeD1 } from './d1.testutil'
 
@@ -507,6 +508,33 @@ describe('/api/sync con perfiles', () => {
       { s: 'house', t: 'profiles', k: 'main', v: '{"name":"Fede"}', u: 1 },
     ])
     expect(res.body).toMatchObject({ saved: 1, rejected: 2 })
+  })
+
+  it('el servidor tampoco deja pasar de 6 perfiles (el principal cuenta); borrar uno libera lugar', async () => {
+    expect(SERVER_MAX_PROFILES).toBe(MAX_PROFILES)
+    const admin = await adminLogin()
+    const prof = (k: string, u = 1): Item => ({ s: 'house', t: 'profiles', k, v: `{"name":"${k}"}`, u })
+    await pushAs(admin, 'main', [prof('main')])
+    const five = ['perfil1', 'perfil2', 'perfil3', 'perfil4', 'perfil5']
+    expect((await pushAs(admin, 'main', five.map((k) => prof(k)))).body).toMatchObject({ saved: 5, rejected: 0 })
+
+    // El séptimo no entra, pero cambiar uno que ya existe sí.
+    const res = await pushAs(admin, 'main', [prof('perfil6'), prof('perfil1', 2)])
+    expect(res.body).toMatchObject({ saved: 1, rejected: 1 })
+    expect(keysOf((await pullPart(admin, 'shared')).body.items)).toEqual(['main', ...five])
+
+    // Borrar uno y crear otro en la misma subida.
+    const swap = await pushAs(admin, 'main', [{ s: 'house', t: 'profiles', k: 'perfil2', v: null, u: 3, d: 1 }, prof('perfil6', 3)])
+    expect(swap.body).toMatchObject({ saved: 2, rejected: 0 })
+  })
+
+  it('el tope es por casa', async () => {
+    const admin = await adminLogin()
+    const { invite } = await newHouse(admin)
+    const member = await join(invite)
+    const prof = (k: string): Item => ({ s: 'house', t: 'profiles', k, v: '{}', u: 1 })
+    await pushAs(admin, 'main', ['perfil1', 'perfil2', 'perfil3', 'perfil4', 'perfil5'].map(prof))
+    expect((await pushAs(member, 'main', [prof('perfil6')])).body).toMatchObject({ saved: 1, rejected: 0 })
   })
 })
 

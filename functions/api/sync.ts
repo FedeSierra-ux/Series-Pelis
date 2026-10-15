@@ -45,6 +45,8 @@ const CLOCK_SKEW_MS = 60_000
 export const OVERLAP_MS = 15_000
 
 export const MAIN_PROFILE = 'main'
+/** Perfiles por casa, contando el principal (el mismo número que `MAX_PROFILES` de `src/lib/profileModel.ts`). */
+export const MAX_PROFILES = 6
 const PROFILE_RE = /^(main|[a-z0-9]{6,32})$/
 
 /** El perfil de `?profile=`: sin nada, el principal; uno mal escrito, `undefined` (400). */
@@ -179,6 +181,25 @@ export interface PushItem {
   d?: 1
 }
 
+/**
+ * Tope de perfiles: la app no deja crear más de `MAX_PROFILES`, pero el servidor también lo controla (una app
+ * vieja o modificada podría llenar la casa de perfiles). Devuelve las claves de perfiles nuevos que no entran.
+ * `live` son los perfiles vivos de la casa sin contar el principal; los borrados de la misma subida liberan lugar.
+ */
+export function overProfileCap(items: PushItem[], live: Iterable<string>): Set<string> {
+  const keep = new Set(live)
+  const over = new Set<string>()
+  for (const it of items) {
+    if (it.t !== 'profiles' || it.k === MAIN_PROFILE) continue
+    if (it.d) keep.delete(it.k)
+    else if (!keep.has(it.k)) {
+      if (keep.size >= MAX_PROFILES - 1) over.add(it.k)
+      else keep.add(it.k)
+    }
+  }
+  return over
+}
+
 /** Valida una fila subida; `undefined` si no se acepta. */
 export function cleanItem(raw: unknown, isAdmin: boolean, now: number): PushItem | 'forbidden' | undefined {
   if (!raw || typeof raw !== 'object') return undefined
@@ -241,8 +262,20 @@ export const onRequestPost = async (context: Ctx): Promise<Response> => {
       return json({ error: 'La base no responde. Probá en un rato.' }, 503)
     }
   }
+  let over = new Set<string>()
+  if (items.some((it) => it.t === 'profiles' && !it.d && it.k !== MAIN_PROFILE)) {
+    try {
+      const { results } = await db
+        .prepare(`SELECT key FROM sync_items WHERE scope = ?1 AND store = 'profiles' AND deleted = 0 AND key != ?2`)
+        .bind(scopeId('house', s), MAIN_PROFILE)
+        .all<{ key: string }>()
+      over = overProfileCap(items, results.map((r) => r.key))
+    } catch {
+      return json({ error: 'La base no responde. Probá en un rato.' }, 503)
+    }
+  }
   for (const it of items) {
-    if (gone && it.s === 'profile') rejected++
+    if ((gone && it.s === 'profile') || (it.t === 'profiles' && over.has(it.k))) rejected++
     else rows.push([scopeId(it.s, s, profile), it.t, it.k, it.v, it.u, it.d ? 1 : 0])
   }
   if (rows.length) {
