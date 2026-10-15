@@ -1,5 +1,18 @@
 # Changelog
 
+## [0.18.1] - 2026-10-15
+
+### Seguridad
+- **Borrar el perfil que se está usando** (por ejemplo, desde el celular mientras la TV reproduce) ya no pasa
+  el historial de ese perfil al principal: hasta recargar, la app sigue escribiendo en el perfil de la página y,
+  mientras borra sus datos, no guarda nada más de ese perfil (antes podía volver a crearlo en el aparato).
+- El servidor vuelve a borrar los datos de un perfil si otro aparato lo borró justo mientras se subía su
+  progreso (quedaban filas huérfanas que contaban para el tope de la casa).
+
+### Cambiado
+- El tope de datos de la casa se mide con el índice de la base: antes cada subida recorría las filas de **todas**
+  las casas (D1 cobra por filas leídas).
+
 ## [0.18.0] - 2026-10-15
 
 ### Agregado

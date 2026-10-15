@@ -20,15 +20,36 @@ let current = read()
 
 export const activeProfileId = () => current
 
-/** Solo al arrancar (antes de leer los datos) o justo antes de recargar. */
+/** Solo al arrancar, antes de leer los datos. Para cambiar de perfil está `persistProfileChoice` + recargar. */
 export function setActiveProfileId(id: string) {
   current = isProfileId(id) ? id : MAIN_PROFILE
+  persist(current)
+}
+
+/**
+ * Deja elegido el perfil para la próxima carga sin cambiar el de esta página: lo que se guarde hasta
+ * recargar (el progreso al salir del reproductor, por ejemplo) sigue yendo al perfil que se estaba usando.
+ */
+export function persistProfileChoice(id: string) {
+  persist(isProfileId(id) ? id : MAIN_PROFILE)
+}
+
+function persist(id: string) {
   try {
-    localStorage.setItem(KEY, current)
+    localStorage.setItem(KEY, id)
   } catch {
     // Sin localStorage: vale hasta cerrar la pestaña.
   }
 }
+
+let frozen = false
+
+/** Los datos del perfil activo se están borrando: hasta recargar no se guarda nada más de ese perfil. */
+export function freezeProfileWrites() {
+  frozen = true
+}
+
+export const profileWritesFrozen = () => frozen
 
 export function profilePicked(): boolean {
   try {

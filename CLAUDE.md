@@ -229,6 +229,13 @@ npm run preview    # sirve dist/ en http://localhost:4173
   servidor y rechaza lo que suba después. UI: `pages/profiles/` (ProfileGate, WhoIsWatching con
   `AUTO_ENTER_S = 10`, ProfileEditor, `profiles.css`), `components/ProfileAvatar.tsx`, cabecera de Vos, avatar
   en el riel. El protector avisa al cerrarse con `SCREENSAVER_CLOSED`. Sin PIN, sin perfil de chicos ni invitado.
+- v0.18.1 hecha: arreglos de la revisión de seguridad de perfiles. El tope de la casa en `sync.ts` usa un rango
+  (`scope >= 'profile:H:' AND scope < 'profile:H;'`), **nunca `LIKE`** (no usa el índice y recorre la tabla).
+  Tras el INSERT se repite el DELETE del perfil subido si tiene lápida (carrera con un borrado). Cliente: para
+  cambiar de perfil va `persistProfileChoice` (solo localStorage) + recargar; `setActiveProfileId` es solo para
+  `hydrateStores`. `freezeProfileWrites()` frena las escrituras de los stores por perfil mientras se borra el activo.
+  Pendientes que el usuario tiene que decidir: tope de 6 perfiles en el servidor y lista blanca de sitios para la
+  imagen del avatar (hoy cualquier https).
 - **Decisiones para la v0.17 (reemplazan el reparto del plan de abajo)**: addons y TorBox **iguales para todas las
   casas**, solo los cambia el admin (opción A). Ajustes generales (subtítulos, idiomas, autoplay, saltar intro, sin
   spoilers, reglas de fuentes) **iguales en toda la casa**; lo físico (modo TV, tamaño de la interfaz, protector,

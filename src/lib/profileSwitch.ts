@@ -4,7 +4,7 @@
 import { useMemo } from 'react'
 import { flushCloudSync, forgetProfileSync, stopCloudSync } from './cloudSync'
 import { cleanName, listProfiles, MAIN_PROFILE, MAX_PROFILES, newProfileId, nextColor, type Profile } from './profileModel'
-import { activeProfileId, markProfilePicked, setActiveProfileId } from './profiles'
+import { activeProfileId, freezeProfileWrites, markProfilePicked, persistProfileChoice } from './profiles'
 import { forgetProfileData, profilesStore, useStore } from './store'
 
 export function useProfiles(): Profile[] {
@@ -30,7 +30,7 @@ export async function switchProfile(id: string) {
   switching = true
   await flushCloudSync(4000)
   stopCloudSync()
-  setActiveProfileId(id)
+  persistProfileChoice(id)
   location.replace('/')
 }
 
@@ -83,10 +83,11 @@ export function initProfileWatch() {
         switching = true
         await flushCloudSync(4000)
         stopCloudSync()
+        freezeProfileWrites()
       }
       await Promise.all(gone.flatMap((id) => [forgetProfileData(id), forgetProfileSync(id)]))
       if (wasActive) {
-        setActiveProfileId(MAIN_PROFILE)
+        persistProfileChoice(MAIN_PROFILE)
         location.replace('/')
       }
     })()
