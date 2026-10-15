@@ -2,6 +2,7 @@ import { Advanced } from '../../components/Advanced'
 import { saveDataOn } from '../../lib/dataSaver'
 import { effectivePlayer, playersFor } from '../../lib/externalPlayers'
 import { langLabel } from '../../lib/i18n'
+import { isNativeApp } from '../../lib/native'
 import { currentPlatform } from '../../lib/platform'
 import { settingsStore, useStore, type Settings, type SubtitleStyle } from '../../lib/store'
 import { subtitleClasses } from '../../lib/subtitlePrefs'
@@ -188,6 +189,20 @@ export function PlayerSettings() {
           : 'Usa un poco más de datos. Se apaga sola si el navegador tiene activado el ahorro de datos.'}
       </p>
       </Advanced>
+
+      {isNativeApp() && (
+        <>
+          <h3>Reproductor de la app</h3>
+          <label className="check">
+            <input type="checkbox" checked={settings.nativePlayer} onChange={(e) => update({ nativePlayer: e.target.checked })} />
+            Usar el reproductor de Android
+          </label>
+          <p className="muted small">
+            Reproduce más formatos (MKV, HEVC, audio Dolby) y anda más fluido en la TV. Saltar intro y resumen, siguiente
+            episodio, pistas de audio y subtítulos siguen igual. Apagalo si algún video se ve mal: vuelve el de la web.
+          </p>
+        </>
+      )}
 
       <h3>Reproductor externo</h3>
       <Choice

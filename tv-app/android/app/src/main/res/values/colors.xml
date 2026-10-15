@@ -6,4 +6,10 @@
     <color name="colorPrimary">#0B0B10</color>
     <color name="colorPrimaryDark">#0B0B10</color>
     <color name="colorAccent">#C4B0FF</color>
+    <!-- Reproductor nativo (v0.20). -->
+    <color name="sp_accent">#C4B0FF</color>
+    <color name="sp_on_accent">#14101F</color>
+    <color name="sp_surface">#16161F</color>
+    <color name="sp_btn_idle">#2EFFFFFF</color>
+    <color name="sp_text_muted">#B3FFFFFF</color>
 </resources>

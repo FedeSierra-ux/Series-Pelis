@@ -221,15 +221,21 @@ export async function loadSubtitle(url: string, opts: { stripSdh?: boolean } = {
     touch(blobUrls, key, hit)
     return hit
   }
+  const blobUrl = toBlobUrl(await loadSubtitleText(url, opts))
+  touch(blobUrls, key, blobUrl)
+  trim()
+  return blobUrl
+}
+
+/** Igual que `loadSubtitle`, pero devuelve el texto VTT (para el reproductor nativo de la app de TV). */
+export async function loadSubtitleText(url: string, opts: { stripSdh?: boolean } = {}): Promise<string> {
   let vtt = vttTexts.get(url)
   if (vtt === undefined) {
     vtt = toVtt(decode(await fetchLimited(url)), new URL(url, location.href).pathname)
   }
   touch(vttTexts, url, vtt)
-  const blobUrl = toBlobUrl(opts.stripSdh ? stripSdh(vtt) : vtt)
-  touch(blobUrls, key, blobUrl)
   trim()
-  return blobUrl
+  return opts.stripSdh ? stripSdh(vtt) : vtt
 }
 
 export const SUBTITLE_FILE_RE = /\.(srt|vtt|ass|ssa)$/i

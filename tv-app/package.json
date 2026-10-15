@@ -1,7 +1,7 @@
 {
   "name": "series-pelis-tv",
   "private": true,
-  "version": "0.19.0",
+  "version": "0.20.0",
   "description": "App de Android TV / Fire TV: abre series-pelis.pages.dev dentro de un WebView (Capacitor).",
   "scripts": {
     "sync": "cap sync android"

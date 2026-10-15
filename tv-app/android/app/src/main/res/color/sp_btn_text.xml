@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Texto de los botones del reproductor: oscuro sobre el acento cuando tienen el foco. -->
+<selector xmlns:android="http://schemas.android.com/apk/res/android">
+    <item android:color="@color/sp_on_accent" android:state_focused="true" />
+    <item android:color="@color/sp_on_accent" android:state_pressed="true" />
+    <item android:color="#FFFFFFFF" />
+</selector>

@@ -8,6 +8,8 @@ import { androidIntent, externalLaunch } from '../lib/externalPlayers'
 import { episodeLabel, formatTime, isHls } from '../lib/format'
 import { useTitle } from '../lib/hooks'
 import { langLabel } from '../lib/i18n'
+import { isNativeApp } from '../lib/native'
+import { nativePlayerAvailable, probeNativePlayer } from '../lib/nativePlayer'
 import { findNextStream, nextEpisodeSeason, prefetchNextStreams } from '../lib/nextEpisode'
 import { setReturnVideo } from '../lib/returnVideo'
 import { currentPlatform } from '../lib/platform'
@@ -30,6 +32,8 @@ import { SubtitleMenu } from './player/SubtitleMenu'
 import { useMediaSession, usePictureInPicture, useWakeLock } from './player/useMediaSession'
 import { useSubtitles } from './player/useSubtitles'
 import { launchUrl } from './player/externalLaunch'
+import { NativePlayerView } from './player/NativePlayer'
+import { MIN_HISTORY_EPISODE_S, MIN_HISTORY_S, NEXT_FALLBACK_S, readAutoCount, writeAutoCount } from './player/autoNext'
 import { detailPathFor } from './player/fallback'
 import { isPhoneLike, toggleFullscreen as toggleScreen, usePlayerScreen } from './player/fullscreen'
 import { NextCard } from './player/NextCard'
@@ -47,16 +51,9 @@ const SAVE_EVERY_MS = 5000
 const HIDE_CONTROLS_MS = 3500
 const SEEK_STEP = 10
 const NEXT_COUNTDOWN_S = 10
-/** Sin datos de créditos, la tarjeta del siguiente episodio aparece este tiempo antes del final. */
-const NEXT_FALLBACK_S = 30
-/** Tráilers y clips: no se guardan en el historial. Los episodios de serie pueden ser cortos (webseries). */
-const MIN_HISTORY_S = 120
-const MIN_HISTORY_EPISODE_S = 60
 /** Errores de red de HLS: cuántas veces se reintenta antes de mostrar el error. */
 const HLS_NETWORK_RETRIES = 2
 const HLS_RETRY_MS = 1000
-/** Episodios seguidos que pasaron solos, sin que nadie toque nada (para el "¿Seguís viendo?"). */
-const AUTONEXT_KEY = 'sp-autonext-count'
 const SLEEP_KEY = 'sp-sleep-at'
 const VOLUME_STEP = 0.1
 
@@ -78,7 +75,6 @@ function sessionSet(key: string, value: string) {
     // sin persistencia, no pasa nada
   }
 }
-const readAutoCount = () => Number(sessionGet(AUTONEXT_KEY)) || 0
 
 const isAndroid = () => /android/i.test(navigator.userAgent)
 /** Freno de la rueda del mouse: un touchpad manda decenas de eventos por gesto. */
@@ -126,10 +122,35 @@ export function Player() {
   // Sin el stream (se recargó la página o se abrió el enlace directo): a la ficha, con el episodio elegido.
   if (!state.playUrl) return <Navigate to={detailPathFor(params.type ?? 'movie', params.id ?? '', progressStore.get())} replace />
   // La key reinicia el reproductor completo al pasar al siguiente episodio (o al cambiar de fuente).
-  return <PlayerView key={state.playUrl} state={state} resume={resume} />
+  return <PlayerChoice key={state.playUrl} state={state} resume={resume} />
 }
 
-function PlayerView({ state, resume }: { state: PlayState; resume?: Resume }) {
+/** En la app de Android TV (v0.20) reproduce Android, si el APK lo trae y no se apagó en Ajustes. */
+function PlayerChoice({ state, resume }: { state: PlayState; resume?: Resume }) {
+  const [native, setNative] = useState(() => (settingsStore.get().nativePlayer && isNativeApp() ? nativePlayerAvailable() : false))
+  const [fallback, setFallback] = useState<Resume>()
+  useEffect(() => {
+    if (native !== undefined) return
+    let alive = true
+    probeNativePlayer().then((ok) => {
+      if (alive) setNative(ok)
+    })
+    return () => {
+      alive = false
+    }
+  }, [native])
+  if (native === undefined) return <div className="player player-native" />
+  if (native && !fallback) return <NativePlayerView state={state} resume={resume} onFallback={(at) => setFallback({ at })} />
+  return (
+    <PlayerView
+      state={state}
+      resume={fallback ?? resume}
+      notice={fallback ? 'El reproductor de Android no pudo con este video: sigue el de la web' : undefined}
+    />
+  )
+}
+
+function PlayerView({ state, resume, notice }: { state: PlayState; resume?: Resume; notice?: string }) {
   const navigate = useNavigate()
   const settings = useStore(settingsStore)
   const videoRef = useRef<HTMLVideoElement>(null)
@@ -402,7 +423,7 @@ function PlayerView({ state, resume }: { state: PlayState; resume?: Resume }) {
 
   // Cualquier tecla, clic o toque cuenta como "hay alguien mirando".
   useEffect(() => {
-    const reset = () => sessionSet(AUTONEXT_KEY, '0')
+    const reset = () => writeAutoCount(0)
     window.addEventListener('keydown', reset)
     window.addEventListener('pointerdown', reset)
     window.addEventListener('touchstart', reset)
@@ -650,7 +671,7 @@ function PlayerView({ state, resume }: { state: PlayState; resume?: Resume }) {
   const goNext = async (auto = false) => {
     if (!state.nextVideoId || advancing.current) return
     advancing.current = true
-    sessionSet(AUTONEXT_KEY, String(auto ? readAutoCount() + 1 : 0))
+    writeAutoCount(auto ? readAutoCount() + 1 : 0)
     persist()
     setNextLoading(true)
     const next = settings.autoplayNext ? await findNextStream(state).catch(() => undefined) : undefined
@@ -720,7 +741,7 @@ function PlayerView({ state, resume }: { state: PlayState; resume?: Resume }) {
   // Al cambiar de fuente se vuelve a poner el subtítulo (y el retraso) que estaba activo.
   useEffect(() => {
     if (!resume) return
-    flash(`Fuente: ${state.addonName}`)
+    flash(notice ?? `Fuente: ${state.addonName}`)
     if (resume.sub !== undefined) subs.restore(resume.sub, resume.subDelay ?? 0, resume.subLabel)
   }, [])
 
@@ -828,7 +849,7 @@ function PlayerView({ state, resume }: { state: PlayState; resume?: Resume }) {
   const keepWatching = () => {
     askStillRef.current = false
     setAskStill(false)
-    sessionSet(AUTONEXT_KEY, '0')
+    writeAutoCount(0)
     videoRef.current?.play().catch(() => setControls(true))
   }
 
