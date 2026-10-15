@@ -248,9 +248,13 @@ export const onRequestPost = async (context: Ctx): Promise<Response> => {
   if (rows.length) {
     try {
       // Tope de la casa: se mide lo que ya tiene guardado (lo global lo sube solo el admin y es chico).
+      // Los perfiles van como rango y no con LIKE: LIKE no usa el índice y recorría la tabla entera
+      // (D1 cobra por filas leídas). ';' es el carácter que sigue a ':'.
       const used = await db
-        .prepare('SELECT COUNT(*) AS n, COALESCE(SUM(LENGTH(value)), 0) AS b FROM sync_items WHERE scope = ?1 OR scope LIKE ?2')
-        .bind(`house:${s.house.id}`, `profile:${s.house.id}:%`)
+        .prepare(
+          'SELECT COUNT(*) AS n, COALESCE(SUM(LENGTH(value)), 0) AS b FROM sync_items WHERE scope = ?1 OR (scope >= ?2 AND scope < ?3)',
+        )
+        .bind(`house:${s.house.id}`, `profile:${s.house.id}:`, `profile:${s.house.id};`)
         .first<{ n: number; b: number }>()
       const adding = rows.reduce((sum, r) => sum + (r[3]?.length ?? 0), 0)
       if ((used?.n ?? 0) + rows.length > HOUSE_MAX_ROWS || (used?.b ?? 0) + adding > HOUSE_MAX_BYTES) {
@@ -270,14 +274,19 @@ export const onRequestPost = async (context: Ctx): Promise<Response> => {
         .bind(JSON.stringify(rows), now)
         .run()
       // Perfiles borrados: se van sus datos (si la lápida quedó, o sea, si nadie lo cambió después).
-      for (const r of rows) {
-        if (r[1] !== 'profiles' || r[5] !== 1) continue
+      // También el perfil de esta subida: si otro aparato lo borró entre el chequeo de arriba y el
+      // INSERT, lo recién guardado quedaba huérfano para siempre.
+      const doomed = rows.filter((r) => r[1] === 'profiles' && r[5] === 1).map((r) => r[2])
+      if (profile !== MAIN_PROFILE && items.some((it) => it.s === 'profile') && !doomed.includes(profile)) {
+        doomed.push(profile)
+      }
+      for (const id of doomed) {
         await db
           .prepare(
             `DELETE FROM sync_items WHERE scope = ?1 AND EXISTS
                (SELECT 1 FROM sync_items WHERE scope = ?2 AND store = 'profiles' AND key = ?3 AND deleted = 1)`,
           )
-          .bind(`profile:${s.house.id}:${r[2]}`, scopeId('house', s), r[2])
+          .bind(`profile:${s.house.id}:${id}`, scopeId('house', s), id)
           .run()
       }
     } catch {
