@@ -1,0 +1,36 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Series-Pelis</title>
+<style>
+  :root { color-scheme: dark; }
+  html, body { height: 100%; margin: 0; }
+  body {
+    display: grid; place-items: center; background: #0b0b10; color: #f2eff7;
+    font: 400 20px/1.5 system-ui, sans-serif; text-align: center; padding: 0 24px;
+  }
+  h1 { font-size: 30px; margin: 0 0 8px; }
+  p { margin: 0 0 28px; color: #b9b3c6; }
+  button {
+    font: 600 20px system-ui, sans-serif; color: #17141f; background: #c4b0ff; border: 0;
+    border-radius: 999px; padding: 14px 32px; cursor: pointer;
+  }
+  button:focus-visible { outline: 3px solid #f2eff7; outline-offset: 4px; }
+</style>
+</head>
+<body>
+<main>
+  <h1>No se pudo abrir Series-Pelis</h1>
+  <p>Revisá que la TV tenga internet y probá de nuevo.</p>
+  <button id="retry" autofocus>Reintentar</button>
+</main>
+<script>
+  // Página local del APK: se muestra cuando el sitio no carga (sin conexión al abrir la app).
+  var btn = document.getElementById('retry')
+  btn.addEventListener('click', function () { location.href = 'https://series-pelis.pages.dev/' })
+  btn.focus()
+</script>
+</body>
+</html>

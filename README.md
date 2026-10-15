@@ -134,7 +134,30 @@ Abrí `https://series-pelis.pages.dev` en la PC, el celular y la TV. En el celul
 *Instalar app* / *Agregar a pantalla de inicio*. Tus addons, tu key de TMDB (si cargaste una) y el historial quedan en cada navegador
 (hasta que llegue la cuenta con código de vinculación).
 
-En Fire TV podés abrirla desde el navegador Silk mientras tanto; el empaquetado como app nativa queda para más adelante.
+## App para Android TV / Fire TV (v0.19)
+
+La carpeta `tv-app/` es una app de Android ([Capacitor](https://capacitorjs.com)) que abre
+`https://series-pelis.pages.dev` a pantalla completa: aparece en el inicio de la TV con su banner, el botón
+Atrás del control funciona como en cualquier app, la pantalla no se apaga mientras mirás y "Abrir en…" manda
+el video a otro reproductor (VLC, MX Player, Just Player…). Las novedades de la web llegan solas; el APK solo
+hay que reinstalarlo cuando cambia la parte nativa.
+
+**Instalarla en la TV**
+1. En la TV instalá **Downloader** (de AFTVnews) desde la tienda.
+2. Habilitá "Instalar apps desconocidas" para Downloader (Fire TV: *Configuración → Mi Fire TV → Opciones
+   para desarrolladores*; Android TV / Google TV: *Configuración → Apps → Seguridad*).
+3. En Downloader escribí:
+   `https://github.com/FedeSierra-ux/Series-Pelis/releases/latest/download/series-pelis-tv.apk`
+4. Instalá y abrí **Series-Pelis**. Vinculala con el código de la casa como cualquier aparato.
+
+**Armar una versión nueva**: el workflow `.github/workflows/android-tv.yml` compila el APK en cada cambio de
+`tv-app/` (queda como *artifact* de la corrida) y, al crear una etiqueta `tv-vX.Y.Z`, lo publica en Releases.
+Para que las versiones se instalen encima (sin desinstalar ni perder el login) el APK tiene que firmarse
+siempre con la misma llave: secretos `ANDROID_KEYSTORE_BASE64`, `ANDROID_KEYSTORE_PASSWORD` y
+`ANDROID_KEY_ALIAS` en *Settings → Secrets and variables → Actions*. La llave **nunca** va en el repo.
+
+Compilar en la PC (con el SDK de Android y Java 21): `cd tv-app && npm install && npx cap sync android &&
+cd android && ./gradlew assembleDebug`.
 
 Para probar localmente igual que en Cloudflare (con la función y los headers): `npm run build && npx wrangler pages dev`.
 
