@@ -229,6 +229,13 @@ npm run preview    # sirve dist/ en http://localhost:4173
   servidor y rechaza lo que suba después. UI: `pages/profiles/` (ProfileGate, WhoIsWatching con
   `AUTO_ENTER_S = 10`, ProfileEditor, `profiles.css`), `components/ProfileAvatar.tsx`, cabecera de Vos, avatar
   en el riel. El protector avisa al cerrarse con `SCREENSAVER_CLOSED`. Sin PIN, sin perfil de chicos ni invitado.
+- v0.18.1 hecha: arreglos de la revisión de seguridad de perfiles. El tope de la casa en `sync.ts` usa un rango
+  (`scope >= 'profile:H:' AND scope < 'profile:H;'`), **nunca `LIKE`** (no usa el índice y recorre la tabla).
+  Tras el INSERT se repite el DELETE del perfil subido si tiene lápida (carrera con un borrado). Cliente: para
+  cambiar de perfil va `persistProfileChoice` (solo localStorage) + recargar; `setActiveProfileId` es solo para
+  `hydrateStores`. `freezeProfileWrites()` frena las escrituras de los stores por perfil mientras se borra el activo.
+  Pendientes que el usuario tiene que decidir: tope de 6 perfiles en el servidor y lista blanca de sitios para la
+  imagen del avatar (hoy cualquier https).
 - v0.19.0 hecha (rama `claude/android-tv-v0.19`): **app de Android TV / Fire TV** en `tv-app/` (Capacitor 8 con
   `server.url` = el sitio; `package.json` propio, así el build de Cloudflare no cambia). La versión del APK sale de
   `tv-app/package.json` (0.19.0 → versionCode 19000): **subirla junto con la raíz**. Nativo:

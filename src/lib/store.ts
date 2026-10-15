@@ -12,7 +12,7 @@ import type { ScreensaverMinutes } from './idle'
 import type { TvModeSetting } from './platform'
 import type { InstalledAddon, Manifest, MetaPreview } from './types'
 import { cleanProfile, MAIN_PROFILE, PROFILE_STORES, profileStorageKey, type Profile } from './profileModel'
-import { activeProfileId, setActiveProfileId } from './profiles'
+import { activeProfileId, profileWritesFrozen, setActiveProfileId } from './profiles'
 
 // Datos del usuario guardados en el navegador (IndexedDB). En la v0.2 se van a
 // sincronizar con Cloudflare D1; por eso todo pasa por estos stores y no por
@@ -130,6 +130,8 @@ export class PersistedStore<T> {
     this.value = value
     this.seq++
     this.emit()
+    // Perfil borrándose (ver initProfileWatch): guardar ahora lo volvería a crear en este aparato.
+    if (this.opts.perProfile && profileWritesFrozen()) return
     // Se escribe enseguida: los cambios son pocos (el progreso se guarda cada 5 s) y así
     // no se pierde nada si se cierra la app justo después.
     this.write(diffPatch(prev, value, this.opts.depth ?? 1), value, false)
