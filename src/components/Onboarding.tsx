@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState, type KeyboardEvent } from 'react'
 import { useLocation } from 'react-router-dom'
 import { CINEMETA_URL } from '../lib/addons'
+import { useCanEditAddons } from '../lib/auth'
 import { useAddons } from '../lib/hooks'
 import { addonsStore, progressStore, settingsStore, useStore, watchlistStore, type Settings } from '../lib/store'
 import { testTmdbKey, useServerTmdb, useTmdbKey } from '../lib/tmdb'
@@ -24,7 +25,10 @@ function isFirstRun() {
   return onlyCinemeta && Object.keys(progressStore.get()).length === 0 && Object.keys(watchlistStore.get()).length === 0
 }
 
-const STEPS = ['Idiomas', 'Addons', 'TMDB', 'Listo'] as const
+const ALL_STEPS = ['Idiomas', 'Addons', 'TMDB', 'Listo'] as const
+type Step = (typeof ALL_STEPS)[number]
+/** Con login, los addons los maneja el administrador: los demás no ven ese paso. */
+const stepsFor = (canEditAddons: boolean): readonly Step[] => (canEditAddons ? ALL_STEPS : ALL_STEPS.filter((s) => s !== 'Addons'))
 
 function LanguagesStep() {
   const settings = useStore(settingsStore)
@@ -155,11 +159,18 @@ function TmdbStep() {
 function DoneStep() {
   const tmdbOn = useTmdbKey().length > 0
   const addons = useAddons().filter((a) => a.transportUrl !== CINEMETA_URL)
+  const canEditAddons = useCanEditAddons()
   return (
     <>
       <h2 id="ob-title">¡Listo!</h2>
       <ul className="ob-summary">
-        <li>{addons.length > 0 ? `✓ ${addons.length === 1 ? '1 addon' : `${addons.length} addons`} de streams` : '• Sin addons de streams todavía (los agregás en Ajustes)'}</li>
+        <li>
+          {addons.length > 0
+            ? `✓ ${addons.length === 1 ? '1 addon' : `${addons.length} addons`} de streams`
+            : canEditAddons
+              ? '• Sin addons de streams todavía (los agregás en Ajustes)'
+              : '• Los addons los carga el administrador y llegan solos'}
+        </li>
         <li>{tmdbOn ? '✓ TMDB activado: fichas en español' : '• Sin TMDB (opcional)'}</li>
         <li>✓ Navegación con el control remoto: flechas, Enter y Atrás</li>
       </ul>
@@ -172,6 +183,7 @@ function DoneStep() {
 export function Onboarding() {
   const [open, setOpen] = useState(isFirstRun)
   const [step, setStep] = useState(0)
+  const STEPS = stepsFor(useCanEditAddons())
   const location = useLocation()
   const boxRef = useRef<HTMLDivElement>(null)
 
@@ -197,7 +209,8 @@ export function Onboarding() {
     settingsStore.set((s) => ({ ...s, onboardingDone: true }))
     setOpen(false)
   }
-  const last = step === STEPS.length - 1
+  const last = step >= STEPS.length - 1
+  const current = STEPS[Math.min(step, STEPS.length - 1)]
 
   // "Atrás" del control (Escape, Backspace, GoBack): vuelve un paso o, en el primero, cierra el asistente.
   // Nunca llega a la navegación general (que cambiaría la página que está debajo).
@@ -234,10 +247,10 @@ export function Onboarding() {
           ))}
         </ol>
         <div className="ob-body">
-          {step === 0 && <LanguagesStep />}
-          {step === 1 && <AddonStep />}
-          {step === 2 && <TmdbStep />}
-          {step === 3 && <DoneStep />}
+          {current === 'Idiomas' && <LanguagesStep />}
+          {current === 'Addons' && <AddonStep />}
+          {current === 'TMDB' && <TmdbStep />}
+          {current === 'Listo' && <DoneStep />}
         </div>
         <div className="ob-actions">
           {!last && (

@@ -1,5 +1,6 @@
 import type { SubOption } from './subtitlePrefs'
 import type { Stream } from './types'
+import { reportUnauthorized } from './auth'
 
 // Subtítulos online en español (SubDL, con OpenSubtitles de respaldo) por la Pages Function /api/subs.
 // La función ya los devuelve ordenados: latino, después sin saber y al final de España.
@@ -113,6 +114,7 @@ export async function fetchOnlineSubs(type: string, videoId: string, hint = ''):
   }
   try {
     const res = await fetch(`${API}/search?${params}`, { headers: { Accept: 'application/json' } })
+    if (res.status === 401) reportUnauthorized()
     if (!res.ok) return []
     const body = (await res.json()) as { subs?: OnlineSub[] }
     return Array.isArray(body.subs) ? onlineOptions(body.subs, hint) : []

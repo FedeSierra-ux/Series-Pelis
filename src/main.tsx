@@ -1,6 +1,8 @@
 import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
 import { App } from './App'
+import { checkAuth } from './lib/auth'
+import { initCloudSync } from './lib/cloudSync'
 import { initDiagnostics, probeReportServer } from './lib/diagnostics'
 import { hydrateStores } from './lib/store'
 import { probeServerTmdb } from './lib/tmdb'
@@ -37,6 +39,10 @@ hydrateStores().finally(() => {
   initDiagnostics()
   // `data-tv` en <html>: letras y controles grandes para mirar desde el sillón.
   syncTvAttr()
+  // Login "Código de casa" (v0.17): pregunta si hay sesión y, con sesión, sincroniza con la casa.
+  // Sin la base en el sitio (o en local con Vite) no hace nada.
+  void checkAuth()
+  initCloudSync()
   createRoot(document.getElementById('root')!).render(
     <StrictMode>
       <App />

@@ -1,5 +1,37 @@
 # Changelog
 
+## [0.17.0] - 2026-10-15
+
+### Agregado
+- **Login "Código de casa" y sincronización entre aparatos** (Cloudflare D1). Con la base enlazada, la app pide
+  entrar con una casa antes de mostrar nada; sin la base (o en `npm run dev`) todo sigue como antes.
+  - **Primera vez**: "Soy el administrador" con la clave `ADMIN_KEY` (secreto de Cloudflare, mínimo 32 caracteres)
+    crea la casa principal.
+  - **Ajustes → Casas** (solo el admin): crear casas, invitaciones (enlace `/unirse#…` o código), anularlas,
+    renombrar, ver y sacar aparatos, y borrar casas.
+  - **Invitación**: abriendo el enlace o pegando el código en la pantalla de entrada.
+  - **TV**: muestra un código de 6 números y un QR; se aprueba desde un aparato que ya entró
+    (**Ajustes → Casa → Vincular un aparato** o `/vincular`). Siempre hay que tocar "Aprobar".
+  - **Ajustes → Casa** (arriba de todo): en qué casa está el aparato, estado de la sincronización, aparatos de la
+    casa y "Salir de la casa" (antes sube lo que quedó pendiente).
+- **Qué se sincroniza**: los addons son los mismos para todas las casas y solo los cambia el admin; los ajustes
+  de reproducción (subtítulos, idiomas, autoplay, saltar intro, sin spoilers, reglas de fuentes) son de la casa;
+  historial, seguir viendo, mi lista, estrellas, "no me interesa", diario y metas son del perfil de la casa. Lo
+  físico (modo TV, tamaño de la interfaz, protector, reproductor externo, servidor local, búsquedas) queda en cada
+  aparato. La key propia de TMDB nunca se sube. Si dos aparatos cambian lo mismo, gana el cambio más nuevo.
+- Lo que ya tenías guardado en el aparato se sube solo la primera vez y se mezcla con lo de la casa.
+
+### Cambiado
+- Con el login activo, `/api/tmdb` y `/api/subs` solo responden a aparatos que entraron (usan las keys del sitio).
+  `_status` sigue abierto.
+- Sin ser admin, Ajustes → Addons muestra la lista sin poder cambiarla, el asistente inicial no tiene el paso de
+  addons e "Importar desde Stremio" no ofrece traer los addons.
+
+### Seguridad
+- Sesión en una cookie `__Host-` (HttpOnly, Secure, SameSite=Lax) guardada como hash; un año en la TV y seis meses
+  en la PC o el celular. Topes de intentos para la clave del admin, las invitaciones y los códigos de la TV. Los
+  códigos de invitación y de la TV se borran de la barra de direcciones apenas se leen.
+
 ## [0.16.2] - 2026-10-14
 
 ### Arreglado
