@@ -1,5 +1,5 @@
 import { useSyncExternalStore } from 'react'
-import { createStore, del, get, set } from 'idb-keyval'
+import { clear, createStore, del, get, set } from 'idb-keyval'
 import { CINEMETA_ADDON, cleanManifest } from './addons'
 import { getAuth, reportUnauthorized, subscribeAuth, type AuthState } from './auth'
 import {
@@ -8,6 +8,7 @@ import {
   forgetAddonData,
   goalsStore,
   notInterestedStore,
+  profilesStore,
   progressStore,
   ratingsStore,
   settingsStore,
@@ -15,7 +16,9 @@ import {
   watchlistStore,
   type Settings,
 } from './store'
-import { applyItems, capture, emptyState, enforceReadOnly, fieldsAdapter, markSent, outgoing, pendingCount, recordAdapter, type ServerItem, type SyncAdapter, type SyncScope, type SyncState } from './syncCore'
+import { applyItems, capture, emptyState, enforceReadOnly, fieldsAdapter, markSent, outgoing, pendingCount, recordAdapter, splitState, type ServerItem, type SyncAdapter, type SyncScope, type SyncState } from './syncCore'
+import { cleanProfile, MAIN_PROFILE, PROFILE_STORES, type Profile } from './profileModel'
+import { activeProfileId } from './profiles'
 import type { DiaryEntry, DiaryState } from './diary'
 import type { GoalsState, YearGoal } from './goals'
 import type { InstalledAddon } from './types'
@@ -24,8 +27,9 @@ import type { InstalledAddon } from './types'
 //
 // - Addons: iguales en todas las casas; solo el admin los cambia (los demás los reciben).
 // - Ajustes generales e idioma por título: iguales en toda la casa.
-// - Historial, seguir viendo, mi lista, estrellas, "no me interesa", diario y metas: del perfil
-//   (en la v0.17, uno por casa).
+// - La lista de perfiles (v0.18): de la casa.
+// - Historial, seguir viendo, mi lista, estrellas, "no me interesa", diario y metas: del perfil activo
+//   de este aparato. Lo de la casa y lo del perfil se bajan por separado, cada uno con su cursor.
 // Lo físico (modo TV, tamaño de la interfaz, protector, reproductor externo, servidor de Stremio,
 // búsquedas recientes) y la key propia de TMDB quedan en cada aparato.
 
@@ -110,10 +114,34 @@ const goalsAdapter: SyncAdapter<GoalsState> = {
   },
 }
 
+/** La lista de perfiles: cada uno es una fila. El principal nunca se borra (solo se le cambia el nombre o el color). */
+const profilesAdapter: SyncAdapter<Record<string, Profile>> = {
+  scope: 'house',
+  name: 'profiles',
+  get: profilesStore.get,
+  set: (fn) => profilesStore.set(fn),
+  subscribe: profilesStore.subscribe,
+  toItems: (s) => s,
+  apply: (s, changes) => {
+    const out = { ...s }
+    for (const [k, v] of Object.entries(changes)) {
+      if (v === null) {
+        if (k !== MAIN_PROFILE) delete out[k]
+        continue
+      }
+      const p = cleanProfile(k, v)
+      if (p) out[k] = p
+    }
+    return out
+  },
+  time: (v) => (isPlain(v) && typeof v.at === 'number' ? v.at : undefined),
+}
+
 export const ADAPTERS: SyncAdapter[] = [
   addonsAdapter,
   fieldsAdapter('house', 'settings', settingsStore, HOUSE_SETTINGS),
   recordAdapter('house', 'trackPrefs', trackPrefsStore, 'at'),
+  profilesAdapter,
   recordAdapter('profile', 'progress', progressStore, 'updatedAt'),
   recordAdapter('profile', 'watchlist', watchlistStore, 'addedAt'),
   recordAdapter('profile', 'ratings', ratingsStore, 'at'),
@@ -121,6 +149,10 @@ export const ADAPTERS: SyncAdapter[] = [
   diaryAdapter,
   goalsAdapter,
 ] as SyncAdapter[]
+
+/** Lo de todos (addons) y lo de la casa: un estado. Lo del perfil activo: otro. */
+const SHARED_ADAPTERS = ADAPTERS.filter((a) => a.scope !== 'profile')
+const PROFILE_ADAPTERS = ADAPTERS.filter((a) => a.scope === 'profile')
 
 // ---------- Estado visible (Ajustes → Casa) ----------
 
@@ -153,7 +185,9 @@ export function useSyncStatus(): SyncStatus {
 // ---------- Motor ----------
 
 const idb = createStore('series-pelis-sync', 'kv')
+/** Lo de la casa (en la v0.17 era todo). */
 const STATE_KEY = 'state'
+const profileStateKey = (profile: string) => `profile:${profile}`
 const API = '/api/sync'
 const CAPTURE_DELAY = 1500
 const PUSH_DELAY = 20_000
@@ -165,20 +199,45 @@ const KEEPALIVE_MAX = 60_000
 
 class Unauthorized extends Error {}
 
-async function loadState(house: string): Promise<SyncState> {
+async function readState(key: string): Promise<SyncState | undefined> {
   try {
-    const stored = await get<SyncState>(STATE_KEY, idb)
-    if (stored && stored.house === house && isPlain(stored.shadow) && isPlain(stored.pending)) return stored
+    return await get<SyncState>(key, idb)
   } catch {
     // IndexedDB bloqueado: se empieza de cero (mezclar de nuevo no pierde nada).
+    return undefined
   }
-  return emptyState(house)
+}
+
+const validState = (st: SyncState | undefined, house: string): st is SyncState => !!st && st.house === house && isPlain(st.shadow) && isPlain(st.pending)
+
+/**
+ * El estado de la casa y el del perfil. Uno de la v0.17 (todo junto) se parte: lo del perfil pasa al del
+ * principal, con el mismo cursor, así no se vuelve a bajar ni a subir nada.
+ */
+async function loadStates(house: string, profile: string): Promise<[SyncState, SyncState]> {
+  const shared = await readState(STATE_KEY)
+  let prof = await readState(profileStateKey(profile))
+  if (validState(shared, house) && !shared.split) {
+    const main = splitState(shared, PROFILE_STORES)
+    if (profile === MAIN_PROFILE) prof = main
+    else await set(profileStateKey(MAIN_PROFILE), main, idb).catch(() => {})
+  }
+  return [validState(shared, house) ? shared : { ...emptyState(house), split: true }, validState(prof, house) ? prof : emptyState(house)]
 }
 
 /** Al salir de la casa se olvida lo sincronizado (los datos de este aparato quedan). */
 export async function forgetSyncState() {
   try {
-    await del(STATE_KEY, idb)
+    await clear(idb)
+  } catch {
+    // Nada que borrar.
+  }
+}
+
+/** Un perfil borrado: se olvida lo que se sabía de él. */
+export async function forgetProfileSync(profile: string) {
+  try {
+    await del(profileStateKey(profile), idb)
   } catch {
     // Nada que borrar.
   }
@@ -187,14 +246,23 @@ export async function forgetSyncState() {
 interface Engine {
   house: string
   isAdmin: boolean
-  /** Sube lo pendiente ya (antes de salir de la casa). */
+  /** Sube lo pendiente ya (antes de salir de la casa o de cambiar de perfil). */
   flush(): Promise<void>
   stop(): void
 }
 
-function startEngine(house: string, isAdmin: boolean): Engine {
+interface Part {
+  /** Dónde se guarda su estado en IndexedDB. */
+  key: string
+  adapters: SyncAdapter[]
+  /** Qué baja (`part`, y el perfil). */
+  query: Record<string, string>
+  state: SyncState
+}
+
+function startEngine(house: string, isAdmin: boolean, profile: string): Engine {
   let stopped = false
-  let state: SyncState | undefined
+  let parts: Part[] | undefined
   let busy: Promise<void> | undefined
   let again = false
   let lastPull = 0
@@ -207,23 +275,35 @@ function startEngine(house: string, isAdmin: boolean): Engine {
   let releaseLock: (() => void) | undefined
 
   const canPush = (scope: SyncScope) => scope !== 'global' || isAdmin
+  const pending = () => (parts ? parts.reduce((n, p) => n + pendingCount(p.state), 0) : 0)
+  const saveNow = () => parts?.forEach((p) => void set(p.key, p.state, idb).catch(() => {}))
+
+  async function load() {
+    const [shared, prof] = await loadStates(house, profile)
+    parts = [
+      { key: STATE_KEY, adapters: SHARED_ADAPTERS, query: { part: 'shared' }, state: shared },
+      { key: profileStateKey(profile), adapters: PROFILE_ADAPTERS, query: { part: 'profile', profile }, state: prof },
+    ]
+  }
 
   const save = () => {
     clearTimeout(saveTimer)
     saveTimer = setTimeout(() => {
-      if (state && !stopped) set(STATE_KEY, state, idb).catch(() => {})
+      if (!stopped) saveNow()
     }, 1000)
   }
 
   const runCapture = () => {
     clearTimeout(captureTimer)
     captureTimer = undefined
-    if (!state || stopped) return
-    if (capture(state, ADAPTERS, Date.now(), canPush) > 0) {
+    if (!parts || stopped) return
+    let changed = 0
+    for (const p of parts) changed += capture(p.state, p.adapters, Date.now(), canPush)
+    if (changed > 0) {
       save()
       schedulePush()
     }
-    setStatus({ pending: pendingCount(state) })
+    setStatus({ pending: pending() })
   }
 
   const scheduleCapture = () => {
@@ -231,7 +311,7 @@ function startEngine(house: string, isAdmin: boolean): Engine {
   }
 
   function schedulePush() {
-    if (!state?.synced || pendingCount(state) === 0) return
+    if (!parts?.some((p) => p.state.synced && pendingCount(p.state) > 0)) return
     const now = Date.now()
     if (!firstPending) firstPending = now
     clearTimeout(pushTimer)
@@ -245,11 +325,11 @@ function startEngine(house: string, isAdmin: boolean): Engine {
     return res
   }
 
-  async function pull() {
-    const s = state!
+  async function pull(part: Part) {
+    const s = part.state
     let first = true
     for (;;) {
-      const params = new URLSearchParams()
+      const params = new URLSearchParams(part.query)
       if (s.cursor) params.set('since', s.cursor)
       if (first && s.cursor) params.set('overlap', '1')
       first = false
@@ -257,29 +337,30 @@ function startEngine(house: string, isAdmin: boolean): Engine {
       const body = (await res.json()) as { items: ServerItem[]; next: string; more: boolean }
       if (stopped) return
       // Lo que se cambió acá mientras tanto queda pendiente antes de aplicar lo del servidor.
-      capture(s, ADAPTERS, Date.now(), canPush)
-      applyItems(s, ADAPTERS, body.items)
+      capture(s, part.adapters, Date.now(), canPush)
+      applyItems(s, part.adapters, body.items)
       s.cursor = body.next
       save()
       if (!body.more) break
     }
-    enforceReadOnly(s, ADAPTERS, canPush)
+    enforceReadOnly(s, part.adapters, canPush)
     if (!s.synced) {
       s.synced = true
       save()
     }
-    lastPull = Date.now()
   }
 
   async function push(keepalive = false) {
-    const s = state!
-    if (!s.synced) return
-    for (const batch of outgoing(s, ADAPTERS)) {
-      const body = JSON.stringify({ items: batch.map(({ ref: _ref, ...o }) => o) })
-      await request(API, { method: 'POST', body, keepalive: keepalive && body.length < KEEPALIVE_MAX })
-      markSent(s, batch)
-      save()
-      if (stopped) return
+    for (const part of parts ?? []) {
+      const s = part.state
+      if (!s.synced) continue
+      for (const batch of outgoing(s, part.adapters)) {
+        const body = JSON.stringify({ items: batch.map(({ ref: _ref, ...o }) => o) })
+        await request(`${API}?${new URLSearchParams({ profile })}`, { method: 'POST', body, keepalive: keepalive && body.length < KEEPALIVE_MAX })
+        markSent(s, batch)
+        save()
+        if (stopped) return
+      }
     }
     firstPending = 0
   }
@@ -294,14 +375,18 @@ function startEngine(house: string, isAdmin: boolean): Engine {
     busy = (async () => {
       setStatus({ phase: 'syncing' })
       try {
-        if (!state) state = await loadState(house)
+        if (!parts) await load()
         runCapture()
-        if (withPull || !state.synced) await pull()
+        const ps = parts!
+        if (withPull || ps.some((p) => !p.state.synced)) {
+          for (const p of ps) await pull(p)
+          lastPull = Date.now()
+        }
         await push()
-        setStatus({ phase: 'ok', lastSync: Date.now(), error: undefined, pending: pendingCount(state) })
+        setStatus({ phase: 'ok', lastSync: Date.now(), error: undefined, pending: pending() })
       } catch (err) {
         if (err instanceof Unauthorized) reportUnauthorized()
-        setStatus({ phase: 'error', error: err instanceof Unauthorized ? 'La sesión se cerró' : 'No se pudo sincronizar. Se reintenta solo.', pending: state ? pendingCount(state) : 0 })
+        setStatus({ phase: 'error', error: err instanceof Unauthorized ? 'La sesión se cerró' : 'No se pudo sincronizar. Se reintenta solo.', pending: pending() })
       } finally {
         busy = undefined
       }
@@ -315,9 +400,9 @@ function startEngine(house: string, isAdmin: boolean): Engine {
 
   /** Al irse (pestaña oculta o cerrada): se sube lo pendiente sin esperar. */
   const flush = () => {
-    if (!state || stopped) return
+    if (!parts || stopped) return
     runCapture()
-    if (state.synced && pendingCount(state) > 0 && !busy) void push(true).catch(() => {})
+    if (parts.some((p) => p.state.synced && pendingCount(p.state) > 0) && !busy) void push(true).catch(() => {})
   }
 
   const begin = () => {
@@ -357,7 +442,7 @@ function startEngine(house: string, isAdmin: boolean): Engine {
   return {
     house,
     isAdmin,
-    flush: () => (stopped || !state ? Promise.resolve() : run(false)),
+    flush: () => (stopped || !parts ? Promise.resolve() : run(false)),
     stop() {
       if (stopped) return
       flush()
@@ -366,7 +451,7 @@ function startEngine(house: string, isAdmin: boolean): Engine {
       clearTimeout(captureTimer)
       clearTimeout(pushTimer)
       clearTimeout(saveTimer)
-      if (state) void set(STATE_KEY, state, idb).catch(() => {})
+      saveNow()
       lockCtrl?.abort()
       releaseLock?.()
       setStatus({ phase: 'off', pending: 0 })
@@ -388,11 +473,12 @@ export function shouldForgetAddons(prev: AuthState | undefined, next: AuthState)
 let lastIn: AuthState | undefined
 
 function onAuth(s: AuthState) {
+  if (halted) return
   if (s.status === 'in') {
     lastIn = s
     if (engine && engine.house === s.house.id && engine.isAdmin === s.house.isAdmin) return
     engine?.stop()
-    engine = startEngine(s.house.id, s.house.isAdmin)
+    engine = startEngine(s.house.id, s.house.isAdmin, activeProfileId())
     return
   }
   if (s.status === 'loading') return
@@ -410,6 +496,15 @@ export async function flushCloudSync(timeoutMs = 5000) {
   if (!engine) return
   await Promise.race([engine.flush().catch(() => {}), new Promise((r) => setTimeout(r, timeoutMs))])
 }
+
+/** Frena la sincronización hasta recargar (al cambiar de perfil: así no se guarda nada a medias). */
+export function stopCloudSync() {
+  engine?.stop()
+  engine = undefined
+  halted = true
+}
+
+let halted = false
 
 /** Arranca la sincronización cuando hay sesión y la frena al salir. Se llama una vez al abrir la app. */
 export function initCloudSync() {

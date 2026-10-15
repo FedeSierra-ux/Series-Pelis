@@ -37,6 +37,8 @@ export interface SyncState {
   synced: boolean
   shadow: Record<string, Record<string, string>>
   pending: Record<string, Record<string, Pending>>
+  /** v0.18: lo del perfil va en un estado aparte. Un estado de la v0.17 no lo tiene (ver `splitState`). */
+  split?: boolean
 }
 
 export interface ServerItem {
@@ -49,6 +51,22 @@ export interface ServerItem {
 }
 
 export const emptyState = (house: string): SyncState => ({ house, cursor: '', synced: false, shadow: {}, pending: {} })
+
+/**
+ * Parte un estado de la v0.17 (todo junto) en dos: devuelve uno nuevo con los stores `names` (los del perfil),
+ * con el mismo cursor, y los saca del original, que queda marcado `split`. Así no se baja ni se sube nada de nuevo.
+ */
+export function splitState(state: SyncState, names: readonly string[]): SyncState {
+  const out: SyncState = { house: state.house, cursor: state.cursor, synced: state.synced, shadow: {}, pending: {}, split: true }
+  for (const n of names) {
+    if (state.shadow[n]) out.shadow[n] = state.shadow[n]
+    if (state.pending[n]) out.pending[n] = state.pending[n]
+    delete state.shadow[n]
+    delete state.pending[n]
+  }
+  state.split = true
+  return out
+}
 
 /**
  * Anota como pendiente lo que cambió en los stores desde la última vez. `canPush` dice qué alcances puede

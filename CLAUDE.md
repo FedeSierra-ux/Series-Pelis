@@ -218,6 +218,17 @@ npm run preview    # sirve dist/ en http://localhost:4173
   `clearCache()`), llamado desde `onAuth` de `cloudSync.ts` después de frenar el motor (`shouldForgetAddons`). Las
   **invitaciones no vencen** (decisión del usuario: se dejan como están). Base D1 aparte para las previews: sí
   (falta el id de la base `series-pelis-preview`).
+- v0.18.0 hecha (rama `claude/perfiles-v0.18`): **perfiles** variante D. `lib/profileModel.ts` (puro: `MAIN_PROFILE`,
+  `MAX_PROFILES = 6`, `PROFILE_COLORS`, `cleanProfile`, `profileStorageKey` → `p:<id>:<store>`; el principal usa
+  las claves de siempre), `lib/profiles.ts` (perfil activo en localStorage `sp-profile`, fijo durante la página;
+  `sp-profile-picked` en sessionStorage; `openProfilePicker`), `lib/profileSwitch.ts` (`switchProfile` = flush →
+  `stopCloudSync` → recarga; `initProfileWatch` borra los datos de un perfil que desaparece). Stores con
+  `perProfile: true`: progress, watchlist, ratings, notInterested, diary, goals. `profilesStore` es de la casa.
+  Sync: dos estados en IndexedDB (`state` compartido y `profile:<id>`; `splitState` migra el de la v0.17),
+  GET `?part=shared|profile&profile=`, POST `?profile=`; una lápida en `profiles` borra `profile:H:K` en el
+  servidor y rechaza lo que suba después. UI: `pages/profiles/` (ProfileGate, WhoIsWatching con
+  `AUTO_ENTER_S = 10`, ProfileEditor, `profiles.css`), `components/ProfileAvatar.tsx`, cabecera de Vos, avatar
+  en el riel. El protector avisa al cerrarse con `SCREENSAVER_CLOSED`. Sin PIN, sin perfil de chicos ni invitado.
 - **Decisiones para la v0.17 (reemplazan el reparto del plan de abajo)**: addons y TorBox **iguales para todas las
   casas**, solo los cambia el admin (opción A). Ajustes generales (subtítulos, idiomas, autoplay, saltar intro, sin
   spoilers, reglas de fuentes) **iguales en toda la casa**; lo físico (modo TV, tamaño de la interfaz, protector,

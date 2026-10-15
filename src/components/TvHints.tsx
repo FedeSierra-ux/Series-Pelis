@@ -110,11 +110,12 @@ export function TvHints() {
     return () => window.removeEventListener(EVENT, onOpen)
   }, [])
 
-  // Si el asistente inicial está abierto, esperamos a que cierre (lo miramos cada medio segundo).
+  // Si el asistente inicial o "¿Quién está mirando?" (v0.18) están abiertos, esperamos a que cierren
+  // (lo miramos cada medio segundo).
   useEffect(() => {
     if (!want) return
     const check = () => {
-      const visible = !!document.querySelector('.onboarding')
+      const visible = !!document.querySelector('.onboarding, .pf-layer')
       setObVisible(visible)
       return visible
     }

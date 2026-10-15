@@ -1,5 +1,29 @@
 # Changelog
 
+## [0.18.0] - 2026-10-15
+
+### Agregado
+- **Perfiles** (hasta 6 por casa). Cada perfil tiene su historial, seguir viendo, Mi lista, estrellas,
+  "no me interesa", diario y metas. Los addons, el debrid y los ajustes generales siguen siendo de la casa, y lo
+  físico (modo TV, tamaño de la interfaz, protector, búsquedas…) de cada aparato.
+  - **"¿Quién está mirando?"**: en la TV, con más de un perfil, aparece al abrir la app y al cerrarse el protector
+    de pantalla; si nadie elige, a los 10 s entra con el perfil marcado (un aro alrededor del avatar muestra la
+    cuenta, y cualquier tecla la reinicia). En la PC y el celular se recuerda el último perfil.
+  - Con un solo perfil, todo se ve igual que antes.
+  - **Avatar**: la inicial sobre un color o una imagen de algo que viste o tenés en Mi lista.
+  - **Vos**: muestra quién está mirando, "Cambiar de perfil" y "Administrar". Con más de un perfil, el ítem
+    "Vos" del menú muestra el avatar.
+  - **Administrar perfiles**: crear, renombrar, cambiar el color o la imagen, y borrar (pide confirmar). El
+    principal ("Principal") no se borra. Borrar un perfil borra sus datos en todos los aparatos.
+- Con la casa enlazada, los perfiles se sincronizan entre los aparatos; sin login funcionan solo en el aparato.
+
+### Cambiado
+- `/api/sync` acepta `?profile=` y `?part=shared|profile` (cada parte con su cursor). Una app v0.17 en caché
+  sigue andando: sin esos parámetros ve el perfil principal, como antes.
+- Los datos del perfil principal quedan donde estaban: no hay que migrar nada.
+- Cambiar de perfil sube lo pendiente y recarga la app. Si otra pestaña cambia de perfil, esta también recarga.
+- La guía del control remoto espera a que se cierre "¿Quién está mirando?".
+
 ## [0.17.1] - 2026-10-15
 
 ### Seguridad

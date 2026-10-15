@@ -2,6 +2,8 @@ import { NavLink, Link, Outlet, useLocation } from 'react-router-dom'
 import { ErrorBoundary } from './ErrorBoundary'
 import { HoverTrailerLayer } from './HoverTrailer'
 import { OfflineBanner } from './OfflineBanner'
+import { ProfileAvatar } from './ProfileAvatar'
+import { useActiveProfile, useProfiles } from '../lib/profileSwitch'
 import { Theme2Icon, type Theme2IconName } from './Theme2Icons'
 import './layout-v14.css'
 
@@ -40,6 +42,14 @@ const TABS: Item[] = [
 /** "Vos" queda marcado también en lo que se abre desde ahí: historial, calendario, diario, metas y Tu año. */
 const isVosPath = (pathname: string) => /^\/(me|history|calendar)(\/|$)/.test(pathname)
 
+/** Ícono del ítem; "Vos" muestra el avatar del perfil activo cuando hay más de uno (v0.18). */
+function ItemIcon({ item, size }: { item: Item; size?: number }) {
+  const multi = useProfiles().length > 1
+  const profile = useActiveProfile()
+  if (item.to === '/me' && multi) return <ProfileAvatar profile={profile} size={size ?? 24} className="t2-avatar" />
+  return <Theme2Icon name={item.icon} size={size} />
+}
+
 function RailLink({ item, forceActive }: { item: Item; forceActive?: boolean }) {
   return (
     <NavLink
@@ -48,7 +58,7 @@ function RailLink({ item, forceActive }: { item: Item; forceActive?: boolean }) 
       className={({ isActive }) => `t2-rail-link${isActive || forceActive ? ' active' : ''}`}
     >
       <span className="t2-pill" aria-hidden>
-        <Theme2Icon name={item.icon} />
+        <ItemIcon item={item} />
       </span>
       <span className="t2-rail-label">{item.label}</span>
     </NavLink>
@@ -109,7 +119,7 @@ export function Theme2Layout() {
             className={({ isActive }) => `t2-tab${isActive || (item.to === '/me' && inVos) ? ' active' : ''}`}
           >
             <span className="t2-pill" aria-hidden>
-              <Theme2Icon name={item.icon} size={20} />
+              <ItemIcon item={item} size={20} />
             </span>
             <span>{item.label}</span>
           </NavLink>

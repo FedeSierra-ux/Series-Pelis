@@ -76,5 +76,8 @@ export class IdleTimer {
 }
 
 /** Opciones del ajuste, en minutos (0 = apagado). */
+/** Evento de `window` cuando el protector se cierra (v0.18: en la TV vuelve "¿Quién está mirando?"). */
+export const SCREENSAVER_CLOSED = 'sp-screensaver-closed'
+
 export const SCREENSAVER_OPTIONS = [0, 2, 5, 10] as const
 export type ScreensaverMinutes = (typeof SCREENSAVER_OPTIONS)[number]

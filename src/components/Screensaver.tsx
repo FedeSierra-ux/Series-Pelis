@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { browsableCatalogs, getCatalog } from '../lib/addons'
-import { IdleTimer } from '../lib/idle'
+import { IdleTimer, SCREENSAVER_CLOSED } from '../lib/idle'
 import { isOnline } from '../lib/online'
 import { buildSlides, type Slide, type SlideSource } from '../lib/screensaver'
 import { addonsStore, progressStore, settingsStore, useStore, watchlistStore } from '../lib/store'
@@ -161,6 +161,7 @@ export function Screensaver() {
       timer.activity()
       swallowUntil = Date.now() + SWALLOW_MS
       setActive(false)
+      window.dispatchEvent(new Event(SCREENSAVER_CLOSED))
     }
     const after = (e: Event) => {
       if (Date.now() < swallowUntil) {
@@ -182,6 +183,7 @@ export function Screensaver() {
         timer.activity()
         swallowUntil = Date.now() + SWALLOW_MS
         setActive(false)
+        window.dispatchEvent(new Event(SCREENSAVER_CLOSED))
       }
     }
     const opts = { capture: true, passive: false } as const

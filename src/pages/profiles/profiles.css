@@ -1,0 +1,315 @@
+/* "¿Quién está mirando?" y el editor de perfiles (v0.18). Usa las variables del tema. */
+
+.pf-layer {
+  position: fixed;
+  inset: 0;
+  z-index: 950;
+  display: grid;
+  place-items: center;
+  overflow-y: auto;
+  padding-block: 32px;
+  padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
+  background: radial-gradient(120% 80% at 50% 0%, var(--tonal, var(--bg-2)) 0%, var(--bg) 60%);
+}
+.pf-box {
+  width: min(960px, 100%);
+  display: grid;
+  justify-items: center;
+  gap: 32px;
+}
+.pf-title {
+  margin: 0;
+  font-family: var(--font-display);
+  font-size: clamp(1.8rem, 4vw, 2.8rem);
+  text-align: center;
+  text-wrap: balance;
+}
+
+/* ---------- Grilla de perfiles ---------- */
+
+.pf-grid {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 28px;
+}
+.pf-tile {
+  display: grid;
+  justify-items: center;
+  gap: 12px;
+  width: 140px;
+  padding: 8px;
+  border: 0;
+  border-radius: var(--radius);
+  background: transparent;
+  color: var(--muted);
+  font: inherit;
+  cursor: pointer;
+}
+/* El anillo va en el avatar, no alrededor de todo el botón (también en la TV). */
+[data-theme='2'] .pf-tile:focus-visible,
+html[data-tv] .pf-tile:focus-visible {
+  outline: none;
+}
+.pf-tile-art {
+  position: relative;
+  display: grid;
+  place-items: center;
+  width: 124px;
+  height: 124px;
+  border-radius: 50%;
+  transition: transform 0.18s;
+}
+.pf-tile-art .pf-avatar {
+  outline: 4px solid transparent;
+  outline-offset: 2px;
+  transition: outline-color 0.15s;
+}
+.pf-tile:hover .pf-tile-art,
+.pf-tile:focus-visible .pf-tile-art {
+  transform: scale(1.06);
+}
+.pf-tile:hover .pf-avatar,
+.pf-tile:focus-visible .pf-avatar {
+  outline-color: var(--text);
+}
+.pf-tile:focus-visible .pf-avatar {
+  outline-color: var(--accent);
+}
+.pf-name {
+  max-width: 100%;
+  overflow-wrap: anywhere;
+  text-align: center;
+  font-size: 1.05rem;
+  font-weight: 600;
+}
+.pf-tile:hover .pf-name,
+.pf-tile:focus-visible .pf-name,
+.pf-tile[aria-current='true'] .pf-name {
+  color: var(--text);
+}
+
+/* Cuenta regresiva: un aro que se completa alrededor del perfil marcado. */
+.pf-ring {
+  --pf-turn: 0turn;
+  position: absolute;
+  inset: -8px;
+  border-radius: 50%;
+  background: conic-gradient(var(--accent) var(--pf-turn), transparent 0);
+  -webkit-mask: radial-gradient(farthest-side, transparent calc(100% - 4px), #000 calc(100% - 3px));
+  mask: radial-gradient(farthest-side, transparent calc(100% - 4px), #000 calc(100% - 3px));
+  animation: pf-count linear forwards;
+  pointer-events: none;
+}
+@property --pf-turn {
+  syntax: '<angle>';
+  inherits: false;
+  initial-value: 0turn;
+}
+@keyframes pf-count {
+  to {
+    --pf-turn: 1turn;
+  }
+}
+.pf-countdown {
+  margin: -12px 0 0;
+  min-height: 1.5em;
+  text-align: center;
+}
+
+.pf-edit-badge {
+  position: absolute;
+  right: 4px;
+  bottom: 4px;
+  display: grid;
+  place-items: center;
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  background: var(--surface-2);
+  color: var(--text);
+  box-shadow: 0 0 0 3px var(--bg);
+}
+.pf-grid.is-managing .pf-avatar {
+  filter: brightness(0.7);
+}
+.pf-add-icon {
+  width: 112px;
+  height: 112px;
+  background: transparent;
+  border: 2px dashed var(--line);
+  color: var(--muted);
+  font-family: var(--font-display);
+  font-size: 3rem;
+  font-weight: 400;
+}
+.pf-add:hover .pf-add-icon,
+.pf-add:focus-visible .pf-add-icon {
+  color: var(--text);
+  border-color: var(--text);
+}
+
+.pf-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+}
+.pf-foot {
+  justify-content: center;
+}
+
+/* ---------- Editor ---------- */
+
+.pf-editor {
+  width: min(560px, 100%);
+  display: grid;
+  gap: 22px;
+  padding: 24px;
+  background: var(--bg-2);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-lg);
+}
+.pf-editor h2 {
+  margin: 0;
+  font-family: var(--font-display);
+  font-size: 1.4rem;
+}
+.pf-editor-top {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+}
+.pf-editor-name {
+  display: grid;
+  gap: 8px;
+  flex: 1;
+  min-width: 0;
+}
+.pf-editor-name input {
+  width: 100%;
+  box-sizing: border-box;
+}
+.pf-label {
+  padding: 0;
+  font-weight: 600;
+  font-size: 0.92rem;
+}
+.pf-field {
+  display: grid;
+  gap: 10px;
+  min-width: 0;
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+.pf-swatches {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+.pf-swatch {
+  width: 40px;
+  height: 40px;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  cursor: pointer;
+}
+.pf-swatch[aria-pressed='true'],
+.pf-art[aria-pressed='true'] {
+  box-shadow: 0 0 0 3px var(--bg-2), 0 0 0 6px var(--text);
+}
+.pf-arts {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(64px, 1fr));
+  gap: 12px;
+}
+/* Redondas, como va a quedar el avatar. */
+.pf-art {
+  aspect-ratio: 1;
+  max-width: 100%;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  overflow: hidden;
+  background: var(--surface-2);
+  cursor: pointer;
+}
+.pf-art img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+.pf-delete {
+  margin-left: auto;
+  color: var(--danger);
+}
+.pf-confirm {
+  display: grid;
+  gap: 12px;
+  padding: 16px;
+  border-radius: var(--radius);
+  background: color-mix(in srgb, var(--danger) 14%, transparent);
+}
+.pf-confirm p {
+  margin: 0;
+  line-height: 1.5;
+}
+[data-theme='2'] .btn.pf-danger {
+  background: var(--danger);
+  color: #1a0b0b;
+}
+[data-theme='2'] .btn.pf-danger:hover,
+[data-theme='2'] .btn.pf-danger:focus-visible {
+  background: #fca5a5;
+}
+
+@media (max-width: 560px) {
+  .pf-grid {
+    gap: 12px;
+  }
+  .pf-tile {
+    width: 104px;
+    padding-inline: 0;
+  }
+  .pf-name {
+    font-size: 0.95rem;
+  }
+  .pf-tile-art {
+    width: 96px;
+    height: 96px;
+  }
+  .pf-tile-art .pf-avatar {
+    width: 88px !important;
+    height: 88px !important;
+    font-size: 2.4rem !important;
+  }
+  .pf-add-icon {
+    width: 88px;
+    height: 88px;
+  }
+  .pf-editor {
+    padding: 18px;
+  }
+  .pf-editor-top {
+    flex-direction: column;
+    align-items: stretch;
+  }
+  .pf-editor-top > .pf-avatar {
+    align-self: center;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .pf-tile-art,
+  .pf-tile-art .pf-avatar {
+    transition: none;
+  }
+  .pf-tile:hover .pf-tile-art,
+  .pf-tile:focus-visible .pf-tile-art {
+    transform: none;
+  }
+}

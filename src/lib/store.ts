@@ -1,5 +1,5 @@
 import { useSyncExternalStore } from 'react'
-import { createStore, get, update } from 'idb-keyval'
+import { createStore, delMany, get, update } from 'idb-keyval'
 import { clearCache, dropLegacySwCaches, isQuotaError } from './cache'
 import { announce, applyPatch, diffPatch, newestUpdate, onRemoteChange, type Patch, type Resolver } from './storeSync'
 import { CINEMETA_ADDON, cleanManifest, fetchManifest } from './addons'
@@ -11,6 +11,8 @@ import type { ExternalPlayerId } from './externalPlayers'
 import type { ScreensaverMinutes } from './idle'
 import type { TvModeSetting } from './platform'
 import type { InstalledAddon, Manifest, MetaPreview } from './types'
+import { cleanProfile, MAIN_PROFILE, PROFILE_STORES, profileStorageKey, type Profile } from './profileModel'
+import { activeProfileId, setActiveProfileId } from './profiles'
 
 // Datos del usuario guardados en el navegador (IndexedDB). En la v0.2 se van a
 // sincronizar con Cloudflare D1; por eso todo pasa por estos stores y no por
@@ -33,6 +35,8 @@ export interface StoreOptions {
   depth?: number
   /** Para una misma clave cambiada en dos pestañas, cuál queda (ver storeSync.ts). */
   resolve?: Resolver
+  /** Cada perfil tiene el suyo (v0.18): se guarda en `p:<perfil>:<clave>`; el principal, en `<clave>`. */
+  perProfile?: boolean
 }
 
 // ---------- Problemas al guardar (cuota llena) ----------
@@ -74,8 +78,13 @@ export class PersistedStore<T> {
   ) {
     this.value = initial
     this.initial = initial
-    // Otra pestaña guardó esta clave: se relee (auditoría #2).
-    onRemoteChange(key, () => void this.refresh())
+    // Otra pestaña guardó esta clave: se relee (auditoría #2). Los de cada perfil, al leerlos (ver `hydrate`).
+    if (!opts.perProfile) onRemoteChange(key, () => void this.refresh())
+  }
+
+  /** Dónde se guarda. El perfil queda fijo hasta recargar la app (cambiar de perfil recarga). */
+  private get storageKey() {
+    return this.opts.perProfile ? profileStorageKey(this.key, activeProfileId()) : this.key
   }
 
   /** Valores por defecto con lo que haya en `stored` encima (para importar copias viejas). */
@@ -84,8 +93,9 @@ export class PersistedStore<T> {
   }
 
   async hydrate() {
+    if (this.opts.perProfile) onRemoteChange(this.storageKey, () => void this.refresh())
     try {
-      const stored = await get<T>(this.key, idb)
+      const stored = await get<T>(this.storageKey, idb)
       if (stored !== undefined) {
         // En objetos de configuración completamos con los valores por defecto de campos nuevos.
         this.value = withDefaults(this.value, stored)
@@ -100,7 +110,7 @@ export class PersistedStore<T> {
     const seq = this.seq
     let stored: T | undefined
     try {
-      stored = await get<T>(this.key, idb)
+      stored = await get<T>(this.storageKey, idb)
     } catch {
       return
     }
@@ -131,10 +141,11 @@ export class PersistedStore<T> {
    */
   private write(patch: Patch, value: T, retried: boolean) {
     const fail = (err: unknown) => void this.writeFailed(err, patch, value, retried)
+    const key = this.storageKey
     try {
-      update<unknown>(this.key, (stored) => (stored === undefined ? value : applyPatch(stored, patch, value, this.opts.resolve)), idb).then(() => {
+      update<unknown>(key, (stored) => (stored === undefined ? value : applyPatch(stored, patch, value, this.opts.resolve)), idb).then(() => {
         if (retried) setStorageIssue(undefined)
-        announce(this.key)
+        announce(key)
       }, fail)
     } catch (err) {
       fail(err)
@@ -320,7 +331,7 @@ export interface WatchEntry {
   hidden?: boolean
 }
 
-export const progressStore = new PersistedStore<Record<string, WatchEntry>>('progress', {}, { resolve: newestUpdate })
+export const progressStore = new PersistedStore<Record<string, WatchEntry>>('progress', {}, { resolve: newestUpdate, perProfile: true })
 
 const WATCHED_RATIO = 0.9
 /** Retroceder más que esto respecto de donde iba cuenta como "lo empezó de nuevo". */
@@ -469,7 +480,7 @@ export function hideFromContinue(metaId: string) {
 // ---------- Diario y metas (v0.5) ----------
 
 /** Cada vez que se terminó algo (ver `lib/diary.ts`). */
-export const diaryStore = new PersistedStore<DiaryState>('diary', { v: 0, entries: {} }, { depth: 2 })
+export const diaryStore = new PersistedStore<DiaryState>('diary', { v: 0, entries: {} }, { depth: 2, perProfile: true })
 
 function logDiary(e: Parameters<typeof diaryEntryFrom>[0], source: DiaryEntry['source']) {
   const at = Date.now()
@@ -488,7 +499,7 @@ export function removeDiaryEntry(id: string) {
 }
 
 /** Metas anuales y logros ya vistos (ver `lib/goals.ts`). */
-export const goalsStore = new PersistedStore<GoalsState>('goals', { byYear: {}, seen: [] }, { depth: 2 })
+export const goalsStore = new PersistedStore<GoalsState>('goals', { byYear: {}, seen: [] }, { depth: 2, perProfile: true })
 
 // ---------- Última fuente elegida por título ----------
 
@@ -552,7 +563,7 @@ export interface ListItem {
   addedAt: number
 }
 
-export const watchlistStore = new PersistedStore<Record<string, ListItem>>('watchlist', {})
+export const watchlistStore = new PersistedStore<Record<string, ListItem>>('watchlist', {}, { perProfile: true })
 
 export function toggleWatchlist(meta: MetaPreview) {
   watchlistStore.set((all) => {
@@ -589,7 +600,7 @@ export interface RatingEntry {
 }
 
 /** Por id del título (`tt…`, o `tmdb:movie:603` si no tiene IMDb). Ver `ratings.ts`. */
-export const ratingsStore = new PersistedStore<Record<string, RatingEntry>>('ratings', {})
+export const ratingsStore = new PersistedStore<Record<string, RatingEntry>>('ratings', {}, { perProfile: true })
 
 /** Títulos que el usuario sacó de las recomendaciones y de las filas de Inicio. */
 export interface NotInterestedEntry {
@@ -601,7 +612,7 @@ export interface NotInterestedEntry {
   at: number
 }
 
-export const notInterestedStore = new PersistedStore<Record<string, NotInterestedEntry>>('notInterested', {})
+export const notInterestedStore = new PersistedStore<Record<string, NotInterestedEntry>>('notInterested', {}, { perProfile: true })
 
 // ---------- v0.5: búsquedas recientes ----------
 
@@ -918,7 +929,37 @@ export async function importData(raw: unknown): Promise<ImportReport> {
 /** Listas curadas que ya no existen (las de IMDb, v0.13.0). */
 const isRemovedList = (id: string) => id.startsWith('top-imdb-')
 
+// ---------- Perfiles (v0.18) ----------
+
+/** Los perfiles de la casa (se sincronizan con la casa). El principal no hace falta que esté: ver `listProfiles`. */
+export const profilesStore = new PersistedStore<Record<string, Profile>>('profiles', {})
+
+/** Borra de este aparato los datos de un perfil (el principal nunca se borra así). */
+export async function forgetProfileData(id: string) {
+  if (id === MAIN_PROFILE) return
+  try {
+    await delMany(
+      PROFILE_STORES.map((k) => profileStorageKey(k, id)),
+      idb,
+    )
+  } catch {
+    // Nada que borrar.
+  }
+}
+
 export async function hydrateStores() {
+  // Primero los perfiles: si el de este aparato ya no existe (lo borraron), se vuelve al principal.
+  await profilesStore.hydrate()
+  const savedProfiles = profilesStore.get()
+  const entries = Object.entries(isPlain(savedProfiles) ? savedProfiles : {})
+  const profiles: Record<string, Profile> = {}
+  for (const [id, raw] of entries) {
+    const p = cleanProfile(id, raw)
+    if (p) profiles[id] = p
+  }
+  if (JSON.stringify(profiles) !== JSON.stringify(savedProfiles)) profilesStore.set(profiles)
+  const active = activeProfileId()
+  if (active !== MAIN_PROFILE && !profiles[active]) setActiveProfileId(MAIN_PROFILE)
   await Promise.all([
     addonsStore.hydrate(),
     progressStore.hydrate(),
