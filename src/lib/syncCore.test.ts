@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { applyItems, capture, emptyState, enforceReadOnly, fieldsAdapter, markSent, outgoing, pendingCount, recordAdapter, type ServerItem, type SyncAdapter } from './syncCore'
+import { applyItems, capture, emptyState, enforceReadOnly, fieldsAdapter, markSent, outgoing, pendingCount, recordAdapter, splitState, type ServerItem, type SyncAdapter } from './syncCore'
 
 function memStore<T>(initial: T) {
   let value = initial
@@ -151,5 +151,20 @@ describe('outgoing / markSent', () => {
     capture(state, adapters, 2, all)
     const sent = outgoing(state, adapters).flat().find((o) => o.k === 'a')
     expect(sent).toMatchObject({ v: null, d: 1, u: 2 })
+  })
+})
+
+describe('splitState (v0.17 → v0.18)', () => {
+  it('pasa lo del perfil a un estado aparte con el mismo cursor, sin perder pendientes', () => {
+    const state = emptyState('h1')
+    state.cursor = 'c9'
+    state.synced = true
+    state.shadow = { progress: { a: '1' }, addons: { x: '2' } }
+    state.pending = { progress: { b: { v: '3', u: 4 } }, addons: {} }
+    const profile = splitState(state, ['progress', 'watchlist'])
+    expect(profile).toEqual({ house: 'h1', cursor: 'c9', synced: true, shadow: { progress: { a: '1' } }, pending: { progress: { b: { v: '3', u: 4 } } }, split: true })
+    expect(state.shadow).toEqual({ addons: { x: '2' } })
+    expect(state.pending).toEqual({ addons: {} })
+    expect(state.split).toBe(true)
   })
 })

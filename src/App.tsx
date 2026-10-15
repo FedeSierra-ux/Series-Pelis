@@ -20,6 +20,7 @@ import { Home } from './pages/Home'
 import { MyList } from './pages/MyList'
 import { Search } from './pages/Search'
 import { Settings } from './pages/Settings'
+import { ProfileGate } from './pages/profiles/ProfileGate'
 import { JoinPage } from './pages/auth/JoinPage'
 
 // El reproductor (con hls.js) se descarga recién al dar play: la portada carga más liviana.
@@ -98,6 +99,8 @@ export function App() {
         {/* Con casas (v0.17), antes de todo la pantalla de entrada. */}
         <AuthGate>
           <Screensaver />
+          {/* Perfiles (v0.18): "¿Quién está mirando?" en la TV al abrir y después del protector. */}
+          <ProfileGate />
           <Onboarding />
           {/* Después del asistente: la guía de la TV espera a que cierre y la ayuda "?" va encima de todo. */}
           <TvHints />

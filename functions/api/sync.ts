@@ -7,15 +7,16 @@
 // Alcances (el aparato nunca elige la casa: sale de la sesión):
 // - global:  los addons (iguales en todas las casas). Los lee cualquiera; solo el admin los cambia.
 // - house:   ajustes generales y el idioma elegido por título, iguales en toda la casa.
-// - profile: historial, seguir viendo, mi lista, estrellas, "no me interesa", diario y metas.
-//            En la v0.17 hay un solo perfil por casa ("main"); los perfiles llegan en la v0.18.
+// - profile: historial, seguir viendo, mi lista, estrellas, "no me interesa", diario y metas, de cada
+//            perfil (v0.18). El aparato dice qué perfil (`?profile=`); sin eso, el principal ("main"), como
+//            en la v0.17. La lista de perfiles es de la casa (store `profiles`): borrar uno borra sus datos.
 
 import { authEnabled, ensureSchema, getSession, overLimit, readText, unauthorized, type AuthEnv, type Session } from '../_auth'
 import { crossSite, fromOwnSite, json } from '../_lib'
 
 export const SYNC_STORES = {
   global: ['addons'],
-  house: ['settings', 'trackPrefs'],
+  house: ['settings', 'trackPrefs', 'profiles'],
   profile: ['progress', 'watchlist', 'ratings', 'notInterested', 'diary', 'goals'],
 } as const
 export type SyncScope = keyof typeof SYNC_STORES
@@ -43,7 +44,27 @@ export const PUSH_LIMIT = { n: 120, ms: 10 * 60 * 1000 }
 const CLOCK_SKEW_MS = 60_000
 export const OVERLAP_MS = 15_000
 
-const scopeId = (scope: SyncScope, s: Session) => (scope === 'global' ? 'global' : scope === 'house' ? `house:${s.house.id}` : `profile:${s.house.id}:main`)
+export const MAIN_PROFILE = 'main'
+const PROFILE_RE = /^(main|[a-z0-9]{6,32})$/
+
+/** El perfil de `?profile=`: sin nada, el principal; uno mal escrito, `undefined` (400). */
+export function profileParam(raw: string | null): string | undefined {
+  if (raw === null || raw === '') return MAIN_PROFILE
+  return PROFILE_RE.test(raw) ? raw : undefined
+}
+
+const scopeId = (scope: SyncScope, s: Session, profile = MAIN_PROFILE) =>
+  scope === 'global' ? 'global' : scope === 'house' ? `house:${s.house.id}` : `profile:${s.house.id}:${profile}`
+
+/** ¿Este perfil se borró (tiene lápida en la lista de la casa)? */
+async function profileDeleted(db: NonNullable<AuthEnv['DB']>, s: Session, profile: string): Promise<boolean> {
+  if (profile === MAIN_PROFILE) return false
+  const row = await db
+    .prepare(`SELECT deleted FROM sync_items WHERE scope = ?1 AND store = 'profiles' AND key = ?2`)
+    .bind(scopeId('house', s), profile)
+    .first<{ deleted: number }>()
+  return row?.deleted === 1
+}
 
 function scopeName(id: string): SyncScope {
   return id === 'global' ? 'global' : id.startsWith('house:') ? 'house' : 'profile'
@@ -98,6 +119,17 @@ export const onRequestGet = async (context: Ctx): Promise<Response> => {
   if (s instanceof Response) return s
   const db = context.env.DB!
   const params = new URL(context.request.url).searchParams
+  const profile = profileParam(params.get('profile'))
+  if (!profile) return json({ error: 'Perfil inválido' }, 400)
+  // `part` (v0.18): la app baja por separado lo de la casa (`shared`) y lo del perfil (`profile`), cada
+  // uno con su cursor. Sin `part` (una app v0.17 en caché), todo junto con el principal, como antes.
+  const part = params.get('part')
+  const scopes =
+    part === 'shared'
+      ? [scopeId('global', s), scopeId('house', s), scopeId('house', s)]
+      : part === 'profile'
+        ? [scopeId('profile', s, profile), scopeId('profile', s, profile), scopeId('profile', s, profile)]
+        : [scopeId('global', s), scopeId('house', s), scopeId('profile', s)]
   let [ts, scope, store, key] = decodeCursor(params.get('since'))
   // Al empezar cada bajada, la app pide releer los últimos segundos: dos aparatos que guardan a la vez
   // pueden terminar con un `srv_ts` apenas anterior a lo que otro ya leyó.
@@ -109,7 +141,7 @@ export const onRequestGet = async (context: Ctx): Promise<Response> => {
          WHERE scope IN (?1, ?2, ?3) AND srv_ts >= ?4 AND (srv_ts, scope, store, key) > (?4, ?5, ?6, ?7)
          ORDER BY srv_ts, scope, store, key LIMIT ${PAGE}`,
       )
-      .bind(scopeId('global', s), scopeId('house', s), scopeId('profile', s), ts, scope, store, key)
+      .bind(...scopes, ts, scope, store, key)
       .all<Row>()
     // Se corta antes si la página pesa mucho; el cursor sigue desde la última fila mandada.
     const full = results.length === PAGE
@@ -158,6 +190,8 @@ export function cleanItem(raw: unknown, isAdmin: boolean, now: number): PushItem
   const deleted = it.d === 1
   if (!deleted && (typeof it.v !== 'string' || it.v.length > (it.t === 'addons' ? MAX_ADDONS_VALUE : MAX_VALUE))) return undefined
   if (scope === 'global' && !isAdmin) return 'forbidden'
+  // La lista de perfiles: claves válidas y el principal no se borra.
+  if (it.t === 'profiles' && (!PROFILE_RE.test(it.k) || (deleted && it.k === MAIN_PROFILE))) return undefined
   return { s: scope, t: it.t as string, k: it.k, v: deleted ? null : (it.v as string), u: Math.min(Math.round(it.u), now + CLOCK_SKEW_MS), ...(deleted ? { d: 1 as const } : {}) }
 }
 
@@ -168,6 +202,8 @@ export const onRequestPost = async (context: Ctx): Promise<Response> => {
   const s = await session(context)
   if (s instanceof Response) return s
   const db = context.env.DB!
+  const profile = profileParam(new URL(request.url).searchParams.get('profile'))
+  if (!profile) return json({ error: 'Perfil inválido' }, 400)
 
   try {
     if (await overLimit(db, `sync:${s.id}`, PUSH_LIMIT.n, PUSH_LIMIT.ms)) return json({ error: 'Demasiados cambios seguidos. Esperá un rato.' }, 429, { 'Retry-After': '120' })
@@ -189,11 +225,25 @@ export const onRequestPost = async (context: Ctx): Promise<Response> => {
   let rejected = 0
   let forbidden = 0
   const rows: [string, string, string, string | null, number, number][] = []
+  const items: PushItem[] = []
   for (const raw of rawItems) {
     const it = cleanItem(raw, s.house.isAdmin, now)
     if (it === 'forbidden') forbidden++
     else if (!it) rejected++
-    else rows.push([scopeId(it.s, s), it.t, it.k, it.v, it.u, it.d ? 1 : 0])
+    else items.push(it)
+  }
+  // Un aparato que todavía no se enteró de que borraron su perfil no lo vuelve a llenar.
+  let gone = false
+  if (items.some((it) => it.s === 'profile')) {
+    try {
+      gone = await profileDeleted(db, s, profile)
+    } catch {
+      return json({ error: 'La base no responde. Probá en un rato.' }, 503)
+    }
+  }
+  for (const it of items) {
+    if (gone && it.s === 'profile') rejected++
+    else rows.push([scopeId(it.s, s, profile), it.t, it.k, it.v, it.u, it.d ? 1 : 0])
   }
   if (rows.length) {
     try {
@@ -219,6 +269,17 @@ export const onRequestPost = async (context: Ctx): Promise<Response> => {
         )
         .bind(JSON.stringify(rows), now)
         .run()
+      // Perfiles borrados: se van sus datos (si la lápida quedó, o sea, si nadie lo cambió después).
+      for (const r of rows) {
+        if (r[1] !== 'profiles' || r[5] !== 1) continue
+        await db
+          .prepare(
+            `DELETE FROM sync_items WHERE scope = ?1 AND EXISTS
+               (SELECT 1 FROM sync_items WHERE scope = ?2 AND store = 'profiles' AND key = ?3 AND deleted = 1)`,
+          )
+          .bind(`profile:${s.house.id}:${r[2]}`, scopeId('house', s), r[2])
+          .run()
+      }
     } catch {
       return json({ error: 'La base no responde. Probá en un rato.' }, 503)
     }

@@ -437,6 +437,79 @@ describe('/api/sync', () => {
   })
 })
 
+// ---------- Perfiles (v0.18) ----------
+
+async function pushAs(cookie: string, profile: string, items: Item[]) {
+  const res = await syncPost({ request: req(`/api/sync?profile=${encodeURIComponent(profile)}`, { method: 'POST', body: { items }, cookie }), env })
+  return { status: res.status, body: await res.json() }
+}
+
+async function pullPart(cookie: string, part: 'shared' | 'profile', profile = 'main') {
+  const res = await syncGet({ request: req(`/api/sync?part=${part}&profile=${encodeURIComponent(profile)}`, { cookie }), env })
+  return { status: res.status, body: (await res.json()) as { items: Item[]; next: string; more: boolean } }
+}
+
+const keysOf = (items: Item[]) => items.map((i) => i.k).sort()
+
+describe('/api/sync con perfiles', () => {
+  it('un perfil mal escrito: 400', async () => {
+    const admin = await adminLogin()
+    expect((await pullPart(admin, 'profile', 'Mal:Id')).status).toBe(400)
+    expect((await pushAs(admin, 'x', [])).status).toBe(400)
+  })
+
+  it('cada perfil tiene lo suyo; lo de la casa baja aparte y sin `part` se ve el principal (app v0.17)', async () => {
+    const admin = await adminLogin()
+    await pushAs(admin, 'main', [
+      { s: 'profile', t: 'progress', k: 'tt-main', v: '{}', u: 1 },
+      { s: 'house', t: 'profiles', k: 'ana123', v: '{"name":"Ana"}', u: 1 },
+      { s: 'global', t: 'addons', k: 'list', v: '[]', u: 1 },
+    ])
+    await pushAs(admin, 'ana123', [{ s: 'profile', t: 'progress', k: 'tt-ana', v: '{}', u: 1 }])
+
+    expect(keysOf((await pullPart(admin, 'shared')).body.items)).toEqual(['ana123', 'list'])
+    expect(keysOf((await pullPart(admin, 'profile', 'main')).body.items)).toEqual(['tt-main'])
+    expect(keysOf((await pullPart(admin, 'profile', 'ana123')).body.items)).toEqual(['tt-ana'])
+    expect(keysOf((await pull(admin)).body.items)).toEqual(['ana123', 'list', 'tt-main'])
+  })
+
+  it('los perfiles son de cada casa', async () => {
+    const admin = await adminLogin()
+    const { invite } = await newHouse(admin)
+    const member = await join(invite)
+    await pushAs(admin, 'ana123', [{ s: 'profile', t: 'progress', k: 'tt-fede', v: '{}', u: 1 }])
+    await pushAs(member, 'ana123', [{ s: 'profile', t: 'progress', k: 'tt-tia', v: '{}', u: 1 }])
+    expect(keysOf((await pullPart(member, 'profile', 'ana123')).body.items)).toEqual(['tt-tia'])
+  })
+
+  it('borrar un perfil borra sus datos del servidor y rechaza lo que suba después', async () => {
+    const admin = await adminLogin()
+    await pushAs(admin, 'main', [{ s: 'house', t: 'profiles', k: 'ana123', v: '{"name":"Ana"}', u: 1 }])
+    await pushAs(admin, 'ana123', [
+      { s: 'profile', t: 'progress', k: 'tt1', v: '{}', u: 1 },
+      { s: 'profile', t: 'watchlist', k: 'tt2', v: '{}', u: 1 },
+    ])
+    await pushAs(admin, 'main', [{ s: 'house', t: 'profiles', k: 'ana123', v: null, u: 2, d: 1 }])
+    const left = rawDb().prepare(`SELECT COUNT(*) AS n FROM sync_items WHERE scope LIKE 'profile:%:ana123'`).all()
+    expect(left[0].n).toBe(0)
+
+    // Un aparato que no se enteró sigue subiendo: no revive el perfil.
+    const late = await pushAs(admin, 'ana123', [{ s: 'profile', t: 'progress', k: 'tt3', v: '{}', u: 3 }])
+    expect(late.body).toMatchObject({ saved: 0, rejected: 1 })
+    expect((await pullPart(admin, 'profile', 'ana123')).body.items).toEqual([])
+  })
+
+  it('el principal no se borra y las claves de perfiles se validan', async () => {
+    const admin = await adminLogin()
+    const res = await pushAs(admin, 'main', [
+      { s: 'house', t: 'profiles', k: 'main', v: null, u: 1, d: 1 },
+      { s: 'house', t: 'profiles', k: 'MAL ID', v: '{}', u: 1 },
+      { s: 'house', t: 'profiles', k: 'main', v: '{"name":"Fede"}', u: 1 },
+    ])
+    expect(res.body).toMatchObject({ saved: 1, rejected: 2 })
+  })
+})
+
 describe('esquema', () => {
   it('una base de una versión anterior recibe las columnas nuevas', async () => {
     const db = await fakeD1()

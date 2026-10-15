@@ -5,6 +5,8 @@ import { checkAuth } from './lib/auth'
 import { initCloudSync } from './lib/cloudSync'
 import { initDiagnostics, probeReportServer } from './lib/diagnostics'
 import { hydrateStores } from './lib/store'
+import { initProfileWatch } from './lib/profileSwitch'
+import { watchProfileChange } from './lib/profiles'
 import { probeServerTmdb } from './lib/tmdb'
 import { loadThemeFonts } from './lib/theme'
 import { syncTvAttr } from './lib/tv'
@@ -43,6 +45,9 @@ hydrateStores().finally(() => {
   // Sin la base en el sitio (o en local con Vite) no hace nada.
   void checkAuth()
   initCloudSync()
+  // Perfiles (v0.18): si otra pestaña cambia de perfil, esta recarga; si borran un perfil, se van sus datos.
+  watchProfileChange()
+  initProfileWatch()
   createRoot(document.getElementById('root')!).render(
     <StrictMode>
       <App />

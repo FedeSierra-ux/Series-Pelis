@@ -1,0 +1,28 @@
+/* Avatar de perfil (v0.18): inicial sobre el color del perfil o el fondo de una peli. */
+
+.pf-avatar {
+  display: inline-grid;
+  place-items: center;
+  flex: none;
+  border-radius: 50%;
+  overflow: hidden;
+  color: #17141f;
+  font-family: var(--font-display);
+  font-weight: 700;
+  line-height: 1;
+  user-select: none;
+}
+.pf-avatar img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+/* En el riel y las pestañas, el avatar ocupa el lugar del ícono de "Vos". */
+.t2-pill .t2-avatar {
+  font-size: 0.8rem !important;
+}
+.t2-rail-link.active .t2-avatar,
+.t2-tab.active .t2-avatar {
+  box-shadow: 0 0 0 2px var(--accent);
+}
