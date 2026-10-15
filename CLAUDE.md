@@ -248,8 +248,24 @@ npm run preview    # sirve dist/ en http://localhost:4173
   `assets/public` y `capacitor.config.json`: antes de gradle va `npx cap sync android`. APK: workflow
   `android-tv.yml` (artifact; etiqueta `tv-v*` → Release `series-pelis-tv.apk` para Downloader). Firma con los
   secretos `ANDROID_KEYSTORE_BASE64` / `_PASSWORD` / `ANDROID_KEY_ALIAS`; **nunca commitear la llave**.
-  v0.20.0 = reproductor nativo integrado (ExoPlayer/Media3) con saltar intro, saltar recap, siguiente episodio,
-  pistas de audio y subs (también los online en latino) y Seguir viendo.
+- v0.20.0 hecha (rama `claude/android-tv-v0.20`): **reproductor nativo** Media3 1.10.1 en la app de TV, como
+  vista encima del WebView en `MainActivity` (no otra Activity: el JS sigue corriendo). **La web decide, Android
+  reproduce**: contrato en `src/lib/nativePlayer.ts` (`playerOpen` / `playerUpdate` / `playerSubtitleData` /
+  `playerClose` + evento `player`: ready, progress, tracks, audioPicked, subPicked, next, ended, closed, error).
+  `getInfo().player` dice si el APK lo trae (`probeNativePlayer`; la v0.19 no → reproductor de la web).
+  Web: `pages/player/NativePlayer.tsx` (`NativePlayerView`, sin interfaz propia: subtítulo automático, segmentos,
+  `creditsPlan`, progreso, siguiente episodio) y `nativeHelpers.ts` (+ test); `Player()` → `PlayerChoice`.
+  Al pasar de episodio la vista se remonta y Android **no se cierra** (`closeTimer`: el cierre se posterga y la
+  vista nueva lo cancela); los eventos se ignoran hasta el `ready` del video nuevo. Subtítulos externos: la web los
+  baja con `loadSubtitleText` (con la cookie de sesión, sin SDH) y manda el VTT; los del video son `emb:<g>:<t>`.
+  Si Android da `error`, sigue `PlayerView` desde esa posición (prop `notice`). Ajuste `nativePlayer` (por aparato,
+  prendido de fábrica, solo se ve en la app). Constantes compartidas y el contador del "¿Seguís viendo?" en
+  `pages/player/autoNext.ts`.
+  Android (`tv-app/android/…/tv/`): `NativePlayer.java` (vista encima del WebView; `playerOpen` con uno abierto
+  cambia el video y **borra lo del episodio**: intro, resumen, `nextAt`, `nextLabel`, subtítulos; por eso la web
+  manda todo recién con el `ready`), `VttParser.java`, `SubtitleTextView.java`, `SpNativePlugin` (`player: true` en
+  `getInfo`, métodos `player*`, evento `player`), `MainActivity` (las teclas y Atrás van primero al reproductor),
+  `res/layout/sp_player*.xml`. Sin cabeceras falsas; un `.m3u8` va como HLS. Sin probar todavía en una TV real.
 - **Decisiones para la v0.17 (reemplazan el reparto del plan de abajo)**: addons y TorBox **iguales para todas las
   casas**, solo los cambia el admin (opción A). Ajustes generales (subtítulos, idiomas, autoplay, saltar intro, sin
   spoilers, reglas de fuentes) **iguales en toda la casa**; lo físico (modo TV, tamaño de la interfaz, protector,

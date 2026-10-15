@@ -1,5 +1,22 @@
 # Changelog
 
+## [0.20.0] - 2026-10-15
+
+### Agregado
+- **Reproductor nativo en la app de Android TV / Fire TV** (Media3/ExoPlayer, se dibuja encima de la web). Lee
+  más formatos que el WebView (MKV, HEVC, audio AC3/E-AC3, pistas de audio y subtítulos dentro del video) y anda
+  más fluido en la TV. Sigue haciendo lo mismo que el de la web, porque las decisiones las toma la web:
+  - **Saltar intro y saltar resumen** (botón o automático, según Ajustes; el resumen no se salta solo si hace una
+    semana o más que no ves la serie).
+  - **Siguiente episodio**: la tarjeta aparece en los créditos con cuenta de 10 s, y el episodio nuevo arranca sin
+    cerrar el reproductor.
+  - **Pistas de audio y subtítulos**: los del video, los de los addons y los online en latino, con la misma elección
+    automática y el estilo de Ajustes → Subtítulos. Lo que elegís se recuerda para el título, como en la web.
+  - **Seguir viendo**: guarda el progreso igual que la web (y arranca donde quedaste). También el "¿Seguís viendo?".
+- Ajustes → Reproductor → **"Usar el reproductor de Android"** (solo en la app; prendido de fábrica, por aparato).
+  Si Android no puede con un video, sigue solo el reproductor de la web desde el mismo minuto.
+- Con un APK viejo (v0.19) la app sigue usando el reproductor de la web.
+
 ## [0.19.0] - 2026-10-15
 
 ### Agregado

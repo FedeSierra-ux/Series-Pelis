@@ -1,0 +1,110 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Capa del reproductor nativo: va encima del WebView (la web sigue corriendo para contestar los
+  eventos). Fondo negro y toques bloqueados para que no lleguen a la web de atrás.
+-->
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:id="@+id/sp_player_root"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="#FF000000"
+    android:clickable="true"
+    android:focusable="false">
+
+    <androidx.media3.ui.PlayerView android:id="@+id/sp_player_view"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:focusable="true"
+        app:animation_enabled="true"
+        app:buffered_color="#80FFFFFF"
+        app:controller_layout_id="@layout/sp_player_controls"
+        app:keep_content_on_player_reset="false"
+        app:played_color="@color/sp_accent"
+        app:repeat_toggle_modes="none"
+        app:scrubber_color="@color/sp_accent"
+        app:show_buffering="when_playing"
+        app:show_shuffle_button="false"
+        app:show_subtitle_button="false"
+        app:show_timeout="5000"
+        app:show_vr_button="false"
+        app:shutter_background_color="#FF000000"
+        app:unplayed_color="#33FFFFFF"
+        app:use_artwork="false" />
+
+    <ar.seriespelis.tv.SubtitleTextView android:id="@+id/sp_ext_sub"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_gravity="bottom|center_horizontal"
+        android:gravity="center"
+        android:includeFontPadding="true"
+        android:lineSpacingMultiplier="1.1"
+        android:visibility="gone" />
+
+    <Button android:id="@+id/sp_skip"
+        style="@style/SpPlayerButton.Big"
+        android:layout_gravity="bottom|end"
+        android:layout_marginEnd="48dp"
+        android:layout_marginBottom="48dp"
+        android:visibility="gone" />
+
+    <LinearLayout android:id="@+id/sp_next_card"
+        android:layout_width="380dp"
+        android:layout_height="wrap_content"
+        android:layout_gravity="bottom|end"
+        android:layout_marginEnd="48dp"
+        android:layout_marginBottom="48dp"
+        android:background="@drawable/sp_card_bg"
+        android:orientation="vertical"
+        android:padding="20dp"
+        android:visibility="gone">
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="@string/sp_player_next_title"
+            android:textAllCaps="true"
+            android:textColor="@color/sp_accent"
+            android:textSize="13sp"
+            android:textStyle="bold" />
+
+        <TextView android:id="@+id/sp_next_label"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="4dp"
+            android:ellipsize="end"
+            android:maxLines="2"
+            android:textColor="#FFFFFFFF"
+            android:textSize="18sp"
+            android:textStyle="bold" />
+
+        <TextView android:id="@+id/sp_next_status"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="4dp"
+            android:textColor="@color/sp_text_muted"
+            android:textSize="15sp"
+            android:visibility="gone" />
+
+        <Button android:id="@+id/sp_next_now"
+            style="@style/SpPlayerButton"
+            android:layout_marginTop="14dp"
+            android:text="@string/sp_player_watch_now" />
+    </LinearLayout>
+
+    <TextView android:id="@+id/sp_toast"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_gravity="bottom|center_horizontal"
+        android:layout_marginStart="48dp"
+        android:layout_marginEnd="48dp"
+        android:layout_marginBottom="140dp"
+        android:background="@drawable/sp_toast_bg"
+        android:paddingStart="24dp"
+        android:paddingTop="12dp"
+        android:paddingEnd="24dp"
+        android:paddingBottom="12dp"
+        android:textColor="#FFFFFFFF"
+        android:textSize="17sp"
+        android:visibility="gone" />
+</FrameLayout>

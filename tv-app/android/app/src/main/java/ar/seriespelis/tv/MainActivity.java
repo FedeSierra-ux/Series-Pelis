@@ -11,6 +11,7 @@ import android.webkit.WebView;
 import androidx.activity.OnBackPressedCallback;
 import com.getcapacitor.BridgeActivity;
 import com.getcapacitor.CapConfig;
+import com.getcapacitor.PluginHandle;
 
 /**
  * La app es la web de siempre (series-pelis.pages.dev) dentro de un WebView: las novedades llegan
@@ -29,7 +30,9 @@ public class MainActivity extends BridgeActivity {
         getOnBackPressedDispatcher().addCallback(this, new OnBackPressedCallback(true) {
             @Override
             public void handleOnBackPressed() {
-                sendBackToWeb();
+                NativePlayer p = nativePlayer();
+                if (p != null) p.onBack();
+                else sendBackToWeb();
             }
         });
     }
@@ -52,12 +55,27 @@ public class MainActivity extends BridgeActivity {
 
     @Override
     public boolean dispatchKeyEvent(KeyEvent event) {
+        // Con el reproductor nativo abierto, las teclas son suyas primero (Atrás incluido).
+        NativePlayer p = nativePlayer();
+        if (p != null) {
+            if (p.handleKey(event)) return true;
+            return super.dispatchKeyEvent(event);
+        }
         // Atrás del control: lo decide la web (cerrar un menú, salir del reproductor, volver de página).
         if (event.getKeyCode() == KeyEvent.KEYCODE_BACK && bridge != null) {
             if (event.getAction() == KeyEvent.ACTION_UP && !event.isCanceled()) sendBackToWeb();
             return true;
         }
         return super.dispatchKeyEvent(event);
+    }
+
+    /** El reproductor nativo si está abierto; si no, null. */
+    private NativePlayer nativePlayer() {
+        if (bridge == null) return null;
+        PluginHandle h = bridge.getPlugin("SpNative");
+        if (h == null || !(h.getInstance() instanceof SpNativePlugin)) return null;
+        NativePlayer p = ((SpNativePlugin) h.getInstance()).player();
+        return p != null && p.isOpen() ? p : null;
     }
 
     private void sendBackToWeb() {

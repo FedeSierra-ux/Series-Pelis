@@ -695,6 +695,8 @@ export interface Settings {
   sourceRules: SourceRules
   /** Reproductor externo para el botón "Abrir en…" (ver lib/externalPlayers.ts). */
   externalPlayer: ExternalPlayerId
+  /** v0.20: en la app de Android TV, reproducir con el reproductor nativo (Media3) en vez del de la web. Por aparato. */
+  nativePlayer: boolean
   /** API key (v3) o Read Access Token (v4) de TMDB. Vacío = solo Cinemeta. */
   tmdbKey: string
   /** Modo sin spoilers: difumina miniaturas y oculta sinopsis de los episodios que no viste. */
@@ -748,6 +750,7 @@ export const settingsStore = new PersistedStore<Settings>('settings', {
     dedupe: true,
   },
   externalPlayer: 'system',
+  nativePlayer: true,
   tmdbKey: '',
   spoilerFree: false,
   spoilerUnstarted: false,

@@ -12,17 +12,107 @@ import com.getcapacitor.PluginCall;
 import com.getcapacitor.PluginMethod;
 import com.getcapacitor.annotation.CapacitorPlugin;
 import java.net.URISyntaxException;
+import java.util.List;
 
 /** Lo que la web le pide a la app (en JS: window.Capacitor.Plugins.SpNative). */
 @CapacitorPlugin(name = "SpNative")
 public class SpNativePlugin extends Plugin {
+
+    // Reproductor nativo (v0.20): se crea con el primer playerOpen y vive en el hilo de la interfaz.
+    private NativePlayer player;
 
     @PluginMethod
     public void getInfo(PluginCall call) {
         JSObject res = new JSObject();
         res.put("tv", MainActivity.isTv(getContext()));
         res.put("version", BuildConfig.VERSION_NAME);
+        res.put("player", true);
         call.resolve(res);
+    }
+
+    /** Para MainActivity (teclas y Atrás). Solo desde el hilo de la interfaz. */
+    NativePlayer player() {
+        return player;
+    }
+
+    private NativePlayer ensurePlayer() {
+        if (player == null) {
+            player = new NativePlayer(getActivity(), getBridge().getWebView(), (e) -> notifyListeners("player", e));
+        }
+        return player;
+    }
+
+    /** Abre el video encima de la web (o cambia el que se está viendo). */
+    @PluginMethod
+    public void playerOpen(PluginCall call) {
+        String url = call.getString("url");
+        if (url == null || url.isEmpty()) {
+            call.reject("Falta la URL del video");
+            return;
+        }
+        JSObject data = call.getData();
+        getActivity().runOnUiThread(() -> {
+            try {
+                ensurePlayer().open(data);
+                call.resolve();
+            } catch (Exception e) {
+                call.reject("No se pudo abrir el reproductor", e);
+            }
+        });
+    }
+
+    /** Datos que la web va sabiendo después de abrir: intro, siguiente episodio, subtítulos… */
+    @PluginMethod
+    public void playerUpdate(PluginCall call) {
+        JSObject data = call.getData();
+        getActivity().runOnUiThread(() -> {
+            if (player != null && player.isOpen()) player.update(data);
+            call.resolve();
+        });
+    }
+
+    /** El VTT de un subtítulo externo. Se lee acá (fuera del hilo de la interfaz) y después se muestra. */
+    @PluginMethod
+    public void playerSubtitleData(PluginCall call) {
+        String id = call.getString("id");
+        String vtt = call.getString("vtt");
+        if (id == null || vtt == null) {
+            call.reject("Faltan el id o el texto del subtítulo");
+            return;
+        }
+        List<VttParser.Cue> cues = VttParser.parse(vtt);
+        getActivity().runOnUiThread(() -> {
+            if (player != null && player.isOpen()) player.subtitleData(id, cues);
+            call.resolve();
+        });
+    }
+
+    /** Cierre pedido por la web: no manda "closed". */
+    @PluginMethod
+    public void playerClose(PluginCall call) {
+        getActivity().runOnUiThread(() -> {
+            if (player != null) player.close();
+            call.resolve();
+        });
+    }
+
+    @Override
+    protected void handleOnPause() {
+        super.handleOnPause();
+        if (player != null) player.onHostPause();
+    }
+
+    @Override
+    protected void handleOnStop() {
+        super.handleOnStop();
+        if (player != null) player.onHostPause();
+    }
+
+    @Override
+    protected void handleOnDestroy() {
+        if (player != null) player.onHostDestroy();
+        player = null;
+        super.handleOnDestroy();
     }
 
     /** Pantalla siempre prendida mientras se reproduce (el WebView no tiene Wake Lock). */
