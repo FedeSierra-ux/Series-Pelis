@@ -1,5 +1,24 @@
 # Changelog
 
+## [0.19.0] - 2026-10-15
+
+### Agregado
+- **App para Android TV y Fire TV** (carpeta `tv-app/`, Capacitor). Abre el sitio a pantalla completa, con el
+  ícono y el banner de la app en el inicio de la TV.
+  - **Botón Atrás del control**: cierra menús, sale del reproductor o vuelve de página igual que en el
+    navegador; en Inicio, la app se va al fondo (como Netflix o YouTube).
+  - **Pantalla prendida** mientras se reproduce (el WebView no tiene Wake Lock).
+  - **"Abrir en…"** otro reproductor: VLC, MX Player, Just Player o el que elija Android. Si el elegido no está
+    instalado, Android muestra la lista de los que haya.
+  - El modo TV se prende solo (la app se presenta como "AndroidTV").
+  - Sin internet al abrir: una pantalla propia con "Reintentar".
+  - La sesión se guarda al pasar la app al fondo (no pide el código de nuevo) y no va a las copias de seguridad
+    de Android.
+- **APK desde GitHub Actions** (`.github/workflows/android-tv.yml`): se compila en cada cambio de `tv-app/` y, con
+  una etiqueta `tv-vX.Y.Z`, se publica en Releases para instalarlo con Downloader. Firma estable con secretos
+  del repo (si no están, sale un APK de prueba).
+- `src/lib/native.ts`: lo que la web le pide a la app (en el navegador no hace nada).
+
 ## [0.18.1] - 2026-10-15
 
 ### Seguridad

@@ -1,0 +1,12 @@
+{
+  "appId": "ar.seriespelis.tv",
+  "appName": "Series-Pelis",
+  "webDir": "shell",
+  "server": {
+    "url": "https://series-pelis.pages.dev",
+    "errorPath": "error.html"
+  },
+  "android": {
+    "resolveServiceWorkerRequests": false
+  }
+}

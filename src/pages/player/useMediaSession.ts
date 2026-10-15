@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState, type RefObject } from 'react'
 import { episodeLabel } from '../../lib/format'
+import { nativeKeepAwake } from '../../lib/native'
 import type { PlayState } from '../Detail'
 
 // Integración con el sistema: controles en la pantalla de bloqueo y los auriculares (Media Session),
@@ -165,6 +166,8 @@ type WakeLockNavigator = Navigator & { wakeLock?: { request(type: 'screen'): Pro
 /** Mantiene la pantalla prendida mientras `active` (reproduciendo); la suelta al pausar o salir y la vuelve a pedir al volver a la pestaña. */
 export function useWakeLock(active: boolean) {
   useEffect(() => {
+    // En la app de TV la pantalla la mantiene prendida Android (el WebView no tiene Wake Lock).
+    if (active && nativeKeepAwake(true)) return () => void nativeKeepAwake(false)
     if (!active || typeof navigator === 'undefined' || !('wakeLock' in navigator)) return
     const wakeLock = (navigator as WakeLockNavigator).wakeLock
     if (!wakeLock || typeof wakeLock.request !== 'function') return
