@@ -11,7 +11,8 @@
     renombrar, ver y sacar aparatos, y borrar casas.
   - **Invitación**: abriendo el enlace o pegando el código en la pantalla de entrada.
   - **TV**: muestra un código de 6 números y un QR; se aprueba desde un aparato que ya entró
-    (**Ajustes → Casa → Vincular un aparato** o `/vincular`). Siempre hay que tocar "Aprobar".
+    (**Ajustes → Casa → Vincular un aparato** o `/vincular`). Antes de aprobar se ve qué aparato pidió el código,
+    hace cuánto y desde qué ciudad (con aviso si no coincide con la tuya); nunca se aprueba solo.
   - **Ajustes → Casa** (arriba de todo): en qué casa está el aparato, estado de la sincronización, aparatos de la
     casa y "Salir de la casa" (antes sube lo que quedó pendiente).
 - **Qué se sincroniza**: los addons son los mismos para todas las casas y solo los cambia el admin; los ajustes
@@ -31,6 +32,13 @@
 - Sesión en una cookie `__Host-` (HttpOnly, Secure, SameSite=Lax) guardada como hash; un año en la TV y seis meses
   en la PC o el celular. Topes de intentos para la clave del admin, las invitaciones y los códigos de la TV. Los
   códigos de invitación y de la TV se borran de la barra de direcciones apenas se leen.
+- **Admin por aparato**: solo es administrador el aparato que entró con la clave `ADMIN_KEY`. La TV vinculada o
+  un aparato invitado a la casa principal ven lo mismo, pero no pueden cambiar addons ni manejar casas.
+- Ninguna sesión dura más de dos años aunque se use todos los días; volver a entrar en un aparato cierra la sesión
+  anterior. Un código de la TV se aprueba una sola vez aunque dos aparatos lo intenten a la vez.
+- Topes de la sincronización: tamaño por dato (32 KB; 256 KB los addons), 120 subidas cada 10 minutos por aparato
+  y 20.000 filas / 20 MB por casa. Los topes por IP agrupan las IPv6 por /64.
+- `/api/tmdb` y `/api/subs` no se pueden saltear con mayúsculas, `%xx` o barras dobles en la ruta.
 
 ## [0.16.2] - 2026-10-14
 

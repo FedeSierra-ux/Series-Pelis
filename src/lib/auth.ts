@@ -226,6 +226,18 @@ export async function pairPoll(poll: string): Promise<'pending' | 'ok' | 'expire
   }
 }
 
+export interface PairInfo {
+  label: string
+  kind: 'tv' | 'web'
+  createdAt: number
+  /** Ciudad y país desde donde se pidió el código (y desde donde aprueba este aparato), si Cloudflare los sabe. */
+  origin?: string
+  here?: string
+}
+
+/** Quién pidió el código, antes de aprobarlo: así no se aprueba a ciegas un código que mandó otro. */
+export const pairInfo = (code: string) => api<PairInfo>('pair/info', { code })
+
 export const pairApprove = (code: string) => api<{ ok: true; label: string; house: string }>('pair/approve', { code })
 
 // ---------- Aparatos ----------

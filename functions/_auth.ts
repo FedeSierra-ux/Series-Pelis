@@ -40,12 +40,14 @@ const SLIDE_MS = DAY
 /** Los códigos de la TV vencen a los 10 minutos. */
 export const PAIR_TTL_MS = 10 * 60 * 1000
 export const MIN_ADMIN_KEY = 32
+/** Una sesión dura como mucho esto aunque se use todos los días: una cookie robada no vale para siempre. */
+export const MAX_SESSION_AGE_MS = 2 * 365 * DAY
 
 const SCHEMA = [
   `CREATE TABLE IF NOT EXISTS houses (id TEXT PRIMARY KEY, name TEXT NOT NULL, is_admin INTEGER NOT NULL DEFAULT 0, created_at INTEGER NOT NULL)`,
-  `CREATE TABLE IF NOT EXISTS sessions (token_hash TEXT PRIMARY KEY, id TEXT NOT NULL UNIQUE, house_id TEXT NOT NULL, label TEXT NOT NULL, kind TEXT NOT NULL, created_at INTEGER NOT NULL, last_seen_at INTEGER NOT NULL, expires_at INTEGER NOT NULL)`,
+  `CREATE TABLE IF NOT EXISTS sessions (token_hash TEXT PRIMARY KEY, id TEXT NOT NULL UNIQUE, house_id TEXT NOT NULL, label TEXT NOT NULL, kind TEXT NOT NULL, created_at INTEGER NOT NULL, last_seen_at INTEGER NOT NULL, expires_at INTEGER NOT NULL, is_admin INTEGER NOT NULL DEFAULT 0)`,
   `CREATE INDEX IF NOT EXISTS sessions_house ON sessions(house_id)`,
-  `CREATE TABLE IF NOT EXISTS pair_requests (code_hash TEXT PRIMARY KEY, poll_hash TEXT NOT NULL UNIQUE, label TEXT NOT NULL, kind TEXT NOT NULL, house_id TEXT, created_at INTEGER NOT NULL, expires_at INTEGER NOT NULL)`,
+  `CREATE TABLE IF NOT EXISTS pair_requests (code_hash TEXT PRIMARY KEY, poll_hash TEXT NOT NULL UNIQUE, label TEXT NOT NULL, kind TEXT NOT NULL, house_id TEXT, created_at INTEGER NOT NULL, expires_at INTEGER NOT NULL, origin TEXT)`,
   `CREATE TABLE IF NOT EXISTS invites (code_hash TEXT PRIMARY KEY, house_id TEXT NOT NULL, created_at INTEGER NOT NULL, revoked_at INTEGER)`,
   `CREATE INDEX IF NOT EXISTS invites_house ON invites(house_id)`,
   `CREATE TABLE IF NOT EXISTS rate_limits (key TEXT PRIMARY KEY, window_start INTEGER NOT NULL, count INTEGER NOT NULL)`,
@@ -53,13 +55,30 @@ const SCHEMA = [
   `CREATE INDEX IF NOT EXISTS sync_scope_ts ON sync_items(scope, srv_ts)`,
 ]
 
+/** Columnas que se sumaron después de crear las tablas (una base de una versión anterior no las tiene). */
+const ADDED_COLUMNS = [
+  `ALTER TABLE sessions ADD COLUMN is_admin INTEGER NOT NULL DEFAULT 0`,
+  `ALTER TABLE pair_requests ADD COLUMN origin TEXT`,
+]
+
+async function addColumns(db: D1): Promise<void> {
+  for (const sql of ADDED_COLUMNS) {
+    try {
+      await db.prepare(sql).run()
+    } catch (err) {
+      // Ya estaba: es lo normal en una base nueva.
+      if (!/duplicate column/i.test(String((err as Error)?.message ?? err))) throw err
+    }
+  }
+}
+
 /** Las tablas se crean solas la primera vez que cada instancia del Worker usa la base. */
 const ready = new WeakMap<D1, Promise<void>>()
 export function ensureSchema(db: D1): Promise<void> {
   let p = ready.get(db)
   if (!p) {
     p = db.batch(SCHEMA.map((sql) => db.prepare(sql))).then(
-      () => undefined,
+      () => addColumns(db),
       (err) => {
         ready.delete(db)
         throw err
@@ -161,6 +180,10 @@ export async function sweep(db: D1, now = Date.now()) {
 export interface House {
   id: string
   name: string
+  /**
+   * ¿Este aparato es del administrador? Solo los que entraron con `ADMIN_KEY` (no toda la casa del admin:
+   * la TV o un invitado de esa casa no pueden crear casas ni cambiar los addons de todos).
+   */
   isAdmin: boolean
 }
 
@@ -173,6 +196,7 @@ export interface Session {
   house: House
   lastSeenAt: number
   expiresAt: number
+  createdAt: number
 }
 
 interface SessionRow {
@@ -182,9 +206,11 @@ interface SessionRow {
   kind: string
   last_seen_at: number
   expires_at: number
+  created_at: number
   house_id: string
   name: string
   is_admin: number
+  s_admin: number
 }
 
 const fromRow = (r: SessionRow): Session => ({
@@ -192,9 +218,10 @@ const fromRow = (r: SessionRow): Session => ({
   tokenHash: r.token_hash,
   label: r.label,
   kind: r.kind === 'tv' ? 'tv' : 'web',
-  house: { id: r.house_id, name: r.name, isAdmin: r.is_admin === 1 },
+  house: { id: r.house_id, name: r.name, isAdmin: r.is_admin === 1 && r.s_admin === 1 },
   lastSeenAt: r.last_seen_at,
   expiresAt: r.expires_at,
+  createdAt: r.created_at,
 })
 
 /**
@@ -233,32 +260,44 @@ export async function getSession(db: D1, request: Request, now = Date.now()): Pr
   await ensureSchema(db)
   const row = await db
     .prepare(
-      `SELECT s.token_hash, s.id, s.label, s.kind, s.last_seen_at, s.expires_at, h.id AS house_id, h.name, h.is_admin
+      `SELECT s.token_hash, s.id, s.label, s.kind, s.last_seen_at, s.expires_at, s.created_at, s.is_admin AS s_admin, h.id AS house_id, h.name, h.is_admin
        FROM sessions s JOIN houses h ON h.id = s.house_id WHERE s.token_hash = ?1`,
     )
     .bind(hash)
     .first<SessionRow>()
-  if (!row || row.expires_at <= now) {
+  if (!row || row.expires_at <= now || row.created_at + MAX_SESSION_AGE_MS <= now) {
     cache.delete(hash)
     return null
   }
   const s = fromRow(row)
   if (now - s.lastSeenAt >= SLIDE_MS) {
     s.lastSeenAt = now
-    s.expiresAt = now + (s.kind === 'tv' ? TV_SESSION_MS : WEB_SESSION_MS)
+    s.expiresAt = Math.min(now + (s.kind === 'tv' ? TV_SESSION_MS : WEB_SESSION_MS), s.createdAt + MAX_SESSION_AGE_MS)
     await db.prepare('UPDATE sessions SET last_seen_at = ?2, expires_at = ?3 WHERE token_hash = ?1').bind(hash, s.lastSeenAt, s.expiresAt).run()
   }
   cache.set(hash, { s, until: now + CACHE_MS })
   return s
 }
 
-/** Crea la sesión de un aparato y devuelve la cookie para mandarle. */
-export async function createSession(db: D1, houseId: string, label: string, kind: 'tv' | 'web', now = Date.now()): Promise<string> {
+/**
+ * Crea la sesión de un aparato y devuelve la cookie para mandarle. `admin` solo lo pone la entrada con
+ * `ADMIN_KEY`. Si el pedido ya traía una sesión (entrar de nuevo, cambiar de casa), la vieja se cierra.
+ */
+export async function createSession(
+  db: D1,
+  houseId: string,
+  label: string,
+  kind: 'tv' | 'web',
+  opts: { now?: number; admin?: boolean; request?: Request } = {},
+): Promise<string> {
+  const now = opts.now ?? Date.now()
+  const old = opts.request && readCookie(opts.request)
+  if (old) await deleteSessions(db, { tokenHash: await sha256(old) })
   const token = randomToken()
   const ms = kind === 'tv' ? TV_SESSION_MS : WEB_SESSION_MS
   await db
-    .prepare('INSERT INTO sessions (token_hash, id, house_id, label, kind, created_at, last_seen_at, expires_at) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?6, ?7)')
-    .bind(await sha256(token), randomId(), houseId, label, kind, now, now + ms)
+    .prepare('INSERT INTO sessions (token_hash, id, house_id, label, kind, created_at, last_seen_at, expires_at, is_admin) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?6, ?7, ?8)')
+    .bind(await sha256(token), randomId(), houseId, label, kind, now, now + ms, opts.admin ? 1 : 0)
     .run()
   return sessionCookie(token, ms)
 }
@@ -286,13 +325,40 @@ export function cleanName(raw: unknown): string {
   return cleanLabel(raw, '').slice(0, 40)
 }
 
+/**
+ * El cuerpo como texto, cortando apenas pasa `maxBytes` (sin `Content-Length` no se lee entero antes de
+ * mirar el tamaño). `null` si es más grande.
+ */
+export async function readText(request: Request, maxBytes: number): Promise<string | null> {
+  if (Number(request.headers.get('Content-Length') ?? 0) > maxBytes) return null
+  if (!request.body) return ''
+  const reader = request.body.getReader()
+  const chunks: Uint8Array[] = []
+  let size = 0
+  for (;;) {
+    const { done, value } = await reader.read()
+    if (done) break
+    size += value.byteLength
+    if (size > maxBytes) {
+      await reader.cancel().catch(() => {})
+      return null
+    }
+    chunks.push(value)
+  }
+  const all = new Uint8Array(size)
+  let at = 0
+  for (const c of chunks) {
+    all.set(c, at)
+    at += c.byteLength
+  }
+  return new TextDecoder().decode(all)
+}
+
 /** Lee el cuerpo JSON con tope de tamaño (un POST de login nunca pasa de unos cientos de bytes). */
 export async function readJson<T = Record<string, unknown>>(request: Request, maxBytes = 4096): Promise<T | null> {
-  const len = Number(request.headers.get('Content-Length') ?? 0)
-  if (len > maxBytes) return null
   try {
-    const text = await request.text()
-    if (text.length > maxBytes) return null
+    const text = await readText(request, maxBytes)
+    if (text === null) return null
     const v: unknown = JSON.parse(text)
     return v && typeof v === 'object' && !Array.isArray(v) ? (v as T) : null
   } catch {

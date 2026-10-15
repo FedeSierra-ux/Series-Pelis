@@ -2,12 +2,16 @@ import { beforeEach, describe, expect, it } from 'vitest'
 import { forgetCachedSessions, normalizeInvite, type AuthEnv } from '../../functions/_auth'
 import { LIMITS, onRequest as auth } from '../../functions/api/auth/[[path]]'
 import { onRequest as middleware } from '../../functions/api/_middleware'
-import { decodeCursor, encodeCursor, onRequestGet as syncGet, onRequestPost as syncPost, PAGE } from '../../functions/api/sync'
+import { decodeCursor, encodeCursor, HOUSE_MAX_ROWS, onRequestGet as syncGet, onRequestPost as syncPost, PAGE, PUSH_LIMIT } from '../../functions/api/sync'
+import { clientIp } from '../../functions/_lib'
 import { fakeD1 } from './d1.testutil'
 
 const SITE = 'https://series-pelis.pages.dev'
 const ADMIN_KEY = 'clave-de-prueba-del-admin-que-es-bien-larga'
 const FROM_APP = { 'Sec-Fetch-Site': 'same-origin', 'Content-Type': 'application/json' }
+
+type RawDb = { prepare(s: string): { all(...p: unknown[]): Record<string, unknown>[]; run(...p: unknown[]): unknown } }
+const rawDb = () => (env.DB as unknown as { raw: RawDb }).raw
 
 let env: AuthEnv
 let ipCounter = 0
@@ -157,6 +161,12 @@ describe('/api/auth', () => {
     const wrong = code === '000000' ? '111111' : '000000'
     expect((await call('pair/approve', { method: 'POST', body: { code: wrong }, cookie: admin })).status).toBe(404)
     expect((await call('pair/approve', { method: 'POST', body: { code } })).status).toBe(401)
+    // Antes de aprobar se ve qué aparato lo pidió.
+    expect((await call('pair/info', { method: 'POST', body: { code } })).status).toBe(401)
+    const info = await (await call('pair/info', { method: 'POST', body: { code }, cookie: admin })).json()
+    expect(info).toMatchObject({ label: 'TV · Living', kind: 'tv' })
+    expect(typeof info.createdAt).toBe('number')
+    expect((await call('pair/info', { method: 'POST', body: { code: wrong }, cookie: admin })).status).toBe(404)
     const ok = await call('pair/approve', { method: 'POST', body: { code: `${code.slice(0, 3)} ${code.slice(3)}` }, cookie: admin })
     expect(await ok.json()).toMatchObject({ ok: true, label: 'TV · Living', house: 'Casa Fede' })
 
@@ -166,11 +176,52 @@ describe('/api/auth', () => {
     expect(done.headers.get('Set-Cookie')).toContain(`Max-Age=${365 * 24 * 60 * 60}`)
     const me = await (await call('me', { cookie: tv })).json()
     expect(me.session.device).toMatchObject({ label: 'TV · Living', kind: 'tv' })
-    expect(me.session.house.isAdmin).toBe(true)
+    // Entra a la casa del admin, pero no es admin: eso es solo para los aparatos que pusieron la clave.
+    expect(me.session.house).toMatchObject({ name: 'Casa Fede', isAdmin: false })
+    expect((await call('houses', { cookie: tv })).status).toBe(403)
 
     // El secreto sirve una sola vez y el código ya no se puede volver a aprobar.
     expect((await call('pair/poll', { method: 'POST', body: { poll } })).status).toBe(410)
     expect((await call('pair/approve', { method: 'POST', body: { code }, cookie: admin })).status).toBe(404)
+  })
+
+  it('quien entra con invitación a la casa del admin tampoco es admin', async () => {
+    const admin = await adminLogin()
+    const adminHouse = (await (await call('me', { cookie: admin })).json()).session.house.id
+    const { invite } = await (await call('houses/invite', { method: 'POST', body: { house: adminHouse }, cookie: admin })).json()
+    const member = await join(invite)
+    const me = await (await call('me', { cookie: member })).json()
+    expect(me.session.house).toEqual({ id: adminHouse, name: 'Casa Fede', isAdmin: false })
+    expect((await call('houses', { cookie: member })).status).toBe(403)
+    expect((await push(member, [{ s: 'global', t: 'addons', k: 'list', v: '[]', u: 1 }])).body).toMatchObject({ forbidden: 1 })
+  })
+
+  it('volver a entrar en el mismo aparato cierra la sesión anterior', async () => {
+    const first = await adminLogin()
+    const res = await call('setup', { method: 'POST', body: { key: ADMIN_KEY, label: 'PC · Chrome' }, cookie: first })
+    const second = cookieOf(res)
+    expect((await (await call('me', { cookie: first })).json()).session).toBeNull()
+    expect((await (await call('me', { cookie: second })).json()).session).toBeTruthy()
+    expect(rawDb().prepare('SELECT id FROM sessions').all()).toHaveLength(1)
+  })
+
+  it('la sesión vence a los dos años aunque se use todos los días', async () => {
+    const cookie = await adminLogin()
+    rawDb().prepare('UPDATE sessions SET created_at = ?1').run(Date.now() - 2 * 365 * 86400_000 - 1000)
+    forgetCachedSessions()
+    expect((await (await call('me', { cookie })).json()).session).toBeNull()
+  })
+
+  it('el código de la TV no se puede aprobar dos veces ni desde dos casas', async () => {
+    const admin = await adminLogin()
+    const { invite } = await newHouse(admin)
+    const member = await join(invite)
+    const { code } = await (await call('pair/start', { method: 'POST', body: { label: 'TV', tv: true } })).json()
+    const [a, b] = await Promise.all([
+      call('pair/approve', { method: 'POST', body: { code }, cookie: admin }),
+      call('pair/approve', { method: 'POST', body: { code }, cookie: member }),
+    ])
+    expect([a.status, b.status].sort()).toEqual([200, 404])
   })
 
   it('aprobar códigos tiene tope por sesión (no se puede probar el millón de códigos)', async () => {
@@ -213,7 +264,7 @@ describe('/api/auth', () => {
     await push(member, [{ s: 'profile', t: 'progress', k: 'tt1', v: '{"a":1}', u: 5 }])
     expect((await call('houses/delete', { method: 'POST', body: { house: house.id }, cookie: admin })).status).toBe(200)
     expect((await (await call('me', { cookie: member })).json()).session).toBeNull()
-    const rows = (env.DB as unknown as { raw: { prepare(s: string): { all(): unknown[] } } }).raw.prepare('SELECT * FROM sync_items').all()
+    const rows = rawDb().prepare('SELECT * FROM sync_items').all()
     expect(rows).toHaveLength(0)
   })
 
@@ -235,6 +286,12 @@ describe('middleware de /api', () => {
     expect((await run('/api/segments?id=1')).status).toBe(200)
     const cookie = await adminLogin()
     expect(await (await run('/api/tmdb/movie/603', cookie)).text()).toBe('ok')
+  })
+
+  it('no se escapa con mayúsculas, %xx, barras dobles ni un _status al final', async () => {
+    for (const p of ['/api/TMDB/movie/603', '/api/%74mdb/movie/603', '//api/tmdb/movie/603', '/api/tmdb//movie/603', '/api/tmdb/movie/603/_status', '/api/subs']) {
+      expect((await run(p)).status, p).toBe(401)
+    }
   })
 
   it('sin la base (sitio sin login) deja pasar todo, como antes', async () => {
@@ -313,6 +370,8 @@ describe('/api/sync', () => {
   it('un reloj adelantado no gana para siempre', async () => {
     const admin = await adminLogin()
     await push(admin, [{ s: 'house', t: 'settings', k: 'hideSdh', v: 'true', u: Date.now() + 10 * 365 * 86400_000 }])
+    // Si las dos caen en el mismo milisegundo, el tope las iguala y gana la primera.
+    await new Promise((r) => setTimeout(r, 5))
     await push(admin, [{ s: 'house', t: 'settings', k: 'hideSdh', v: 'false', u: Date.now() + 120_000 }])
     expect((await pull(admin)).body.items[0].v).toBe('false')
   })
@@ -335,6 +394,38 @@ describe('/api/sync', () => {
     expect(seen.size).toBe(900)
   })
 
+  it('un valor muy grande se rechaza (los addons tienen más lugar)', async () => {
+    const admin = await adminLogin()
+    const big = JSON.stringify('x'.repeat(40 * 1024))
+    const res = await push(admin, [
+      { s: 'profile', t: 'progress', k: 'tt1', v: big, u: 1 },
+      { s: 'global', t: 'addons', k: 'list', v: big, u: 1 },
+    ])
+    expect(res.body).toMatchObject({ saved: 1, rejected: 1 })
+  })
+
+  it('cada aparato tiene un tope de subidas seguidas', async () => {
+    const admin = await adminLogin()
+    for (let i = 0; i < PUSH_LIMIT.n; i++) expect((await push(admin, [])).status).toBe(200)
+    expect((await push(admin, [])).status).toBe(429)
+  })
+
+  it('cada casa tiene un tope de filas guardadas', async () => {
+    const admin = await adminLogin()
+    const { house, invite } = await newHouse(admin)
+    const member = await join(invite)
+    rawDb()
+      .prepare(
+        `WITH RECURSIVE n(i) AS (SELECT 1 UNION ALL SELECT i + 1 FROM n WHERE i < ?2)
+         INSERT INTO sync_items (scope, store, key, value, updated_at, srv_ts, deleted)
+         SELECT 'profile:' || ?1 || ':main', 'progress', 'tt' || i, '{}', 1, 1, 0 FROM n`,
+      )
+      .run(house.id, HOUSE_MAX_ROWS)
+    expect((await push(member, [{ s: 'profile', t: 'progress', k: 'nuevo', v: '{}', u: 1 }])).status).toBe(507)
+    // Las demás casas siguen.
+    expect((await push(admin, [{ s: 'profile', t: 'progress', k: 'nuevo', v: '{}', u: 1 }])).status).toBe(200)
+  })
+
   it('overlap relee los últimos segundos; el cursor roto baja todo', async () => {
     const admin = await adminLogin()
     await push(admin, [{ s: 'profile', t: 'ratings', k: 'tt1', v: '{}', u: 1 }])
@@ -343,5 +434,27 @@ describe('/api/sync', () => {
     expect((await pull(admin, first.next, true)).body.items).toHaveLength(1)
     expect(decodeCursor('basura')).toEqual([0, '', '', ''])
     expect(decodeCursor(encodeCursor([5, 'profile:á', 'x', 'ñ']))).toEqual([5, 'profile:á', 'x', 'ñ'])
+  })
+})
+
+describe('esquema', () => {
+  it('una base de una versión anterior recibe las columnas nuevas', async () => {
+    const db = await fakeD1()
+    db.raw.prepare(`CREATE TABLE sessions (token_hash TEXT PRIMARY KEY, id TEXT NOT NULL UNIQUE, house_id TEXT NOT NULL, label TEXT NOT NULL, kind TEXT NOT NULL, created_at INTEGER NOT NULL, last_seen_at INTEGER NOT NULL, expires_at INTEGER NOT NULL)`).run()
+    db.raw.prepare(`CREATE TABLE pair_requests (code_hash TEXT PRIMARY KEY, poll_hash TEXT NOT NULL UNIQUE, label TEXT NOT NULL, kind TEXT NOT NULL, house_id TEXT, created_at INTEGER NOT NULL, expires_at INTEGER NOT NULL)`).run()
+    env = { DB: db, ADMIN_KEY }
+    const cookie = await adminLogin()
+    expect((await (await call('me', { cookie })).json()).session.house.isAdmin).toBe(true)
+    expect((await call('pair/start', { method: 'POST', body: { label: 'TV', tv: true } })).status).toBe(200)
+  })
+})
+
+describe('clientIp', () => {
+  const ip = (v: string) => clientIp(new Request(SITE, { headers: { 'CF-Connecting-IP': v } }))
+  it('IPv4 tal cual; IPv6 agrupada por /64 (un proveedor da un /64 entero a cada casa)', () => {
+    expect(ip('200.1.2.3')).toBe('200.1.2.3')
+    expect(ip('2001:db8:aa:bb:1:2:3:4')).toBe('2001:db8:aa:bb::/64')
+    expect(ip('2001:DB8:AA:BB::9')).toBe('2001:db8:aa:bb::/64')
+    expect(ip('2001:db8::1')).toBe('2001:db8:0:0::/64')
   })
 })

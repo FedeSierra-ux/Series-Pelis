@@ -5,12 +5,24 @@
 import { authEnabled, getSession, unauthorized, type AuthEnv } from '../_auth'
 import { json } from '../_lib'
 
-const GATED = /^\/api\/(tmdb|subs)\//
+const GATED = /^\/api\/(tmdb|subs)(\/|$)/i
+const OPEN = /^\/api\/(tmdb|subs)\/_status\/?$/i
+
+/** La ruta como la ve el router: sin `%xx` ni barras repetidas (así `/api/%74mdb` o `//api/tmdb` no se escapan). */
+export function gatePath(url: string): string {
+  let path = new URL(url).pathname
+  try {
+    path = decodeURIComponent(path)
+  } catch {
+    // Un `%` suelto: se compara tal cual.
+  }
+  return path.replace(/\/{2,}/g, '/')
+}
 
 export const onRequest = async (context: { request: Request; env: AuthEnv; next: () => Promise<Response> }): Promise<Response> => {
   const { request, env } = context
-  const path = new URL(request.url).pathname
-  if (!GATED.test(path) || path.endsWith('/_status') || !authEnabled(env)) return context.next()
+  const path = gatePath(request.url)
+  if (!GATED.test(path) || OPEN.test(path) || !authEnabled(env)) return context.next()
   try {
     if (!(await getSession(env.DB, request))) return unauthorized()
   } catch {

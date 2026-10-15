@@ -207,6 +207,12 @@ npm run preview    # sirve dist/ en http://localhost:4173
   primera sección) y Casas (`HousesSettings`, solo admin). Tests con un D1 falso de `node:sqlite`
   (`lib/d1.testutil.ts`, `authFunction.test.ts`, `syncCore.test.ts`). Una tienda nueva que se sincronice = una
   línea en `ADAPTERS` (y su `store` en `SYNC_STORES` del servidor).
+  Arreglos de la revisión de seguridad: **admin por aparato** (`sessions.is_admin`, solo lo pone `setup`; la casa
+  principal sola no alcanza), vincular en dos pasos (`pair/info` con ciudad/país de `request.cf`, después
+  `pair/approve` atómico con `UPDATE … RETURNING`), sesión de 2 años como máximo (`MAX_SESSION_AGE_MS`), entrar de
+  nuevo borra la sesión vieja, topes de sync (`MAX_VALUE`, `PUSH_LIMIT`, `HOUSE_MAX_ROWS/BYTES`, 507), `readText`
+  con tope de bytes, IPv6 por /64 en `clientIp`, `gatePath` en el middleware. Columnas nuevas en tablas que ya
+  existen = `ADDED_COLUMNS` (ALTER que ignora "duplicate column"). Los previews de Pages usan la misma D1.
 - **Decisiones para la v0.17 (reemplazan el reparto del plan de abajo)**: addons y TorBox **iguales para todas las
   casas**, solo los cambia el admin (opción A). Ajustes generales (subtítulos, idiomas, autoplay, saltar intro, sin
   spoilers, reglas de fuentes) **iguales en toda la casa**; lo físico (modo TV, tamaño de la interfaz, protector,

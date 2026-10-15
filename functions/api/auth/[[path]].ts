@@ -38,7 +38,7 @@ export const LIMITS = {
   setup: { n: 5, ms: HOUR },
   join: { n: 10, ms: HOUR },
   pairStart: { n: 30, ms: HOUR },
-  approve: { n: 5, ms: 10 * 60 * 1000 },
+  approve: { n: 10, ms: 10 * 60 * 1000 },
 }
 const MAX_HOUSES = 50
 
@@ -50,6 +50,23 @@ const sessionInfo = (s: Session) => ({
 })
 
 const kindOf = (body: Record<string, unknown>) => (body.tv === true ? 'tv' : 'web') as 'tv' | 'web'
+
+/** "Buenos Aires, AR" según Cloudflare (`request.cf`); en local no hay. */
+function originOf(request: Request): string | null {
+  const cf = (request as Request & { cf?: { city?: unknown; country?: unknown } }).cf
+  const parts = [cf?.city, cf?.country].filter((x): x is string => typeof x === 'string' && !!x)
+  return parts.length ? parts.join(', ').slice(0, 80) : null
+}
+
+const notFoundCode = () => json({ error: 'Código incorrecto o vencido. Fijate el que muestra la TV ahora.' }, 404)
+
+/** El código de 6 dígitos del cuerpo, con el tope de intentos de la sesión (adivinar no sirve). */
+async function pairCodeOf(c: { request: Request; db: D1 }, s: Session): Promise<string | Response> {
+  if (await overLimit(c.db, `approve:${s.id}`, LIMITS.approve.n, LIMITS.approve.ms)) return tooMany()
+  const body = await readJson(c.request)
+  const code = typeof body?.code === 'string' ? body.code.replace(/\D/g, '') : ''
+  return code.length === 6 ? code : json({ error: 'El código tiene 6 números' }, 400)
+}
 
 export const onRequest = async (context: Ctx): Promise<Response> => {
   const { request, env } = context
@@ -135,7 +152,7 @@ const ROUTES: Record<string, H> = {
       house = { id: randomId(), name: cleanName(body.name) || 'Casa principal' }
       await db.prepare('INSERT INTO houses (id, name, is_admin, created_at) VALUES (?1, ?2, 1, ?3)').bind(house.id, house.name, Date.now()).run()
     }
-    const cookie = await createSession(db, house.id, cleanLabel(body.label), kindOf(body))
+    const cookie = await createSession(db, house.id, cleanLabel(body.label), kindOf(body), { admin: true, request })
     return withCookie(json({ ok: true, house: { ...house, isAdmin: true } }, 200), cookie)
   },
 
@@ -150,8 +167,9 @@ const ROUTES: Record<string, H> = {
       .bind(await sha256(code))
       .first<{ id: string; name: string; is_admin: number }>()
     if (!house) return json({ error: 'Ese enlace no existe o ya se cambió. Pedile uno nuevo a quien te lo mandó.' }, 404)
-    const cookie = await createSession(db, house.id, cleanLabel(body!.label), kindOf(body!))
-    return withCookie(json({ ok: true, house: { id: house.id, name: house.name, isAdmin: house.is_admin === 1 } }, 200), cookie)
+    // Entrar con invitación nunca da permisos de admin (ni a la casa del admin): eso es solo con ADMIN_KEY.
+    const cookie = await createSession(db, house.id, cleanLabel(body!.label), kindOf(body!), { request })
+    return withCookie(json({ ok: true, house: { id: house.id, name: house.name, isAdmin: false } }, 200), cookie)
   },
 
   'POST logout': async ({ request, db }) => {
@@ -173,8 +191,8 @@ const ROUTES: Record<string, H> = {
       // Un código vencido con el mismo número se reemplaza; uno vigente no (se prueba otro).
       await db.prepare('DELETE FROM pair_requests WHERE code_hash = ?1 AND expires_at < ?2').bind(codeHash, now).run()
       const res = await db
-        .prepare('INSERT OR IGNORE INTO pair_requests (code_hash, poll_hash, label, kind, created_at, expires_at) VALUES (?1, ?2, ?3, ?4, ?5, ?6)')
-        .bind(codeHash, await sha256(poll), cleanLabel(body.label, 'TV'), kindOf(body), now, now + PAIR_TTL_MS)
+        .prepare('INSERT OR IGNORE INTO pair_requests (code_hash, poll_hash, label, kind, created_at, expires_at, origin) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7)')
+        .bind(codeHash, await sha256(poll), cleanLabel(body.label, 'TV'), kindOf(body), now, now + PAIR_TTL_MS, originOf(request))
         .run()
       if ((res.meta?.changes ?? 0) > 0) return json({ code, poll, expiresAt: now + PAIR_TTL_MS, interval: 3 }, 200)
     }
@@ -196,27 +214,38 @@ const ROUTES: Record<string, H> = {
     // Se borra antes de crear la sesión: si dos pedidos llegan juntos, solo uno se la lleva.
     const del = await db.prepare('DELETE FROM pair_requests WHERE poll_hash = ?1 AND house_id IS NOT NULL').bind(pollHash).run()
     if ((del.meta?.changes ?? 0) === 0) return json({ status: 'expired' }, 410)
-    const cookie = await createSession(db, row.house_id, row.label, row.kind === 'tv' ? 'tv' : 'web', now)
+    const cookie = await createSession(db, row.house_id, row.label, row.kind === 'tv' ? 'tv' : 'web', { now, request })
     return withCookie(json({ status: 'ok' }, 200), cookie)
   },
+
+  /**
+   * Antes de aprobar: qué aparato pidió ese código, hace cuánto y desde dónde (lo dice Cloudflare). Así quien
+   * aprueba ve si es su TV o un código que le mandó otro (el truco de "escaneá este QR").
+   */
+  'POST pair/info': (c) =>
+    withSession(c, async (s) => {
+      const code = await pairCodeOf(c, s)
+      if (code instanceof Response) return code
+      const row = await c.db
+        .prepare('SELECT label, kind, created_at, origin FROM pair_requests WHERE code_hash = ?1 AND house_id IS NULL AND expires_at > ?2')
+        .bind(await sha256(code), Date.now())
+        .first<{ label: string; kind: string; created_at: number; origin: string | null }>()
+      if (!row) return notFoundCode()
+      return json({ label: row.label, kind: row.kind, createdAt: row.created_at, origin: row.origin ?? undefined, here: originOf(c.request) ?? undefined }, 200)
+    }),
 
   /** Desde un aparato que ya entró: aprobar el código que muestra la TV. */
   'POST pair/approve': (c) =>
     withSession(c, async (s) => {
-      const limitKey = `approve:${s.id}`
-      if (await overLimit(c.db, limitKey, LIMITS.approve.n, LIMITS.approve.ms)) return tooMany()
-      const body = await readJson(c.request)
-      const code = typeof body?.code === 'string' ? body.code.replace(/\D/g, '') : ''
-      if (code.length !== 6) return json({ error: 'El código tiene 6 números' }, 400)
-      const codeHash = await sha256(code)
-      const now = Date.now()
+      const code = await pairCodeOf(c, s)
+      if (code instanceof Response) return code
+      // Un solo UPDATE: si dos aprueban a la vez, solo uno se lo lleva (y el otro recibe "vencido").
       const row = await c.db
-        .prepare('SELECT label FROM pair_requests WHERE code_hash = ?1 AND house_id IS NULL AND expires_at > ?2')
-        .bind(codeHash, now)
+        .prepare('UPDATE pair_requests SET house_id = ?2 WHERE code_hash = ?1 AND house_id IS NULL AND expires_at > ?3 RETURNING label')
+        .bind(await sha256(code), s.house.id, Date.now())
         .first<{ label: string }>()
-      if (!row) return json({ error: 'Código incorrecto o vencido. Fijate el que muestra la TV ahora.' }, 404)
-      await c.db.prepare('UPDATE pair_requests SET house_id = ?2 WHERE code_hash = ?1 AND house_id IS NULL').bind(codeHash, s.house.id).run()
-      await clearLimit(c.db, limitKey)
+      if (!row) return notFoundCode()
+      await clearLimit(c.db, `approve:${s.id}`)
       return json({ ok: true, label: row.label, house: s.house.name }, 200)
     }),
 

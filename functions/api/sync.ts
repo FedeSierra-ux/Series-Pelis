@@ -10,7 +10,7 @@
 // - profile: historial, seguir viendo, mi lista, estrellas, "no me interesa", diario y metas.
 //            En la v0.17 hay un solo perfil por casa ("main"); los perfiles llegan en la v0.18.
 
-import { authEnabled, ensureSchema, getSession, unauthorized, type AuthEnv, type Session } from '../_auth'
+import { authEnabled, ensureSchema, getSession, overLimit, readText, unauthorized, type AuthEnv, type Session } from '../_auth'
 import { crossSite, fromOwnSite, json } from '../_lib'
 
 export const SYNC_STORES = {
@@ -26,7 +26,19 @@ export const PAGE = 500
 export const MAX_ITEMS = 300
 export const MAX_BODY = 512 * 1024
 const MAX_KEY = 200
-const MAX_VALUE = 256 * 1024
+/** Por fila. Los addons van en una sola fila con todos los manifiestos: esa puede ser más grande. */
+const MAX_VALUE = 32 * 1024
+const MAX_ADDONS_VALUE = 256 * 1024
+/** Bytes por página al bajar (además de `PAGE` filas): que una página nunca se acerque a la memoria del Worker. */
+export const PAGE_BYTES = 2 * 1024 * 1024
+/**
+ * Topes por casa (sus alcances `house:` y `profile:`), para que un aparato no llene la base de todos (D1 gratis:
+ * 500 MB y 100k escrituras por día). Una casa con años de historial no llega ni a un décimo.
+ */
+export const HOUSE_MAX_ROWS = 20_000
+export const HOUSE_MAX_BYTES = 20 * 1024 * 1024
+/** Subidas por aparato: la primera sincronización de un historial largo son unas pocas decenas. */
+export const PUSH_LIMIT = { n: 120, ms: 10 * 60 * 1000 }
 /** Un aparato con el reloj adelantado no puede "ganar" para siempre: lo del futuro cuenta como ahora. */
 const CLOCK_SKEW_MS = 60_000
 export const OVERLAP_MS = 15_000
@@ -99,12 +111,23 @@ export const onRequestGet = async (context: Ctx): Promise<Response> => {
       )
       .bind(scopeId('global', s), scopeId('house', s), scopeId('profile', s), ts, scope, store, key)
       .all<Row>()
+    // Se corta antes si la página pesa mucho; el cursor sigue desde la última fila mandada.
+    const full = results.length === PAGE
+    let bytes = 0
+    for (let i = 0; i < results.length; i++) {
+      bytes += (results[i].value?.length ?? 0) + results[i].key.length + 64
+      if (bytes > PAGE_BYTES && i > 0) {
+        results.length = i
+        break
+      }
+    }
+    const truncated = bytes > PAGE_BYTES
     const last = results[results.length - 1]
     return json(
       {
         items: results.map((r) => ({ s: scopeName(r.scope), t: r.store, k: r.key, v: r.deleted ? null : r.value, u: r.updated_at, ...(r.deleted ? { d: 1 } : {}) })),
         next: last ? encodeCursor([last.srv_ts, last.scope, last.store, last.key]) : encodeCursor([ts, scope, store, key]),
-        more: results.length === PAGE,
+        more: full || truncated,
         now: Date.now(),
       },
       200,
@@ -133,7 +156,7 @@ export function cleanItem(raw: unknown, isAdmin: boolean, now: number): PushItem
   if (typeof it.k !== 'string' || !it.k || it.k.length > MAX_KEY) return undefined
   if (typeof it.u !== 'number' || !Number.isFinite(it.u) || it.u < 0) return undefined
   const deleted = it.d === 1
-  if (!deleted && (typeof it.v !== 'string' || it.v.length > MAX_VALUE)) return undefined
+  if (!deleted && (typeof it.v !== 'string' || it.v.length > (it.t === 'addons' ? MAX_ADDONS_VALUE : MAX_VALUE))) return undefined
   if (scope === 'global' && !isAdmin) return 'forbidden'
   return { s: scope, t: it.t as string, k: it.k, v: deleted ? null : (it.v as string), u: Math.min(Math.round(it.u), now + CLOCK_SKEW_MS), ...(deleted ? { d: 1 as const } : {}) }
 }
@@ -146,11 +169,15 @@ export const onRequestPost = async (context: Ctx): Promise<Response> => {
   if (s instanceof Response) return s
   const db = context.env.DB!
 
-  if (Number(request.headers.get('Content-Length') ?? 0) > MAX_BODY) return json({ error: 'Demasiado grande' }, 413)
+  try {
+    if (await overLimit(db, `sync:${s.id}`, PUSH_LIMIT.n, PUSH_LIMIT.ms)) return json({ error: 'Demasiados cambios seguidos. Esperá un rato.' }, 429, { 'Retry-After': '120' })
+  } catch {
+    return json({ error: 'La base no responde. Probá en un rato.' }, 503)
+  }
   let body: unknown
   try {
-    const text = await request.text()
-    if (text.length > MAX_BODY) return json({ error: 'Demasiado grande' }, 413)
+    const text = await readText(request, MAX_BODY)
+    if (text === null) return json({ error: 'Demasiado grande' }, 413)
     body = JSON.parse(text)
   } catch {
     return json({ error: 'Pedido inválido' }, 400)
@@ -170,6 +197,15 @@ export const onRequestPost = async (context: Ctx): Promise<Response> => {
   }
   if (rows.length) {
     try {
+      // Tope de la casa: se mide lo que ya tiene guardado (lo global lo sube solo el admin y es chico).
+      const used = await db
+        .prepare('SELECT COUNT(*) AS n, COALESCE(SUM(LENGTH(value)), 0) AS b FROM sync_items WHERE scope = ?1 OR scope LIKE ?2')
+        .bind(`house:${s.house.id}`, `profile:${s.house.id}:%`)
+        .first<{ n: number; b: number }>()
+      const adding = rows.reduce((sum, r) => sum + (r[3]?.length ?? 0), 0)
+      if ((used?.n ?? 0) + rows.length > HOUSE_MAX_ROWS || (used?.b ?? 0) + adding > HOUSE_MAX_BYTES) {
+        return json({ error: 'La casa llegó al máximo de datos guardados.' }, 507)
+      }
       // Una sola consulta con todas las filas como un JSON (D1 limita a 100 parámetros por consulta).
       await db
         .prepare(

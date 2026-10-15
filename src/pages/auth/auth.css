@@ -266,3 +266,20 @@
 [data-theme='2'] .auth-card input[type='text'] {
   background-color: var(--bg-3);
 }
+
+/* Vincular: quién pidió el código, antes de aprobar. */
+.pair-info {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 6px 16px;
+  margin: 0;
+}
+.pair-info dt {
+  color: var(--muted);
+}
+.pair-info dd {
+  margin: 0;
+  font-weight: 600;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
