@@ -611,6 +611,23 @@ export const recentSearchesStore = new PersistedStore<string[]>('recentSearches'
 
 export const catalogPrefsStore = new PersistedStore<CatalogPrefs>('catalogPrefs', DEFAULT_CATALOG_PREFS)
 
+/**
+ * Borra de este aparato todo lo que tiene URLs de addons (llevan la key del debrid): la lista, la última
+ * fuente por título, las filas de catálogos, las revisiones de manifests y la caché de respuestas.
+ * Se usa cuando un aparato que no es del admin sale de la casa o lo sacan (v0.17.1).
+ */
+export async function forgetAddonData() {
+  addonsStore.set([CINEMETA_ADDON])
+  lastSourceStore.set({})
+  catalogPrefsStore.set(DEFAULT_CATALOG_PREFS)
+  try {
+    localStorage.removeItem(MANIFEST_CHECKED_KEY)
+  } catch {
+    // Sin localStorage no había nada guardado.
+  }
+  await clearCache().catch(() => {})
+}
+
 // ---------- Ajustes ----------
 
 export interface SubtitleStyle {

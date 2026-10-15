@@ -1,5 +1,14 @@
 # Changelog
 
+## [0.17.1] - 2026-10-15
+
+### Seguridad
+- Un aparato que no es del admin y **sale de la casa (o lo sacan desde otro)** se queda sin los addons: se
+  borran la lista, la última fuente elegida por título, las filas de catálogos de Inicio, las revisiones de
+  manifests y la caché de respuestas, porque las URLs de los addons llevan la key del debrid. Queda Cinemeta.
+  Lo demás (historial, mi lista, ajustes) sigue en el aparato. Al aparato del admin no se le borra nada.
+- "Salir de la casa" avisa que se borran los addons cuando el aparato no es del admin.
+
 ## [0.17.0] - 2026-10-15
 
 ### Agregado
