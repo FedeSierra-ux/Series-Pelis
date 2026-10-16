@@ -1,1 +1,8 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64"><rect width="64" height="64" rx="14" fill="#0b0b10"/><rect x="6" y="6" width="52" height="52" rx="10" fill="url(#g)"/><path d="M26 20v24l20-12z" fill="#fff"/><defs><linearGradient id="g" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#7c3aed"/><stop offset="1" stop-color="#e11d48"/></linearGradient></defs></svg>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><defs>
+<radialGradient id="bg" cx=".5" cy=".42" r=".7"><stop offset="0" stop-color="#2a1d4f"/><stop offset="1" stop-color="#0b0819"/></radialGradient>
+<radialGradient id="pool" cx=".5" cy=".5" r=".5"><stop offset="0" stop-color="#c4b0ff" stop-opacity=".55"/><stop offset="1" stop-color="#c4b0ff" stop-opacity="0"/></radialGradient>
+<filter id="glow" x="-40%" y="-40%" width="180%" height="180%"><feGaussianBlur in="SourceGraphic" stdDeviation="9" result="b1"/><feGaussianBlur in="SourceGraphic" stdDeviation="3" result="b2"/><feMerge><feMergeNode in="b1"/><feMergeNode in="b2"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
+<path id="f" d="M180 140H340V186H230V234H316V278H230V372H180Z" fill="none" stroke-linejoin="round"/>
+</defs><rect width="512" height="512" rx="112" fill="url(#bg)"/><ellipse cx="256" cy="420" rx="120" ry="14" fill="url(#pool)"/>
+<g filter="url(#glow)" stroke="#c4b0ff"><use href="#f" stroke-width="7"/><use href="#f" stroke-width="3" transform="translate(256 256) scale(.86) translate(-256 -256)" stroke-opacity=".7"/></g>
+<g fill="#efe9ff"><circle cx="180" cy="140" r="7"/><circle cx="340" cy="186" r="6"/><circle cx="316" cy="234" r="6"/><circle cx="230" cy="372" r="6"/><circle cx="262" cy="205" r="2.5"/><circle cx="208" cy="318" r="2"/><circle cx="290" cy="120" r="2"/><circle cx="372" cy="300" r="2.5"/></g></svg>

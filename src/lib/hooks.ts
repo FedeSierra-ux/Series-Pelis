@@ -71,7 +71,7 @@ export function useDebounced<T>(value: T, ms: number): T {
 
 export function useTitle(title: string | undefined) {
   useEffect(() => {
-    document.title = title ? `${title} · Series-Pelis` : 'Series-Pelis'
+    document.title = title ? `${title} · Flix` : 'Flix'
   }, [title])
 }
 

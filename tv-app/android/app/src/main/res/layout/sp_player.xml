@@ -32,7 +32,7 @@
         app:unplayed_color="#33FFFFFF"
         app:use_artwork="false" />
 
-    <ar.seriespelis.tv.SubtitleTextView android:id="@+id/sp_ext_sub"
+    <ar.flix.tv.SubtitleTextView android:id="@+id/sp_ext_sub"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:layout_gravity="bottom|center_horizontal"

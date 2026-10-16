@@ -1,5 +1,23 @@
 # Changelog
 
+## [0.22.0] - 2026-10-16
+
+### Cambiado
+- **La app ahora se llama Flix**, en todos lados: título de la página, PWA, menú, inicio de sesión, "Tu año",
+  avisos y la app de TV.
+- **Ícono nuevo**: una F de neón lavanda sobre fondo violeta oscuro. Está en el favicon, la PWA, el logo del menú y
+  la app de Android TV / Fire TV (ícono, banner de la fila de apps y pantalla de inicio).
+- App de TV: el identificador pasa a ser `ar.flix.tv`, los enlaces usan `flix://` y el APK se llama
+  **`flix-tv.apk`**. Enlace para Downloader:
+  `https://github.com/FedeSierra-ux/Series-Pelis/releases/latest/download/flix-tv.apk`.
+  - Un APK anterior (`ar.seriespelis.tv`) no se actualiza a este: se instala aparte (y conviene desinstalar el viejo).
+- Las copias exportadas se llaman `flix-<fecha>.json` y la imagen de "Tu año" `mi-<año>-flix.png`. Las copias
+  viejas de Series-Pelis se siguen pudiendo importar.
+
+### Sin cambios
+- El sitio sigue en `series-pelis.pages.dev`, y el repo y el proyecto de Cloudflare conservan el nombre. Los datos
+  guardados en el navegador no se pierden.
+
 ## [0.21.0] - 2026-10-15
 
 ### Agregado

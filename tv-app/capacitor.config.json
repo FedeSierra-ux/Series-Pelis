@@ -1,6 +1,6 @@
 {
-  "appId": "ar.seriespelis.tv",
-  "appName": "Series-Pelis",
+  "appId": "ar.flix.tv",
+  "appName": "Flix",
   "webDir": "shell",
   "server": {
     "url": "https://series-pelis.pages.dev",

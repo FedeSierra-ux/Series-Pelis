@@ -1,4 +1,4 @@
-package ar.seriespelis.tv;
+package ar.flix.tv;
 
 import android.content.Context;
 import android.content.Intent;
@@ -7,14 +7,14 @@ import java.util.Locale;
 import java.util.regex.Pattern;
 
 /**
- * Enlaces "seriespelis://open?path=…&profile=…" (v0.21): los usan las filas del inicio de la TV
+ * Enlaces "flix://open?path=…&profile=…" (v0.21): los usan las filas del inicio de la TV
  * ("A continuación") para abrir una ficha. Cualquier app instalada puede mandar este intent
  * (el filtro no es BROWSABLE, así que una página web no), por eso se valida todo y lo que no cierra
  * se ignora: solo se aceptan rutas propias de la app, nunca una URL de afuera.
  */
 final class DeepLink {
 
-    static final String SCHEME = "seriespelis";
+    static final String SCHEME = "flix";
     static final String HOST = "open";
 
     private static final int MAX_PATH = 500;

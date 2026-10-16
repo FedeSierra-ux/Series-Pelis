@@ -70,6 +70,6 @@ describe('importErrorText (auditoría de uso #7)', () => {
     const text = importErrorText(err)
     expect(text).toMatch(/archivo/)
     expect(text).not.toMatch(/respuesta/)
-    expect(importErrorText(new Error('El archivo no es una copia de Series-Pelis'))).toBe('El archivo no es una copia de Series-Pelis')
+    expect(importErrorText(new Error('El archivo no es una copia de Flix'))).toBe('El archivo no es una copia de Flix')
   })
 })
