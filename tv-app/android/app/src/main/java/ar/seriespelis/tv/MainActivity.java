@@ -35,7 +35,7 @@ public class MainActivity extends BridgeActivity {
         } finally {
             creating = false;
         }
-        // Abierta desde una fila del inicio de la TV (A continuación, Mi lista). Si Android recrea
+        // Abierta desde una fila del inicio de la TV ("A continuación"). Si Android recrea
         // la actividad (savedInstanceState), el intent es el viejo y ya se usó.
         if (savedInstanceState == null) DeepLink.offer(getIntent());
         // Gesto de "atrás" en un celular (en la TV lo agarra dispatchKeyEvent antes).

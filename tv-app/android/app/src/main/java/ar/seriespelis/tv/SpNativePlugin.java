@@ -60,7 +60,7 @@ public class SpNativePlugin extends Plugin {
 
     // ───────────────────────── inicio de la TV (v0.21) ─────────────────────────
 
-    /** Todo lo de "A continuación" y "Mi lista" del perfil activo; acá se compara con lo publicado. */
+    /** Todo lo de "A continuación" del perfil activo; acá se compara con lo publicado. */
     @PluginMethod
     public void homeSync(PluginCall call) {
         if (!HomeRows.isAvailable(getContext())) {

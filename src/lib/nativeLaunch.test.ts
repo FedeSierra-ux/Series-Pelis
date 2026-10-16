@@ -15,20 +15,20 @@ describe('parseLaunchPath', () => {
 
   it('sin play solo navega', () => {
     expect(parseLaunchPath('/detail/series/tt0903747')).toEqual({ path: '/detail/series/tt0903747' })
-    expect(parseLaunchPath('/list')).toEqual({ path: '/list' })
   })
 
   it('no reproduce un episodio de otra serie', () => {
     expect(parseLaunchPath('/detail/series/tt1?video=tt2%3A1%3A1&play=1')).toEqual({ path: '/detail/series/tt1?video=tt2%3A1%3A1' })
   })
 
-  it('rechaza lo que no es una ficha o Mi lista', () => {
+  it('rechaza lo que no es una ficha', () => {
     for (const bad of [
       undefined,
       '',
       'detail/movie/tt1',
       '//evil.com/detail/movie/tt1',
       '/settings',
+      '/list',
       '/watch/movie/tt1',
       '/detail/movie/tt1/extra',
       '/detail/other/tt1',

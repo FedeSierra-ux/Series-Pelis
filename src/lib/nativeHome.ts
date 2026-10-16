@@ -1,15 +1,14 @@
-// Filas propias en el inicio de Android TV (v0.21): "Seguir viendo" va a la fila "A continuación" del
-// sistema (Watch Next) y "Mi lista" a un canal de la app. Acá se arma lo que se manda (lógica pura);
+// Fila propia en el inicio de Android TV (v0.21): "Seguir viendo" va a la fila "A continuación" del
+// sistema (Watch Next). Acá se arma lo que se manda (lógica pura);
 // `components/NativeHomeSync.tsx` lo manda al APK cada vez que cambia.
 
-import type { NativeHomeData, NativeHomeItem, NativeListItem } from './native'
-import type { ListItem, WatchEntry } from './store'
+import type { NativeHomeData, NativeHomeItem } from './native'
+import type { WatchEntry } from './store'
 import { cardBackdrop } from './titleArt'
 import type { ContinueItem } from './upNext'
 
 /** Google recomienda pocas: más que esto en "A continuación" no se ve y ensucia. */
 export const HOME_CONTINUE_MAX = 20
-export const HOME_LIST_MAX = 30
 
 /** Solo imágenes https (el inicio de la TV no muestra otras y no mandamos `data:` ni `http:`). */
 const https = (url?: string) => (url && /^https:\/\//i.test(url) ? url : undefined)
@@ -47,8 +46,8 @@ function fromResume(e: WatchEntry, at: number): NativeHomeItem {
   }
 }
 
-/** "Seguir viendo" (lo empezado + el siguiente episodio) y lo de Mi lista sin empezar, para el perfil activo. */
-export function buildHomeData(profile: string, items: ContinueItem[], watchlist: ListItem[]): NativeHomeData {
+/** "Seguir viendo" (lo empezado + el siguiente episodio) del perfil activo. */
+export function buildHomeData(profile: string, items: ContinueItem[]): NativeHomeData {
   const cont: NativeHomeItem[] = items.slice(0, HOME_CONTINUE_MAX).map((it) => {
     if (it.kind === 'resume') return fromResume(it.entry, it.at)
     const ep = it.episode
@@ -69,13 +68,5 @@ export function buildHomeData(profile: string, items: ContinueItem[], watchlist:
       path: homeItemPath('series', ep.metaId, ep.videoId, ep.season, true),
     }
   })
-  const list: NativeListItem[] = watchlist.slice(0, HOME_LIST_MAX).map((item) => ({
-    key: item.id,
-    type: kindOf(item.type),
-    title: item.name,
-    poster: https(item.poster),
-    year: item.year,
-    path: homeItemPath(item.type, item.id, undefined, undefined, false),
-  }))
-  return { profile, continue: cont, watchlist: list }
+  return { profile, continue: cont }
 }

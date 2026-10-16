@@ -42,7 +42,7 @@ describe('buildHomeData', () => {
       { kind: 'next', key: 'tt1:2:1', at: 5000, episode: episode(), label: 'Episodio nuevo' },
       { kind: 'next', key: 'tt2:1:3', at: 400, episode: episode({ metaId: 'tt2', videoId: 'tt2:1:3' }), label: 'Siguiente' },
     ]
-    const data = buildHomeData('main', items, [])
+    const data = buildHomeData('main', items)
     expect(data.profile).toBe('main')
     expect(data.continue[0]).toMatchObject({
       key: 'tt0903747:1:2',
@@ -61,14 +61,10 @@ describe('buildHomeData', () => {
     for (const it of data.continue) expect(parseLaunchPath(it.path)?.play?.videoId).toBe(it.key)
   })
 
-  it('las pelis reproducen directo y Mi lista solo abre la ficha', () => {
+  it('las pelis reproducen directo', () => {
     const movie = entry({ videoId: 'tt0133093', metaId: 'tt0133093', type: 'movie', season: undefined, episode: undefined })
-    const data = buildHomeData('p2', [{ kind: 'resume', key: movie.videoId, at: 1, entry: movie }], [
-      { id: 'tt0110912', type: 'movie', name: 'Pulp Fiction', poster: 'data:image/png;base64,xx', year: '1994', addedAt: 1 },
-    ])
-    expect(data.continue[0].path).toBe('/detail/movie/tt0133093?play=1')
-    expect(data.watchlist).toEqual([{ key: 'tt0110912', type: 'movie', title: 'Pulp Fiction', poster: undefined, year: '1994', path: '/detail/movie/tt0110912' }])
-    expect(parseLaunchPath(data.watchlist[0].path)).toEqual({ path: '/detail/movie/tt0110912' })
+    const data = buildHomeData('p2', [{ kind: 'resume', key: movie.videoId, at: 1, entry: movie }])
+    expect(data).toEqual({ profile: 'p2', continue: [expect.objectContaining({ path: '/detail/movie/tt0133093?play=1' })] })
   })
 
   it('no pasa del tope', () => {
@@ -76,6 +72,6 @@ describe('buildHomeData', () => {
       const e = entry({ videoId: `tt${i}`, metaId: `tt${i}`, type: 'movie' })
       return { kind: 'resume', key: e.videoId, at: i, entry: e }
     })
-    expect(buildHomeData('main', items, []).continue).toHaveLength(HOME_CONTINUE_MAX)
+    expect(buildHomeData('main', items).continue).toHaveLength(HOME_CONTINUE_MAX)
   })
 })

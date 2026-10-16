@@ -277,11 +277,11 @@ npm run preview    # sirve dist/ en http://localhost:4173
   "¿Quién está mirando?"). Android: `AppUpdater.java` (GitHub `releases/latest` sin token, etiqueta `tv-vX.Y.Z`,
   asset `series-pelis-tv.apk`, solo hosts de GitHub por https, tope 200 MB, verifica paquete, versionCode y **misma
   firma**; 6 h de caché, 15 min si falló; instalador clásico ACTION_VIEW + FileProvider `updates/`),
-  `HomeRows.java` (tvprovider 1.1.0: Watch Next CONTINUE/NEXT/NEW + canal "Mi lista"; lo que el usuario saca de la
+  `HomeRows.java` (tvprovider 1.1.0: Watch Next CONTINUE/NEXT/NEW; lo que el usuario saca de la
   fila no vuelve salvo que avance >30 s o cambie), `DeepLink.java` (`seriespelis://open?path=&profile=`, sin
   BROWSABLE, sin `..` ni `%2e`/`%2f`). El workflow exige etiqueta = versión de `tv-app/package.json`.
   **Fire TV**: sin filas (el "Continuar viendo" de Amazon pide integración de catálogo con Amazon); `home` es falso.
-  El canal "Mi lista" lo propuse yo (se puede sacar). El repo era privado: el usuario eligió **hacerlo público** para
+  **Sin canal "Mi lista"** en el inicio de la TV (el usuario lo sacó): solo "A continuación". El repo era privado: el usuario eligió **hacerlo público** para
   que el actualizador y Downloader lean Releases. Sin probar todavía en una TV real.
 - **Decisiones para la v0.17 (reemplazan el reparto del plan de abajo)**: addons y TorBox **iguales para todas las
   casas**, solo los cambia el admin (opción A). Ajustes generales (subtítulos, idiomas, autoplay, saltar intro, sin

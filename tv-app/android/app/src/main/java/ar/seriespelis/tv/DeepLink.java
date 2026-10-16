@@ -8,7 +8,7 @@ import java.util.regex.Pattern;
 
 /**
  * Enlaces "seriespelis://open?path=…&profile=…" (v0.21): los usan las filas del inicio de la TV
- * (A continuación, Mi lista) para abrir una ficha. Cualquier app instalada puede mandar este intent
+ * ("A continuación") para abrir una ficha. Cualquier app instalada puede mandar este intent
  * (el filtro no es BROWSABLE, así que una página web no), por eso se valida todo y lo que no cierra
  * se ignora: solo se aceptan rutas propias de la app, nunca una URL de afuera.
  */
@@ -83,7 +83,7 @@ final class DeepLink {
         if (path == null || path.isEmpty() || path.length() > MAX_PATH) return false;
         if (!path.startsWith("/") || path.startsWith("//")) return false;
         if (!PATH_CHARS.matcher(path).matches()) return false;
-        if (!path.startsWith("/detail/") && !"/list".equals(path)) return false;
+        if (!path.startsWith("/detail/")) return false;
         // Sin "." ni ".." como tramo de la ruta: que nadie salga de /detail/ con /detail/../algo.
         int q = path.indexOf('?');
         String route = q >= 0 ? path.substring(0, q) : path;
