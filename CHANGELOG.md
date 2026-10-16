@@ -11,6 +11,8 @@
   **`flix-tv.apk`**. Enlace para Downloader:
   `https://github.com/FedeSierra-ux/Series-Pelis/releases/latest/download/flix-tv.apk`.
   - Un APK anterior (`ar.seriespelis.tv`) no se actualiza a este: se instala aparte (y conviene desinstalar el viejo).
+  - Las versiones de la TV se publican con etiquetas **`flix-vX.Y.Z`** (antes `tv-vX.Y.Z`). La primera es
+    `flix-v0.22.0`.
 - Las copias exportadas se llaman `flix-<fecha>.json` y la imagen de "Tu año" `mi-<año>-flix.png`. Las copias
   viejas de Series-Pelis se siguen pudiendo importar.
 

@@ -288,7 +288,8 @@ npm run preview    # sirve dist/ en http://localhost:4173
   banner, splash) salen de `scratchpad/flix-assets/gen.py` (Chromium headless + PIL; si se pierde el scratchpad, el
   dibujo está en `public/favicon.svg`). Android: paquete **`ar.flix.tv`** (antes `ar.seriespelis.tv`; se cambió
   porque todavía no había nada instalado), esquema `flix://`, User-Agent `FlixApp/<v>`, APK **`flix-tv.apk`**
-  (Release con etiqueta `tv-v0.22.0`). El logo del riel usa `/favicon.svg`. **Se quedan con el nombre viejo**: el
+  (Release con etiqueta **`flix-v0.22.0`**: desde la v0.22 las etiquetas son `flix-vX.Y.Z`, pedido del usuario; el
+  workflow y `TAG_RE` de `AppUpdater.java` las exigen así). El logo del riel usa `/favicon.svg`. **Se quedan con el nombre viejo**: el
   sitio `series-pelis.pages.dev`, el repo, el proyecto de Cloudflare y la D1, los nombres de IndexedDB
   (`series-pelis-*`), las claves de localStorage, el campo `app: 'series-pelis'` de las copias exportadas (así se
   importan las viejas) y `OS_AGENT` de OpenSubtitles. Las notas de v0.19–v0.21 con `ar.seriespelis.tv`,

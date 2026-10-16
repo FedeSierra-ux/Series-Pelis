@@ -153,7 +153,8 @@ hay que reinstalarlo cuando cambia la parte nativa.
 4. Instalá y abrí **Flix**. Vinculala con el código de la casa como cualquier aparato.
 
 **Armar una versión nueva**: el workflow `.github/workflows/android-tv.yml` compila el APK en cada cambio de
-`tv-app/` (queda como *artifact* de la corrida) y, al crear una etiqueta `tv-vX.Y.Z`, lo publica en Releases.
+`tv-app/` (queda como *artifact* de la corrida) y, al crear una etiqueta `flix-vX.Y.Z` (por ejemplo `flix-v0.22.0`),
+lo publica en Releases.
 Para que las versiones se instalen encima (sin desinstalar ni perder el login) el APK tiene que firmarse
 siempre con la misma llave: secretos `ANDROID_KEYSTORE_BASE64`, `ANDROID_KEYSTORE_PASSWORD` y
 `ANDROID_KEY_ALIAS` en *Settings → Secrets and variables → Actions*. La llave **nunca** va en el repo.
