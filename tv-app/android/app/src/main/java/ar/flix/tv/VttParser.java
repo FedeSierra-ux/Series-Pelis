@@ -1,4 +1,4 @@
-package ar.seriespelis.tv;
+package ar.flix.tv;
 
 import android.text.Html;
 import android.text.Spanned;

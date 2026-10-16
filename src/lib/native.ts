@@ -53,20 +53,9 @@ export interface NativeHomeItem {
   path: string
 }
 
-/** Un título de "Mi lista" (canal propio en el inicio de la TV). */
-export interface NativeListItem {
-  key: string
-  type: 'movie' | 'series'
-  title: string
-  poster?: string
-  year?: string
-  path: string
-}
-
 export interface NativeHomeData {
   profile: string
   continue: NativeHomeItem[]
-  watchlist: NativeListItem[]
 }
 
 export interface NativeLaunch {
@@ -91,7 +80,7 @@ interface CapacitorLike {
   Plugins?: { SpNative?: SpNativePlugin }
 }
 
-const APP_UA = /\bSeriesPelisApp\//
+const APP_UA = /\bFlixApp\//
 
 function capacitor(): CapacitorLike | undefined {
   return typeof window === 'undefined' ? undefined : (window as Window & { Capacitor?: CapacitorLike }).Capacitor

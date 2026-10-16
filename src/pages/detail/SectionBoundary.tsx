@@ -28,7 +28,7 @@ export class SectionBoundary extends Component<Props, State> {
   }
 
   componentDidCatch(error: unknown, info: ErrorInfo) {
-    console.error('[Series-Pelis] Error en una sección de la ficha:', error, info.componentStack)
+    console.error('[Flix] Error en una sección de la ficha:', error, info.componentStack)
   }
 
   render() {

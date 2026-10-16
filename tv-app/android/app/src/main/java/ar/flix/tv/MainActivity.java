@@ -1,4 +1,4 @@
-package ar.seriespelis.tv;
+package ar.flix.tv;
 
 import android.app.UiModeManager;
 import android.content.Context;
@@ -35,7 +35,7 @@ public class MainActivity extends BridgeActivity {
         } finally {
             creating = false;
         }
-        // Abierta desde una fila del inicio de la TV (A continuación, Mi lista). Si Android recrea
+        // Abierta desde una fila del inicio de la TV ("A continuación"). Si Android recrea
         // la actividad (savedInstanceState), el intent es el viejo y ya se usó.
         if (savedInstanceState == null) DeepLink.offer(getIntent());
         // Gesto de "atrás" en un celular (en la TV lo agarra dispatchKeyEvent antes).
@@ -65,7 +65,7 @@ public class MainActivity extends BridgeActivity {
     protected void load() {
         // La configuración va acá y no en capacitor.config.json para poder sumar "AndroidTV" al
         // User-Agent solo en los televisores: la web lo usa para prender el modo TV sola.
-        String ua = "SeriesPelisApp/" + BuildConfig.VERSION_NAME + (isTv(this) ? " AndroidTV" : "");
+        String ua = "FlixApp/" + BuildConfig.VERSION_NAME + (isTv(this) ? " AndroidTV" : "");
         config = new CapConfig.Builder(this)
             .setServerUrl(SITE)
             .setErrorPath("error.html")

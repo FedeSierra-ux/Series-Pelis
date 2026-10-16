@@ -234,7 +234,7 @@ function DataSection() {
     const blob = new Blob([JSON.stringify(exportData(), null, 2)], { type: 'application/json' })
     const a = document.createElement('a')
     a.href = URL.createObjectURL(blob)
-    a.download = `series-pelis-${new Date().toISOString().slice(0, 10)}.json`
+    a.download = `flix-${new Date().toISOString().slice(0, 10)}.json`
     a.click()
     URL.revokeObjectURL(a.href)
   }

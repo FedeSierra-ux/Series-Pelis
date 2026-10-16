@@ -776,6 +776,7 @@ export function exportData() {
   const { tmdbKey: _tmdbKey, ...settings } = settingsStore.get()
   const addons = addonsStore.get()
   return {
+    // Identificador del formato, de cuando la app se llamaba Series-Pelis: no cambiarlo, así se importan las copias viejas.
     app: 'series-pelis',
     version: 1,
     exportedAt: new Date().toISOString(),
@@ -873,7 +874,7 @@ export interface ImportReport {
  * `progress` como texto) se ignora.
  */
 export async function importData(raw: unknown): Promise<ImportReport> {
-  if (!isPlain(raw) || raw.app !== 'series-pelis') throw new Error('El archivo no es una copia de Series-Pelis')
+  if (!isPlain(raw) || raw.app !== 'series-pelis') throw new Error('El archivo no es una copia de Flix')
   const data = raw as Partial<Record<keyof ReturnType<typeof exportData>, unknown>>
   const progress = plainRecord<WatchEntry>(data.progress)
   const watchlist = plainRecord<ListItem>(data.watchlist)

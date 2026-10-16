@@ -81,7 +81,7 @@ function SlideBody({ slide, stats, reduced, actions }: { slide: StorySlide; stat
     case 'intro':
       return (
         <>
-          <In className="story-kicker">Series-Pelis</In>
+          <In className="story-kicker">Flix</In>
           <In d={1} className="story-huge">
             Tu {slide.year}
           </In>

@@ -1,6 +1,6 @@
-# Series-Pelis — memoria del proyecto
+# Flix (ex Series-Pelis) — memoria del proyecto
 
-App web personal (PWA) para ver pelis y series usando **addons de Stremio**, con puntaje de IMDb,
+**Flix** (se llamaba Series-Pelis hasta la v0.21) es una app web personal (PWA) para ver pelis y series usando **addons de Stremio**, con puntaje de IMDb,
 historial, "Seguir viendo" y "Mi lista". Interfaz en **español latino (es-AR)**.
 
 ## Cómo trabajar con el usuario
@@ -270,19 +270,29 @@ npm run preview    # sirve dist/ en http://localhost:4173
   `src/lib/native.ts` (`getInfo` suma `update`, `home`, `fireTv`; `updateCheck`/`updateInstall` + evento `update`;
   `homeSync`; `takeLaunch` + evento `open`). Web: `lib/appUpdate.ts` (estado, "Después" = 24 h por versión en
   `sp-app-update-later`), `components/AppUpdateToast.tsx`, Ajustes → App de TV (`settings/AppSettings.tsx`, solo
-  `isNativeApp()`), `lib/nativeHome.ts` + `components/NativeHomeSync.tsx` (Seguir viendo/siguiente/nuevo y Mi lista
-  sin empezar del perfil activo, cada 5 s como mucho; solo https en imágenes), `lib/nativeLaunch.ts` +
-  `components/NativeLaunch.tsx` (rutas `/detail/<movie|series>/<id>` o `/list`; `play=1` = reproducir; si el perfil
+  `isNativeApp()`), `lib/nativeHome.ts` + `components/NativeHomeSync.tsx` (Seguir viendo/siguiente/nuevo del perfil
+  activo, cada 5 s como mucho; solo https en imágenes), `lib/nativeLaunch.ts` +
+  `components/NativeLaunch.tsx` (solo rutas `/detail/<movie|series>/<id>`; `play=1` = reproducir; si el perfil
   del enlace es otro, `sp-pending-launch` en sessionStorage + `switchProfile`; `PROFILE_FROM_LAUNCH` cierra el
   "¿Quién está mirando?"). Android: `AppUpdater.java` (GitHub `releases/latest` sin token, etiqueta `tv-vX.Y.Z`,
   asset `series-pelis-tv.apk`, solo hosts de GitHub por https, tope 200 MB, verifica paquete, versionCode y **misma
   firma**; 6 h de caché, 15 min si falló; instalador clásico ACTION_VIEW + FileProvider `updates/`),
-  `HomeRows.java` (tvprovider 1.1.0: Watch Next CONTINUE/NEXT/NEW + canal "Mi lista"; lo que el usuario saca de la
+  `HomeRows.java` (tvprovider 1.1.0: Watch Next CONTINUE/NEXT/NEW; lo que el usuario saca de la
   fila no vuelve salvo que avance >30 s o cambie), `DeepLink.java` (`seriespelis://open?path=&profile=`, sin
   BROWSABLE, sin `..` ni `%2e`/`%2f`). El workflow exige etiqueta = versión de `tv-app/package.json`.
   **Fire TV**: sin filas (el "Continuar viendo" de Amazon pide integración de catálogo con Amazon); `home` es falso.
-  El canal "Mi lista" lo propuse yo (se puede sacar). El repo era privado: el usuario eligió **hacerlo público** para
+  **Sin canal "Mi lista"** en el inicio de la TV (el usuario lo sacó): solo "A continuación". El repo era privado: el usuario eligió **hacerlo público** para
   que el actualizador y Downloader lean Releases. Sin probar todavía en una TV real.
+- v0.22.0 hecha (rama `claude/flix-v0.22`): **la app pasa a llamarse Flix** (pedido del usuario) con el ícono **2B**
+  (F de neón lavanda `#c4b0ff` sobre violeta oscuro, con brillo y estrellitas). Los íconos (favicon, PWA, mipmaps,
+  banner, splash) salen de `scratchpad/flix-assets/gen.py` (Chromium headless + PIL; si se pierde el scratchpad, el
+  dibujo está en `public/favicon.svg`). Android: paquete **`ar.flix.tv`** (antes `ar.seriespelis.tv`; se cambió
+  porque todavía no había nada instalado), esquema `flix://`, User-Agent `FlixApp/<v>`, APK **`flix-tv.apk`**
+  (Release con etiqueta `tv-v0.22.0`). El logo del riel usa `/favicon.svg`. **Se quedan con el nombre viejo**: el
+  sitio `series-pelis.pages.dev`, el repo, el proyecto de Cloudflare y la D1, los nombres de IndexedDB
+  (`series-pelis-*`), las claves de localStorage, el campo `app: 'series-pelis'` de las copias exportadas (así se
+  importan las viejas) y `OS_AGENT` de OpenSubtitles. Las notas de v0.19–v0.21 con `ar.seriespelis.tv`,
+  `SeriesPelisApp`, `seriespelis://` y `series-pelis-tv.apk` son de antes del cambio.
 - **Decisiones para la v0.17 (reemplazan el reparto del plan de abajo)**: addons y TorBox **iguales para todas las
   casas**, solo los cambia el admin (opción A). Ajustes generales (subtítulos, idiomas, autoplay, saltar intro, sin
   spoilers, reglas de fuentes) **iguales en toda la casa**; lo físico (modo TV, tamaño de la interfaz, protector,

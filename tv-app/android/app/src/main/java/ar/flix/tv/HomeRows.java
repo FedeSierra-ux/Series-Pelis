@@ -1,19 +1,13 @@
-package ar.seriespelis.tv;
+package ar.flix.tv;
 
 import android.content.ContentResolver;
 import android.content.Context;
 import android.content.SharedPreferences;
 import android.content.pm.PackageManager;
 import android.database.Cursor;
-import android.graphics.Bitmap;
-import android.graphics.Canvas;
-import android.graphics.drawable.Drawable;
 import android.net.Uri;
 import android.os.Build;
 import android.util.Log;
-import androidx.tvprovider.media.tv.PreviewChannel;
-import androidx.tvprovider.media.tv.PreviewChannelHelper;
-import androidx.tvprovider.media.tv.PreviewProgram;
 import androidx.tvprovider.media.tv.TvContractCompat;
 import androidx.tvprovider.media.tv.WatchNextProgram;
 import java.util.ArrayList;
@@ -31,8 +25,8 @@ import org.json.JSONException;
 import org.json.JSONObject;
 
 /**
- * Filas del inicio de Android TV (v0.21): "A continuación" (Watch Next del sistema) con lo que se
- * está viendo, el siguiente episodio y los episodios nuevos, y un canal propio "Mi lista".
+ * Fila del inicio de Android TV (v0.21): "A continuación" (Watch Next del sistema) con lo que se
+ * está viendo, el siguiente episodio y los episodios nuevos.
  *
  * La web manda todo el conjunto de una vez (homeSync) y acá se compara con lo que hay publicado:
  * se agrega, se actualiza o se borra para que quede igual. Todo el trabajo con el ContentResolver va
@@ -43,9 +37,7 @@ final class HomeRows {
 
     private static final String TAG = "SpHomeRows";
     private static final String PREFS = "sp_home_rows";
-    private static final String CHANNEL_PROVIDER_ID = "mi-lista";
     private static final int MAX_CONTINUE = 20;
-    private static final int MAX_LIST = 30;
     private static final int MAX_REMOVED = 200;
     private static final int MAX_TEXT = 200;
     // Si el usuario sacó una tarjeta, vuelve solo si avanzó al menos esto (o cambió de tipo).
@@ -64,7 +56,7 @@ final class HomeRows {
 
     /**
      * ¿Anda "A continuación" en este aparato? Hace falta Android 8 (API 26, donde aparecen Watch
-     * Next y los canales propios), una TV con Leanback y el TvProvider del sistema. En Fire TV no:
+     * Next), una TV con Leanback y el TvProvider del sistema. En Fire TV no:
      * su inicio no muestra estas filas (ver el informe de la v0.21).
      */
     static synchronized boolean isAvailable(Context ctx) {
@@ -127,28 +119,21 @@ final class HomeRows {
         long durationMs;
         long lastEngagement;
         String path;
-        String year;
     }
 
     private static void syncNow(Context ctx, JSONObject data) {
         String profile = data.optString("profile", "");
         if (!DeepLink.validProfile(profile)) return;
-        List<Item> cont = readItems(data.optJSONArray("continue"), MAX_CONTINUE, true);
-        List<Item> list = readItems(data.optJSONArray("watchlist"), MAX_LIST, false);
+        List<Item> cont = readItems(data.optJSONArray("continue"), MAX_CONTINUE);
         SharedPreferences prefs = ctx.getSharedPreferences(PREFS, Context.MODE_PRIVATE);
         try {
             syncWatchNext(ctx, prefs, profile, cont);
         } catch (Exception e) {
             Log.w(TAG, "Watch Next", e);
         }
-        try {
-            syncChannel(ctx, prefs, profile, list);
-        } catch (Exception e) {
-            Log.w(TAG, "Canal Mi lista", e);
-        }
     }
 
-    private static List<Item> readItems(JSONArray arr, int max, boolean watchNext) {
+    private static List<Item> readItems(JSONArray arr, int max) {
         List<Item> out = new ArrayList<>();
         if (arr == null) return out;
         Set<String> seen = new HashSet<>();
@@ -162,20 +147,16 @@ final class HomeRows {
             it.path = o.optString("path", null);
             if (it.key == null || it.title == null || !DeepLink.validPath(it.path) || !seen.add(it.key)) continue;
             it.poster = httpsUrl(o.optString("poster", null));
-            if (watchNext) {
-                String kind = o.optString("kind");
-                it.kind = "next".equals(kind) || "new".equals(kind) ? kind : "continue";
-                it.episodeTitle = text(o, "episodeTitle");
-                it.season = Math.max(0, o.optInt("season", 0));
-                it.episode = Math.max(0, o.optInt("episode", 0));
-                it.image = httpsUrl(o.optString("image", null));
-                it.positionMs = seconds(o.optDouble("position", 0));
-                it.durationMs = seconds(o.optDouble("duration", 0));
-                it.lastEngagement = Math.max(0, o.optLong("lastEngagement", 0));
-                if (!"continue".equals(it.kind)) it.positionMs = 0;
-            } else {
-                it.year = text(o, "year");
-            }
+            String kind = o.optString("kind");
+            it.kind = "next".equals(kind) || "new".equals(kind) ? kind : "continue";
+            it.episodeTitle = text(o, "episodeTitle");
+            it.season = Math.max(0, o.optInt("season", 0));
+            it.episode = Math.max(0, o.optInt("episode", 0));
+            it.image = httpsUrl(o.optString("image", null));
+            it.positionMs = seconds(o.optDouble("position", 0));
+            it.durationMs = seconds(o.optDouble("duration", 0));
+            it.lastEngagement = Math.max(0, o.optLong("lastEngagement", 0));
+            if (!"continue".equals(it.kind)) it.positionMs = 0;
             out.add(it);
         }
         return out;
@@ -224,19 +205,13 @@ final class HomeRows {
         // Lo que hay publicado ahora (el TvProvider solo devuelve las filas de esta app).
         Map<String, Existing> existing = new HashMap<>();
         List<Long> orphans = new ArrayList<>();
-        // Lo que el usuario agregó él mismo desde el canal "Mi lista" ("Agregar a A continuación"): el
-        // sistema lo copia como WATCHLIST con nuestro paquete. No se toca, salvo para convertirlo en
-        // "seguir viendo" cuando empieza a verlo (así no queda repetido).
-        Map<String, Long> userAdded = new HashMap<>();
         try (Cursor c = cr.query(TvContractCompat.WatchNextPrograms.CONTENT_URI, WatchNextProgram.PROJECTION, null, null, null)) {
             if (c != null) {
                 while (c.moveToNext()) {
                     WatchNextProgram p = WatchNextProgram.fromCursor(c);
                     String ipid = p.getInternalProviderId();
-                    if (p.getWatchNextType() == TvContractCompat.WatchNextPrograms.WATCH_NEXT_TYPE_WATCHLIST) {
-                        if (ipid != null && p.isBrowsable()) userAdded.put(ipid, p.getId());
-                        continue;
-                    }
+                    // Los WATCHLIST los agrega el usuario desde el sistema: no son nuestros, no se tocan.
+                    if (p.getWatchNextType() == TvContractCompat.WatchNextPrograms.WATCH_NEXT_TYPE_WATCHLIST) continue;
                     if (ipid == null || existing.containsKey(ipid)) {
                         orphans.add(p.getId());
                         continue;
@@ -311,12 +286,6 @@ final class HomeRows {
             String print = fingerprint(it);
             Existing e = existing.get(ipid);
             boolean live = e != null && e.browsable;
-            if (!live && userAdded.containsKey(ipid)) {
-                e = new Existing();
-                e.id = userAdded.get(ipid);
-                e.browsable = true;
-                live = true;
-            }
             JSONObject was = published.optJSONObject(ipid);
             if (live && was != null && print.equals(was.optString("h"))) {
                 nextPublished.put(ipid, was);
@@ -421,126 +390,6 @@ final class HomeRows {
             '\n' + it.image + '\n' + it.poster + '\n' + it.positionMs + '\n' + it.durationMs + '\n' + it.lastEngagement +
             '\n' + it.path
         );
-    }
-
-    // ───────────────────────── Canal "Mi lista" ─────────────────────────
-
-    private static void syncChannel(Context ctx, SharedPreferences prefs, String profile, List<Item> items) throws Exception {
-        PreviewChannelHelper helper = new PreviewChannelHelper(ctx);
-        long channelId = -1;
-        for (PreviewChannel ch : helper.getAllChannels()) {
-            if (CHANNEL_PROVIDER_ID.equals(ch.getInternalProviderId())) {
-                if (channelId == -1) channelId = ch.getId();
-                else helper.deletePreviewChannel(ch.getId()); // duplicado (no debería pasar)
-            }
-        }
-        if (channelId == -1) {
-            PreviewChannel channel = new PreviewChannel.Builder()
-                .setDisplayName("Mi lista")
-                .setDescription("Lo que guardaste para ver en Series-Pelis")
-                .setAppLinkIntent(DeepLink.intent(ctx, "/list", null))
-                .setInternalProviderId(CHANNEL_PROVIDER_ID)
-                .setLogo(appLogo(ctx))
-                .build();
-            // El primero es el canal por defecto: se pide que se muestre una sola vez. Si después
-            // el usuario lo oculta, se respeta (no se vuelve a pedir).
-            if (!prefs.getBoolean("channelAsked", false)) {
-                channelId = helper.publishDefaultChannel(channel);
-                prefs.edit().putBoolean("channelAsked", true).apply();
-            } else {
-                channelId = helper.publishChannel(channel);
-            }
-        }
-
-        ContentResolver cr = ctx.getContentResolver();
-        Map<String, PreviewProgram> existing = new HashMap<>();
-        List<Long> extra = new ArrayList<>();
-        try (Cursor c = cr.query(TvContractCompat.buildPreviewProgramsUriForChannel(channelId), PreviewProgram.PROJECTION, null, null, null)) {
-            if (c != null) {
-                while (c.moveToNext()) {
-                    PreviewProgram p = PreviewProgram.fromCursor(c);
-                    String ipid = p.getInternalProviderId();
-                    if (ipid == null || existing.containsKey(ipid)) extra.add(p.getId());
-                    else existing.put(ipid, p);
-                }
-            }
-        }
-        JSONObject published = json(prefs, "listPublished");
-        Map<String, Item> wanted = new LinkedHashMap<>();
-        for (Item it : items) wanted.put(providerId(profile, it.key), it);
-
-        for (long id : extra) deleteProgram(helper, id);
-        for (Map.Entry<String, PreviewProgram> en : existing.entrySet()) {
-            if (!wanted.containsKey(en.getKey())) {
-                deleteProgram(helper, en.getValue().getId());
-                published.remove(en.getKey());
-            }
-        }
-
-        JSONObject nextPublished = new JSONObject();
-        int weight = wanted.size();
-        for (Map.Entry<String, Item> en : wanted.entrySet()) {
-            String ipid = en.getKey();
-            Item it = en.getValue();
-            int w = weight--;
-            PreviewProgram old = existing.get(ipid);
-            String print = it.type + '\n' + it.title + '\n' + it.poster + '\n' + it.year + '\n' + it.path + '\n' + w;
-            if (old != null && !old.isBrowsable()) {
-                // El usuario lo sacó del canal: queda oculto mientras siga en la lista.
-                nextPublished.put(ipid, print);
-                continue;
-            }
-            if (old != null && print.equals(published.optString(ipid, null))) {
-                nextPublished.put(ipid, print);
-                continue;
-            }
-            PreviewProgram.Builder b = new PreviewProgram.Builder()
-                .setChannelId(channelId)
-                .setType(
-                    "series".equals(it.type)
-                        ? TvContractCompat.PreviewPrograms.TYPE_TV_SERIES
-                        : TvContractCompat.PreviewPrograms.TYPE_MOVIE
-                )
-                .setTitle(it.title)
-                .setInternalProviderId(ipid)
-                .setWeight(w)
-                .setIntent(DeepLink.intent(ctx, it.path, profile));
-            if (it.poster != null) {
-                b.setPosterArtUri(Uri.parse(it.poster)).setPosterArtAspectRatio(TvContractCompat.PreviewPrograms.ASPECT_RATIO_2_3);
-            }
-            if (it.year != null) b.setReleaseDate(it.year);
-            try {
-                if (old != null) helper.updatePreviewProgram(old.getId(), b.build());
-                else if (helper.publishPreviewProgram(b.build()) <= 0) continue;
-                nextPublished.put(ipid, print);
-            } catch (Exception ex) {
-                Log.w(TAG, "No se pudo publicar un título de Mi lista", ex);
-            }
-        }
-        prefs.edit().putString("listPublished", nextPublished.toString()).apply();
-    }
-
-    private static void deleteProgram(PreviewChannelHelper helper, long id) {
-        try {
-            helper.deletePreviewProgram(id);
-        } catch (Exception e) {
-            Log.w(TAG, "No se pudo borrar un título de Mi lista", e);
-        }
-    }
-
-    /** El ícono de la app como mapa de bits (el adaptativo no se puede pasar como URI). */
-    private static Bitmap appLogo(Context ctx) {
-        int size = 320;
-        Bitmap bmp = Bitmap.createBitmap(size, size, Bitmap.Config.ARGB_8888);
-        try {
-            Drawable d = ctx.getPackageManager().getApplicationIcon(ctx.getPackageName());
-            Canvas canvas = new Canvas(bmp);
-            d.setBounds(0, 0, size, size);
-            d.draw(canvas);
-        } catch (Exception e) {
-            // Sin logo se ve el nombre del canal: no vale la pena fallar por esto.
-        }
-        return bmp;
     }
 
     // ───────────────────────── utilidades ─────────────────────────

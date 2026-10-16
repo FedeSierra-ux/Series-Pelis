@@ -57,7 +57,7 @@ export function AppSettings() {
       <h3>Inicio de la TV</h3>
       <p className="muted small">
         {info.home
-          ? '“Seguir viendo” aparece en la fila “A continuación” del inicio de Android TV y “Mi lista” como un canal de la app (en Google TV, en la pestaña Apps). Muestra lo del perfil que se usó último en este aparato.'
+          ? '“Seguir viendo” aparece en la fila “A continuación” del inicio de Android TV. Muestra lo del perfil que se usó último en este aparato.'
           : info.fireTv
             ? 'Fire TV no deja que una app instalada por fuera de la tienda de Amazon aparezca en “Continuar viendo”.'
             : 'Este aparato no tiene filas de apps en el inicio.'}
@@ -83,7 +83,7 @@ function statusText(state: ReturnType<typeof useAppUpdate>): string {
     case 'verifying':
       return 'Revisando la descarga…'
     case 'permission':
-      return 'Dale permiso a Series-Pelis para instalar apps y volvé: la actualización sigue sola.'
+      return 'Dale permiso a Flix para instalar apps y volvé: la actualización sigue sola.'
     case 'installer':
       return 'Se abrió el instalador: tocá “Instalar”.'
     case 'error':

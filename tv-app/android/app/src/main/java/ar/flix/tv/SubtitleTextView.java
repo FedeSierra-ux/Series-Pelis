@@ -1,4 +1,4 @@
-package ar.seriespelis.tv;
+package ar.flix.tv;
 
 import android.content.Context;
 import android.graphics.Canvas;

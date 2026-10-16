@@ -1,6 +1,6 @@
-// Abrir la app desde el inicio de Android TV (v0.21): una tarjeta de "A continuación" o de "Mi lista" trae
-// la ficha a abrir (`/detail/...`, con `play=1` si hay que reproducir directo). Android ya lo revisa, pero
-// acá se revisa de nuevo: solo fichas o Mi lista, nunca otra cosa.
+// Abrir la app desde el inicio de Android TV (v0.21): una tarjeta de "A continuación" trae la ficha a
+// abrir (`/detail/...`, con `play=1` si hay que reproducir directo). Android ya lo revisa, pero acá se
+// revisa de nuevo: solo fichas, nunca otra cosa.
 
 import type { ResumeTarget } from './nextEpisode'
 
@@ -24,7 +24,6 @@ export function parseLaunchPath(raw: string | undefined): LaunchTarget | undefin
     return undefined
   }
   if (url.origin !== 'https://app.invalid') return undefined
-  if (url.pathname === '/list') return { path: '/list' }
   const m = DETAIL.exec(url.pathname)
   if (!m) return undefined
   const type = m[1]

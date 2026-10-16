@@ -1,9 +1,9 @@
 <?xml version='1.0' encoding='utf-8'?>
 <resources>
-    <string name="app_name">Series-Pelis</string>
-    <string name="title_activity_main">Series-Pelis</string>
-    <string name="package_name">ar.seriespelis.tv</string>
-    <string name="custom_url_scheme">ar.seriespelis.tv</string>
+    <string name="app_name">Flix</string>
+    <string name="title_activity_main">Flix</string>
+    <string name="package_name">ar.flix.tv</string>
+    <string name="custom_url_scheme">ar.flix.tv</string>
     <!-- Reproductor nativo (v0.20). -->
     <string name="sp_player_audio">Audio</string>
     <string name="sp_player_subs">Subtítulos</string>
