@@ -2,6 +2,7 @@ package ar.seriespelis.tv;
 
 import android.app.UiModeManager;
 import android.content.Context;
+import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.content.res.Configuration;
 import android.os.Bundle;
@@ -22,10 +23,21 @@ public class MainActivity extends BridgeActivity {
 
     static final String SITE = "https://series-pelis.pages.dev";
 
+    // BridgeActivity llama a onNewIntent(getIntent()) dentro de su onCreate: ese no es un enlace nuevo.
+    private boolean creating;
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         registerPlugin(SpNativePlugin.class);
-        super.onCreate(savedInstanceState);
+        creating = true;
+        try {
+            super.onCreate(savedInstanceState);
+        } finally {
+            creating = false;
+        }
+        // Abierta desde una fila del inicio de la TV (A continuación, Mi lista). Si Android recrea
+        // la actividad (savedInstanceState), el intent es el viejo y ya se usó.
+        if (savedInstanceState == null) DeepLink.offer(getIntent());
         // Gesto de "atrás" en un celular (en la TV lo agarra dispatchKeyEvent antes).
         getOnBackPressedDispatcher().addCallback(this, new OnBackPressedCallback(true) {
             @Override
@@ -35,6 +47,18 @@ public class MainActivity extends BridgeActivity {
                 else sendBackToWeb();
             }
         });
+    }
+
+    @Override
+    protected void onNewIntent(Intent intent) {
+        super.onNewIntent(intent);
+        if (creating || intent == null) return;
+        // La app ya estaba abierta (singleTask) y se eligió otra tarjeta del inicio de la TV.
+        if (DeepLink.offer(intent)) {
+            setIntent(intent);
+            SpNativePlugin plugin = spNative();
+            if (plugin != null) plugin.notifyOpen();
+        }
     }
 
     @Override
@@ -69,12 +93,17 @@ public class MainActivity extends BridgeActivity {
         return super.dispatchKeyEvent(event);
     }
 
-    /** El reproductor nativo si está abierto; si no, null. */
-    private NativePlayer nativePlayer() {
+    private SpNativePlugin spNative() {
         if (bridge == null) return null;
         PluginHandle h = bridge.getPlugin("SpNative");
         if (h == null || !(h.getInstance() instanceof SpNativePlugin)) return null;
-        NativePlayer p = ((SpNativePlugin) h.getInstance()).player();
+        return (SpNativePlugin) h.getInstance();
+    }
+
+    /** El reproductor nativo si está abierto; si no, null. */
+    private NativePlayer nativePlayer() {
+        SpNativePlugin plugin = spNative();
+        NativePlayer p = plugin != null ? plugin.player() : null;
         return p != null && p.isOpen() ? p : null;
     }
 

@@ -25,6 +25,14 @@
                 <category android:name="android.intent.category.LEANBACK_LAUNCHER" />
             </intent-filter>
 
+            <!-- Tarjetas del inicio de la TV (A continuación, Mi lista): seriespelis://open?path=…
+                 Sin BROWSABLE a propósito, así una página web no puede abrir la app con este enlace. -->
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <data android:scheme="seriespelis" android:host="open" />
+            </intent-filter>
+
         </activity>
 
         <provider
@@ -45,4 +53,11 @@
     <!-- Permissions -->
 
     <uses-permission android:name="android.permission.INTERNET" />
+    <!-- Se actualiza sola desde GitHub Releases (v0.21): abre el instalador de Android. -->
+    <uses-permission android:name="android.permission.REQUEST_INSTALL_PACKAGES" />
+
+    <!-- Android 11 o más nuevo: para ver el TvProvider del sistema (filas del inicio de la TV). -->
+    <queries>
+        <provider android:authorities="android.media.tv" />
+    </queries>
 </manifest>

@@ -1,5 +1,28 @@
 # Changelog
 
+## [0.21.0] - 2026-10-15
+
+### Agregado
+- **La app de TV se actualiza desde GitHub Releases.** Al abrir, revisa si hay una versión nueva (como mucho cada
+  6 h) y muestra un aviso: tocás **"Actualizar"**, baja el APK, lo verifica y abre el instalador de Android, donde
+  solo queda tocar **"Instalar"**. "Después" la esconde 24 h (por versión).
+  - Antes de instalar se controla que sea la misma app, una versión más nueva y **firmada con la misma llave**.
+  - La primera vez Android pide el permiso de "instalar apps desconocidas"; al volver sigue sola.
+  - Ajustes → **App de TV** (solo en la app): versión instalada, "Buscar actualizaciones" e "Instalar".
+  - Necesita el repo público y las versiones firmadas con los secretos del repo. Un APK v0.20 o anterior se
+    actualiza a mano una vez.
+- **Filas propias en el inicio de Android TV / Google TV.**
+  - **"A continuación"** del sistema: lo que estás viendo (con el avance), el episodio siguiente y los episodios
+    nuevos de tus series, del perfil activo.
+  - Canal **"Mi lista"** con lo que todavía no empezaste.
+  - Al elegir una tarjeta se abre la app en esa ficha (si era "Seguir viendo", arranca a reproducir), y cambia al
+    perfil que corresponda. Si sacás una tarjeta de la fila, no vuelve hasta que avances o cambie el episodio.
+- **Fire TV:** el actualizador y los enlaces andan igual, pero el "Continuar viendo" de Amazon solo acepta apps con
+  integración de catálogo con Amazon, así que en Fire TV no aparecen filas propias.
+
+### Cambiado
+- El workflow `android-tv.yml` falla si la etiqueta `tv-vX.Y.Z` no coincide con la versión de `tv-app/package.json`.
+
 ## [0.20.0] - 2026-10-15
 
 ### Agregado

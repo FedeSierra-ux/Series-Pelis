@@ -20,6 +20,14 @@ public class SpNativePlugin extends Plugin {
 
     // Reproductor nativo (v0.20): se crea con el primer playerOpen y vive en el hilo de la interfaz.
     private NativePlayer player;
+    // Actualizaciones desde GitHub Releases (v0.21).
+    private AppUpdater updater;
+
+    @Override
+    public void load() {
+        updater = new AppUpdater(getContext(), (e) -> notifyListeners("update", e));
+        updater.cleanupOnStart();
+    }
 
     @PluginMethod
     public void getInfo(PluginCall call) {
@@ -27,7 +35,56 @@ public class SpNativePlugin extends Plugin {
         res.put("tv", MainActivity.isTv(getContext()));
         res.put("version", BuildConfig.VERSION_NAME);
         res.put("player", true);
+        // v0.21: un APK viejo no manda estas claves, y la web lo toma como "no lo tiene".
+        res.put("update", true);
+        res.put("home", HomeRows.isAvailable(getContext()));
+        res.put("fireTv", HomeRows.isFireTv(getContext()));
         call.resolve(res);
+    }
+
+    // ───────────────────────── actualizaciones (v0.21) ─────────────────────────
+
+    /** ¿Hay una versión nueva en GitHub? Nunca falla por la red: lo dice en `error`. */
+    @PluginMethod
+    public void updateCheck(PluginCall call) {
+        boolean force = Boolean.TRUE.equals(call.getBoolean("force", false));
+        updater.check(force, call::resolve);
+    }
+
+    /** Arranca la descarga y la instalación; el avance va por el evento `update`. */
+    @PluginMethod
+    public void updateInstall(PluginCall call) {
+        updater.install(getActivity());
+        call.resolve();
+    }
+
+    // ───────────────────────── inicio de la TV (v0.21) ─────────────────────────
+
+    /** Todo lo de "A continuación" y "Mi lista" del perfil activo; acá se compara con lo publicado. */
+    @PluginMethod
+    public void homeSync(PluginCall call) {
+        if (!HomeRows.isAvailable(getContext())) {
+            call.resolve();
+            return;
+        }
+        HomeRows.sync(getContext(), call.getData(), call::resolve);
+    }
+
+    /** El enlace con el que se abrió la app desde el inicio de la TV (una sola vez; si no hay, vacío). */
+    @PluginMethod
+    public void takeLaunch(PluginCall call) {
+        JSObject res = new JSObject();
+        DeepLink.Launch l = DeepLink.take();
+        if (l != null) {
+            res.put("path", l.path);
+            if (l.profile != null) res.put("profile", l.profile);
+        }
+        call.resolve(res);
+    }
+
+    /** MainActivity avisa que llegó un enlace nuevo con la app abierta: la web llama a takeLaunch. */
+    void notifyOpen() {
+        notifyListeners("open", new JSObject());
     }
 
     /** Para MainActivity (teclas y Atrás). Solo desde el hilo de la interfaz. */
@@ -94,6 +151,13 @@ public class SpNativePlugin extends Plugin {
             if (player != null) player.close();
             call.resolve();
         });
+    }
+
+    @Override
+    protected void handleOnResume() {
+        super.handleOnResume();
+        // Volvió de Ajustes con el permiso para instalar: sigue sola al instalador.
+        if (updater != null) updater.onResume(getActivity());
     }
 
     @Override
