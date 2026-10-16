@@ -83,7 +83,7 @@ function statusText(state: ReturnType<typeof useAppUpdate>): string {
     case 'verifying':
       return 'Revisando la descarga…'
     case 'permission':
-      return 'Dale permiso a Series-Pelis para instalar apps y volvé: la actualización sigue sola.'
+      return 'Dale permiso a Flix para instalar apps y volvé: la actualización sigue sola.'
     case 'installer':
       return 'Se abrió el instalador: tocá “Instalar”.'
     case 'error':

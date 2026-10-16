@@ -201,11 +201,14 @@
   height: 48px;
   margin-bottom: 10px;
   border-radius: 16px;
-  background: var(--accent);
-  color: var(--on-accent);
-  font-weight: 800;
-  font-size: 18px;
-  letter-spacing: 0;
+  overflow: hidden;
+  /* El ícono de Flix (v0.22) ya trae su fondo violeta oscuro. */
+  background: #0b0819;
+}
+.t2-logo img {
+  display: block;
+  width: 100%;
+  height: 100%;
 }
 .t2-logo:focus-visible {
   outline-offset: 3px;
@@ -215,7 +218,6 @@
   height: 36px;
   margin: 0;
   border-radius: 12px;
-  font-size: 14px;
 }
 .t2-rail-link {
   flex: none;
@@ -989,7 +991,6 @@
     width: 56px;
     height: 56px;
     border-radius: 18px;
-    font-size: 22px;
     margin-bottom: 14px;
   }
   html[data-tv] .t2-rail-link {

@@ -10,10 +10,10 @@ def (vMajor, vMinor, vPatch) = appVersion.tokenize('.').collect { it.toInteger()
 def keystorePath = System.getenv('ANDROID_KEYSTORE_FILE')
 
 android {
-    namespace = "ar.seriespelis.tv"
+    namespace = "ar.flix.tv"
     compileSdk = rootProject.ext.compileSdkVersion
     defaultConfig {
-        applicationId "ar.seriespelis.tv"
+        applicationId "ar.flix.tv"
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
         versionCode vMajor * 1000000 + vMinor * 1000 + vPatch

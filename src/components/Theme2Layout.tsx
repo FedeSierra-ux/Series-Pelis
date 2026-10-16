@@ -71,8 +71,8 @@ export function Theme2Layout() {
   return (
     <div className="app t2-app">
       <nav className="t2-rail" aria-label="Principal">
-        <Link to="/" className="t2-logo" aria-label="Series-Pelis, inicio">
-          SP
+        <Link to="/" className="t2-logo" aria-label="Flix, inicio">
+          <img src="/favicon.svg" alt="" />
         </Link>
         {RAIL.map((item) => (
           <RailLink key={item.to} item={item} forceActive={item.to === '/me' && inVos} />
@@ -84,9 +84,9 @@ export function Theme2Layout() {
       <header className="t2-top">
         <Link to="/" className="t2-brand">
           <span className="t2-logo t2-logo-sm" aria-hidden>
-            SP
+            <img src="/favicon.svg" alt="" />
           </span>
-          <span>Series-Pelis</span>
+          <span>Flix</span>
         </Link>
         <NavLink to="/search" className="t2-round" aria-label="Buscar">
           <Theme2Icon name="search" size={20} />

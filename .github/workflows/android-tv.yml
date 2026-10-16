@@ -1,7 +1,7 @@
 # Arma el APK de la app de Android TV / Fire TV (carpeta tv-app/).
 # - En cada push o PR que toque tv-app/: compila y deja el APK como "artifact" de la corrida.
 # - Con una etiqueta tv-v* (por ejemplo tv-v0.19.0): además lo publica en Releases, y queda en
-#   https://github.com/FedeSierra-ux/Series-Pelis/releases/latest/download/series-pelis-tv.apk
+#   https://github.com/FedeSierra-ux/Series-Pelis/releases/latest/download/flix-tv.apk
 #   (esa dirección es la que se escribe en Downloader, en la TV).
 #
 # Firma: con los secretos ANDROID_KEYSTORE_BASE64, ANDROID_KEYSTORE_PASSWORD, ANDROID_KEY_ALIAS
@@ -85,14 +85,14 @@ jobs:
           ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
         run: |
           ./gradlew assembleRelease --no-daemon
-          cp app/build/outputs/apk/release/app-release.apk "$RUNNER_TEMP/series-pelis-tv.apk"
+          cp app/build/outputs/apk/release/app-release.apk "$RUNNER_TEMP/flix-tv.apk"
 
       - name: Compilar (prueba)
         if: steps.keystore.outputs.file == ''
         working-directory: tv-app/android
         run: |
           ./gradlew assembleDebug --no-daemon
-          cp app/build/outputs/apk/debug/app-debug.apk "$RUNNER_TEMP/series-pelis-tv.apk"
+          cp app/build/outputs/apk/debug/app-debug.apk "$RUNNER_TEMP/flix-tv.apk"
 
       - name: Borrar la llave
         if: always() && steps.keystore.outputs.file != ''
@@ -100,8 +100,8 @@ jobs:
 
       - uses: actions/upload-artifact@v4
         with:
-          name: series-pelis-tv
-          path: ${{ runner.temp }}/series-pelis-tv.apk
+          name: flix-tv
+          path: ${{ runner.temp }}/flix-tv.apk
           if-no-files-found: error
 
   release:
@@ -114,12 +114,12 @@ jobs:
     steps:
       - uses: actions/download-artifact@v4
         with:
-          name: series-pelis-tv
+          name: flix-tv
       - uses: softprops/action-gh-release@v2
         with:
-          name: App de TV ${{ github.ref_name }}
-          files: series-pelis-tv.apk
+          name: Flix para TV ${{ github.ref_name }}
+          files: flix-tv.apk
           make_latest: true
           body: |
-            APK de la app de Android TV / Fire TV.
-            Para instalarlo en la TV con Downloader: https://github.com/${{ github.repository }}/releases/latest/download/series-pelis-tv.apk
+            APK de Flix para Android TV / Fire TV.
+            Para instalarlo en la TV con Downloader: https://github.com/${{ github.repository }}/releases/latest/download/flix-tv.apk

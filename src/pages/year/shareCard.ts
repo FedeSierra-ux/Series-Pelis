@@ -119,7 +119,7 @@ export async function renderShareCard(s: YearStats): Promise<Blob> {
   ctx.textBaseline = 'alphabetic'
   ctx.fillStyle = muted
   ctx.font = `700 34px ${FONT}`
-  ctx.fillText('SERIES-PELIS', PAD, 150)
+  ctx.fillText('FLIX', PAD, 150)
 
   ctx.fillStyle = text
   ctx.font = `900 150px ${FONT}`
@@ -218,7 +218,7 @@ export async function renderShareCard(s: YearStats): Promise<Blob> {
   ctx.fillStyle = muted
   ctx.font = `600 30px ${FONT}`
   ctx.textAlign = 'center'
-  ctx.fillText('Hecho con Series-Pelis', W / 2, H - 52)
+  ctx.fillText('Hecho con Flix', W / 2, H - 52)
   ctx.textAlign = 'left'
 
   return new Promise((resolve, reject) => canvas.toBlob((b) => (b ? resolve(b) : reject(new Error('No se pudo generar la imagen'))), 'image/png'))
@@ -228,10 +228,10 @@ export type ShareResult = 'shared' | 'downloaded' | 'cancelled'
 
 /** Compartir con archivo si el navegador puede (celular); si no, se descarga el PNG. */
 export async function shareOrDownload(blob: Blob, year: number, text: string): Promise<ShareResult> {
-  const file = new File([blob], `mi-${year}-series-pelis.png`, { type: 'image/png' })
+  const file = new File([blob], `mi-${year}-flix.png`, { type: 'image/png' })
   if (typeof navigator.canShare === 'function' && navigator.canShare({ files: [file] })) {
     try {
-      await navigator.share({ files: [file], title: `Mi ${year} en Series-Pelis`, text })
+      await navigator.share({ files: [file], title: `Mi ${year} en Flix`, text })
       return 'shared'
     } catch (err) {
       if (err instanceof DOMException && err.name === 'AbortError') return 'cancelled'

@@ -192,7 +192,7 @@ export function Login({ needsSetup }: { needsSetup: boolean }) {
     <main className="login" data-nav-scope data-no-screensaver>
       <div ref={boxRef} className="login-box">
         <header className="login-head">
-          <h1>Series-Pelis</h1>
+          <h1>Flix</h1>
           <p className="muted">{needsSetup ? 'Configurá el sitio con la clave del administrador.' : 'Entrá con tu casa para empezar.'}</p>
         </header>
 

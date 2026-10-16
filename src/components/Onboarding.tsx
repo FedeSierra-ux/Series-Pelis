@@ -35,7 +35,7 @@ function LanguagesStep() {
   const update = (patch: Partial<Settings>) => settingsStore.set((s) => ({ ...s, ...patch }))
   return (
     <>
-      <h2 id="ob-title">¡Hola! Dejemos Series-Pelis a tu gusto</h2>
+      <h2 id="ob-title">¡Hola! Dejemos Flix a tu gusto</h2>
       <p className="muted">Son 3 pasos cortos. Todo se puede cambiar después en Ajustes.</p>
       <h3>Idioma del audio</h3>
       <p className="muted small">Si un stream trae varias pistas, se elige la primera de estas. Tocá para sumar o sacar; el número es el orden.</p>

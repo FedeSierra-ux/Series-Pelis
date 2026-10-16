@@ -70,7 +70,7 @@ function toastText(s: AppUpdateState): string | undefined {
     case 'verifying':
       return 'Revisando la actualización…'
     case 'permission':
-      return 'Dale permiso a Series-Pelis para instalar apps y volvé: la actualización sigue sola'
+      return 'Dale permiso a Flix para instalar apps y volvé: la actualización sigue sola'
     case 'installer':
       return 'Tocá "Instalar" para terminar'
     case 'error':

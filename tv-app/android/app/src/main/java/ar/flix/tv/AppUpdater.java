@@ -1,4 +1,4 @@
-package ar.seriespelis.tv;
+package ar.flix.tv;
 
 import android.app.Activity;
 import android.content.ActivityNotFoundException;
@@ -56,7 +56,7 @@ final class AppUpdater {
     private static final String TAG = "SpUpdater";
     private static final String API = "https://api.github.com/repos/FedeSierra-ux/Series-Pelis/releases/latest";
     private static final String DOWNLOAD_PREFIX = "/fedesierra-ux/series-pelis/releases/download/";
-    private static final String ASSET = "series-pelis-tv.apk";
+    private static final String ASSET = "flix-tv.apk";
     private static final Pattern TAG_RE = Pattern.compile("^tv-v(\\d{1,3})\\.(\\d{1,3})\\.(\\d{1,3})$");
     private static final long CHECK_EVERY_MS = 6L * 60 * 60 * 1000;
     private static final long ERROR_RETRY_MS = 15L * 60 * 1000;
@@ -541,9 +541,9 @@ final class AppUpdater {
 
     private String manualPermissionText() {
         if (HomeRows.isFireTv(ctx)) {
-            return "Activalo a mano en Configuración → Mi Fire TV → Opciones para desarrolladores → Instalar apps desconocidas → Series-Pelis.";
+            return "Activalo a mano en Configuración → Mi Fire TV → Opciones para desarrolladores → Instalar apps desconocidas → Flix.";
         }
-        return "Activalo a mano en Ajustes → Apps → Acceso especial → Instalar apps desconocidas → Series-Pelis.";
+        return "Activalo a mano en Ajustes → Apps → Acceso especial → Instalar apps desconocidas → Flix.";
     }
 
     // ───────────────────────── red ─────────────────────────
@@ -578,7 +578,7 @@ final class AppUpdater {
             c.setInstanceFollowRedirects(false);
             c.setConnectTimeout(15_000);
             c.setReadTimeout(30_000);
-            c.setRequestProperty("User-Agent", "SeriesPelisApp/" + BuildConfig.VERSION_NAME);
+            c.setRequestProperty("User-Agent", "FlixApp/" + BuildConfig.VERSION_NAME);
             c.setRequestProperty("Accept", download ? "application/octet-stream" : "application/vnd.github+json");
             if (!download) c.setRequestProperty("X-GitHub-Api-Version", "2022-11-28");
             int code = c.getResponseCode();

@@ -63,8 +63,8 @@ export default defineConfig({
       registerType: 'prompt',
       includeAssets: ['favicon.svg', 'icon-192.png', 'icon-512.png'],
       manifest: {
-        name: 'Series-Pelis',
-        short_name: 'Series-Pelis',
+        name: 'Flix',
+        short_name: 'Flix',
         description: 'Tus pelis y series con tus addons de Stremio',
         lang: 'es-AR',
         start_url: '/',

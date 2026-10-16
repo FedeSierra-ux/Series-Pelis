@@ -1,4 +1,6 @@
-# Series-Pelis
+# Flix
+
+> Antes se llamaba Series-Pelis: el sitio, el repo y el proyecto de Cloudflare siguen con ese nombre.
 
 Tu plataforma personal para ver pelis y series con **tus addons de Stremio**, el **puntaje de IMDb** a la vista
 y un **historial** de todo lo que viste. Funciona en la PC, el celular y el navegador de la TV (se puede instalar como app).
@@ -147,8 +149,8 @@ hay que reinstalarlo cuando cambia la parte nativa.
 2. Habilitá "Instalar apps desconocidas" para Downloader (Fire TV: *Configuración → Mi Fire TV → Opciones
    para desarrolladores*; Android TV / Google TV: *Configuración → Apps → Seguridad*).
 3. En Downloader escribí:
-   `https://github.com/FedeSierra-ux/Series-Pelis/releases/latest/download/series-pelis-tv.apk`
-4. Instalá y abrí **Series-Pelis**. Vinculala con el código de la casa como cualquier aparato.
+   `https://github.com/FedeSierra-ux/Series-Pelis/releases/latest/download/flix-tv.apk`
+4. Instalá y abrí **Flix**. Vinculala con el código de la casa como cualquier aparato.
 
 **Armar una versión nueva**: el workflow `.github/workflows/android-tv.yml` compila el APK en cada cambio de
 `tv-app/` (queda como *artifact* de la corrida) y, al crear una etiqueta `tv-vX.Y.Z`, lo publica en Releases.

@@ -1,4 +1,4 @@
-package ar.seriespelis.tv;
+package ar.flix.tv;
 
 import android.content.ContentResolver;
 import android.content.Context;

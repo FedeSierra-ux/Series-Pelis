@@ -21,7 +21,7 @@ class Boundary extends Component<Props, State> {
   }
 
   componentDidCatch(error: unknown, info: ErrorInfo) {
-    console.error('[Series-Pelis] Error en pantalla:', error, info.componentStack)
+    console.error('[Flix] Error en pantalla:', error, info.componentStack)
     this.setState({ stack: info.componentStack ?? '' })
   }
 

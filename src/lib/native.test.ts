@@ -4,9 +4,9 @@ import { detectPlatform } from './platform'
 
 // Lo que la app de Android TV (tv-app/) suma al User-Agent del WebView.
 const TV_UA =
-  'Mozilla/5.0 (Linux; Android 12; BRAVIA 4K VH2 Build/STT1.211025.001; wv) AppleWebKit/537.36 (KHTML, like Gecko) Version/4.0 Chrome/140.0.0.0 Mobile Safari/537.36 SeriesPelisApp/0.19.0 AndroidTV'
+  'Mozilla/5.0 (Linux; Android 12; BRAVIA 4K VH2 Build/STT1.211025.001; wv) AppleWebKit/537.36 (KHTML, like Gecko) Version/4.0 Chrome/140.0.0.0 Mobile Safari/537.36 FlixApp/0.22.0 AndroidTV'
 const PHONE_UA =
-  'Mozilla/5.0 (Linux; Android 14; Pixel 8; wv) AppleWebKit/537.36 (KHTML, like Gecko) Version/4.0 Chrome/140.0.0.0 Mobile Safari/537.36 SeriesPelisApp/0.19.0'
+  'Mozilla/5.0 (Linux; Android 14; Pixel 8; wv) AppleWebKit/537.36 (KHTML, like Gecko) Version/4.0 Chrome/140.0.0.0 Mobile Safari/537.36 FlixApp/0.22.0'
 
 afterEach(() => {
   vi.unstubAllGlobals()

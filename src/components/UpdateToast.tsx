@@ -30,7 +30,7 @@ export function UpdateToast() {
 
   return (
     <div ref={box} className="update-toast" role="status" aria-live="polite" onKeyDown={onKeyDown}>
-      <span className="update-toast-text">Hay una versión nueva de Series-Pelis</span>
+      <span className="update-toast-text">Hay una versión nueva de Flix</span>
       <div className="update-toast-actions">
         <button type="button" className="btn btn-primary btn-small" onClick={() => void updateServiceWorker(true)}>
           Actualizar

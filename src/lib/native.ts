@@ -80,7 +80,7 @@ interface CapacitorLike {
   Plugins?: { SpNative?: SpNativePlugin }
 }
 
-const APP_UA = /\bSeriesPelisApp\//
+const APP_UA = /\bFlixApp\//
 
 function capacitor(): CapacitorLike | undefined {
   return typeof window === 'undefined' ? undefined : (window as Window & { Capacitor?: CapacitorLike }).Capacitor
