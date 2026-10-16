@@ -1,6 +1,6 @@
 # Arma el APK de la app de Android TV / Fire TV (carpeta tv-app/).
 # - En cada push o PR que toque tv-app/: compila y deja el APK como "artifact" de la corrida.
-# - Con una etiqueta tv-v* (por ejemplo tv-v0.19.0): además lo publica en Releases, y queda en
+# - Con una etiqueta flix-v* (por ejemplo flix-v0.22.0): además lo publica en Releases, y queda en
 #   https://github.com/FedeSierra-ux/Series-Pelis/releases/latest/download/flix-tv.apk
 #   (esa dirección es la que se escribe en Downloader, en la TV).
 #
@@ -16,7 +16,7 @@ on:
       - 'tv-app/**'
       - '.github/workflows/android-tv.yml'
     tags:
-      - 'tv-v*'
+      - 'flix-v*'
   pull_request:
     paths:
       - 'tv-app/**'
@@ -53,9 +53,9 @@ jobs:
       - run: npm ci
       # La app se actualiza sola comparando la etiqueta con su versión (v0.21): tienen que coincidir.
       - name: Etiqueta = versión de tv-app
-        if: startsWith(github.ref, 'refs/tags/tv-v')
+        if: startsWith(github.ref, 'refs/tags/flix-v')
         run: |
-          want="tv-v$(node -p "require('./package.json').version")"
+          want="flix-v$(node -p "require('./package.json').version")"
           if [ "$GITHUB_REF_NAME" != "$want" ]; then
             echo "::error::La etiqueta $GITHUB_REF_NAME no coincide con la versión de tv-app/package.json ($want)."
             exit 1
@@ -107,7 +107,7 @@ jobs:
   release:
     name: Publicar en Releases
     needs: apk
-    if: startsWith(github.ref, 'refs/tags/tv-v')
+    if: startsWith(github.ref, 'refs/tags/flix-v')
     runs-on: ubuntu-latest
     permissions:
       contents: write
@@ -115,9 +115,12 @@ jobs:
       - uses: actions/download-artifact@v4
         with:
           name: flix-tv
+      # flix-v0.22.0 → v0.22.0, para el título del Release.
+      - id: version
+        run: echo "v=${GITHUB_REF_NAME#flix-}" >> "$GITHUB_OUTPUT"
       - uses: softprops/action-gh-release@v2
         with:
-          name: Flix para TV ${{ github.ref_name }}
+          name: Flix para TV ${{ steps.version.outputs.v }}
           files: flix-tv.apk
           make_latest: true
           body: |

@@ -57,7 +57,7 @@ final class AppUpdater {
     private static final String API = "https://api.github.com/repos/FedeSierra-ux/Series-Pelis/releases/latest";
     private static final String DOWNLOAD_PREFIX = "/fedesierra-ux/series-pelis/releases/download/";
     private static final String ASSET = "flix-tv.apk";
-    private static final Pattern TAG_RE = Pattern.compile("^tv-v(\\d{1,3})\\.(\\d{1,3})\\.(\\d{1,3})$");
+    private static final Pattern TAG_RE = Pattern.compile("^flix-v(\\d{1,3})\\.(\\d{1,3})\\.(\\d{1,3})$");
     private static final long CHECK_EVERY_MS = 6L * 60 * 60 * 1000;
     private static final long ERROR_RETRY_MS = 15L * 60 * 1000;
     private static final long MAX_APK = 200L * 1024 * 1024;
