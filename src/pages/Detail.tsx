@@ -16,6 +16,7 @@ import { remainingLabel } from '../lib/remaining'
 import { takeReturnVideo } from '../lib/returnVideo'
 import { hideTitleSynopsis } from '../lib/spoilers'
 import { findResumeStream } from '../lib/nextEpisode'
+import { hasSeriesDetails, seriesFacts } from '../lib/seriesDetails'
 import { lastSourceStore, progressStore, RESUME_MIN_S, setWatched, settingsStore, toggleWatchlist, useStore, watchlistStore } from '../lib/store'
 import {
   getDetails,
@@ -42,6 +43,7 @@ import { HeroTrailer, useBackdropTrailerAllowed } from './detail/HeroTrailer'
 import type { MoreItem } from './detail/MoreMenu'
 import { safeMeta } from './detail/safeData'
 import { SectionBoundary } from './detail/SectionBoundary'
+import { SeriesDetailsPanel } from './detail/SeriesDetailsPanel'
 import { StreamList, type DetailLocationState } from './detail/StreamList'
 import { isYtId, originalTitle } from './detail/trailers'
 import { NARROW_QUERY, useMediaQuery } from './detail/useMediaQuery'
@@ -310,6 +312,9 @@ function DetailPage({ type, id, onRetry }: { type: string; id: string; onRetry: 
   const focusVideoId = selectedVideoId ?? (seasonVideos.find((v) => !progress[v.id]?.watched) ?? seasonVideos[0])?.id
   // Si hay fila de reparto con fotos, el elenco en texto sobra.
   const hasTmdbCast = !!(type === 'movie' ? tmdb?.credits?.cast : tmdb?.aggregate_credits?.cast)?.length
+  // Series: "Detalles" (reparto, creación, país y dónde ver). Sin TMDB, con lo que traiga Cinemeta.
+  const seriesInfo = isSeries ? seriesFacts(tmdb, { writer: meta.writer, country: meta.country }) : undefined
+  const seriesCastCount = tmdb?.aggregate_credits?.cast?.length ?? 0
   const seriesProgress = isSeries && !!lastWatched
   const continueEp = isSeries ? episodeToContinue(videos, progress) : undefined
   const firstEp = isSeries ? firstEpisode(videos) : undefined
@@ -513,6 +518,17 @@ function DetailPage({ type, id, onRetry }: { type: string; id: string; onRetry: 
         </SectionBoundary>
       ),
     })
+  // Última pestaña, solo en series y si tiene algo (sin TMDB muchas veces no hay nada).
+  if (seriesInfo && hasSeriesDetails(seriesInfo, seriesCastCount))
+    tabs.push({
+      id: 'details',
+      label: 'Detalles',
+      content: (
+        <SectionBoundary what="los detalles">
+          <SeriesDetailsPanel tmdb={seriesCastCount > 0 ? tmdb : undefined} facts={seriesInfo} peopleIndex={peopleIndex} />
+        </SectionBoundary>
+      ),
+    })
   return (
     <div className="page detail">
       <section className="detail-hero" style={{ backgroundImage: bg ? `url(${bg})` : undefined }}>
@@ -559,12 +575,10 @@ function DetailPage({ type, id, onRetry }: { type: string; id: string; onRetry: 
         </div>
       </section>
 
-      {/* El reparto va fuera de las pestañas (decisión del usuario); en las pelis, arriba de las fuentes (v0.24). */}
+      {/* En las pelis el reparto va fuera de las pestañas, arriba de las fuentes (v0.24); en las series, en "Detalles" (v0.25). */}
       {tmdb && !isSeries && <CastRow details={tmdb} type={tmdbType} />}
 
       <DetailTabs tabs={tabs} active={activeTab} onChange={setTab} onExitUp={focusHeroActions} />
-
-      {tmdb && isSeries && <CastRow details={tmdb} type={tmdbType} />}
 
       {trailer && <TrailerPlayer ytId={trailer.ytId} kind={trailer.kind} title={name} backdrop={bg} onClose={() => setTrailer(undefined)} />}
     </div>
