@@ -15,6 +15,11 @@ export interface NativeInfo {
   /** v0.21: la fila "A continuación" del inicio de Android TV (TvProvider) anda en este aparato. */
   home?: boolean
   fireTv?: boolean
+  /**
+   * v0.25: motor de torrents de la app, `http://127.0.0.1:<puerto>/<token>`. Un torrent se pide en
+   * `<base>/<infoHash>/<fileIdx>` (como el servidor de Stremio) y solo lo abre el reproductor nativo.
+   */
+  torrent?: string
 }
 
 export interface NativeUpdateInfo {

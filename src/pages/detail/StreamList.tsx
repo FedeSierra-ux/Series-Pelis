@@ -5,6 +5,7 @@ import { useAddons } from '../../lib/hooks'
 import { isOnline } from '../../lib/online'
 import { lastSourceStore, settingsStore, useStore } from '../../lib/store'
 import { analyzeStreams, lastSourceOf, playable, streamKey, type RankedStream } from '../../lib/streamPicker'
+import { useTorrentServer } from '../../lib/torrentServer'
 import type { AddonStreams, InstalledAddon, Meta, Stream, Video } from '../../lib/types'
 import { createRecentSet } from './autoPlayed'
 import { episodeNumber } from './episodes'
@@ -47,6 +48,8 @@ const autoPlayed = createRecentSet(50)
 export function StreamList({ meta, video, nextVideoId }: { meta: Meta; video?: Video; nextVideoId?: string }) {
   const addons = useAddons()
   const settings = useStore(settingsStore)
+  // Con qué se abren los torrents: el servidor de Stremio de Ajustes o el motor de la app de Android.
+  const server = useTorrentServer()
   const lastSources = useStore(lastSourceStore)
   const navigate = useNavigate()
   const location = useLocation()
@@ -72,10 +75,7 @@ export function StreamList({ meta, video, nextVideoId }: { meta: Meta; video?: V
   const groups = useMemo(() => (fetched && result ? safeGroups(result.groups) : []), [fetched, result])
   const rules = settings.sourceRules
   const last = rules.rememberLast ? lastSources[meta.id] : undefined
-  const { ranked, hidden } = useMemo(
-    () => analyzeStreams(groups, rules, last, settings.streamingServerUrl),
-    [groups, rules, last, settings.streamingServerUrl],
-  )
+  const { ranked, hidden } = useMemo(() => analyzeStreams(groups, rules, last, server), [groups, rules, last, server])
   const loading = !fetched || groups.some((g) => g.loading)
   const hasPlayable = ranked.length > 0
 
@@ -174,7 +174,7 @@ export function StreamList({ meta, video, nextVideoId }: { meta: Meta; video?: V
   /** `hiddenReason`: está en "Ocultos por tus filtros" (se puede reproducir igual). */
   const renderItem = (s: Stream, i: number, addon: InstalledAddon, recommended: boolean, hiddenReason?: string, key: string | number = i) => {
     const { name, lines } = streamLabel(s)
-    const p = playable(s, settings.streamingServerUrl)
+    const p = playable(s, server)
     const content = (
       <>
         {recommended && <span className="stream-badge">Recomendado</span>}
@@ -238,7 +238,7 @@ export function StreamList({ meta, video, nextVideoId }: { meta: Meta; video?: V
         if (bestIndex >= 0) items.sort((a, b) => Number(b.i === bestIndex) - Number(a.i === bestIndex))
         // Los torrents que no se pueden abrir (sin debrid ni servidor de Stremio) van plegados, así no tapan los que sí andan.
         const isDeadTorrent = (s: Stream) => {
-          const p = playable(s, settings.streamingServerUrl)
+          const p = playable(s, server)
           return !p.url && !p.external && !!s.infoHash
         }
         const usable = items.filter(({ s }) => !isDeadTorrent(s))

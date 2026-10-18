@@ -33,6 +33,7 @@ import { HousesSettings } from './settings/HousesSettings'
 import { SettingsBlock, SettingsIndex, WIDE_QUERY, goToSection, useActiveSection, useMediaQuery, type SettingsSectionDef } from './settings/SettingsLayout'
 import { importErrorText } from '../lib/errors'
 import { isNativeApp } from '../lib/native'
+import { useTorrentEngine } from '../lib/torrentServer'
 import './settings/settings-layout.css'
 
 const DEFAULT_SERVER = 'http://127.0.0.1:11470'
@@ -173,6 +174,8 @@ function AddonsSection() {
 function PlaybackSection() {
   const settings = useStore(settingsStore)
   const [test, setTest] = useState<string>()
+  // App de Android con motor de torrents propio (v0.25): el servidor de Stremio pasa a ser opcional.
+  const engine = useTorrentEngine()
 
   const testServer = async () => {
     const server = settings.streamingServerUrl || DEFAULT_SERVER
@@ -181,7 +184,8 @@ function PlaybackSection() {
       // Sin `AbortSignal.timeout`: en las TVs viejas no existe y siempre decía "No responde" (auditoría #9).
       const res = await fetchWithTimeout(`${server.replace(/\/+$/, '')}/settings`, { timeoutMs: 4000 })
       setTest(res.ok ? '✓ Conectado al servidor de Stremio' : `Respondió ${res.status}`)
-      if (res.ok && !settings.streamingServerUrl) settingsStore.set((s) => ({ ...s, streamingServerUrl: server }))
+      // Con el motor de la app no se guarda solo: una dirección puesta le ganaría al motor.
+      if (res.ok && !settings.streamingServerUrl && !engine) settingsStore.set((s) => ({ ...s, streamingServerUrl: server }))
     } catch {
       setTest('No responde. ¿Está Stremio abierto en esta PC?')
     }
@@ -203,10 +207,18 @@ function PlaybackSection() {
 
       <Advanced>
       <h3>Servidor de streaming de Stremio (opcional, experimental)</h3>
-      <p className="muted">
-        Solo en la PC: si tenés Stremio abierto, la app puede usar su servidor local para reproducir torrents sin debrid.
-        En el celular y la TV usá addons con Real-Debrid o TorBox.
-      </p>
+      {engine ? (
+        <p className="muted">
+          En la app de Android los torrents se reproducen solos con el motor integrado; este campo es opcional. Si ponés una
+          dirección, se usa esa en vez del motor.
+          {!settings.nativePlayer && ' El motor necesita el reproductor de Android (Ajustes → Reproductor).'}
+        </p>
+      ) : (
+        <p className="muted">
+          Solo en la PC: si tenés Stremio abierto, la app puede usar su servidor local para reproducir torrents sin debrid.
+          En el celular y la TV usá addons con Real-Debrid o TorBox.
+        </p>
+      )}
       <div className="inline-form">
         <input
           type="url"

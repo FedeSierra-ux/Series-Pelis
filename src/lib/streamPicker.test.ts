@@ -340,3 +340,70 @@ describe('siguiente episodio en el mismo idioma (auditoría #7)', () => {
     expect(rankStreams([broken, group(A, [s('1080p')])], rules(), undefined, '')).toHaveLength(1)
   })
 })
+
+describe('debrid primero (v0.25)', () => {
+  const SERVER = 'http://127.0.0.1:11470'
+  const TIO = addon('Torrentio')
+  const RD = addon('Debrid')
+  // Torrent 1080p de la misma fuente de antes (bingeGroup) y en el mismo idioma (latino).
+  const torrent = (hash: string, quality = '1080p', extra: Partial<Stream> = {}): Stream => ({
+    name: `Torrentio\n${quality}`,
+    title: `Serie.S01E02.${quality}.WEB-DL 🇲🇽 Latino`,
+    infoHash: hash,
+    fileIdx: 0,
+    behaviorHints: { bingeGroup: 'tio|1080p' },
+    ...extra,
+  })
+  const last: LastSource = { addonUrl: TIO.transportUrl, bingeGroup: 'tio|1080p', streamName: 'Torrentio\n1080p', streamTitle: '🇲🇽 Latino', at: 0 }
+
+  it('un debrid 720p le gana a un torrent 1080p que es la misma fuente de antes y en el mismo idioma', () => {
+    const groups = [group(TIO, [torrent('abc')]), group(RD, [s('Debrid 720p', { title: 'Serie.S01E02.720p 🇬🇧 English' })])]
+    const ranked = rankStreams(groups, rules({ preferKeywords: ['latino'] }), last, SERVER)
+    expect(ranked.map((r) => r.stream.name)).toEqual(['Debrid 720p', 'Torrentio\n1080p'])
+    // El torrent sigue siendo "la misma fuente": solo queda segundo.
+    expect(ranked[1].match).toBe('binge')
+  })
+
+  it('el torrent se elige si es lo único reproducible', () => {
+    const groups = [group(TIO, [torrent('abc')]), group(RD, [{ name: 'Sin servidor', infoHash: 'zzz' }, { name: 'YouTube', ytId: 'x' }])]
+    const best = pickBest(groups, rules(), last, SERVER)
+    expect(best?.stream.infoHash).toBe('abc')
+    expect(best?.url).toBe(`${SERVER}/abc/0`)
+  })
+
+  it('entre torrents se mantiene el orden de siempre (calidad, misma fuente, addon)', () => {
+    const groups = [group(TIO, [torrent('a4k', '4k', { behaviorHints: {} }), torrent('a720', '720p', { behaviorHints: {} }), torrent('a1080', '1080p')])]
+    expect(rankStreams(groups, rules(), last, SERVER).map((r) => r.stream.infoHash)).toEqual(['a1080', 'a720', 'a4k'])
+  })
+
+  it('sin servidor el torrent no se reproduce y dice por qué', () => {
+    const p = playable(torrent('abc'), { url: '', missing: 'Torrent: abrí Stremio en la PC (servidor local) o usá un addon con debrid' })
+    expect(p.url).toBeUndefined()
+    expect(p.reason).toBe('Torrent: abrí Stremio en la PC (servidor local) o usá un addon con debrid')
+    // Con un texto suelto (como antes de la v0.25), el mensaje de siempre.
+    expect(playable(torrent('abc'), '').reason).toMatch(/servidor de Stremio/)
+    expect(rankStreams([group(TIO, [torrent('abc')])], rules(), last, { url: '' })).toEqual([])
+  })
+
+  it('un directo que no se puede reproducir no tapa a un torrent igual (repetidos)', () => {
+    const file = { filename: 'Serie.S01E02.1080p.WEB-DL.mkv', videoSize: 2e9 }
+    const proxied = s('Proxy 1080p', { behaviorHints: { ...file, proxyHeaders: { request: { Referer: 'https://x' } } } })
+    const groups = [group(RD, [proxied]), group(TIO, [torrent('abc', '1080p', { behaviorHints: file })])]
+    const { ranked, hidden } = analyzeStreams(groups, rules(), undefined, SERVER)
+    expect(ranked.map((r) => r.stream.infoHash)).toEqual(['abc'])
+    expect(hidden.get(streamKey(0, 0))).toBe('Repetido')
+  })
+
+  it('con el motor de la app, la URL lleva trackers y nombre de archivo', () => {
+    const stream = torrent('abc', '1080p', {
+      sources: ['tracker:udp://tracker.example:1337/announce', 'dht:abc'],
+      behaviorHints: { filename: 'Serie S01E02.mkv' },
+    })
+    const engine = { url: 'http://127.0.0.1:8090/tok', engine: true }
+    expect(playable(stream, engine).url).toBe(
+      'http://127.0.0.1:8090/tok/abc/0?tr=udp%3A%2F%2Ftracker.example%3A1337%2Fannounce&f=Serie%20S01E02.mkv',
+    )
+    // El servidor de Stremio no los recibe.
+    expect(playable(stream, SERVER).url).toBe(`${SERVER}/abc/0`)
+  })
+})

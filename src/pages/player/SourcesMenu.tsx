@@ -2,8 +2,9 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import { useLocation, useNavigate } from 'react-router-dom'
 import { getStreams } from '../../lib/addons'
 import { useAddons } from '../../lib/hooks'
-import { lastSourceStore, settingsStore, useStore } from '../../lib/store'
+import { lastSourceStore, settingsStore } from '../../lib/store'
 import { lastSourceOf, playable } from '../../lib/streamPicker'
+import { useTorrentServer } from '../../lib/torrentServer'
 import type { AddonStreams, InstalledAddon, Stream } from '../../lib/types'
 import type { PlayState } from '../Detail'
 
@@ -61,7 +62,7 @@ function lines(s: Stream) {
 /** Opciones del menú "Fuentes": los streams reproducibles del video, con la actual marcada. */
 export function SourcesMenu({ state, onPick }: { state: PlayState; onPick: (pick: Pick) => void }) {
   const addons = useAddons()
-  const server = useStore(settingsStore).streamingServerUrl
+  const server = useTorrentServer()
   const [groups, setGroups] = useState<AddonStreams[]>()
   const ref = useRef<HTMLSpanElement>(null)
   const videoId = state.video?.id ?? state.meta.id

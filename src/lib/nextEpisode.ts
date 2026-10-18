@@ -1,7 +1,8 @@
 import type { PlayState } from '../pages/Detail'
 import { getMeta, getStreams, prefetchMeta } from './addons'
 import { addonsStore, lastSourceStore, progressStore, settingsStore, type LastSource, type SourceRules, type WatchEntry } from './store'
-import { lastSourceOf, rankStreams, type RankedStream } from './streamPicker'
+import { lastSourceOf, rankStreams, type RankedStream, type TorrentServerArg } from './streamPicker'
+import { torrentServerReady } from './torrentServer'
 import type { AddonStreams, InstalledAddon, Meta, Video } from './types'
 import { episodeNumber, releaseDate } from './upNext'
 
@@ -85,7 +86,7 @@ function pickStream(
   videoId: string,
   rules: SourceRules,
   ref: LastSource | undefined,
-  server: string,
+  server: TorrentServerArg,
   signal?: AbortSignal,
 ): Promise<RankedStream | undefined> {
   return new Promise<RankedStream | undefined>((resolve) => {
@@ -110,8 +111,9 @@ function pickStream(
     cancel = getStreams(addons, type, videoId, (groups) => {
       latest = groups
       const top = rankStreams(groups, rules, ref, server)[0]
-      // Mismo bingeGroup: no hay nada mejor que esperar (su addon ya respondió).
-      if (top?.match === 'binge' || groups.every((g) => !g.loading)) finish()
+      // Mismo bingeGroup con enlace directo: no hay nada mejor que esperar (su addon ya respondió). Si es un
+      // torrent, un addon con debrid que todavía no respondió le ganaría: se espera como con el resto.
+      if ((top?.match === 'binge' && !!top.stream.url) || groups.every((g) => !g.loading)) finish()
       else if (top && !grace) grace = setTimeout(finish, GRACE_MS)
     })
     if (done) cancel()
@@ -138,7 +140,8 @@ function rememberSource(metaId: string, best: RankedStream, rules: SourceRules) 
 export async function findNextStream(state: PlayState): Promise<PlayState | undefined> {
   if (!state.nextVideoId || !state.video) return undefined
   const addons = addonsStore.get()
-  const { sourceRules: rules, streamingServerUrl: server } = settingsStore.get()
+  const { sourceRules: rules } = settingsStore.get()
+  const server = await torrentServerReady()
   const meta: Meta = await getMeta(addons, state.meta.type, state.meta.id)
   const next = locateNextEpisode(meta.videos, state.nextVideoId)
   if (!next) return undefined
@@ -172,7 +175,8 @@ export interface ResumeTarget {
  */
 export async function findResumeStream(target: ResumeTarget, signal?: AbortSignal): Promise<PlayState | undefined> {
   const addons = addonsStore.get()
-  const { sourceRules: rules, streamingServerUrl: server } = settingsStore.get()
+  const { sourceRules: rules } = settingsStore.get()
+  const server = await torrentServerReady()
   const meta: Meta = await getMeta(addons, target.type, target.metaId)
   if (signal?.aborted) return undefined
   const videos = meta.videos ?? []

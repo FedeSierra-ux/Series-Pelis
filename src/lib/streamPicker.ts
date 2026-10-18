@@ -1,13 +1,22 @@
 import { streamingServerUrl } from './addons'
 import { sameAddon } from './addonKey'
 import type { LastSource, SourceRules } from './store'
+import type { TorrentServer } from './torrentServer'
 import type { AddonStreams, InstalledAddon, Stream } from './types'
 
 // Elección automática de stream: funciones puras que puntúan los streams según las
 // reglas del usuario y la última fuente que usó en ese título.
 
+/**
+ * Servidor para los torrents: el que da `useTorrentServer()` / `torrentServer()`. Un texto suelto es la URL del
+ * servidor de Stremio (como antes de la v0.25).
+ */
+export type TorrentServerArg = string | TorrentServer
+
+const asServer = (server: TorrentServerArg): TorrentServer => (typeof server === 'string' ? { url: server } : server)
+
 /** Cómo se va a reproducir este stream en la app, o por qué no se puede. */
-export function playable(s: Stream, server: string): { url?: string; external?: string; reason?: string } {
+export function playable(s: Stream, server: TorrentServerArg): { url?: string; external?: string; reason?: string } {
   // El navegador no puede mandar cabeceras propias (Referer, Origin, cookies…): eso solo lo hace
   // el servidor de Stremio o un reproductor externo.
   if (needsProxyHeaders(s)) return { reason: 'Necesita cabeceras especiales: abrilo en un reproductor externo' }
@@ -15,8 +24,9 @@ export function playable(s: Stream, server: string): { url?: string; external?: 
   if (s.ytId) return { external: `https://www.youtube.com/watch?v=${s.ytId}` }
   if (s.externalUrl) return { external: s.externalUrl }
   if (s.infoHash) {
-    const url = streamingServerUrl(server, s)
-    return url ? { url } : { reason: 'Torrent: necesita el servidor de Stremio (ver Ajustes) o un addon con debrid' }
+    const srv = asServer(server)
+    const url = streamingServerUrl(srv.url, s, srv.engine)
+    return url ? { url } : { reason: srv.missing ?? 'Torrent: necesita el servidor de Stremio (ver Ajustes) o un addon con debrid' }
   }
   return { reason: 'Formato no soportado' }
 }
@@ -266,7 +276,7 @@ export interface StreamAnalysis {
 }
 
 /** Puntúa todos los streams y separa los que esconden los filtros (incluidos los repetidos). */
-export function analyzeStreams(groups: AddonStreams[], rules: SourceRules, last: LastSource | undefined, server: string): StreamAnalysis {
+export function analyzeStreams(groups: AddonStreams[], rules: SourceRules, last: LastSource | undefined, server: TorrentServerArg): StreamAnalysis {
   const hidden = new Map<string, string>()
   const candidates: (Omit<RankedStream, 'url'> & { url?: string })[] = []
   const preferred = rules.preferredQuality
@@ -297,13 +307,17 @@ export function analyzeStreams(groups: AddonStreams[], rules: SourceRules, last:
       score += 80 * rules.preferKeywords.filter((kw) => hasKeyword(text, kw)).length
       if (rules.hdr === 'prefer' && isHdr(stream)) score += 80
       if (CACHED_MARKERS.test(text)) score += 20
-      // Lo que el navegador probablemente no reproduce (MKV/HEVC) o depende del servidor local va después.
+      // Lo que el navegador probablemente no reproduce (MKV/HEVC) va después.
       if (stream.behaviorHints?.notWebReady) score -= 40
-      if (!stream.url) score -= 25
       candidates.push({ addon: g.addon, stream, url, score, match, quality, addonIndex, streamIndex })
     })
   })
-  candidates.sort((a, b) => b.score - a.score || a.addonIndex - b.addonIndex || a.streamIndex - b.streamIndex)
+  // Debrid primero (v0.25): cualquier stream con enlace directo va antes que cualquier torrent (infoHash sin
+  // url), aunque el torrent sea la misma fuente de antes o esté en el idioma de antes. Un torrent se elige
+  // solo si no hay nada directo reproducible; entre torrents, el orden de siempre.
+  // Los que no se pueden reproducir (sin `url`) siguen al final, después de los torrents.
+  const direct = (c: (typeof candidates)[number]) => Number(!!c.url && !!c.stream.url)
+  candidates.sort((a, b) => direct(b) - direct(a) || b.score - a.score || a.addonIndex - b.addonIndex || a.streamIndex - b.streamIndex)
   const seen = new Set<string>()
   const ranked: RankedStream[] = []
   for (const c of candidates) {
@@ -321,7 +335,7 @@ export function analyzeStreams(groups: AddonStreams[], rules: SourceRules, last:
 }
 
 /** Streams reproducibles en la app, del mejor al peor según las reglas. Los excluidos no aparecen. */
-export function rankStreams(groups: AddonStreams[], rules: SourceRules, last: LastSource | undefined, server: string): RankedStream[] {
+export function rankStreams(groups: AddonStreams[], rules: SourceRules, last: LastSource | undefined, server: TorrentServerArg): RankedStream[] {
   return analyzeStreams(groups, rules, last, server).ranked
 }
 
@@ -329,7 +343,7 @@ export function pickBest(
   groups: AddonStreams[],
   rules: SourceRules,
   last: LastSource | undefined,
-  server: string,
+  server: TorrentServerArg,
 ): RankedStream | undefined {
   return rankStreams(groups, rules, last, server)[0]
 }
