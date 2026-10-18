@@ -1,5 +1,17 @@
 # Changelog
 
+## [0.22.3] - 2026-10-18
+
+### Cambiado
+- **Modo sin spoilers prendido de fábrica**: viene tildado en las casas nuevas y se prende una sola vez en las que
+  ya lo tenían apagado. Si después alguien lo destilda en Ajustes, queda destildado para toda la casa (no se vuelve
+  a prender solo). "Ocultar también lo que no empezaste" sigue apagado de fábrica.
+
+### Arreglado
+- **Sincronización de ajustes nuevos**: cuando un aparato se actualiza después que otro, los ajustes que trae la
+  versión nueva ya no pisan lo que la casa eligió en el servidor (van con el valor de fábrica y gana lo de la casa).
+  La primera vez que abre la versión nueva, el aparato vuelve a bajar todos los ajustes de la casa.
+
 ## [0.22.2] - 2026-10-18
 
 ### Cambiado

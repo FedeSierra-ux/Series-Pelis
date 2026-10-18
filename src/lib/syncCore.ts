@@ -20,6 +20,11 @@ export interface SyncAdapter<T = unknown> {
   apply(state: T, changes: Record<string, unknown | null>): T
   /** Hora propia de una fila (ej. `updatedAt`): en la primera sincronización decide quién gana. */
   time?(value: unknown): number | undefined
+  /**
+   * Ajustes: una fila que este aparato nunca anotó es un campo nuevo de esta versión y su valor es el de
+   * fábrica, no un cambio. Va con hora 0, así lo que la casa ya tenga en el servidor gana.
+   */
+  newKeysAreDefaults?: boolean
 }
 
 export interface Pending {
@@ -39,6 +44,8 @@ export interface SyncState {
   pending: Record<string, Record<string, Pending>>
   /** v0.18: lo del perfil va en un estado aparte. Un estado de la v0.17 no lo tiene (ver `splitState`). */
   split?: boolean
+  /** v0.22.3: versión de las filas que conoce este estado (ver `upgradeSchema`). */
+  schema?: number
 }
 
 export interface ServerItem {
@@ -69,6 +76,17 @@ export function splitState(state: SyncState, names: readonly string[]): SyncStat
 }
 
 /**
+ * Una versión vieja ignora (y pierde) las filas de campos que no conoce, y su cursor ya pasó por ellas. Si el
+ * estado es de antes de `schema`, se baja todo de nuevo una vez. Devuelve si hubo que hacerlo.
+ */
+export function upgradeSchema(state: SyncState, schema: number): boolean {
+  if ((state.schema ?? 0) >= schema) return false
+  state.schema = schema
+  state.cursor = ''
+  return true
+}
+
+/**
  * Anota como pendiente lo que cambió en los stores desde la última vez. `canPush` dice qué alcances puede
  * cambiar este aparato (los addons, solo el admin): lo demás no se anota y lo del servidor manda.
  * Devuelve cuántas filas cambiaron.
@@ -84,9 +102,10 @@ export function capture(state: SyncState, adapters: SyncAdapter[], now: number, 
       if (value === undefined) continue
       const json = JSON.stringify(value)
       if (shadow[k] === json) continue
+      const isDefault = a.newKeysAreDefaults && shadow[k] === undefined
       shadow[k] = json
       // La primera vez, lo de acá lleva su propia hora (o 0): así lo más nuevo de cada lado queda.
-      pending[k] = { v: json, u: state.synced ? now : Math.max(0, a.time?.(value) ?? 0) }
+      pending[k] = { v: json, u: state.synced && !isDefault ? now : Math.max(0, a.time?.(value) ?? 0) }
       changed++
     }
     for (const k of Object.keys(shadow)) {
@@ -252,6 +271,7 @@ export function fieldsAdapter<S extends object>(scope: SyncScope, name: string, 
     get: store.get,
     set: (fn) => store.set(fn),
     subscribe: store.subscribe,
+    newKeysAreDefaults: true,
     toItems: (s) => Object.fromEntries(fields.map((f) => [f, s[f]])),
     apply: (s, changes) => {
       const out = { ...s } as Record<string, unknown>

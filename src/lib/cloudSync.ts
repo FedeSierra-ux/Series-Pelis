@@ -4,6 +4,7 @@ import { CINEMETA_ADDON, cleanManifest } from './addons'
 import { getAuth, reportUnauthorized, subscribeAuth, type AuthState } from './auth'
 import {
   addonsStore,
+  applyHouseDefaults,
   diaryStore,
   forgetAddonData,
   goalsStore,
@@ -16,7 +17,7 @@ import {
   watchlistStore,
   type Settings,
 } from './store'
-import { applyItems, capture, emptyState, enforceReadOnly, fieldsAdapter, markSent, outgoing, pendingCount, recordAdapter, splitState, type ServerItem, type SyncAdapter, type SyncScope, type SyncState } from './syncCore'
+import { applyItems, capture, emptyState, enforceReadOnly, fieldsAdapter, markSent, outgoing, pendingCount, recordAdapter, splitState, upgradeSchema, type ServerItem, type SyncAdapter, type SyncScope, type SyncState } from './syncCore'
 import { cleanProfile, MAIN_PROFILE, PROFILE_STORES, type Profile } from './profileModel'
 import { activeProfileId } from './profiles'
 import type { DiaryEntry, DiaryState } from './diary'
@@ -44,6 +45,7 @@ export const HOUSE_SETTINGS = [
   'skipSegments',
   'spoilerFree',
   'spoilerUnstarted',
+  'spoilerDefaulted',
   'sourceRules',
 ] as const satisfies readonly (keyof Settings)[]
 
@@ -187,6 +189,11 @@ export function useSyncStatus(): SyncStatus {
 const idb = createStore('series-pelis-sync', 'kv')
 /** Lo de la casa (en la v0.17 era todo). */
 const STATE_KEY = 'state'
+/**
+ * Subirlo al agregar un campo a `HOUSE_SETTINGS` (u otra fila de la casa): cada aparato baja todo lo de la casa
+ * una vez, porque su versión vieja ignoró esas filas. 1 = v0.22.3 (`spoilerDefaulted`).
+ */
+const HOUSE_SCHEMA = 1
 const profileStateKey = (profile: string) => `profile:${profile}`
 const API = '/api/sync'
 const CAPTURE_DELAY = 1500
@@ -280,6 +287,7 @@ function startEngine(house: string, isAdmin: boolean, profile: string): Engine {
 
   async function load() {
     const [shared, prof] = await loadStates(house, profile)
+    upgradeSchema(shared, HOUSE_SCHEMA)
     parts = [
       { key: STATE_KEY, adapters: SHARED_ADAPTERS, query: { part: 'shared' }, state: shared },
       { key: profileStateKey(profile), adapters: PROFILE_ADAPTERS, query: { part: 'profile', profile }, state: prof },
@@ -381,6 +389,8 @@ function startEngine(house: string, isAdmin: boolean, profile: string): Engine {
         if (withPull || ps.some((p) => !p.state.synced)) {
           for (const p of ps) await pull(p)
           lastPull = Date.now()
+          // Con lo de la casa ya bajado: lo que se prende de fábrica una sola vez por casa.
+          if (!stopped && ps[0].state.synced) applyHouseDefaults()
         }
         await push()
         setStatus({ phase: 'ok', lastSync: Date.now(), error: undefined, pending: pending() })
@@ -482,6 +492,8 @@ function onAuth(s: AuthState) {
     return
   }
   if (s.status === 'loading') return
+  // Sin casas (local, sin la base): lo de fábrica va directo.
+  if (s.status === 'disabled') applyHouseDefaults()
   // Primero se frena el motor: así el borrado no se anota como un cambio para subir.
   engine?.stop()
   engine = undefined

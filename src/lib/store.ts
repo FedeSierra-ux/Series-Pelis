@@ -703,6 +703,8 @@ export interface Settings {
   spoilerFree: boolean
   /** Con el modo sin spoilers, ocultar también la sinopsis de los títulos que no empezaste. */
   spoilerUnstarted: boolean
+  /** v0.22.3: la casa ya recibió el modo sin spoilers prendido (se sincroniza; ver `applyHouseDefaults`). */
+  spoilerDefaulted: boolean
   /** Ofrecer puntuar con estrellas al terminar una peli o el último episodio. */
   askRatingAtEnd: boolean
   /** v0.5: puntaje de IMDb sobre el póster, debajo (como antes) o sin puntaje. */
@@ -752,8 +754,9 @@ export const settingsStore = new PersistedStore<Settings>('settings', {
   externalPlayer: 'system',
   nativePlayer: true,
   tmdbKey: '',
-  spoilerFree: false,
+  spoilerFree: true,
   spoilerUnstarted: false,
+  spoilerDefaulted: false,
   askRatingAtEnd: true,
   posterRating: 'on',
   posterLabels: true,
@@ -768,6 +771,15 @@ export const settingsStore = new PersistedStore<Settings>('settings', {
   autoSubsMigrated: false,
   uiScale: 100,
 })
+
+/**
+ * v0.22.3: el modo sin spoilers viene prendido de fábrica. A las casas que ya lo tenían apagado se les prende una
+ * sola vez: la marca `spoilerDefaulted` es de la casa, así un aparato que se actualiza más tarde no lo vuelve a
+ * prender si alguien lo apagó. Con casas se llama después de bajar lo de la casa (`cloudSync.ts`).
+ */
+export function applyHouseDefaults() {
+  if (!settingsStore.get().spoilerDefaulted) settingsStore.set((s) => ({ ...s, spoilerFree: true, spoilerDefaulted: true }))
+}
 
 // ---------- Copia de seguridad ----------
 
