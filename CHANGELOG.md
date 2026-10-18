@@ -1,5 +1,32 @@
 # Changelog
 
+## [0.25.0] - 2026-10-18
+
+### Agregado
+- **Torrents sin debrid en la app de Android** (TV, Fire TV y celular, el mismo APK): la app trae su propio motor
+  de torrents, como Stremio. Las fuentes de torrent de los addons (las que no tienen debrid) se reproducen en el
+  reproductor de Android mientras se van bajando. Mientras busca, muestra "Buscando pares…" y después cuántos pares
+  hay y a qué velocidad baja.
+  - Necesita **Android 9 o más nuevo** y el reproductor de Android prendido (Ajustes → Reproductor). En un aparato
+    más viejo la app anda igual que antes, sin torrents.
+  - Usa hasta unos 110 MB de espacio por torrent mientras mirás y lo borra al cerrar; guarda 2 torrents como mucho.
+  - Si nadie comparte el torrent avisa: "No hay nadie compartiendo este torrent ahora. Probá otra fuente."
+  - En la PC los torrents siguen necesitando Stremio abierto (servidor local).
+- **Pestaña Detalles en la ficha de las series** (última pestaña): el reparto, creación o dirección, países y
+  dónde verla en Argentina (suscripción, alquiler y compra, con datos de JustWatch).
+
+### Cambiado
+- **Debrid primero**: la elección automática (y el siguiente episodio) siempre prefiere una fuente directa o con
+  debrid antes que un torrent, aunque el torrent tenga más calidad.
+- En la lista de fuentes, los torrents que no se pueden abrir en ese aparato dicen por qué (abrir Stremio en la PC,
+  prender el reproductor de Android o actualizar la app).
+- El APK pesa unos 20 MB más por el motor de torrents.
+
+### Arreglado
+- **Pósters cortados en Películas y Series**: al volver de una ficha, el Top 10 quedaba tapado por la portada de
+  arriba; y al bajar con el teclado o el control remoto, la fila quedaba cortada debajo de la portada. Ahora la
+  fila con el foco siempre queda entera a la vista.
+
 ## [0.24.0] - 2026-10-18
 
 ### Cambiado

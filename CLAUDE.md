@@ -16,7 +16,7 @@ historial, "Seguir viendo" y "Mi lista". Interfaz en **español latino (es-AR)**
 | Plataforma | PWA (PC, celular, navegador de la TV). Pensada para llevarla después a Fire TV / Android TV (TWA o Capacitor). |
 | Metadatos | **Cinemeta** (`v3-cinemeta.strem.io`): sin API key, incluye `imdbRating`. Desde v0.3, **TMDB opcional** para español, reparto, sagas y tendencias. |
 | Streams | Protocolo de addons de Stremio. El usuario pega las URLs de manifest de sus addons; el debrid (Real-Debrid / TorBox) va configurado dentro del addon, la app no lo maneja. |
-| Torrents sin debrid | Solo vía servidor local de Stremio (`http://127.0.0.1:11470`, opcional/experimental, solo PC). |
+| Torrents sin debrid | Desde la v0.25: **motor propio en la app de Android** (libtorrent4j, como Stremio/Nuvio; pedido del usuario). En PC, servidor local de Stremio (`http://127.0.0.1:11470`). Debrid/directo siempre primero. |
 | Datos del usuario | v0.1: IndexedDB en el navegador + exportar/importar JSON. |
 | Backend (v0.2) | **Cloudflare**: Pages (web) + Workers (API/caché) + D1 (base). No usar Supabase. |
 | Login (v0.2) | **Código de vinculación** estilo Netflix: usuario/contraseña en PC o celular y código de 6 dígitos en la TV. |
@@ -352,6 +352,26 @@ npm run preview    # sirve dist/ en http://localhost:4173
   sigue abajo). **Tráiler**: `pickTrailer(videos, original_language)` con `trailerLangScore` en `lib/tmdb.ts`:
   latino subtitulado > latino doblado > España subtitulado > original (`ORIGINAL_TRAILER`) > España doblado; si la
   peli es en español, gana el de audio latino. `hoverTrailer` usa el de TMDB si supera al original.
+- v0.25.0 hecha (rama `claude/torrents-v0.25.0`): **motor de torrents nativo** en `tv-app/android`
+  (`TorrentEngine.java` + `TorrentServer.java`, libtorrent4j 2.1.0-39; .so arm/arm64/x86_64, **solo Android 9+**:
+  en 7/8 no carga y `getInfo` no trae `torrent`). Contrato: `getInfo.torrent` = `http://127.0.0.1:<puerto>/<token>`
+  (token de 128 bits, escucha solo en 127.0.0.1, sin CORS: lo abre solo el reproductor nativo); pedido
+  `<base>/<infoHash>/<fileIdx>[?tr=…&f=…]` (fileIdx inválido o -1 → coincide `f`, si no el video más grande);
+  504 = nadie comparte. Caché en `cacheDir/torrents`, 2 torrents como mucho, ventana ~112 MB, se borra al
+  arrancar/parar. `network_security_config.xml`: http solo para 127.0.0.1/localhost. Web: `lib/torrentServer.ts`
+  (`TorrentServer {url, engine?, missing?}`, `pickTorrentServer`, `useTorrentServer`, `needsNativePlayer`; textos
+  `TORRENT_NEEDS_*`), `streamingServerUrl(server, stream, engine)` + `streamTrackers`, `pages/player/EngineError.tsx`
+  (sin caída al reproductor web para URLs del motor). **Debrid/directo siempre gana** en `streamPicker` (sin la
+  penalidad -25) y en `nextEpisode`. **Pestaña Detalles solo en series** (última; `lib/seriesDetails.ts`,
+  `detail/SeriesDetailsPanel.tsx`): reparto + Creación (`created_by`, si no Dirección top 3, si no `writer` de
+  Cinemeta) + Países (nombres fijos para SU/YU/CS/DD) + dónde ver en AR (suscripción/alquiler/compra, "Datos de
+  JustWatch"); las pelis no cambian. **Pósters cortados en Películas/Series**: `html:has(.browse-hero)` con
+  `scroll-padding-top` (alto de la portada) y `needsReveal`/`visibleTop` en `lib/focusMemory.ts` al restaurar el
+  foco; con la rueda las filas pasan por debajo con un degradé.
+  **Plan v0.26 (debrid, decidido por el usuario)**: la key de TorBox va **dentro del addon** (Torrentio/Comet; la
+  usan todas las casas). Si el debrid falla: cartel con botón **"Reproducir por torrent"** (no automático). Si no
+  está cacheado: arranca por torrent y en paralelo abre el link "descargar" del addon para que TorBox lo baje.
+  Falta ver cómo sacar el infoHash (del link de Torrentio o con un Torrentio sin debrid).
 - **Decisiones para la v0.17 (reemplazan el reparto del plan de abajo)**: addons y TorBox **iguales para todas las
   casas**, solo los cambia el admin (opción A). Ajustes generales (subtítulos, idiomas, autoplay, saltar intro, sin
   spoilers, reglas de fuentes) **iguales en toda la casa**; lo físico (modo TV, tamaño de la interfaz, protector,
