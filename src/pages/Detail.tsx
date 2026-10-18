@@ -7,7 +7,7 @@ import { ErrorBox } from '../components/Status'
 import { CastRow, hasMoreLikeThis, MoreLikeThis, SagaBlock, TmdbSections } from '../components/TmdbExtras'
 import { TrailerPlayer } from '../components/TrailerPlayer'
 import { offlineMessage } from '../lib/online'
-import { episodeLabel, formatTime, relativeDate } from '../lib/format'
+import { episodeLabel, formatTime, relativeDate, seasonCount, seriesYear } from '../lib/format'
 import { useMeta, useTitle, useTmdbDetails } from '../lib/hooks'
 import { trailerKeyFromMeta } from '../lib/hoverTrailer'
 import { typeLabel } from '../lib/i18n'
@@ -225,6 +225,7 @@ function DetailPage({ type, id, onRetry }: { type: string; id: string; onRetry: 
     // Los especiales (temporada 0) van al final.
     return list.filter((s) => s !== 0).concat(list.includes(0) ? [0] : [])
   }, [videos])
+  const releaseInfo = isSeries ? seriesYear(meta?.releaseInfo, seasonCount(videos)) : meta?.releaseInfo
 
   // Temporada inicial: la del último episodio visto, o la 1.
   const lastWatched = useMemo(
@@ -544,8 +545,9 @@ function DetailPage({ type, id, onRetry }: { type: string; id: string; onRetry: 
             <div className="hero-meta">
               <ImdbRating value={meta.imdbRating} />
               <span>{typeLabel(type, false)}</span>
-              {meta.releaseInfo && <span>{meta.releaseInfo}</span>}
-              {meta.runtime && <span>{meta.runtime}</span>}
+              {releaseInfo && <span>{releaseInfo}</span>}
+              {/* En las series la duración cambia en cada episodio: solo en las pelis. */}
+              {meta.runtime && !isSeries && <span>{meta.runtime}</span>}
             </div>
             <GenreChips type={type} tmdbGenres={tmdb?.genres} names={meta.genre ?? meta.genres} />
             {description && (

@@ -1,4 +1,5 @@
 import { getMeta } from '../lib/addons'
+import { seasonCount, seriesYear } from '../lib/format'
 import { addonsStore } from '../lib/store'
 import { formatRuntime, getDetails, getDetailsByImdb, hasTmdb, imdbFromTmdb, parseTmdbId, pickLogo, tmdbImg, type TmdbDetails } from '../lib/tmdb'
 import type { Meta } from '../lib/types'
@@ -51,8 +52,11 @@ export function shortText(text: string | undefined, max = 220): string | undefin
 /** Junta lo de Cinemeta (nombre original, IMDb, logo) y lo de TMDB (sinopsis en español) si hay key. */
 export function buildInfo(key: string, meta: Meta | undefined, tmdb: TmdbDetails | undefined, fallbackName?: string): BillboardInfo {
   const imdb = meta?.id?.startsWith('tt') ? meta.id : tmdb?.external_ids?.imdb_id || tmdb?.imdb_id || undefined
-  const year = meta?.releaseInfo ?? meta?.year ?? (tmdb?.release_date || tmdb?.first_air_date || '').slice(0, 4)
-  const runtime = cinemetaRuntime(meta?.runtime) || formatRuntime(tmdb?.runtime || tmdb?.episode_run_time?.[0] || tmdb?.last_episode_to_air?.runtime || undefined)
+  const series = meta?.type === 'series' || !!tmdb?.first_air_date
+  const releaseInfo = meta?.releaseInfo ?? meta?.year
+  const year = (series ? seriesYear(releaseInfo, tmdb?.number_of_seasons ?? seasonCount(meta?.videos)) : releaseInfo) ?? (tmdb?.release_date || tmdb?.first_air_date || '').slice(0, 4)
+  // En las series la duración cambia en cada episodio: solo en las pelis.
+  const runtime = series ? '' : cinemetaRuntime(meta?.runtime) || formatRuntime(tmdb?.runtime || undefined)
   const genres = tmdb?.genres?.length ? tmdb.genres.map((g) => g.name) : (meta?.genres ?? meta?.genre ?? [])
   const tmdbLogo = tmdbImg(pickLogo(tmdb), 'w500')
   return {

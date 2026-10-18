@@ -138,7 +138,8 @@ export function TmdbHero({ items, variant = 'compact', fallbackType = 'movie', e
   const overview = item.overview || d?.overview
   const genres = (d?.genres ?? []).slice(0, variant === 'full' ? 3 : 2).map((g) => g.name)
   const year = itemYear(item)
-  const runtime = formatRuntime(d?.runtime || d?.episode_run_time?.[0] || d?.last_episode_to_air?.runtime || undefined)
+  // En las series la duración cambia en cada episodio: solo en las pelis.
+  const runtime = type === 'movie' ? formatRuntime(d?.runtime || undefined) : ''
   const facts = [year, runtime, variant === 'compact' ? (type === 'movie' ? 'Película' : 'Serie') : ''].filter(Boolean)
   const cast =
     variant === 'full'

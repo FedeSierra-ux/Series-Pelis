@@ -43,3 +43,20 @@ export function smallPoster(id: string, poster?: string): string | undefined {
 export function isHls(url: string): boolean {
   return /\.m3u8(\?|$)/i.test(url) || /\/hls\//i.test(url)
 }
+
+/** Temporadas de una serie según sus episodios (sin contar los especiales, temporada 0). */
+export function seasonCount(videos: { season?: number }[] | undefined): number | undefined {
+  const seasons = new Set((videos ?? []).map((v) => v.season ?? 0).filter((s) => s > 0))
+  return seasons.size || undefined
+}
+
+/**
+ * Año de una serie: "2026–" con una sola temporada (por ahora) queda "2026", y "2019–2019" siempre queda "2019".
+ * Sin saber las temporadas se deja como viene.
+ */
+export function seriesYear(releaseInfo: string | undefined, seasons: number | undefined): string | undefined {
+  const m = /^(\d{4})\s*[–-]\s*(\d{4})?$/.exec(releaseInfo?.trim() ?? '')
+  if (!m) return releaseInfo
+  if (m[2] === m[1] || (!m[2] && seasons === 1)) return m[1]
+  return releaseInfo
+}

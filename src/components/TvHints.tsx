@@ -111,11 +111,11 @@ export function TvHints() {
   }, [])
 
   // Si el asistente inicial o "¿Quién está mirando?" (v0.18) están abiertos, esperamos a que cierren
-  // (lo miramos cada medio segundo).
+  // (lo miramos cada medio segundo). `.ob-pending`: el asistente espera la primera sincronización para abrirse.
   useEffect(() => {
     if (!want) return
     const check = () => {
-      const visible = !!document.querySelector('.onboarding, .pf-layer')
+      const visible = !!document.querySelector('.onboarding, .ob-pending, .pf-layer')
       setObVisible(visible)
       return visible
     }
