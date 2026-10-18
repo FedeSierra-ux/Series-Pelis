@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { Link } from 'react-router-dom'
 import { backdropFor } from '../../components/ContinueCard'
 import { ImdbRating } from '../../components/Rating'
-import { seriesYear } from '../../lib/format'
+import { displayYear } from '../../lib/yearLabel'
 import { typeLabel } from '../../lib/i18n'
 import { toggleWatchlist, useStore, watchlistStore } from '../../lib/store'
 import type { MetaPreview } from '../../lib/types'
@@ -22,7 +22,7 @@ export function BestResult({ meta }: { meta: MetaPreview }) {
   const logo = logoFor(meta)
   const showLogo = logo && logo !== brokenLogo ? logo : undefined
   const to = `/detail/${meta.type}/${encodeURIComponent(meta.id)}`
-  const year = seriesYear(meta.releaseInfo ?? meta.year)
+  const year = displayYear(meta)
   return (
     <section className="search-best" aria-labelledby="search-best-title">
       <div className="search-best-art" aria-hidden>

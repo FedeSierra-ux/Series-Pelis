@@ -10,6 +10,8 @@ import {
   FORCED_RANK,
   addonSubOption,
   autoSubtitle,
+  canShiftCueBox,
+  cuePlacement,
   lang3,
   langRank,
   looksForced,
@@ -44,6 +46,7 @@ export function useSubtitles({
   flash,
   closeMenu,
   controlsClear = 0,
+  cueBottom = 0,
 }: {
   videoRef: RefObject<HTMLVideoElement | null>
   hlsRef: RefObject<Hls | null>
@@ -54,6 +57,11 @@ export function useSubtitles({
   closeMenu: () => void
   /** % de abajo que tapa la barra de controles (0 si está oculta): los subtítulos suben para no quedar debajo. */
   controlsClear?: number
+  /**
+   * % desde arriba donde tiene que terminar el subtítulo, tenga los renglones que tenga (0 = no se usa). Lo
+   * pone el celular con controles cuando hay algo en la esquina ("Saltar", siguiente episodio…).
+   */
+  cueBottom?: number
 }) {
   const addons = useAddons()
   const settings = useStore(settingsStore)
@@ -71,6 +79,8 @@ export function useSubtitles({
   positionRef.current = settings.subtitleStyle.position
   const clearRef = useRef(controlsClear)
   clearRef.current = controlsClear
+  const bottomRef = useRef(cueBottom)
+  bottomRef.current = cueBottom
   const userPicked = useRef(false)
   const autoRank = useRef(99)
   const request = useRef(0)
@@ -122,6 +132,17 @@ export function useSubtitles({
     const el = videoRef.current
     if (!el) return
     const d = delayRef.current
+    // Con `cueBottom` en Chromium los cues quedan en auto y sube la caja entera (ver `cuePlacement`).
+    const shiftBox = canShiftCueBox()
+    const { shift } = cuePlacement(positionRef.current, clearRef.current, bottomRef.current, shiftBox)
+    const shiftPx = shift > 0 ? Math.round((shift / 100) * el.clientHeight) : 0
+    if (shiftPx > 0) {
+      el.style.setProperty('--sp-sub-shift', `${shiftPx}px`)
+      el.dataset.subShift = ''
+    } else if (el.dataset.subShift !== undefined) {
+      el.style.removeProperty('--sp-sub-shift')
+      delete el.dataset.subShift
+    }
     for (const track of Array.from(el.textTracks)) {
       if (track.mode !== 'showing' || !track.cues) continue
       for (const cue of Array.from(track.cues)) {
@@ -134,7 +155,7 @@ export function useSubtitles({
         const end = Math.max(0, orig[1] + d)
         if (cue.startTime !== start) cue.startTime = start
         if (cue.endTime !== end) cue.endTime = end
-        placeCue(cue, positionRef.current, clearRef.current)
+        placeCue(cue, positionRef.current, clearRef.current, bottomRef.current, shiftBox)
       }
     }
   }, [videoRef])
@@ -154,7 +175,7 @@ export function useSubtitles({
     }
   }, [videoRef, adjustCues])
 
-  useEffect(adjustCues, [settings.subtitleStyle.position, controlsClear, adjustCues])
+  useEffect(adjustCues, [settings.subtitleStyle.position, controlsClear, cueBottom, adjustCues])
 
   const changeDelay = (delta: number) => {
     const next = Math.round((delayRef.current + delta) * 10) / 10

@@ -59,8 +59,8 @@ const HLS_NETWORK_RETRIES = 2
 const HLS_RETRY_MS = 1000
 const SLEEP_KEY = 'sp-sleep-at'
 const VOLUME_STEP = 0.1
-/** Px entre el subtítulo y "Saltar intro" en el celular con controles (más el 2 % que deja `placeCue`). */
-const SUB_SKIP_GAP = 14
+/** Px entre el final del subtítulo y lo que haya en la esquina ("Saltar", siguiente…), en el celular con controles. */
+const SUB_CORNER_GAP = 16
 
 type Menu = 'subs' | 'audio' | 'sleep' | 'sources' | 'speed' | 'quick'
 type Sleep = { kind: 'off' } | { kind: 'time'; at: number; minutes?: number } | { kind: 'episode' }
@@ -333,9 +333,9 @@ function PlayerView({ state, resume, notice }: { state: PlayState; resume?: Resu
       ro.disconnect()
     }
   }, [])
-  // Pantalla angosta con controles y "Saltar intro/resumen/créditos": lo que ocupa desde el botón hasta abajo
-  // (lo calcula un efecto más abajo, donde se sabe si está el botón). En PC/TV o sin controles queda en 0.
-  const [skipClear, setSkipClear] = useState(0)
+  // Pantalla angosta con controles y algo en la esquina: % desde arriba donde tiene que terminar el subtítulo
+  // (lo calcula un efecto más abajo, donde se sabe qué hay en la esquina). En PC/TV o sin controles queda en 0.
+  const [cueBottom, setCueBottom] = useState(0)
   const subs = useSubtitles({
     videoRef,
     hlsRef,
@@ -343,7 +343,8 @@ function PlayerView({ state, resume, notice }: { state: PlayState; resume?: Resu
     audioLang,
     flash,
     closeMenu: () => setMenu(null),
-    controlsClear: Math.max(controlsClear, skipClear),
+    controlsClear,
+    cueBottom,
   })
   const pip = usePictureInPicture(videoRef)
   // Celular vertical: "Abrir en…", ventana flotante y Ajustar van dentro del ⚙ (el CSS los saca de la barra).
@@ -1215,22 +1216,40 @@ function PlayerView({ state, resume, notice }: { state: PlayState; resume?: Resu
     rootRef.current?.querySelector<HTMLElement>('.player-corner > .skip-btn')?.focus({ preventScroll: true })
     // Solo cuando aparece el botón (o cambia de intro a resumen/créditos).
   }, [skipFocusKey])
-  // Celular con controles: el botón de saltar le tapaba el final al subtítulo. El subtítulo sube hasta
-  // SUB_SKIP_GAP px por arriba del botón, más el 2 % que ya deja `placeCue`. Chromium no implementa `lineAlign`
-  // y baja el cuadro (1 − line) × su alto, así que en un 390×844 quedan 17 px de aire con 2 renglones y 24 con 1.
-  // La esquina no se mueve con los controles (bottom fijo, sin transición), así que offsetTop ya es el final.
-  const liftForSkip = narrow && controls && skipAlone
+  // Celular con controles: lo de la esquina ("Saltar", la tarjeta del siguiente episodio, la oferta del resumen o
+  // "Más como esto") le tapaba el final al subtítulo. El subtítulo termina SUB_CORNER_GAP px por arriba de lo que
+  // haya, tenga los renglones que tenga (ver `cuePlacement`). La esquina no se mueve con los controles (bottom
+  // fijo, sin transición) y offsetTop no cuenta la animación de entrada, así que ya es el lugar final; el
+  // ResizeObserver sigue a la tarjeta cuando cambia de alto (cargando → con imagen) y al giro de pantalla.
+  const cornerKind = !showCorner ? null : offerRecap && !showNextCard ? 'recap' : showNextCard ? 'next' : postPlayDue ? 'more' : 'skip'
+  const liftForCorner = narrow && controls && cornerKind !== null
   useEffect(() => {
     const root = rootRef.current
-    const skip = root?.querySelector<HTMLElement>('.player-corner > .skip-btn')
-    if (!liftForSkip || !root || !skip || !root.clientHeight) {
-      setSkipClear(0)
+    const corner = root?.querySelector<HTMLElement>('.player-corner')
+    if (!liftForCorner || !root || !corner) {
+      setCueBottom(0)
       return
     }
-    let top = 0
-    for (let el: HTMLElement | null = skip; el && el !== root; el = el.offsetParent as HTMLElement | null) top += el.offsetTop
-    setSkipClear(Math.round(((root.clientHeight - top + SUB_SKIP_GAP) / root.clientHeight) * 1000) / 10)
-  }, [liftForSkip])
+    const measure = () => {
+      const h = root.clientHeight
+      // Vacía (ej. "Más como esto" sin resultados todavía): no hay nada que esquivar.
+      if (!h || !corner.offsetHeight) {
+        setCueBottom(0)
+        return
+      }
+      let top = 0
+      for (let el: HTMLElement | null = corner; el && el !== root; el = el.offsetParent as HTMLElement | null) top += el.offsetTop
+      setCueBottom(Math.max(0, Math.floor(((top - SUB_CORNER_GAP) / h) * 1000) / 10))
+    }
+    measure()
+    if (typeof ResizeObserver === 'undefined') return
+    const ro = new ResizeObserver(measure)
+    ro.observe(corner)
+    ro.observe(root)
+    return () => {
+      ro.disconnect()
+    }
+  }, [liftForCorner, cornerKind])
   // Cuenta regresiva de la tarjeta del siguiente: con escena post-créditos, hasta el final del video.
   const nextLeft = plan.afterCredits ? duration - time : countdown
   const nextTotal = plan.afterCredits && nextAt !== undefined ? duration - nextAt : NEXT_COUNTDOWN_S

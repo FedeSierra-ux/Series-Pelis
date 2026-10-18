@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { browsableCatalogs, getCatalog } from '../lib/addons'
-import { seriesYear } from '../lib/format'
+import { displayYear } from '../lib/yearLabel'
 import { IdleTimer, SCREENSAVER_CLOSED } from '../lib/idle'
 import { isOnline } from '../lib/online'
 import { buildSlides, type Slide, type SlideSource } from '../lib/screensaver'
@@ -120,7 +120,7 @@ function Slideshow() {
       {shown.cur && (
         <div key={`t-${shown.cur.id}`} className="ss-title">
           <strong>{shown.cur.name}</strong>
-          {shown.cur.year && <span>{seriesYear(shown.cur.year)}</span>}
+          {shown.cur.year && <span>{displayYear(shown.cur)}</span>}
         </div>
       )}
     </>

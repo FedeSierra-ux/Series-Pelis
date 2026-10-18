@@ -761,3 +761,18 @@ html[data-tv] .player-title strong {
 html[data-tv] .player-title span {
   font-size: 24px;
 }
+
+/* v0.26.1: celular con controles y algo en la esquina ("Saltar", siguiente episodio, resumen, "Más como esto").
+   Los cues quedan donde los pone el navegador (el último renglón apoyado abajo, tenga los renglones que tenga)
+   y la caja entera sube lo que pone `useSubtitles` en --sp-sub-shift (ver `cuePlacement`). Firefox no conoce
+   este pseudoelemento y descarta la regla: ahí `useSubtitles` no pone el atributo y usa `line` con
+   `lineAlign: end`, que Firefox sí respeta. */
+.player-video[data-sub-shift]::-webkit-media-text-track-container {
+  transform: translateY(calc(-1 * var(--sp-sub-shift, 0px)));
+}
+/* Con la caja subida todos los cues van en auto, que Chromium dibuja sin transform. Pero si el cue en pantalla
+   venía con `line` en % (controles a la vista sin nada en la esquina), Chromium le deja pegado el
+   `translate(0, -line%)` al pasarlo a auto y queda más alto hasta el próximo cue: se lo saca. */
+.player-video[data-sub-shift]::-webkit-media-text-track-display {
+  transform: none !important;
+}
