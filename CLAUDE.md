@@ -305,6 +305,13 @@ npm run preview    # sirve dist/ en http://localhost:4173
   portada de Inicio, `HoverTrailer`, `PostPlay`, protector) `seriesYear(x)` saca el guion si la serie **arrancó este
   año** (el usuario aceptó que a veces una serie con dos temporadas en el mismo año quede sin guion). Con las
   temporadas conocidas (ficha, `buildInfo` con TMDB) manda el conteo real.
+- v0.22.3 hecha (rama `claude/sin-spoilers-v0.22.3`): **`spoilerFree: true` de fábrica** (solo ese; `spoilerUnstarted`
+  sigue apagado). Migración **una vez por casa** con la marca `spoilerDefaulted` (está en `HOUSE_SETTINGS`, se
+  sincroniza): `applyHouseDefaults()` (`store.ts`) corre en `run()` tras bajar lo de la casa, o en `onAuth` sin
+  login. Si la apagan, se respeta. Arreglos de sync: `fieldsAdapter` tiene `newKeysAreDefaults` (un campo que el
+  aparato nunca anotó sube con `u = 0`, así gana el servidor) y `upgradeSchema` + `HOUSE_SCHEMA` en `cloudSync.ts`
+  (resetea una vez el cursor compartido: las versiones viejas tiran las filas de campos que no conocen).
+  **Al sumar un campo a `HOUSE_SETTINGS`, subir `HOUSE_SCHEMA`.**
 - **Decisiones para la v0.17 (reemplazan el reparto del plan de abajo)**: addons y TorBox **iguales para todas las
   casas**, solo los cambia el admin (opción A). Ajustes generales (subtítulos, idiomas, autoplay, saltar intro, sin
   spoilers, reglas de fuentes) **iguales en toda la casa**; lo físico (modo TV, tamaño de la interfaz, protector,

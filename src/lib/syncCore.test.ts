@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { applyItems, capture, emptyState, enforceReadOnly, fieldsAdapter, markSent, outgoing, pendingCount, recordAdapter, splitState, type ServerItem, type SyncAdapter } from './syncCore'
+import { applyItems, capture, emptyState, enforceReadOnly, fieldsAdapter, markSent, outgoing, pendingCount, recordAdapter, splitState, upgradeSchema, type ServerItem, type SyncAdapter } from './syncCore'
 
 function memStore<T>(initial: T) {
   let value = initial
@@ -68,6 +68,35 @@ describe('capture', () => {
     addons.set(() => ({ a: { url: 'x' } }))
     capture(state, adapters, 1, (s) => s !== 'global')
     expect(state.pending.addons).toBeUndefined()
+  })
+})
+
+describe('campos nuevos de ajustes (v0.22.3)', () => {
+  it('un campo que este aparato nunca anotó va con hora 0 y gana lo del servidor', () => {
+    const { settings, adapters, state } = setup()
+    capture(state, adapters, 1, all)
+    outgoing(state, adapters).forEach((b) => markSent(state, b))
+    state.synced = true
+    // Una versión nueva trae un campo más: su valor es el de fábrica, no un cambio.
+    delete state.shadow.settings.autoplay
+    expect(capture(state, adapters, 5000, all)).toBe(1)
+    expect(state.pending.settings.autoplay.u).toBe(0)
+    applyItems(state, adapters, [item('settings', 'autoplay', false, 3000, 'house')])
+    expect(settings.get().autoplay).toBe(false)
+    // Un cambio de verdad en un campo ya conocido sí lleva la hora del cambio.
+    settings.set((s) => ({ ...s, langs: ['en'] }))
+    capture(state, adapters, 6000, all)
+    expect(state.pending.settings.langs.u).toBe(6000)
+  })
+
+  it('upgradeSchema vuelve a bajar todo una sola vez', () => {
+    const state = emptyState('h1')
+    state.cursor = 'abc'
+    expect(upgradeSchema(state, 1)).toBe(true)
+    expect(state.cursor).toBe('')
+    state.cursor = 'def'
+    expect(upgradeSchema(state, 1)).toBe(false)
+    expect(state.cursor).toBe('def')
   })
 })
 

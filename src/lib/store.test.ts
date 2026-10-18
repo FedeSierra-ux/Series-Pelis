@@ -24,6 +24,7 @@ import {
   exportData,
   forgetAddonData,
   hydrateStores,
+  applyHouseDefaults,
   importData,
   installAddon,
   lastSourceStore,
@@ -347,6 +348,17 @@ describe('subtítulos automáticos de fábrica (v0.12.2)', () => {
     idbSeed.set('settings', { ...settingsStore.get(), autoSubtitles: false })
     await hydrateStores()
     expect(settingsStore.get().autoSubtitles).toBe(false)
+  })
+})
+
+describe('modo sin spoilers de fábrica (v0.22.3)', () => {
+  it('se prende una sola vez por casa y después se respeta si lo apagan', () => {
+    settingsStore.set((s) => ({ ...s, spoilerFree: false, spoilerDefaulted: false }))
+    applyHouseDefaults()
+    expect(settingsStore.get()).toMatchObject({ spoilerFree: true, spoilerDefaulted: true })
+    settingsStore.set((s) => ({ ...s, spoilerFree: false }))
+    applyHouseDefaults()
+    expect(settingsStore.get().spoilerFree).toBe(false)
   })
 })
 
