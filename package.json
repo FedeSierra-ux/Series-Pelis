@@ -1,7 +1,7 @@
 {
   "name": "flix",
   "private": true,
-  "version": "0.22.3",
+  "version": "0.22.4",
   "description": "Plataforma personal para ver pelis y series con addons de Stremio, puntaje de IMDb e historial.",
   "type": "module",
   "scripts": {

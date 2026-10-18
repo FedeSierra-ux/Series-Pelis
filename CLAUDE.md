@@ -312,6 +312,10 @@ npm run preview    # sirve dist/ en http://localhost:4173
   aparato nunca anotó sube con `u = 0`, así gana el servidor) y `upgradeSchema` + `HOUSE_SCHEMA` en `cloudSync.ts`
   (resetea una vez el cursor compartido: las versiones viejas tiran las filas de campos que no conocen).
   **Al sumar un campo a `HOUSE_SETTINGS`, subir `HOUSE_SCHEMA`.**
+- v0.22.4 hecha (rama `claude/atras-ficha-v0.22.4`): **botón de atrás** (`DetailBack` en `Detail.tsx`, `.detail-back`
+  en `detail-v14.css`) arriba a la izquierda de la portada de la ficha, **solo en la ficha** y **no en la TV**
+  (`html[data-tv]` lo oculta; decisión del usuario). `useGoBack`: sin historial va a `/`. En PC la portada tiene
+  `padding-top: 68px` para que no tape el título cuando no hay póster.
 - **Decisiones para la v0.17 (reemplazan el reparto del plan de abajo)**: addons y TorBox **iguales para todas las
   casas**, solo los cambia el admin (opción A). Ajustes generales (subtítulos, idiomas, autoplay, saltar intro, sin
   spoilers, reglas de fuentes) **iguales en toda la casa**; lo físico (modo TV, tamaño de la interfaz, protector,
