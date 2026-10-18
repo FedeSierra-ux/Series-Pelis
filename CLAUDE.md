@@ -320,6 +320,17 @@ npm run preview    # sirve dist/ en http://localhost:4173
   Para vos → Porque viste → Tendencias → listas → catálogos (pedido del usuario). **Sin fila "Mi lista"** (ya está en
   el riel): `HOME_VIRTUAL_ROWS` quedó vacío (el mecanismo de filas propias sigue, con su test), se fueron
   `WatchlistRow`, `VirtualRow` y `unstartedWatchlist`.
+- v0.22.6 hecha (rama `claude/canales-tv-v0.22.6`): **TV en vivo con lista fija** (`LIVE_CHANNELS` en `lib/liveTv.ts`;
+  ya no se baja el M3U de iptv-org). Pedido del usuario: TN, C5N, Crónica, Canal 26, LN+, A24, TV Pública, Encuentro,
+  Cine.AR, DeporTV, Telefe, El Trece, El Nueve, América y Music Top. **Solo señales oficiales**: HLS del canal
+  (Canal 26 y Music Top de Telecentro, América de qaotic) o el vivo de su **canal oficial de YouTube**
+  (`youtube` = id `UC…`, embed `live_stream?channel=` en youtube-nocookie con `useYtPlayer`; componente `YoutubeLive`
+  en `LiveTv.tsx`, sin eventos del mouse para que las teclas queden en la página). Telefe, El Trece y El Nueve en las
+  listas de IPTV son restreams de IPs sueltas por http: **no se usan**. El YouTube de la TV Pública ahora se llama
+  "Canal Siete" (@TVPublicaArgentina). LN+ y la TV Pública tienen varios vivos y YouTube a veces no elige uno para el
+  embed ("Video no disponible"); Encuentro, Cine.AR, Telefe y El Trece no transmiten siempre (`notAlways`).
+  **DeporTV quedó afuera**: el stream de cont.ar (streamlock) no anda y no tiene vivo en YouTube. Categorías:
+  Noticias, Públicos, Aire, Música. En Chromium headless ni YouTube ni H.264 reproducen: probar en un navegador real.
 - v0.23.0 hecha (rama `claude/vos-historial-v0.23.0`): **Vos** = accesos Historial → Calendario → Tu año (en ese
   orden; sin Diario ni Metas) y **Mi lista completa en grilla** (`MyListSection` en `pages/MyList.tsx`) como lo
   principal. **Mi lista fuera del riel y de las pestañas**; `/list` → `/me`, sin atajo G+L, la escalera de Atrás vale

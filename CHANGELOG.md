@@ -18,6 +18,20 @@
   películas y el modo historia ("Ver como historia" y la imagen para compartir).
 - El atajo de teclado G → L (Mi lista).
 
+## [0.22.6] - 2026-10-18
+
+### Cambiado
+- **TV en vivo con tus canales**: la lista ahora tiene solo TN, C5N, Crónica TV, Canal 26, LN+, A24, Televisión
+  Pública, Encuentro, Cine.AR, Telefe, El Trece, El Nueve, América TV y Music Top, agrupados en Noticias, Públicos,
+  Aire y Música.
+- **Solo señales oficiales**: Canal 26, América y Music Top van por el stream del canal; los demás, por la
+  transmisión en vivo de su canal oficial de YouTube, dentro de la app. Si no están transmitiendo, aparece el aviso y
+  el botón "Abrir en YouTube".
+
+### Quitado
+- La lista de iptv-org y los canales que traía.
+- **DeporTV**: no tiene ahora ninguna señal oficial que funcione.
+
 ## [0.22.5] - 2026-10-18
 
 ### Cambiado

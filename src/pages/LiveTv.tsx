@@ -1,23 +1,25 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import type Hls from 'hls.js'
-import { ErrorBox, Empty } from '../components/Status'
+import { Empty } from '../components/Status'
 import { useTitle } from '../lib/hooks'
 import {
   LIVE_CATEGORIES,
+  LIVE_CHANNELS,
   channelInitials,
   loadChannelHealth,
-  loadLiveChannels,
   probeChannels,
   saveChannelHealth,
   setLastChannel,
   stepChannel,
   toggleLiveFavorite,
   watchable,
+  youtubeLiveUrl,
   type ChannelHealth,
   type LiveCategory,
   type LiveChannel,
 } from '../lib/liveTv'
 import { liveTvStore, useStore } from '../lib/store'
+import { useYtPlayer } from './detail/useYtPlayer'
 
 type Filter = 'all' | 'fav' | LiveCategory
 
@@ -32,9 +34,8 @@ const pad = (n: number) => String(n).padStart(3, '0')
 function channelNote(c: LiveChannel, health?: ChannelHealth) {
   if (health === 'blocked') return 'No se puede ver en el navegador'
   if (health === 'down') return 'Sin señal ahora'
-  if (c.geoBlocked) return 'Solo anda en su zona'
-  if (c.notAlways) return 'No siempre en el aire'
-  return [CATEGORY_LABEL[c.category], c.quality].filter(Boolean).join(' · ')
+  if (c.notAlways) return 'No siempre en vivo'
+  return [CATEGORY_LABEL[c.category], c.youtube ? 'YouTube' : c.quality].filter(Boolean).join(' · ')
 }
 
 function isTyping() {
@@ -55,11 +56,42 @@ function ChannelLogo({ channel }: { channel: LiveChannel }) {
   )
 }
 
+/**
+ * Un canal que se ve por su transmisión oficial de YouTube. Va sin eventos del mouse: así el foco y las
+ * teclas (CH+/CH−, números) se quedan en la página y no los toma el iframe.
+ */
+function YoutubeLive({ channel, muted, onPlaying, onMuted }: { channel: LiveChannel; muted: boolean; onPlaying: () => void; onMuted: (m: boolean) => void }) {
+  const yt = useYtPlayer(muted)
+  // La URL se arma una sola vez por canal: el sonido después se cambia por postMessage.
+  const [src] = useState(() => youtubeLiveUrl(channel.youtube!, { muted, origin: location.origin }))
+  const { playing, setMuted } = yt
+  useEffect(() => {
+    if (playing) onPlaying()
+  }, [playing, onPlaying])
+  useEffect(() => {
+    if (yt.muted !== muted) setMuted(muted)
+    // Solo cuando lo cambia el usuario; si YouTube se silencia solo (autoplay), lo avisa el efecto de abajo.
+  }, [muted])
+  useEffect(() => {
+    onMuted(yt.muted)
+  }, [yt.muted, onMuted])
+  return (
+    <iframe
+      ref={yt.frame}
+      className="ltv-yt"
+      src={src}
+      title={`${channel.name} en vivo`}
+      allow="autoplay; encrypted-media; picture-in-picture"
+      tabIndex={-1}
+      onLoad={yt.onLoad}
+    />
+  )
+}
+
 export function LiveTv() {
   useTitle('TV en vivo')
   const { favorites, last } = useStore(liveTvStore)
-  const [channels, setChannels] = useState<LiveChannel[] | null>(null)
-  const [loadError, setLoadError] = useState('')
+  const channels = LIVE_CHANNELS
   const [filter, setFilter] = useState<Filter>('all')
   const [currentId, setCurrentId] = useState<string | undefined>(last)
   const [status, setStatus] = useState<'loading' | 'playing' | 'error'>('loading')
@@ -78,19 +110,11 @@ export function LiveTv() {
     saveChannelHealth(results)
   }, [])
 
-  const fetchChannels = useCallback(() => {
-    setLoadError('')
-    loadLiveChannels()
-      .then(setChannels)
-      .catch(() => setLoadError('No se pudo bajar la lista de canales. Revisá la conexión y probá de nuevo.'))
-  }, [])
-  useEffect(fetchChannels, [fetchChannels])
-
   // En segundo plano: qué canales no se pueden reproducir en este navegador (ver lib/liveTv.ts).
   useEffect(() => {
-    if (!channels || nativeHls) return
+    if (nativeHls) return
     const known = loadChannelHealth()
-    const todo = channels.filter((c) => !known[c.id])
+    const todo = channels.filter((c) => !c.youtube && !known[c.id])
     if (todo.length === 0) return
     const ctrl = new AbortController()
     probeChannels(todo, markHealth, { signal: ctrl.signal }).catch(() => {})
@@ -99,13 +123,12 @@ export function LiveTv() {
 
   const favSet = useMemo(() => new Set(favorites), [favorites])
   const visible = useMemo(() => {
-    if (!channels) return []
     if (filter === 'all') return channels
     if (filter === 'fav') return channels.filter((c) => favSet.has(c.id))
     return channels.filter((c) => c.category === filter)
   }, [channels, filter, favSet])
 
-  const current = channels?.find((c) => c.id === currentId)
+  const current = channels.find((c) => c.id === currentId)
 
   // Si el canal lo eligió el usuario (en esta visita) no se cambia solo, aunque no ande.
   const picked = useRef(false)
@@ -113,7 +136,7 @@ export function LiveTv() {
   // Arranca con el último canal que se vio (o el primero de la lista). Mientras no se elija uno a mano,
   // tampoco se queda en uno que se sabe que no anda: si la prueba lo marca después, pasa al primero que sí.
   useEffect(() => {
-    if (!channels?.length || picked.current || status === 'playing') return
+    if (picked.current || status === 'playing') return
     const now = channels.find((c) => c.id === currentId)
     const first = watchable(channels, health)[0]
     if ((!now || isBad(now)) && first.id !== currentId) setCurrentId(first.id)
@@ -129,14 +152,14 @@ export function LiveTv() {
   }, [])
 
   const zap = useCallback(
-    (step: number) => tune(stepChannel(visible.length ? visible : channels ?? [], currentId, step, isBad)),
+    (step: number) => tune(stepChannel(visible.length ? visible : channels, currentId, step, isBad)),
     [visible, channels, currentId, tune, isBad],
   )
 
   // Reproducción: HLS con hls.js (o nativo en Safari / Fire TV), cualquier otra cosa directo.
   useEffect(() => {
     const el = videoRef.current
-    if (!el || !current) return
+    if (!el || !current || current.youtube) return
     setStatus('loading')
     let cancelled = false
     const fail = () => !cancelled && setStatus('error')
@@ -196,6 +219,15 @@ export function LiveTv() {
     }
   }, [current, retry, markHealth])
 
+  // YouTube: si en este tiempo no arrancó, el canal no está transmitiendo ahora.
+  const ytPlaying = useCallback(() => setStatus('playing'), [])
+  useEffect(() => {
+    if (!current?.youtube) return
+    setStatus('loading')
+    const stall = setTimeout(() => setStatus((s) => (s === 'playing' ? s : 'error')), STALL_MS)
+    return () => clearTimeout(stall)
+  }, [current, retry])
+
   useEffect(() => {
     if (videoRef.current) videoRef.current.muted = muted
   }, [muted])
@@ -243,21 +275,18 @@ export function LiveTv() {
   useEffect(() => {
     if (!digits) return
     const t = setTimeout(() => {
-      tune(channels?.find((c) => c.no === Number(digits)))
+      tune(channels.find((c) => c.no === Number(digits)))
       setDigits('')
     }, 1200)
     return () => clearTimeout(t)
   }, [digits, channels, tune])
 
-  if (loadError) return <div className="page"><ErrorBox message={loadError} onRetry={fetchChannels} /></div>
-  if (!channels) return <div className="page"><div className="spinner" /></div>
-
   const counts: Record<Filter, number> = {
     all: channels.length,
     fav: channels.filter((c) => favSet.has(c.id)).length,
-    aire: 0,
     noticias: 0,
-    deportes: 0,
+    publicos: 0,
+    aire: 0,
     musica: 0,
   }
   for (const c of channels) counts[c.category]++
@@ -272,13 +301,16 @@ export function LiveTv() {
     <div className="page ltv">
       <header className="page-header">
         <h1>TV en vivo</h1>
-        <p className="ltv-source">{channels.length} canales gratis de Argentina · lista de iptv-org</p>
+        <p className="ltv-source">{channels.length} canales de Argentina · señales oficiales de cada canal y sus vivos de YouTube</p>
       </header>
 
       <div className="ltv-layout">
         <section className="ltv-stage" aria-label="Reproductor">
           <div className="ltv-screen" ref={screenRef}>
-            <video ref={videoRef} playsInline autoPlay onDoubleClick={toggleFullscreen} />
+            <video ref={videoRef} playsInline autoPlay hidden={!!current?.youtube} onDoubleClick={toggleFullscreen} />
+            {current?.youtube && (
+              <YoutubeLive key={`${current.id}:${retry}`} channel={current} muted={muted} onPlaying={ytPlaying} onMuted={setMuted} />
+            )}
             <span className="ltv-live">
               <i />
               EN VIVO
@@ -289,8 +321,8 @@ export function LiveTv() {
                 <p>
                   {health[current.id] === 'blocked'
                     ? 'Este canal no se puede ver desde el navegador: su servidor no lo permite.'
-                    : current.geoBlocked
-                      ? 'Este canal solo se ve desde su zona.'
+                    : current.youtube
+                      ? 'Este canal no está transmitiendo en vivo ahora.'
                       : 'Este canal no responde ahora.'}
                 </p>
                 <div className="ltv-error-actions">
@@ -300,6 +332,11 @@ export function LiveTv() {
                   <button className="btn btn-primary" onClick={() => zap(1)}>
                     Siguiente canal
                   </button>
+                  {current.youtube && (
+                    <a className="btn" href={current.url} target="_blank" rel="noopener noreferrer">
+                      Abrir en YouTube
+                    </a>
+                  )}
                 </div>
               </div>
             )}
@@ -337,8 +374,8 @@ export function LiveTv() {
           </div>
           <p className="ltv-hint">
             Con el control: CH+ / CH− cambian de canal, los números van directo a uno y en pantalla completa también
-            sirven ▲ ▼. Se ocultan los canales de cable pago y los que no se pueden ver desde la app; los que este
-            navegador no puede reproducir aparecen atenuados y se saltean al cambiar de canal.
+            sirven ▲ ▼. Los canales marcados “No siempre en vivo” transmiten por YouTube solo en algunos horarios; los
+            que este navegador no puede reproducir aparecen atenuados y se saltean al cambiar de canal.
           </p>
         </section>
 
@@ -376,7 +413,7 @@ export function LiveTv() {
                     <ChannelLogo channel={c} />
                     <span className="ltv-text">
                       <span className="ltv-ch-name">{c.name}</span>
-                      <span className={`ltv-note${c.notAlways || c.geoBlocked || isBad(c) ? ' warn' : ''}`}>{channelNote(c, health[c.id])}</span>
+                      <span className={`ltv-note${c.notAlways || isBad(c) ? ' warn' : ''}`}>{channelNote(c, health[c.id])}</span>
                     </span>
                   </button>
                   <button
