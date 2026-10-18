@@ -74,7 +74,7 @@ describe('probeChannels', () => {
 })
 
 describe('zapping saltea los que no andan', () => {
-  const ch = (id: string, no: number): LiveChannel => ({ id, no, name: id, category: 'aire', notAlways: false, geoBlocked: false, url: `https://${id}.example/x.m3u8` })
+  const ch = (id: string, no: number): LiveChannel => ({ id, no, name: id, category: 'aire', notAlways: false, url: `https://${id}.example/x.m3u8` })
   const list = [ch('a', 1), ch('b', 2), ch('c', 3), ch('d', 4)]
   const health: Record<string, ChannelHealth> = { b: 'blocked', c: 'down' }
   const bad = (c: LiveChannel) => !!health[c.id] && health[c.id] !== 'ok'
