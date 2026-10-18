@@ -1,11 +1,11 @@
-import { useId, useMemo, useState } from 'react'
+import { useCallback, useEffect, useId, useMemo, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { EmptyState } from '../../components/EmptyState'
 import { UserStars } from '../../components/StarRating'
 import { episodeLabel, formatTime, smallPoster } from '../../lib/format'
 import { groupHistory } from '../../lib/historyGroups'
 import { typeLabel } from '../../lib/i18n'
-import { progressStore, removeHistory, useStore, type WatchEntry } from '../../lib/store'
+import { progressStore, removeHistory, restoreHistory, useStore, type RemovedHistory, type WatchEntry } from '../../lib/store'
 import { formatWatchTime, plural, watchStats } from '../../lib/watchStats'
 
 // Lista del historial con filtros y búsqueda. Desde la v0.23 tiene el formato del Diario (que se unificó acá):
@@ -90,9 +90,12 @@ export function HistoryFeed({ initialFilter = 'all', initialQuery = '', onChange
       .filter((e) => !q || e.name.toLowerCase().includes(q) || e.episodeTitle?.toLowerCase().includes(q))
       .sort((a, b) => b.updatedAt - a.updatedAt)
   }, [all, filter, query])
-  const shown = limit ? entries.slice(0, limit) : entries
+  const shownCount = limit ? Math.min(limit, entries.length) : entries.length
 
-  const months = useMemo(() => groupHistory(shown), [shown])
+  // Los totales de cada mes van sobre toda la lista (aunque Vos muestre solo las primeras): así Vos e Historial
+  // dicen lo mismo del mismo mes.
+  const months = useMemo(() => groupHistory(entries, limit), [entries, limit])
+  const { undo, remove, restore } = useUndoRemove()
 
   const pick = (f: HistoryFilter) => {
     setFilter(f)
@@ -146,7 +149,11 @@ export function HistoryFeed({ initialFilter = 'all', initialQuery = '', onChange
             <MonthHeading>
               <span className="diary-month-name">{label}</span>
               <span className="muted small">
-                {[m.movies && plural(m.movies, 'película', 'películas'), m.episodes && plural(m.episodes, 'episodio', 'episodios')]
+                {[
+                  m.movies && plural(m.movies, 'película', 'películas'),
+                  m.episodes && plural(m.episodes, 'episodio', 'episodios'),
+                  m.started && `${m.started} sin terminar`,
+                ]
                   .filter(Boolean)
                   .join(' · ')}
               </span>
@@ -167,7 +174,7 @@ export function HistoryFeed({ initialFilter = 'all', initialQuery = '', onChange
                     </div>
                     <ul className="diary-items">
                       {d.items.map((e) => (
-                        <HistoryItem key={e.videoId} e={e} />
+                        <HistoryItem key={e.videoId} e={e} onRemove={remove} />
                       ))}
                     </ul>
                   </li>
@@ -178,18 +185,74 @@ export function HistoryFeed({ initialFilter = 'all', initialQuery = '', onChange
         )
       })}
 
-      {limit !== undefined && entries.length > shown.length && (
+      {limit !== undefined && entries.length > shownCount && (
         <div className="history-more">
           <Link to={historyLink(filter, query)} className="btn">
             Ver todo el historial ({entries.length})
           </Link>
         </div>
       )}
+
+      {undo && (
+        <div className="undo-toast" role="status">
+          <span>
+            Quitado del historial<span className="muted"> · {undo.name}</span>
+          </span>
+          <button type="button" className="btn btn-small" onClick={restore}>
+            Deshacer
+          </button>
+        </div>
+      )}
     </>
   )
 }
 
-function HistoryItem({ e }: { e: WatchEntry }) {
+const UNDO_MS = 6000
+
+/** El ✕ borra al toque (así se pueden sacar varios seguidos) y deja 6 s un aviso con "Deshacer". */
+function useUndoRemove() {
+  const [undo, setUndo] = useState<{ name: string; removed: RemovedHistory }>()
+  const timer = useRef<ReturnType<typeof setTimeout>>(undefined)
+  useEffect(
+    () => () => {
+      clearTimeout(timer.current)
+    },
+    [],
+  )
+
+  const remove = useCallback((e: WatchEntry, button?: HTMLButtonElement) => {
+    // Con el control remoto o el teclado, el foco pasa al ✕ del que sigue (si no, quedaba en <body>).
+    const keepFocus = !!button && document.activeElement === button
+    const index = keepFocus ? removeButtons().indexOf(button) : -1
+    const removed = removeHistory([e.videoId])
+    const name = e.season !== undefined ? `${e.name} ${episodeLabel(e.season, e.episode)}` : e.name
+    setUndo({ name, removed })
+    clearTimeout(timer.current)
+    timer.current = setTimeout(() => setUndo(undefined), UNDO_MS)
+    if (keepFocus) {
+      requestAnimationFrame(() => {
+        const list = removeButtons()
+        ;(list[index] ?? list[index - 1])?.focus()
+      })
+    }
+  }, [])
+
+  const restore = useCallback(() => {
+    if (!undo) return
+    restoreHistory(undo.removed)
+    clearTimeout(timer.current)
+    setUndo(undefined)
+    // El aviso desaparece: el foco vuelve al ✕ de lo que se recuperó.
+    const id = undo.removed.progress[0]?.videoId
+    if (id) requestAnimationFrame(() => removeButtons().find((b) => b.dataset.historyRemove === id)?.focus())
+  }, [undo])
+
+  return { undo, remove, restore }
+}
+
+const removeButtons = () => Array.from(document.querySelectorAll<HTMLButtonElement>('button[data-history-remove]'))
+
+function HistoryItem({ e, onRemove }: { e: WatchEntry; onRemove: (e: WatchEntry, button?: HTMLButtonElement) => void }) {
   const pct = e.duration ? Math.min(100, (e.position / e.duration) * 100) : 0
   const link = `/detail/${e.type}/${encodeURIComponent(e.metaId)}${
     e.season !== undefined ? `?season=${e.season}&video=${encodeURIComponent(e.videoId)}` : ''
@@ -206,7 +269,7 @@ function HistoryItem({ e }: { e: WatchEntry }) {
             {e.episodeTitle && ` · ${e.episodeTitle}`}
           </span>
           <span className="small diary-meta">
-            <span>{e.watched ? '✓ Vista' : e.duration ? `${formatTime(e.position)} de ${formatTime(e.duration)}` : 'Empezada'}</span>
+            <span>{e.watched ? '✓ Visto' : e.duration ? `${formatTime(e.position)} de ${formatTime(e.duration)}` : 'Empezado'}</span>
             <span className="muted">{new Date(e.updatedAt).toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit' })}</span>
           </span>
           {!e.watched && pct > 0 && (
@@ -223,7 +286,8 @@ function HistoryItem({ e }: { e: WatchEntry }) {
         className="btn btn-ghost"
         aria-label={`Quitar “${e.name}” del historial`}
         title="Quitar del historial"
-        onClick={() => removeHistory([e.videoId])}
+        data-history-remove={e.videoId}
+        onClick={(ev) => onRemove(e, ev.currentTarget)}
       >
         ✕
       </button>

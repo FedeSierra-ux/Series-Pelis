@@ -25,6 +25,18 @@ const DEPARTMENTS: Record<string, string> = {
   Crew: 'Equipo técnico',
 }
 
+/** Los puestos más comunes del equipo técnico (TMDB los da en inglés); el resto queda como viene. */
+const JOBS: Record<string, string> = {
+  Director: 'Dirección',
+  Producer: 'Producción',
+  'Executive Producer': 'Producción ejecutiva',
+  Screenplay: 'Guion',
+  Writer: 'Guion',
+  Novel: 'Novela',
+  'Original Music Composer': 'Música original',
+  'Director of Photography': 'Dirección de fotografía',
+}
+
 /** "1964-09-02" → "2 de septiembre de 1964" (sin pasar por UTC, que corre el día). */
 function formatDate(iso: string): string {
   const [y, m, d] = iso.split('-').map(Number)
@@ -171,7 +183,7 @@ export function Person() {
           <div className="grid">
             {credits.map((c) => {
               const meta = tmdbToPreview(c)
-              const sub = [itemYear(c), c.character || c.job].filter(Boolean).join(' · ')
+              const sub = [itemYear(c), c.character || (c.job && (JOBS[c.job] ?? c.job))].filter(Boolean).join(' · ')
               return <PosterCard key={meta.id} meta={meta} subtitle={sub || undefined} />
             })}
           </div>

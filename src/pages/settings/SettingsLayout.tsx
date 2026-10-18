@@ -58,12 +58,35 @@ export function goToSection(id: string, focusFirst: boolean) {
 /** Línea (desde arriba) que una sección tiene que haber pasado para contar como "la que se está leyendo". */
 const READING_LINE = 0.12
 
+/** Tiempo en que el foco recién movido manda aunque el control todavía no haya entrado en pantalla (scroll suave). */
+const FOCUS_GRACE_MS = 1000
+
 /** Sección que se resalta en el índice: la última cuyo título ya pasó la línea de lectura (o la última si se llegó al final). */
 export function useActiveSection(ids: string[], enabled: boolean) {
   const [active, setActive] = useState(ids[0])
   useEffect(() => {
     if (!enabled || typeof IntersectionObserver === 'undefined') return
+    // Cuándo entró el foco por última vez: mientras dura el scroll suave que lo sigue, el control todavía
+    // está fuera de la pantalla y igual tiene que mandar.
+    let focusAt = 0
+    // Sección que tiene el foco (control remoto o teclado), si el control enfocado se ve en pantalla.
+    const focusedSection = (): string | undefined => {
+      const el = document.activeElement
+      if (!(el instanceof HTMLElement) || el === document.body) return undefined
+      const block = el.closest<HTMLElement>('.settings-block')
+      if (!block || !ids.includes(block.id)) return undefined
+      if (performance.now() - focusAt < FOCUS_GRACE_MS) return block.id
+      const r = el.getBoundingClientRect()
+      return r.bottom > 0 && r.top < window.innerHeight ? block.id : undefined
+    }
     const update = () => {
+      // El foco manda sobre el scroll: en la TV se baja por los controles y la línea de lectura podía marcar
+      // otra sección. Si el control enfocado salió de la pantalla (se scrolleó con el mouse), vuelve el scroll.
+      const focused = focusedSection()
+      if (focused) {
+        setActive(focused)
+        return
+      }
       const limit = window.innerHeight * READING_LINE + 8
       let current = ids[0]
       for (const id of ids) {
@@ -81,10 +104,18 @@ export function useActiveSection(ids: string[], enabled: boolean) {
       const el = document.getElementById(id)
       if (el) io.observe(el)
     }
+    // Al entrar el foco en una sección, el índice la marca enseguida (no espera al scroll).
+    const onFocusIn = () => {
+      focusAt = performance.now()
+      const focused = focusedSection()
+      if (focused) setActive(focused)
+    }
     window.addEventListener('scroll', update, { passive: true })
+    document.addEventListener('focusin', onFocusIn)
     return () => {
       io.disconnect()
       window.removeEventListener('scroll', update)
+      document.removeEventListener('focusin', onFocusIn)
     }
   }, [ids, enabled])
   return [active, setActive] as const

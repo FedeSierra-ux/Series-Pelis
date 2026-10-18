@@ -16,8 +16,9 @@ const logoFor = (m: MetaPreview) => m.logo ?? (m.id.startsWith('tt') ? `https://
 export function BestResult({ meta }: { meta: MetaPreview }) {
   const inList = !!useStore(watchlistStore)[meta.id]
   const [brokenLogo, setBrokenLogo] = useState<string>()
-  const [brokenBg, setBrokenBg] = useState<string>()
-  const bg = backdropFor(meta.id, meta.background) ?? meta.poster
+  const [brokenBg, setBrokenBg] = useState<string[]>([])
+  // Si el fondo no carga, el póster (antes quedaba una caja vacía).
+  const bg = [backdropFor(meta.id, meta.background), meta.poster].find((u) => u && !brokenBg.includes(u))
   const logo = logoFor(meta)
   const showLogo = logo && logo !== brokenLogo ? logo : undefined
   const to = `/detail/${meta.type}/${encodeURIComponent(meta.id)}`
@@ -25,7 +26,7 @@ export function BestResult({ meta }: { meta: MetaPreview }) {
   return (
     <section className="search-best" aria-labelledby="search-best-title">
       <div className="search-best-art" aria-hidden>
-        {bg && bg !== brokenBg && <img src={bg} alt="" decoding="async" onError={() => setBrokenBg(bg)} />}
+        {bg && <img key={bg} src={bg} alt="" decoding="async" onError={() => setBrokenBg((b) => [...b, bg])} />}
       </div>
       <div className="search-best-body">
         <span className="search-best-eyebrow">Mejor resultado</span>

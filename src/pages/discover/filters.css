@@ -70,7 +70,10 @@
   color: var(--muted);
 }
 
-/* Botón "Filtros" con el contador. */
+/* Botón "Filtros" con el contador (en PC y TV el envoltorio no cuenta para la grilla). */
+.fb-more-wrap {
+  display: contents;
+}
 .fb-more {
   display: inline-flex;
   align-items: center;
@@ -521,14 +524,29 @@
     flex-shrink: 0;
   }
   .fb-more {
+    padding: 0 14px;
+  }
+  /* El envoltorio (sin bordes redondeados) es el que queda pegado: tapa los chips que pasan por
+     detrás, también en las esquinas del botón, en el margen de la izquierda y con un fundido a la derecha. */
+  .fb-more-wrap {
+    display: flex;
     order: -2;
     position: sticky;
     /* Chrome mide `left` desde el borde interno (después del padding de la fila). */
     left: 0;
     z-index: 1;
-    padding: 0 14px;
-    /* Tapa los chips que pasan por detrás, también en el margen de la izquierda. */
-    box-shadow: calc(-1 * var(--gutter)) 0 0 var(--bg), 12px 0 12px -4px var(--bg);
+    background: var(--bg);
+    box-shadow: calc(-1 * var(--gutter)) 0 0 var(--bg);
+  }
+  .fb-more-wrap::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    left: 100%;
+    width: 24px;
+    background: linear-gradient(to right, var(--bg), transparent);
+    pointer-events: none;
   }
   .fb-genres {
     display: contents;

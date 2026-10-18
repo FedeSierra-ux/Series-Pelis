@@ -6,6 +6,7 @@ import { useAddons, useTitle } from '../lib/hooks'
 import { availableYears, computeYearStats, entriesOfYear, formatDuration, loadYearMetas, type TitleStat } from '../lib/stats'
 import { progressStore, useStore } from '../lib/store'
 import type { Meta } from '../lib/types'
+import { wholeHours } from '../lib/watchStats'
 import { GoalBars, useYearGoal } from './goals/GoalBars'
 
 function TitleRow({ t, extra }: { t: TitleStat; extra?: string }) {
@@ -45,7 +46,7 @@ export function YearReview() {
   }, [addons, progress, year])
 
   const s = useMemo(() => computeYearStats(progress, year, metas), [progress, year, metas])
-  const hours = s.seconds / 3600
+  const hours = wholeHours(s.seconds)
   const empty = s.seconds === 0 && s.activeDays === 0
   const maxGenre = s.genres[0]?.seconds ?? 1
   const goalLines = useYearGoal(year, s.seconds)
@@ -79,9 +80,9 @@ export function YearReview() {
         <>
           <section className="year-hero">
             <div className="year-hero-main">
-              <span className="year-big">{hours >= 1 ? Math.round(hours).toLocaleString('es-AR') : Math.round(s.seconds / 60)}</span>
+              <span className="year-big">{hours >= 1 ? hours.toLocaleString('es-AR') : Math.floor(s.seconds / 60)}</span>
               <span className="year-big-label">
-                {hours >= 1 ? 'horas' : 'minutos'} de pelis y series en {year}
+                {hours >= 1 ? (hours === 1 ? 'hora' : 'horas') : 'minutos'} de pelis y series en {year}
                 {s.approx && <span className="muted small"> (aprox.)</span>}
               </span>
             </div>

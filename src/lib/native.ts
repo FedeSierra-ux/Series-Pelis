@@ -20,6 +20,16 @@ export interface NativeInfo {
    * `<base>/<infoHash>/<fileIdx>` (como el servidor de Stremio) y solo lo abre el reproductor nativo.
    */
   torrent?: string
+  /**
+   * v0.25.1: el motor todavía se está armando (carga la librería en otro hilo). No es "este APK no tiene
+   * motor": `nativeInfo` no guarda esta respuesta y el APK avisa con el evento `torrentReady`.
+   */
+  torrentLoading?: boolean
+}
+
+/** Evento `torrentReady`: terminó de armarse el motor (`torrent` falta si no arrancó). */
+export interface NativeTorrentReady {
+  torrent?: string
 }
 
 export interface NativeUpdateInfo {
@@ -78,6 +88,7 @@ interface SpNativePlugin {
   takeLaunch(): Promise<NativeLaunch>
   addListener(event: 'update', fn: (e: NativeUpdateEvent) => void): Promise<PluginListenerHandle> | PluginListenerHandle
   addListener(event: 'open', fn: () => void): Promise<PluginListenerHandle> | PluginListenerHandle
+  addListener(event: 'torrentReady', fn: (e: NativeTorrentReady) => void): Promise<PluginListenerHandle> | PluginListenerHandle
 }
 
 interface CapacitorLike {
@@ -103,11 +114,23 @@ export function isNativeApp(userAgent = typeof navigator === 'undefined' ? '' : 
 
 let info: Promise<NativeInfo> | undefined
 
-/** Lo que sabe hacer el APK (se pregunta una vez). En el navegador, vacío. */
+/**
+ * Lo que sabe hacer el APK (se pregunta una vez). En el navegador, vacío. Una respuesta con `torrentLoading`
+ * (el motor se está armando) no se guarda: la próxima llamada vuelve a preguntar.
+ */
 export function nativeInfo(): Promise<NativeInfo> {
   const p = plugin()
   if (!p) return Promise.resolve({})
-  info ??= p.getInfo().catch(() => ({}))
+  if (!info) {
+    const asked: Promise<NativeInfo> = p.getInfo().then(
+      (i) => {
+        if (i?.torrentLoading && info === asked) info = undefined
+        return i ?? {}
+      },
+      () => ({}),
+    )
+    info = asked
+  }
   return info
 }
 
@@ -166,12 +189,16 @@ export async function nativeTakeLaunch(): Promise<NativeLaunch> {
 /** Escucha un evento del APK. Devuelve la función para dejar de escuchar. */
 export function listenNative(event: 'update', fn: (e: NativeUpdateEvent) => void): () => void
 export function listenNative(event: 'open', fn: () => void): () => void
-export function listenNative(event: 'update' | 'open', fn: (e: NativeUpdateEvent) => void): () => void {
+export function listenNative(event: 'torrentReady', fn: (e: NativeTorrentReady) => void): () => void
+export function listenNative(
+  event: 'update' | 'open' | 'torrentReady',
+  fn: ((e: NativeUpdateEvent) => void) | ((e: NativeTorrentReady) => void),
+): () => void {
   const p = plugin()
   if (!p) return () => {}
   let handle: PluginListenerHandle | undefined
   let removed = false
-  Promise.resolve(p.addListener(event as 'update', fn))
+  Promise.resolve(p.addListener(event as 'update', fn as (e: NativeUpdateEvent) => void))
     .then((h) => {
       handle = h
       if (removed) void Promise.resolve(h.remove()).catch(() => {})

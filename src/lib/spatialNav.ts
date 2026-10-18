@@ -3,7 +3,7 @@
 
 import { restoredElement } from './focusMemory'
 
-type Dir = 'up' | 'down' | 'left' | 'right'
+export type Dir = 'up' | 'down' | 'left' | 'right'
 
 const KEYS: Record<string, Dir> = {
   ArrowUp: 'up',
@@ -14,7 +14,8 @@ const KEYS: Record<string, Dir> = {
 
 const BACK_KEYS = new Set(['Escape', 'GoBack', 'BrowserBack', 'Backspace'])
 
-const FOCUSABLE = 'a[href], button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea, [tabindex]:not([tabindex="-1"])'
+// `summary`: el título de un <details> ("Soy el administrador" en el Login, las secciones de Ajustes en el celular).
+const FOCUSABLE = 'a[href], button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea, summary, [tabindex]:not([tabindex="-1"])'
 
 function isVisible(el: HTMLElement) {
   // Sin getComputedStyle a propósito: con cientos de pósters en pantalla es lo que más cuesta.
@@ -47,41 +48,106 @@ function initialTarget(els: HTMLElement[]): HTMLElement | undefined {
   return marked ?? els.find((el) => main.contains(el)) ?? els[0]
 }
 
-function center(r: DOMRect) {
-  return { x: r.left + r.width / 2, y: r.top + r.height / 2 }
+interface Box {
+  left: number
+  right: number
+  top: number
+  bottom: number
+}
+
+/** Separación entre dos tramos (0 si se superponen). */
+function gap(a1: number, a2: number, b1: number, b2: number) {
+  return Math.max(0, b1 - a2, a1 - b2)
+}
+
+/**
+ * Puntaje de un candidato para moverse de `from` a `to` en `dir` (menos es mejor); `undefined` si no
+ * sirve. El avance se mide entre centros; el desvío lateral, como la separación entre los dos
+ * rectángulos (0 si se superponen en ese eje): una fila de fuentes a todo el ancho debajo de una pestaña
+ * angosta gana sobre un botón angosto alineado con la pestaña pero más lejos (antes, de centro a centro,
+ * la fila ancha quedaba "desviada" y no se podía llegar). El desvío entre centros solo desempata.
+ * Con ← / → y `view` (lo visible de la ventana, en y), lo que no comparte ninguna altura con el origen
+ * tiene que estar a la vista: si no, desde un episodio sin nada a la derecha el foco saltaba a la
+ * portada, fuera de la pantalla y arriba de todo.
+ */
+export function navScore(from: Box, to: Box, dir: Dir, view?: { top: number; bottom: number }): number | undefined {
+  // Tiene que estar del lado correcto (con una tolerancia chica para elementos superpuestos).
+  const ok =
+    dir === 'right' ? to.left >= from.right - 4 :
+    dir === 'left' ? to.right <= from.left + 4 :
+    dir === 'down' ? to.top >= from.bottom - 4 :
+    to.bottom <= from.top + 4
+  if (!ok) return undefined
+  const horizontal = dir === 'left' || dir === 'right'
+  const cross = horizontal ? gap(from.top, from.bottom, to.top, to.bottom) : gap(from.left, from.right, to.left, to.right)
+  if (horizontal && view && cross > 0 && (to.bottom <= view.top || to.top >= view.bottom)) return undefined
+  const fc = { x: (from.left + from.right) / 2, y: (from.top + from.bottom) / 2 }
+  const tc = { x: (to.left + to.right) / 2, y: (to.top + to.bottom) / 2 }
+  const main = horizontal ? Math.abs(tc.x - fc.x) : Math.abs(tc.y - fc.y)
+  const centerCross = horizontal ? Math.abs(tc.y - fc.y) : Math.abs(tc.x - fc.x)
+  // Penalizamos el desvío lateral para que se mueva "en línea".
+  return main + cross * 2.5 + centerCross * 0.05
 }
 
 function best(from: DOMRect, dir: Dir, els: HTMLElement[], current: Element | null): HTMLElement | undefined {
-  const c = center(from)
   let winner: HTMLElement | undefined
   let winnerScore = Infinity
   const vertical = dir === 'up' || dir === 'down'
   const fromRail = inRail(current)
+  const view = { top: 0, bottom: window.innerHeight }
+  const fromScroller = current?.closest('.row-scroller')
+  const clips = new Map<Element, DOMRect>()
   for (const el of els) {
     if (el === current) continue
     // ↑ / ↓ nunca cruzan entre el riel y la página: sin nada abajo, el foco se queda (antes saltaba al riel).
     if (vertical && inRail(el) !== fromRail) continue
     const r = el.getBoundingClientRect()
-    const t = center(r)
-    const dx = t.x - c.x
-    const dy = t.y - c.y
-    // Tiene que estar del lado correcto (con una tolerancia chica para elementos superpuestos).
-    const ok =
-      dir === 'right' ? r.left >= from.right - 4 :
-      dir === 'left' ? r.right <= from.left + 4 :
-      dir === 'down' ? r.top >= from.bottom - 4 :
-      r.bottom <= from.top + 4
-    if (!ok) continue
-    const main = dir === 'left' || dir === 'right' ? Math.abs(dx) : Math.abs(dy)
-    const cross = dir === 'left' || dir === 'right' ? Math.abs(dy) : Math.abs(dx)
-    // Penalizamos el desvío lateral para que se mueva "en línea".
-    const score = main + cross * 2.5
-    if (score < winnerScore) {
+    // Lo que una fila recorta (scroll horizontal) no se ve: desde afuera de esa fila no cuenta (antes → desde
+    // "Tu año" caía en el "Quitar" de una tarjeta escondida de Seguir viendo, y OK la borraba). Dentro de la
+    // misma fila sí, así se sigue avanzando y la fila se corre.
+    const scroller = el.closest('.row-scroller')
+    if (scroller && scroller !== fromScroller) {
+      let clip = clips.get(scroller)
+      if (!clip) clips.set(scroller, (clip = scroller.getBoundingClientRect()))
+      if (r.right <= clip.left + 1 || r.left >= clip.right - 1) continue
+    }
+    const score = navScore(from, r, dir, view)
+    if (score !== undefined && score < winnerScore) {
       winnerScore = score
       winner = el
     }
   }
   return winner
+}
+
+/**
+ * Zonas de la pantalla (`data-nav-zone`, o el índice lateral de Ajustes): ↑ / ↓ se quedan en la zona
+ * donde está el foco y recién la dejan si no queda nada en esa dirección (antes ↓ desde el contenido de
+ * Ajustes caía en el índice). ← / → pasan de una a otra; → desde el índice de Ajustes va a la sección
+ * marcada, no a lo que quede más cerca.
+ */
+const ZONE = '[data-nav-zone], .settings-index'
+const zoneOf = (el: Element | null) => el?.closest(ZONE) ?? null
+
+function move(from: DOMRect, dir: Dir, els: HTMLElement[], current: Element): HTMLElement | undefined {
+  const zone = zoneOf(current)
+  if (dir === 'up' || dir === 'down') {
+    const same = els.filter((el) => zoneOf(el) === zone)
+    if (same.length < els.length) return best(from, dir, same, current) ?? best(from, dir, els, current)
+  }
+  if (dir === 'right' && zone?.classList.contains('settings-index')) {
+    const id = zone.querySelector('[aria-current="true"]')?.getAttribute('href')?.slice(1)
+    const section = id ? document.getElementById(id) : null
+    if (section) {
+      const inside = els.filter((el) => section.contains(el))
+      const shown = inside.find((el) => {
+        const r = el.getBoundingClientRect()
+        return r.top >= 0 && r.bottom <= window.innerHeight
+      })
+      if (shown ?? inside[0]) return shown ?? inside[0]
+    }
+  }
+  return best(from, dir, els, current)
 }
 
 function isTextInput(el: Element | null) {
@@ -96,8 +162,10 @@ function isTextInput(el: Element | null) {
  */
 function caretAtEdge(el: HTMLInputElement | HTMLTextAreaElement, dir: 'left' | 'right') {
   const { selectionStart: start, selectionEnd: end } = el
-  // Algunos tipos (email, number) no exponen el cursor: ahí las flechas siguen siendo del campo.
-  if (start === null || end === null || start !== end) return false
+  // Algunos tipos no exponen el cursor: en email las flechas siguen siendo del campo; en number ← / →
+  // no hacen nada adentro, así que salen (si no, el campo de la meta atrapaba el foco).
+  if (start === null || end === null) return el.type === 'number'
+  if (start !== end) return false
   return dir === 'right' ? end === el.value.length : start === 0
 }
 
@@ -144,11 +212,55 @@ function reducedMotion() {
   return typeof matchMedia === 'function' && matchMedia('(prefers-reduced-motion: reduce)').matches
 }
 
+/** Desde dónde se ve la página: 0, o lo que tapa una portada fija (`scroll-padding-top`, ver discover/browse.css). */
+export function visibleTop(): number {
+  return parseFloat(getComputedStyle(document.documentElement).scrollPaddingTop) || 0
+}
+
+/** Lo que apaga la sombra de la portada fija debajo de ella (`bh-edge` en discover/browse.css: 32 px + 48 de difuminado). */
+export const SHADE_PX = 80
+
+/**
+ * Scroll vertical para una tarjeta de una fila debajo de una portada fija (PC): centrada en lo que se ve,
+ * pero sin dejar el título de la fila dentro de la sombra de la portada; si no entra todo, gana la tarjeta
+ * entera. Puro, para poder probarlo.
+ */
+export function rowRevealTop(o: { scrollY: number; viewTop: number; viewH: number; cardTop: number; cardBottom: number; headTop: number }): number {
+  const center = o.scrollY + (o.cardTop + o.cardBottom) / 2 - (o.viewTop + (o.viewH - o.viewTop) / 2)
+  const keepHead = o.scrollY + o.headTop - o.viewTop - SHADE_PX
+  const keepCard = o.scrollY + o.cardBottom - o.viewH
+  return Math.max(0, Math.round(Math.max(Math.min(center, keepHead), keepCard)))
+}
+
 /** Lleva a la vista el elemento recién enfocado. En la TV, anclado; si no, centrado como siempre. */
 function reveal(el: HTMLElement, instant: boolean) {
   if (!isTv()) {
-    // Centrado: el póster del borde no queda cortado ni tapado por la barra de arriba.
-    el.scrollIntoView({ block: 'center', inline: 'center', behavior: instant ? 'auto' : 'smooth' })
+    const behavior: ScrollBehavior = instant ? 'auto' : 'smooth'
+    const scroller = el.closest<HTMLElement>('.row-scroller')
+    const row = scroller?.closest<HTMLElement>('.row')
+    const viewTop = visibleTop()
+    if (!scroller || !row || viewTop <= 0) {
+      // Centrado: el póster del borde no queda cortado ni tapado por la barra de arriba.
+      el.scrollIntoView({ block: 'center', inline: 'center', behavior })
+      return
+    }
+    // Debajo de la portada fija de Películas/Series: centrada, con el título de la fila fuera de la sombra.
+    const item = (el.closest('.row-scroller > *') as HTMLElement | null) ?? el
+    const ir = item.getBoundingClientRect()
+    const sr = scroller.getBoundingClientRect()
+    const maxLeft = scroller.scrollWidth - scroller.clientWidth
+    const left = Math.max(0, Math.min(maxLeft, Math.round(scroller.scrollLeft + ir.left + ir.width / 2 - (sr.left + scroller.clientWidth / 2))))
+    if (Math.abs(left - scroller.scrollLeft) > 1) scroller.scrollTo({ left, behavior })
+    const head = row.querySelector('.row-header') ?? row
+    const top = rowRevealTop({
+      scrollY: window.scrollY,
+      viewTop,
+      viewH: window.innerHeight,
+      cardTop: ir.top,
+      cardBottom: ir.bottom,
+      headTop: head.getBoundingClientRect().top,
+    })
+    if (Math.abs(top - window.scrollY) > 1) window.scrollTo({ top, behavior })
     return
   }
   const behavior: ScrollBehavior = instant || reducedMotion() ? 'auto' : 'smooth'
@@ -175,6 +287,25 @@ function reveal(el: HTMLElement, instant: boolean) {
     return
   }
   el.scrollIntoView({ block: 'center', inline: 'nearest', behavior })
+}
+
+/**
+ * Lo restaurado por la memoria de foco al volver (sin animación). En la TV una fila o grilla vuelve
+ * siempre anclada debajo de la portada que sigue al foco, como al moverse con las flechas; lo demás, y
+ * todo en PC, solo si no se ve entero (`needed`).
+ */
+export function revealRestored(el: HTMLElement, needed: boolean) {
+  if (needed || (isTv() && el.closest('.row-scroller, .grid'))) reveal(el, true)
+}
+
+/** En la TV, si lo guardado no aparece, la primera tarjeta a la vista (si no, las flechas arrancan de cero). */
+export function firstVisibleCard(): HTMLElement | undefined {
+  if (!isTv()) return undefined
+  const cards = document.querySelectorAll<HTMLElement>('main .row-scroller a[href], main .grid a[href]')
+  return Array.from(cards).find((c) => {
+    const r = c.getBoundingClientRect()
+    return r.width > 0 && r.top >= 0 && r.bottom <= window.innerHeight && r.left >= 0 && r.right <= window.innerWidth
+  })
 }
 
 /**
@@ -285,7 +416,17 @@ export function initSpatialNav(onBack: () => void) {
     const els = candidates()
     const from =
       active && active !== document.body ? (active as HTMLElement).getBoundingClientRect() : new DOMRect(0, 0, 0, 0)
-    const next = active && active !== document.body ? best(from, dir, rowPool(els, active, dir), active) : initialTarget(els)
+    let next = active && active !== document.body ? move(from, dir, rowPool(els, active, dir), active) : initialTarget(els)
+    // De la página al riel se entra siempre por el ítem activo ("Inicio"), no por el más cercano
+    // (desde las filas de abajo era "Ajustes"), como en Netflix o Google TV.
+    if (next && inRail(next) && !inRail(active)) next = railTarget(els) ?? next
+    // Salir hacia la izquierda de un panel que dice a dónde volver (`data-nav-left`, un selector): las
+    // fuentes de un episodio vuelven al episodio elegido, no al ✓ que quede más cerca.
+    const back = dir === 'left' && active instanceof Element ? active.closest<HTMLElement>('[data-nav-left]') : null
+    if (back && next && !back.contains(next)) {
+      const target = document.querySelector<HTMLElement>(back.dataset.navLeft ?? '')
+      if (target && els.includes(target)) next = target
+    }
     if (next) {
       e.preventDefault()
       lastMove = now

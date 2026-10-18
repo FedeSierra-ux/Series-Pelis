@@ -78,7 +78,7 @@ export function Row({ title, moreTo, loading, error, empty, errorNotice, reportC
 
   if (!loading && error && empty && errorNotice) {
     return (
-      <section className="row">
+      <section className="row" data-row-key={title}>
         <header className="row-header">
           <h2>{title}</h2>
         </header>
@@ -91,7 +91,9 @@ export function Row({ title, moreTo, loading, error, empty, errorNotice, reportC
   }
   if (!loading && (empty || (error && empty !== false))) return null
   return (
-    <section className="row">
+    // `data-row-key`: la memoria de foco vuelve al póster en esta fila (puede estar repetido en otra);
+    // `data-row-loading`: todavía no llegaron las tarjetas, hay que esperarla.
+    <section className="row" data-row-key={title} data-row-loading={showSkeleton || undefined}>
       <header className="row-header">
         <h2>{title}</h2>
         {moreTo && (

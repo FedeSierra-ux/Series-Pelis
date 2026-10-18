@@ -64,6 +64,11 @@ export function StreamList({ meta, video, nextVideoId }: { meta: Meta; video?: V
   const [openTorrents, setOpenTorrents] = useState<Set<string>>(() => new Set())
   const listRef = useRef<HTMLDivElement>(null)
   const cancelRef = useRef<HTMLButtonElement>(null)
+  // Orden de las fuentes de cada addon, fijado la primera vez que se muestran. La recomendación llega
+  // tarde (a los GRACE_MS o cuando responde el último addon): si ese addon ya estaba en pantalla, el
+  // recomendado se marca donde está y nada se corre bajo el dedo o el mouse.
+  const orderRef = useRef<{ key: string; byAddon: Map<string, number[]> }>({ key: '', byAddon: new Map() })
+  if (orderRef.current.key !== fetchKey) orderRef.current = { key: fetchKey, byAddon: new Map() }
 
   useEffect(
     () => getStreams(addons, meta.type, videoId, (groups) => setResult({ key: fetchKey, groups })),
@@ -233,9 +238,16 @@ export function StreamList({ meta, video, nextVideoId }: { meta: Meta; video?: V
       <div className="streams-status muted" aria-live="polite">{statusText}</div>
       {groups.map((g, addonIndex) => {
         const bestIndex = best?.addon.transportUrl === g.addon.transportUrl ? best.streamIndex : -1
-        // El recomendado va primero dentro de su addon; los que esconden los filtros van aparte.
-        const items = g.streams.map((s, i) => ({ s, i })).filter(({ i }) => !hidden.has(streamKey(addonIndex, i)))
-        if (bestIndex >= 0) items.sort((a, b) => Number(b.i === bestIndex) - Number(a.i === bestIndex))
+        // El recomendado va primero dentro de su addon solo si ya se sabía al mostrarlo por primera vez
+        // (ver `orderRef`); los que esconden los filtros van aparte.
+        const frozen = orderRef.current.byAddon
+        let order = frozen.get(g.addon.transportUrl)
+        if (!order || order.length !== g.streams.length) {
+          order = g.streams.map((_, i) => i)
+          if (bestIndex >= 0) order.sort((a, b) => Number(b === bestIndex) - Number(a === bestIndex))
+          if (order.length > 0) frozen.set(g.addon.transportUrl, order)
+        }
+        const items = order.map((i) => ({ s: g.streams[i], i })).filter(({ i }) => !hidden.has(streamKey(addonIndex, i)))
         // Los torrents que no se pueden abrir (sin debrid ni servidor de Stremio) van plegados, así no tapan los que sí andan.
         const isDeadTorrent = (s: Stream) => {
           const p = playable(s, server)

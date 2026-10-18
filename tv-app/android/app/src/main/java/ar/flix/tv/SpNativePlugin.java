@@ -4,6 +4,8 @@ import android.app.Activity;
 import android.content.ActivityNotFoundException;
 import android.content.Intent;
 import android.net.Uri;
+import android.os.Handler;
+import android.os.Looper;
 import android.util.Log;
 import android.view.WindowManager;
 import android.widget.Toast;
@@ -15,6 +17,8 @@ import com.getcapacitor.annotation.CapacitorPlugin;
 import java.io.File;
 import java.net.URISyntaxException;
 import java.util.List;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.TimeUnit;
 
 /** Lo que la web le pide a la app (en JS: window.Capacitor.Plugins.SpNative). */
 @CapacitorPlugin(name = "SpNative")
@@ -26,14 +30,58 @@ public class SpNativePlugin extends Plugin {
     private NativePlayer player;
     // Actualizaciones desde GitHub Releases (v0.21).
     private AppUpdater updater;
-    // Motor de torrents (v0.25): el puerto se abre ya; libtorrent arranca con el primer pedido.
-    private TorrentServer torrent;
+    // Motor de torrents (v0.25): se arma en otro hilo al cargar (loadLibrary tarda y no puede frenar el
+    // arranque de la app); libtorrent en sí arranca con el primer pedido. Volatile: lo escribe ese hilo.
+    private volatile TorrentServer torrent;
+    // Se suelta cuando terminó de armarse (haya motor o no).
+    private final CountDownLatch torrentReady = new CountDownLatch(1);
+    private volatile boolean destroyed;
+    // Cuánto espera getInfo al motor antes de contestar `torrentLoading` (la web pregunta de nuevo
+    // o espera el aviso "torrentReady").
+    private static final long INFO_WAIT_MS = 1_500;
+    // En el fondo más de 5 minutos: se da el video por cerrado (el motor suelta los torrents al rato).
+    private static final long BACKGROUND_CLOSE_MS = 5 * 60_000;
+    private final Handler main = new Handler(Looper.getMainLooper());
+    // Ya se avisó el cierre por estar en el fondo (solo en el hilo de la interfaz).
+    private boolean backgroundClosed;
+    private final Runnable backgroundClose = () -> {
+        TorrentServer t = torrent;
+        if (t != null) {
+            Log.i(TAG, "Cinco minutos en el fondo: se sueltan los torrents");
+            t.engine().playerClosed();
+            backgroundClosed = true;
+        }
+    };
 
     @Override
     public void load() {
         updater = new AppUpdater(getContext(), (e) -> notifyListeners("update", e));
         updater.cleanupOnStart();
-        startTorrentServer();
+        Thread start = new Thread(() -> {
+            try {
+                startTorrentServer();
+                // Si la actividad se destruyó mientras tanto, nadie más lo va a cerrar.
+                if (destroyed) {
+                    TorrentServer t = takeTorrent();
+                    if (t != null) {
+                        t.shutdown();
+                        t.engine().stop();
+                    }
+                }
+            } finally {
+                torrentReady.countDown();
+            }
+            // La web que preguntó mientras arrancaba (getInfo con `torrentLoading`) se entera acá.
+            // Se guarda hasta que alguien escuche: puede registrarse un momento después.
+            if (!destroyed) {
+                JSObject ev = new JSObject();
+                TorrentServer t = torrent;
+                if (t != null) ev.put("torrent", t.baseUrl());
+                notifyListeners("torrentReady", ev, true);
+            }
+        }, "sp-torrent-start");
+        start.setDaemon(true);
+        start.start();
     }
 
     /**
@@ -69,7 +117,41 @@ public class SpNativePlugin extends Plugin {
         res.put("home", HomeRows.isAvailable(getContext()));
         res.put("fireTv", HomeRows.isFireTv(getContext()));
         // v0.25: base del motor de torrents (http://127.0.0.1:<puerto>/<token>); sin motor, no va.
-        if (torrent != null) res.put("torrent", torrent.baseUrl());
+        if (torrentReady.getCount() == 0) {
+            resolveInfo(call, res);
+            return;
+        }
+        // Todavía se está armando: se espera un poco en otro hilo (nunca en el de la interfaz).
+        Thread wait = new Thread(() -> {
+            try {
+                torrentReady.await(INFO_WAIT_MS, TimeUnit.MILLISECONDS);
+            } catch (InterruptedException ignored) {
+                Thread.currentThread().interrupt();
+            }
+            resolveInfo(call, res);
+        }, "sp-torrent-info");
+        wait.setDaemon(true);
+        wait.start();
+    }
+
+    /** Lo saca una sola vez: el hilo de arranque y onDestroy pueden querer cerrarlo a la vez. */
+    private synchronized TorrentServer takeTorrent() {
+        TorrentServer t = torrent;
+        torrent = null;
+        return t;
+    }
+
+    /**
+     * Con motor, `torrent`; si todavía se está armando, `torrentLoading` (no es "este APK no tiene
+     * motor": la web no tiene que guardarse esa respuesta ni pedir que se actualice la app).
+     */
+    private void resolveInfo(PluginCall call, JSObject res) {
+        // Primero el latch y después el campo: countDown va después de escribir `torrent`, así que
+        // con el latch en 0 el campo ya está (o no va a estar nunca).
+        boolean loading = torrentReady.getCount() > 0;
+        TorrentServer t = torrent;
+        if (t != null) res.put("torrent", t.baseUrl());
+        else if (loading && !destroyed) res.put("torrentLoading", true);
         call.resolve(res);
     }
 
@@ -125,7 +207,8 @@ public class SpNativePlugin extends Plugin {
 
     private NativePlayer ensurePlayer() {
         if (player == null) {
-            player = new NativePlayer(getActivity(), getBridge().getWebView(), torrent, (e) -> notifyListeners("player", e));
+            // Proveedor y no el servidor: puede terminar de armarse después de crear el reproductor.
+            player = new NativePlayer(getActivity(), getBridge().getWebView(), () -> torrent, (e) -> notifyListeners("player", e));
         }
         return player;
     }
@@ -189,6 +272,16 @@ public class SpNativePlugin extends Plugin {
         super.handleOnResume();
         // Volvió de Ajustes con el permiso para instalar: sigue sola al instalador.
         if (updater != null) updater.onResume(getActivity());
+        main.removeCallbacks(backgroundClose);
+        TorrentServer t = torrent;
+        if (t != null) {
+            t.engine().resume();
+            // Volvió después de los 5 minutos con el video del motor todavía abierto: la limpieza que
+            // dejó programada playerClosed borraría lo que se está viendo.
+            if (backgroundClosed && player != null && player.playingTorrent()) t.engine().playerReopened();
+        }
+        backgroundClosed = false;
+        if (player != null) player.onHostResume();
     }
 
     @Override
@@ -197,10 +290,21 @@ public class SpNativePlugin extends Plugin {
         if (player != null) player.onHostPause();
     }
 
+    /**
+     * La app quedó tapada del todo (otra app, inicio de la TV): se pausan los torrents (sin bajar ni
+     * subir) y, si tarda más de 5 minutos en volver, se da el video por cerrado. En onPause no: un
+     * diálogo encima no tiene por qué cortar los pares.
+     */
     @Override
     protected void handleOnStop() {
         super.handleOnStop();
-        if (player != null) player.onHostPause();
+        if (player != null) player.onHostStop();
+        TorrentServer t = torrent;
+        if (t != null) {
+            t.engine().pause();
+            main.removeCallbacks(backgroundClose);
+            main.postDelayed(backgroundClose, BACKGROUND_CLOSE_MS);
+        }
     }
 
     /** Cómo va un torrent del motor: pares, velocidad, avance. Sin motor o sin ese torrent, vacío. */
@@ -208,7 +312,8 @@ public class SpNativePlugin extends Plugin {
     public void torrentStatus(PluginCall call) {
         JSObject res = new JSObject();
         String hash = call.getString("hash", "");
-        TorrentEngine.Status st = torrent != null && hash != null ? torrent.engine().status(hash.toLowerCase(java.util.Locale.ROOT)) : null;
+        TorrentServer t = torrent;
+        TorrentEngine.Status st = t != null && hash != null ? t.engine().status(hash.toLowerCase(java.util.Locale.ROOT)) : null;
         if (st != null) {
             res.put("metadata", st.metadata);
             res.put("peers", st.peers);
@@ -221,12 +326,13 @@ public class SpNativePlugin extends Plugin {
 
     @Override
     protected void handleOnDestroy() {
+        destroyed = true;
+        main.removeCallbacks(backgroundClose);
         if (player != null) player.onHostDestroy();
         player = null;
-        if (torrent != null) {
+        TorrentServer t = takeTorrent();
+        if (t != null) {
             // Parar libtorrent tarda (cierra conexiones y borra la caché): en otro hilo.
-            TorrentServer t = torrent;
-            torrent = null;
             t.shutdown();
             Thread stop = new Thread(() -> t.engine().stop(), "sp-torrent-stop");
             stop.setDaemon(true);

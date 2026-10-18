@@ -32,11 +32,14 @@
   display: flex;
   flex-wrap: wrap;
   justify-content: center;
+  /* Arriba: un nombre de dos líneas no corre los avatares de su tarjeta. */
+  align-items: flex-start;
   gap: 28px;
 }
 .pf-tile {
   display: grid;
   justify-items: center;
+  align-content: start;
   gap: 12px;
   width: 140px;
   padding: 8px;
@@ -51,6 +54,10 @@
 [data-theme='2'] .pf-tile:focus-visible,
 html[data-tv] .pf-tile:focus-visible {
   outline: none;
+}
+/* En la TV la letra es más grande: tarjetas más anchas para que un nombre como "Maximiliano" entre entero. */
+html[data-tv] .pf-tile {
+  width: 200px;
 }
 .pf-tile-art {
   position: relative;
@@ -79,7 +86,8 @@ html[data-tv] .pf-tile:focus-visible {
 }
 .pf-name {
   max-width: 100%;
-  overflow-wrap: anywhere;
+  /* Corta entre palabras; una palabra sola solo si no entra en la tarjeta (antes "Maximilian / o"). */
+  overflow-wrap: break-word;
   text-align: center;
   font-size: 1.05rem;
   font-weight: 600;
@@ -190,6 +198,10 @@ html[data-tv] .pf-tile:focus-visible {
 .pf-editor-name input {
   width: 100%;
   box-sizing: border-box;
+}
+/* La caja es --bg-2 como el campo: sin foco no se veía. */
+[data-theme='2'] .pf-editor input[type='text'] {
+  background-color: var(--bg-3);
 }
 .pf-label {
   padding: 0;

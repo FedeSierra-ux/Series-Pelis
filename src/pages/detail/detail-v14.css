@@ -124,9 +124,12 @@
   color: var(--text-soft, var(--text));
   white-space: nowrap;
 }
-.d-icon-btn:hover .d-icon-circle {
-  background: var(--surface-2, var(--bg-3));
-  border-color: var(--text);
+/* Solo con mouse: en pantallas táctiles el :hover queda pegado después de tocar. */
+@media (hover: hover) {
+  .d-icon-btn:hover .d-icon-circle {
+    background: var(--surface-2, var(--bg-3));
+    border-color: var(--text);
+  }
 }
 .d-icon-btn.on .d-icon-circle {
   border-color: var(--accent);
@@ -485,9 +488,11 @@ html[data-tv] .dt-tab {
   cursor: pointer;
   transition: background 0.15s, border-color 0.15s;
 }
-.detail-back:hover {
-  background: var(--surface-2, var(--bg-3));
-  border-color: var(--text);
+@media (hover: hover) {
+  .detail-back:hover {
+    background: var(--surface-2, var(--bg-3));
+    border-color: var(--text);
+  }
 }
 .detail-back:focus-visible {
   outline: var(--focus-ring, 3px solid var(--accent));

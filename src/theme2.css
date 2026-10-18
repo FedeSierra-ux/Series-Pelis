@@ -77,25 +77,38 @@
   backdrop-filter: none;
   transition: background 0.15s, transform 0.15s;
 }
-[data-theme='2'] .btn:hover,
 [data-theme='2'] .btn:focus-visible {
   background: var(--tonal);
+}
+/* Los realces de :hover van solo con mouse: en pantallas táctiles quedan pegados después de tocar. */
+@media (hover: hover) {
+  [data-theme='2'] .btn:hover {
+    background: var(--tonal);
+  }
 }
 [data-theme='2'] .btn-primary {
   background: var(--accent);
   color: var(--on-accent);
 }
-[data-theme='2'] .btn-primary:hover,
 [data-theme='2'] .btn-primary:focus-visible {
   background: #d6c8ff;
+}
+@media (hover: hover) {
+  [data-theme='2'] .btn-primary:hover {
+    background: #d6c8ff;
+  }
 }
 [data-theme='2'] .btn-ghost {
   background: transparent;
   padding: 8px 12px;
 }
-[data-theme='2'] .btn-ghost:hover,
 [data-theme='2'] .btn-ghost:focus-visible {
   background: var(--surface-2);
+}
+@media (hover: hover) {
+  [data-theme='2'] .btn-ghost:hover {
+    background: var(--surface-2);
+  }
 }
 [data-theme='2'] .btn-small {
   padding: 7px 14px;
@@ -108,6 +121,9 @@
 [data-theme='2'] input[type='url'],
 [data-theme='2'] input[type='text'],
 [data-theme='2'] input[type='password'],
+[data-theme='2'] input[type='email'],
+[data-theme='2'] input[type='number'],
+[data-theme='2'] input[type='tel'],
 [data-theme='2'] select {
   font: inherit;
   color: var(--text);
@@ -115,6 +131,13 @@
   border: 1px solid transparent;
   border-radius: 999px;
   padding: 11px 18px;
+}
+/* El número de la meta: misma píldora, centrado y en negrita (el `font: inherit` de arriba le sacaba el peso).
+   La tarjeta de metas ya es --bg-2: el campo sube un tono para que se vea (igual que en Ajustes y el login). */
+[data-theme='2'] .goal-stepper input {
+  background-color: var(--bg-3);
+  font-weight: 700;
+  padding-inline: 8px;
 }
 [data-theme='2'] input:focus-visible,
 [data-theme='2'] select:focus-visible {
@@ -373,7 +396,14 @@
 /* Más aire arriba y abajo: el anillo de foco y la escala no se cortan. */
 [data-theme='2'] .row-scroller {
   gap: 18px;
-  padding: 14px var(--gutter) 20px;
+  /* Arriba, lugar para el anillo (5 + 5 px) y la escala de la tarjeta enfocada (~17 px; 19 en la TV).
+     El margen negativo compensa (cae en el margen de abajo del título): la fila no se corre. */
+  padding: 24px var(--gutter) 20px;
+  margin-top: -10px;
+}
+html[data-tv][data-theme='2'] .row-scroller {
+  padding-top: 30px;
+  margin-top: -16px;
 }
 [data-theme='2'] .grid {
   gap: 26px 18px;
@@ -400,8 +430,10 @@
 [data-theme='2'] .poster-card:focus-visible {
   outline: none;
 }
-[data-theme='2'] .poster-card:hover .poster-img {
-  transform: scale(1.04);
+@media (hover: hover) {
+  [data-theme='2'] .poster-card:hover .poster-img {
+    transform: scale(1.04);
+  }
 }
 [data-theme='2'] .poster-card:focus-visible .poster-img {
   outline: 5px solid var(--accent);
@@ -631,10 +663,15 @@
   border-radius: 16px;
   background: var(--surface-2);
 }
-[data-theme='2'] .stream-item:hover,
 [data-theme='2'] .stream-item:focus-visible {
   border-color: var(--accent);
   background: var(--tonal);
+}
+@media (hover: hover) {
+  [data-theme='2'] .stream-item:hover {
+    border-color: var(--accent);
+    background: var(--tonal);
+  }
 }
 [data-theme='2'] .stream-item:focus-visible {
   outline-offset: 2px;
@@ -813,8 +850,11 @@
   color: var(--on-accent);
   box-shadow: none;
 }
-[data-theme='2'] .player-float .btn:focus,
 [data-theme='2'] .player-float .btn:focus-visible {
+  outline: 4px solid var(--accent);
+  outline-offset: 3px;
+}
+html[data-tv][data-theme='2'] .player-float .btn:focus {
   outline: 4px solid var(--accent);
   outline-offset: 3px;
 }
@@ -1016,6 +1056,23 @@ html[data-tv][data-theme='2'] .btn-small {
 [data-theme='2'] .settings-index-link.active {
   background: var(--tonal);
   color: var(--accent);
+}
+
+/* Catálogos: "Apaisada" prendida se ve marcada (tonal + acento + ✓), también con el foco o el mouse encima. */
+[data-theme='2'] .catalog-shape-toggle[aria-pressed='true'],
+[data-theme='2'] .catalog-shape-toggle[aria-pressed='true']:focus-visible {
+  background: var(--tonal);
+  color: var(--accent);
+}
+@media (hover: hover) {
+  [data-theme='2'] .catalog-shape-toggle[aria-pressed='true']:hover {
+    background: var(--tonal);
+    color: var(--accent);
+  }
+}
+.catalog-shape-toggle[aria-pressed='true']::before {
+  content: '✓' / '';
+  margin-right: 6px;
 }
 @media (max-width: 1023px) {
   /* En el celular la tarjeta tonal es el plegable, no la sección de adentro. */

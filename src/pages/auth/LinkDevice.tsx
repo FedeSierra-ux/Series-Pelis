@@ -1,4 +1,4 @@
-import { useEffect, useState, type FormEvent } from 'react'
+import { useEffect, useRef, useState, type FormEvent } from 'react'
 import { Link, useLocation, useNavigate } from 'react-router-dom'
 import { KeyboardToggle } from '../../components/OnScreenKeyboard'
 import { AuthApiError, pairApprove, pairInfo, useAuth, type PairInfo } from '../../lib/auth'
@@ -23,6 +23,7 @@ export function LinkDevice() {
   const [info, setInfo] = useState<PairInfo>()
   const [busy, setBusy] = useState(false)
   const [msg, setMsg] = useState<{ ok: boolean; text: string }>()
+  const codeRef = useRef<HTMLInputElement>(null)
 
   useEffect(() => {
     if (hash) navigate({ hash: '' }, { replace: true })
@@ -39,6 +40,9 @@ export function LinkDevice() {
       setInfo(await pairInfo(code))
     } catch (err) {
       fail(err)
+      // "Seguir" se deshabilita mientras busca y el foco se iba a <body> (con el control remoto no se movía
+      // nada): vuelve al campo para corregir el código.
+      codeRef.current?.focus()
     } finally {
       setBusy(false)
     }
@@ -132,6 +136,7 @@ export function LinkDevice() {
             Escribí el código de 6 números que muestra la TV (o el otro aparato) para que entre a <strong>{auth.house.name}</strong>.
           </p>
           <input
+            ref={codeRef}
             type="text"
             inputMode="numeric"
             autoComplete="one-time-code"

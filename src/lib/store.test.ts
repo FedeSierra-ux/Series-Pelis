@@ -31,7 +31,9 @@ import {
   MANIFEST_TTL_MS,
   progressStore,
   refreshManifests,
+  removeHistory,
   restartedWatched,
+  restoreHistory,
   saveProgress,
   settingsStore,
   watchlistStore,
@@ -394,5 +396,32 @@ describe('forgetAddonData (v0.17.1)', () => {
     expect(ls.has('sp-manifest-checked')).toBe(false)
     expect(ls.get('sp-otra')).toBe('x')
     expect(progressStore.get()).toBe(progress)
+  })
+})
+
+describe('quitar del historial con "Deshacer" (auditoría v0.25.1)', () => {
+  it('removeHistory devuelve lo borrado y restoreHistory lo vuelve a poner, con el diario', () => {
+    saveProgress({ ...base, position: 5900, duration: 6000 })
+    const before = progressStore.get().tt1
+    const diaryBefore = diaryStore.get().entries
+    expect(Object.keys(diaryBefore)).toHaveLength(1)
+
+    const removed = removeHistory(['tt1'])
+    expect(progressStore.get().tt1).toBeUndefined()
+    expect(diaryStore.get().entries).toEqual({})
+    expect(removed.progress).toEqual([before])
+
+    restoreHistory(removed)
+    expect(progressStore.get().tt1).toEqual(before)
+    expect(diaryStore.get().entries).toEqual(diaryBefore)
+  })
+
+  it('si mientras tanto se volvió a ver, deshacer no pisa lo nuevo', () => {
+    saveProgress({ ...base, position: 5900, duration: 6000 })
+    const removed = removeHistory(['tt1'])
+    saveProgress({ ...base, position: 120, duration: 6000 })
+    const fresh = progressStore.get().tt1
+    restoreHistory(removed)
+    expect(progressStore.get().tt1).toBe(fresh)
   })
 })

@@ -483,6 +483,9 @@
   .portada .portada-bgs {
     inset: 0 0 auto;
     height: var(--portada-img-h);
+    /* La imagen termina sobre el fundido, no en el borde de la portada: sin curva ahí (se veía un escalón). */
+    border-bottom-left-radius: 0;
+    border-bottom-right-radius: 0;
   }
   .portada .portada-bg {
     object-position: center top;

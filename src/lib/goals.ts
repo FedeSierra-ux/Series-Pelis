@@ -1,3 +1,4 @@
+import { wholeHours } from './watchStats'
 import { dayStart, type DiaryEntry } from './diary'
 import type { Meta } from './types'
 
@@ -64,7 +65,7 @@ export function yearFraction(year: number, now: number): number {
 export function goalProgress(goal: YearGoal | undefined, counts: YearCounts, year: number, now = Date.now()): GoalLine[] {
   if (!goal) return []
   const frac = yearFraction(year, now)
-  const current: Record<GoalMetric, number> = { movies: counts.movies, episodes: counts.episodes, hours: Math.floor(counts.seconds / 3600) }
+  const current: Record<GoalMetric, number> = { movies: counts.movies, episodes: counts.episodes, hours: wholeHours(counts.seconds) }
   return (['movies', 'episodes', 'hours'] as GoalMetric[])
     .filter((m) => goal[m] > 0)
     .map((m) => ({

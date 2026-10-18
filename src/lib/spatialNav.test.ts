@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { anchoredScrollLeft, backStep, ladderApplies, rowAnchorY } from './spatialNav'
+import { SHADE_PX, anchoredScrollLeft, backStep, ladderApplies, navScore, rowAnchorY, rowRevealTop } from './spatialNav'
 
 describe('"Atrás" en escalera', () => {
   it('vale en Inicio, Películas, Series y Vos', () => {
@@ -46,5 +46,58 @@ describe('foco anclado en la TV', () => {
     expect(rowAnchorY(1000, undefined)).toBe(200)
     // Fondo oculto (alto 0, pantallas bajas): altura fija.
     expect(rowAnchorY(1000, 0)).toBe(200)
+  })
+})
+
+describe('navScore (a qué se mueve el foco)', () => {
+  const box = (left: number, top: number, w: number, h: number) => ({ left, top, right: left + w, bottom: top + h })
+
+  it('↓ desde una pestaña angosta va a la fila ancha de abajo, no a un botón alineado más lejos', () => {
+    // Pestaña "Fuentes" (angosta, a la izquierda); debajo, la fuente recomendada a todo el ancho;
+    // más abajo, "2 torrents sin debrid", angosto y alineado con la pestaña.
+    const tab = box(40, 100, 120, 44)
+    const wide = box(40, 170, 1900, 90)
+    const narrow = box(40, 420, 220, 40)
+    expect(navScore(tab, wide, 'down')!).toBeLessThan(navScore(tab, narrow, 'down')!)
+  })
+
+  it('lo del lado equivocado no cuenta', () => {
+    expect(navScore(box(100, 100, 50, 50), box(100, 0, 50, 50), 'down')).toBeUndefined()
+    expect(navScore(box(100, 100, 50, 50), box(0, 100, 50, 50), 'right')).toBeUndefined()
+  })
+
+  it('→ sin nada en la misma altura no salta a algo fuera de la pantalla', () => {
+    const check = box(500, 600, 40, 40)
+    const offscreen = box(900, -400, 80, 40) // "Más" de la portada, arriba de todo
+    const view = { top: 0, bottom: 800 }
+    expect(navScore(check, offscreen, 'right', view)).toBeUndefined()
+    // A la vista sí, y en la misma altura aunque esté lejos también.
+    expect(navScore(check, box(900, 300, 80, 40), 'right', view)).toBeDefined()
+    expect(navScore(check, box(3000, 600, 80, 40), 'right', view)).toBeDefined()
+  })
+
+  it('en línea gana sobre desviado', () => {
+    const from = box(0, 100, 100, 100)
+    expect(navScore(from, box(150, 100, 100, 100), 'right')!).toBeLessThan(navScore(from, box(150, 260, 100, 100), 'right')!)
+  })
+})
+
+describe('rowRevealTop (fila debajo de la portada fija en PC)', () => {
+  const base = { scrollY: 1000, viewTop: 300, viewH: 900 }
+
+  it('centra la tarjeta en lo visible si el título de la fila entra', () => {
+    // Tarjeta de 300 px, título 50 px arriba: centrada en 300..900 queda en 450..750.
+    const top = rowRevealTop({ ...base, cardTop: 700, cardBottom: 1000, headTop: 650 })
+    expect(top).toBe(1000 + 850 - 600)
+  })
+
+  it('no deja el título debajo de la sombra de la portada', () => {
+    const top = rowRevealTop({ ...base, viewH: 1100, cardTop: 700, cardBottom: 1000, headTop: 600 })
+    // El título queda a SHADE_PX debajo del borde de la portada.
+    expect(1000 + 600 - top).toBeGreaterThanOrEqual(300 + SHADE_PX)
+  })
+
+  it('nunca negativo', () => {
+    expect(rowRevealTop({ scrollY: 0, viewTop: 300, viewH: 900, cardTop: 320, cardBottom: 600, headTop: 280 })).toBe(0)
   })
 })

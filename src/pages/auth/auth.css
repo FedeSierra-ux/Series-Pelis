@@ -59,8 +59,18 @@
 }
 .login-form {
   display: grid;
+  /* Columna explícita: la `auto` tomaba el ancho mínimo del campo + "Entrar" y en la TV el botón se salía
+     de la tarjeta. */
+  grid-template-columns: minmax(0, 1fr);
   gap: 10px;
   min-width: 0;
+}
+.login-form .inline-form {
+  min-width: 0;
+}
+.login-form .inline-form input {
+  min-width: 0;
+  width: 100%;
 }
 .login-form p {
   margin: 0;

@@ -169,7 +169,7 @@ export function EpisodesPanel(p: Props) {
           })}
         </ol>
         {!p.inlineStreams && (
-          <aside className="episode-streams" aria-label="Fuentes del episodio">
+          <aside className="episode-streams" aria-label="Fuentes del episodio" data-nav-left=".episode-main[aria-current]">
             {p.streamsPanel ?? <div className="streams-empty muted">Elegí un episodio para ver las fuentes disponibles.</div>}
           </aside>
         )}

@@ -85,20 +85,51 @@ export function BrowseHero({ title, first, exploreTo, rowsRef }: Props) {
         setTarget((prev) => (prev && prev.type === t.type && prev.id === t.id ? prev : t))
       }, DEBOUNCE_MS)
     }
-    const onOver = (e: MouseEvent) => pick((e.target as Element | null)?.closest?.('a[href^="/detail/"]') ?? null)
-    const onFocus = (e: FocusEvent) => pick(e.target as Element | null)
-    // Se fue del póster antes de la pausa: no cambia.
+    // El mouseover también salta cuando la página se mueve bajo el puntero quieto (rueda, flechas):
+    // solo cuenta después de un movimiento real del mouse, así no le gana al foco (explorar-bug-4).
+    let still = true
+    let lastX = -1
+    let lastY = -1
+    const card = (t: EventTarget | null) => (t as Element | null)?.closest?.('a[href^="/detail/"]') ?? null
+    const onOver = (e: MouseEvent) => {
+      if (!still) pick(card(e.target))
+    }
+    // Chrome manda un mousemove sin moverse después de scrollear: se compara con la posición anterior
+    // (la primera solo se anota).
+    const onMove = (e: MouseEvent) => {
+      const first = lastX < 0
+      if (e.clientX === lastX && e.clientY === lastY) return
+      lastX = e.clientX
+      lastY = e.clientY
+      if (first || !still) return
+      still = false
+      pick(card(e.target))
+    }
+    const onStill = () => {
+      still = true
+    }
+    // El foco manda hasta que el mouse se mueva de nuevo.
+    const onFocus = (e: FocusEvent) => {
+      still = true
+      pick(e.target as Element | null)
+    }
+    // Se fue del póster antes de la pausa: no cambia (con el mouse quieto, la pausa es la del foco).
     const onOut = (e: MouseEvent) => {
-      const to = e.relatedTarget as Element | null
-      if (!to?.closest?.('a[href^="/detail/"]')) clearTimeout(timer)
+      if (!still && !card(e.relatedTarget)) clearTimeout(timer)
     }
     rows.addEventListener('mouseover', onOver)
     rows.addEventListener('mouseout', onOut)
+    document.addEventListener('mousemove', onMove)
     document.addEventListener('focusin', onFocus)
+    document.addEventListener('keydown', onStill, true)
+    window.addEventListener('scroll', onStill, true)
     return () => {
       rows.removeEventListener('mouseover', onOver)
       rows.removeEventListener('mouseout', onOut)
+      document.removeEventListener('mousemove', onMove)
       document.removeEventListener('focusin', onFocus)
+      document.removeEventListener('keydown', onStill, true)
+      window.removeEventListener('scroll', onStill, true)
       clearTimeout(timer)
     }
   }, [rowsRef])

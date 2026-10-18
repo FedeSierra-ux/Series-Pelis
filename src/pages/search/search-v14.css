@@ -357,10 +357,25 @@
   flex-wrap: wrap;
   gap: 8px;
 }
-.search-genre-chip {
-  display: inline-block;
-  padding: 8px 14px;
+/* Con [data-theme='2'] .chip le gana a la regla de .chip (etiquetas chicas): mismo tamaño que los chips de Filtros. */
+[data-theme='2'] .chip.search-genre-chip {
+  display: inline-flex;
+  align-items: center;
+  height: 42px;
+  padding: 0 16px;
   border-radius: 999px;
+  font-size: 0.9rem;
+  font-weight: 600;
+}
+@media (pointer: coarse), (max-width: 760px) {
+  [data-theme='2'] .chip.search-genre-chip {
+    height: 44px;
+  }
+}
+html[data-tv][data-theme='2'] .chip.search-genre-chip {
+  height: 56px;
+  padding: 0 24px;
+  font-size: 1.1rem;
 }
 .search-genre-chip:hover,
 .search-genre-chip:focus-visible {
