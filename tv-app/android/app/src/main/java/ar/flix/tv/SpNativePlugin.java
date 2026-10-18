@@ -36,16 +36,20 @@ public class SpNativePlugin extends Plugin {
     // Se suelta cuando terminó de armarse (haya motor o no).
     private final CountDownLatch torrentReady = new CountDownLatch(1);
     private volatile boolean destroyed;
-    // Cuánto espera getInfo al motor antes de contestar sin `torrent`.
+    // Cuánto espera getInfo al motor antes de contestar `torrentLoading` (la web pregunta de nuevo
+    // o espera el aviso "torrentReady").
     private static final long INFO_WAIT_MS = 1_500;
     // En el fondo más de 5 minutos: se da el video por cerrado (el motor suelta los torrents al rato).
     private static final long BACKGROUND_CLOSE_MS = 5 * 60_000;
     private final Handler main = new Handler(Looper.getMainLooper());
+    // Ya se avisó el cierre por estar en el fondo (solo en el hilo de la interfaz).
+    private boolean backgroundClosed;
     private final Runnable backgroundClose = () -> {
         TorrentServer t = torrent;
         if (t != null) {
             Log.i(TAG, "Cinco minutos en el fondo: se sueltan los torrents");
             t.engine().playerClosed();
+            backgroundClosed = true;
         }
     };
 
@@ -66,6 +70,14 @@ public class SpNativePlugin extends Plugin {
                 }
             } finally {
                 torrentReady.countDown();
+            }
+            // La web que preguntó mientras arrancaba (getInfo con `torrentLoading`) se entera acá.
+            // Se guarda hasta que alguien escuche: puede registrarse un momento después.
+            if (!destroyed) {
+                JSObject ev = new JSObject();
+                TorrentServer t = torrent;
+                if (t != null) ev.put("torrent", t.baseUrl());
+                notifyListeners("torrentReady", ev, true);
             }
         }, "sp-torrent-start");
         start.setDaemon(true);
@@ -129,9 +141,17 @@ public class SpNativePlugin extends Plugin {
         return t;
     }
 
+    /**
+     * Con motor, `torrent`; si todavía se está armando, `torrentLoading` (no es "este APK no tiene
+     * motor": la web no tiene que guardarse esa respuesta ni pedir que se actualice la app).
+     */
     private void resolveInfo(PluginCall call, JSObject res) {
+        // Primero el latch y después el campo: countDown va después de escribir `torrent`, así que
+        // con el latch en 0 el campo ya está (o no va a estar nunca).
+        boolean loading = torrentReady.getCount() > 0;
         TorrentServer t = torrent;
         if (t != null) res.put("torrent", t.baseUrl());
+        else if (loading && !destroyed) res.put("torrentLoading", true);
         call.resolve(res);
     }
 
@@ -254,7 +274,13 @@ public class SpNativePlugin extends Plugin {
         if (updater != null) updater.onResume(getActivity());
         main.removeCallbacks(backgroundClose);
         TorrentServer t = torrent;
-        if (t != null) t.engine().resume();
+        if (t != null) {
+            t.engine().resume();
+            // Volvió después de los 5 minutos con el video del motor todavía abierto: la limpieza que
+            // dejó programada playerClosed borraría lo que se está viendo.
+            if (backgroundClosed && player != null && player.playingTorrent()) t.engine().playerReopened();
+        }
+        backgroundClosed = false;
         if (player != null) player.onHostResume();
     }
 

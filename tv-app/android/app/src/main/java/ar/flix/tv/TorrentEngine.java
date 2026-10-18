@@ -60,6 +60,16 @@ final class TorrentEngine {
 
     private static final Logger LOG = Logger.getLogger("SpTorrent");
 
+    /** Un flush pedido sin aviso en este tiempo se da por perdido (ver askFlush). */
+    static final long FLUSH_LOST_MS = 5_000;
+
+    /** Carpetas (`home`) de los motores vivos: la limpieza de `root` nunca las toca. */
+    private static final Set<String> LIVE = java.util.concurrent.ConcurrentHashMap.newKeySet();
+    /** Una limpieza de `root` a la vez (cada una en su hilo). */
+    private static final Object SWEEP = new Object();
+    private static final java.util.concurrent.atomic.AtomicInteger SWEEPS = new java.util.concurrent.atomic.AtomicInteger();
+    private static final String TRASH = "-basura-";
+
     /** Trackers públicos conocidos: se suman a los que manda el addon. */
     static final String[] DEFAULT_TRACKERS = {
         "udp://tracker.opentrackr.org:1337/announce",
@@ -164,10 +174,18 @@ final class TorrentEngine {
         // Pedazos que ya se pueden leer del archivo: havePiece y después un flushCache terminado.
         final BitSet have = new BitSet();
         // flushCache pedidos y terminados (CacheFlushedAlert), y cuándo se pidió el último (nanoTime).
-        // Los tres con el lock de `have`; flushDone nunca pasa a flushIssued (ver el listener).
+        // Todos con el lock de `have`; flushDone nunca pasa a flushIssued (ver el listener).
         long flushIssued;
         long flushIssuedAt;
         long flushDone;
+        // Desde cuándo (nanoTime) hay flushes pendientes sin parar (flushIssued > flushDone). Con
+        // uno perdido nunca se emparejan (cada aviso que llega es del anterior); pasados
+        // FLUSH_LOST_MS se dan por perdidos (ver askFlush). Los avisos no lo reinician: justo en
+        // ese caso siguen llegando, uno atrás.
+        long flushWaitSince;
+        // Un ticket menor no marca nada: lo sube want() (el pase del .parts va detrás) y un flush
+        // perdido (los tickets viejos se cumplirían sin que haya pasado nada por el disco).
+        long minTicket;
         final Set<Integer> wanted = new HashSet<>();
         long lastUsed;
         long idleSince;
@@ -320,9 +338,12 @@ final class TorrentEngine {
     private ScheduledFuture<?> cleanup;
     private long emptySince;
     private int dirSeq;
-    private boolean stopped;
+    private volatile boolean stopped;
     // App en segundo plano: la sesión queda en pausa (ni baja ni sube). Los plazos no corren en pausa.
-    private boolean paused;
+    // Con su propio lock (`clock`): activeMs() se llama en cada vuelta de las esperas y no tiene que
+    // pelear el lock del motor con applyWindows y compañía.
+    private final Object clock = new Object();
+    private volatile boolean paused;
     private long pausedSince;
     private long pausedTotal;
     private volatile Map<String, Status> statuses = Collections.emptyMap();
@@ -332,7 +353,11 @@ final class TorrentEngine {
         this.home = new File(root, "m-" + Long.toString(System.currentTimeMillis(), 36) + "-"
             + Integer.toHexString(new java.util.Random().nextInt() & 0xfffff));
         this.opt = options;
+        LIVE.add(home.getName());
         timer.scheduleWithFixedDelay(this::housekeeping, 1, 1, TimeUnit.SECONDS);
+        // Lo que quedó de antes (la app se cerró de golpe, un motor viejo que no llegó a borrar lo
+        // suyo) se borra ya, en otro hilo: no hace falta esperar al primer torrent.
+        sweepRoot();
     }
 
     // ---------- lo que usa el servidor ----------
@@ -406,24 +431,38 @@ final class TorrentEngine {
     }
 
     /**
+     * El reproductor sigue abierto con un torrent (la app volvió después de que se avisó el cierre
+     * por estar mucho en segundo plano): no se borra nada.
+     */
+    synchronized void playerReopened() {
+        if (cleanup != null) cleanup.cancel(false);
+        cleanup = null;
+    }
+
+    /** Solo para pruebas: hay una limpieza programada (playerClosed sin lectores nuevos). */
+    synchronized boolean cleanupPending() {
+        return cleanup != null && !cleanup.isDone();
+    }
+
+    /**
      * La app pasó a segundo plano: la sesión entera en pausa (corta pares, no baja ni sube). Las
      * llamadas a libtorrent van en el hilo del motor (no en el de la interfaz).
      */
     void pause() {
-        synchronized (this) {
+        synchronized (clock) {
             if (stopped || paused) return;
-            paused = true;
             pausedSince = now();
+            paused = true;
         }
         runOnTimer(this::applyPause);
     }
 
     /** Volvió la app: la sesión sigue (y los plazos de los pedidos vuelven a correr). */
     void resume() {
-        synchronized (this) {
+        synchronized (clock) {
             if (stopped || !paused) return;
-            paused = false;
             pausedTotal += now() - pausedSince;
+            paused = false;
         }
         runOnTimer(this::applyPause);
         synchronized (signal) {
@@ -431,7 +470,7 @@ final class TorrentEngine {
         }
     }
 
-    synchronized boolean isPaused() {
+    boolean isPaused() {
         return paused;
     }
 
@@ -446,11 +485,10 @@ final class TorrentEngine {
     /** Pone la sesión como dice `paused` (en el hilo del motor; nunca con el lock tomado). */
     private void applyPause() {
         SessionManager s;
-        boolean p;
         synchronized (this) {
             s = session;
-            p = paused;
         }
+        boolean p = paused;
         if (s == null) return; // ensureSession la arranca ya en pausa
         life.readLock().lock();
         try {
@@ -466,9 +504,11 @@ final class TorrentEngine {
     }
 
     /** Milisegundos del motor sin contar el tiempo en pausa (para los plazos de los pedidos). */
-    private synchronized long activeMs() {
-        long n = now();
-        return n - pausedTotal - (paused ? n - pausedSince : 0);
+    private long activeMs() {
+        synchronized (clock) {
+            long n = now();
+            return n - pausedTotal - (paused ? n - pausedSince : 0);
+        }
     }
 
     /** Lo último que se sabe de un torrent (no bloquea; se actualiza cada segundo). */
@@ -499,8 +539,20 @@ final class TorrentEngine {
             Thread.currentThread().interrupt();
         }
         stopSession(s);
-        // Solo la carpeta de este motor: la de uno nuevo (Activity recreada) puede estar al lado.
-        deleteTree(home);
+        // Solo lo de este motor (su carpeta y la basura que dejó al reiniciar la sesión): la carpeta
+        // de uno nuevo (Activity recreada) puede estar al lado.
+        try {
+            deleteTree(home);
+            String trash = home.getName() + TRASH;
+            File[] left = root.listFiles();
+            if (left != null) {
+                for (File f : left) {
+                    if (f.getName().startsWith(trash)) deleteTree(f);
+                }
+            }
+        } finally {
+            LIVE.remove(home.getName());
+        }
     }
 
     private void stopSession(SessionManager s) {
@@ -526,6 +578,25 @@ final class TorrentEngine {
         synchronized (t.have) {
             return new long[] { t.flushIssued, t.flushDone };
         }
+    }
+
+    /**
+     * Solo para pruebas: un flush "pedido" del que nunca va a llegar el aviso (lo que pasa cuando
+     * libtorrent no tiene storage), y se olvida `have` así la próxima lectura tiene que esperarlo.
+     */
+    boolean loseFlush(String hash) {
+        Torrent t;
+        synchronized (this) {
+            t = torrents.get(hash);
+        }
+        if (t == null) return false;
+        synchronized (t.have) {
+            if (t.flushIssued == t.flushDone) t.flushWaitSince = System.nanoTime();
+            t.flushIssued++;
+            t.flushIssuedAt = System.nanoTime();
+            t.have.clear();
+        }
+        return true;
     }
 
     /** Solo para pruebas: la carpeta de este motor (adentro de `root`). */
@@ -568,9 +639,16 @@ final class TorrentEngine {
             // los manda solos (al quedar "terminado" un torrent libera los archivos) y esos
             // adelantaban el contador: un flush pedido después se daba por hecho y se leían ceros.
             // file_error y torrent_error siguen llegando (son también de "error").
+            // Tampoco hacen falta (y son miles por segundo bajando rápido, cada uno un objeto Java que
+            // pasa por el hilo de avisos): bloques, pares, subida, progreso de archivos y conexiones.
+            // Lo que usa el motor (piece_finished, metadata, errores, cache_flushed pedidos) y lo que
+            // usa SessionManager (session_stats, portmap, listen, external_ip, add_torrent) queda.
             int mask = s.settings().getInteger(settings_pack.int_types.alert_mask.swigValue());
+            int off = alert.storage_notification.to_int() | alert.block_progress_notification.to_int()
+                | alert.peer_notification.to_int() | alert.upload_notification.to_int()
+                | alert.file_progress_notification.to_int() | alert.connect_notification.to_int();
             SettingsPack m = new SettingsPack();
-            m.setInteger(settings_pack.int_types.alert_mask.swigValue(), mask & ~alert.storage_notification.to_int());
+            m.setInteger(settings_pack.int_types.alert_mask.swigValue(), mask & ~off);
             s.applySettings(m);
             if (paused) s.pause();
             session = s;
@@ -775,10 +853,13 @@ final class TorrentEngine {
         // El primer y el último pedazo pueden ser compartidos con otro archivo ya bajado (pack de
         // temporada): están en `have`, pero lo de este archivo quedó en el .parts y libtorrent lo
         // pasa al archivo en su hilo de disco. Se sacan de `have` para que vuelvan a pasar por
-        // waitPiece: el flushCache que pide va detrás de ese pase.
+        // waitPiece: el flushCache que pide va detrás de ese pase. Un ticket de antes (un lector que
+        // ya esperaba esos pedazos) podría cumplirse con un flush pedido antes del pase y volver a
+        // marcarlos: con minTicket solo sirve uno pedido desde ahora.
         synchronized (t.have) {
             t.have.clear(t.pieceAt(file, 0));
             t.have.clear(t.lastPiece(file));
+            t.minTicket = Math.max(t.minTicket, t.flushIssued + 1);
         }
         applyWindows(t);
     }
@@ -890,15 +971,23 @@ final class TorrentEngine {
             long now = now();
             if (ticket >= 0) {
                 boolean flushed;
+                boolean stale;
                 synchronized (t.have) {
-                    flushed = t.flushDone >= ticket;
+                    stale = ticket < t.minTicket;
+                    flushed = !stale && t.flushDone >= ticket;
                     if (flushed) {
                         for (int p : batch) t.have.set(p);
                     }
                 }
                 if (flushed) return;
-                // Si el aviso se perdió (o se reinició algo), se pide de nuevo.
-                if (now - ticketAt > 3000) ticket = -1;
+                if (stale) {
+                    // Pedido antes de un want() o de un flush perdido: no prueba nada, se pide otro ya.
+                    ticket = -1;
+                    nextPoll = 0;
+                } else if (now - ticketAt > 3000) {
+                    // Si el aviso se perdió (o se reinició algo), se pide de nuevo.
+                    ticket = -1;
+                }
             }
             long finished = t.finished;
             // Se pregunta cuando terminó algún pedazo y, por las dudas (avisos perdidos), cada segundo.
@@ -956,16 +1045,32 @@ final class TorrentEngine {
     /**
      * Pide un flushCache posterior a `seen` (cuando se vio havePiece) y devuelve cuántos tienen que
      * haber terminado; si ya hay uno pedido después, se usa ese. -1 si no se pudo pedir.
+     *
+     * libtorrent no avisa un flush que no pudo hacer (torrent sin storage, sesión cerrándose): sin
+     * esto los avisos quedaban uno atrás para siempre y cada pedido terminaba en 504. Si hace
+     * FLUSH_LOST_MS que hay pendientes sin parar, se dan todos por perdidos y se pide uno nuevo; los
+     * tickets de antes dejan de servir (minTicket), así nadie marca un pedazo sin un flush de verdad.
+     * (Un flush de verdad tarda milisegundos; 5 s seguidos con la cola llena es que se perdió uno.)
      */
     private long askFlush(Torrent t, long seen) {
         life.readLock().lock();
         try {
             synchronized (t.have) {
-                if (t.flushIssued > t.flushDone && t.flushIssuedAt - seen > 0) return t.flushIssued;
+                long nowNs = System.nanoTime();
+                if (t.flushIssued > t.flushDone && nowNs - t.flushWaitSince > FLUSH_LOST_MS * 1_000_000L) {
+                    LOG.warning(String.format(Locale.ROOT, "%s: %d flush sin aviso, se dan por perdidos",
+                        t.hash, t.flushIssued - t.flushDone));
+                    t.flushDone = t.flushIssued;
+                    t.minTicket = Math.max(t.minTicket, t.flushIssued + 1);
+                }
+                if (t.flushIssued > t.flushDone && t.flushIssued >= t.minTicket && t.flushIssuedAt - seen > 0) {
+                    return t.flushIssued;
+                }
                 if (stopped || t.removed) return -1;
                 t.th.flushCache();
+                if (t.flushIssued == t.flushDone) t.flushWaitSince = nowNs;
                 t.flushIssued++;
-                t.flushIssuedAt = System.nanoTime();
+                t.flushIssuedAt = nowNs;
                 return t.flushIssued;
             }
         } catch (RuntimeException e) {
@@ -1075,6 +1180,9 @@ final class TorrentEngine {
 
     /** Sin pares y con alguien leyendo: se vuelve a preguntar a trackers y DHT (cada 30 s como mucho). */
     private void reconnect(Torrent t) {
+        // En pausa no hay pares a propósito: anunciar despertaría la radio para nada (y los
+        // trackers devolverían pares a los que no nos conectamos).
+        if (paused) return;
         boolean reading;
         synchronized (this) {
             reading = !t.readers.isEmpty() || t.ghostFile >= 0;
@@ -1101,21 +1209,56 @@ final class TorrentEngine {
     // ---------- utilidades ----------
 
     /**
-     * Carpeta limpia para una sesión nueva. Lo que hay en `root` que no es de este motor (de antes,
-     * o de un motor viejo que se está parando) se borra en otro hilo; la de este motor (de una sesión
-     * anterior que se apagó por estar sin uso) se renombra primero: renombrar es instantáneo, borrar GB no.
+     * Carpeta limpia para una sesión nueva. La de este motor (de una sesión anterior que se apagó
+     * por estar sin uso) se renombra a `<home>-basura-<n>` (renombrar es instantáneo, borrar GB no)
+     * y se borra en otro hilo junto con lo que haya quedado de antes (ver sweepRoot). El nombre lleva
+     * el de este motor: si stop() llega antes que la limpieza, la borra él.
      */
     private void clearRoot() {
         if (home.exists()) {
-            File trash = new File(root, "basura-" + System.nanoTime());
+            File trash = new File(root, home.getName() + TRASH + System.nanoTime());
             if (!home.renameTo(trash)) deleteTree(home);
         }
         home.mkdirs();
-        File[] old = root.listFiles();
-        if (old == null) return;
-        for (File f : old) {
-            if (!f.getName().equals(home.getName())) runOnTimer(() -> deleteTree(f));
+        sweepRoot();
+    }
+
+    /**
+     * Borra en otro hilo (nunca el del motor: con GB tarda y frenaba el mantenimiento) todo lo que
+     * hay en `root` menos las carpetas de los motores vivos (LIVE): basura de reinicios, carpetas
+     * `m-*` de motores que no llegaron a parar (la app se cerró de golpe) y lo de versiones viejas.
+     */
+    private void sweepRoot() {
+        SWEEPS.incrementAndGet();
+        Thread th = new Thread(() -> {
+            try {
+                synchronized (SWEEP) {
+                    File[] old = root.listFiles();
+                    if (old == null) return;
+                    for (File f : old) {
+                        // Se mira justo antes de borrar: un motor nuevo se anota antes de crear su carpeta.
+                        if (!LIVE.contains(f.getName())) deleteTree(f);
+                    }
+                }
+            } catch (RuntimeException e) {
+                LOG.log(Level.FINE, "No se pudo limpiar la carpeta de torrents", e);
+            } finally {
+                SWEEPS.decrementAndGet();
+            }
+        }, "sp-torrent-sweep");
+        th.setDaemon(true);
+        th.setPriority(Thread.MIN_PRIORITY);
+        th.start();
+    }
+
+    /** Solo para pruebas: espera (hasta `ms`) a que terminen las limpiezas de `root`. */
+    static boolean awaitSweeps(long ms) throws InterruptedException {
+        long end = System.nanoTime() + ms * 1_000_000L;
+        while (SWEEPS.get() > 0) {
+            if (System.nanoTime() > end) return false;
+            Thread.sleep(20);
         }
+        return true;
     }
 
     /** Borra la carpeta y lo que tiene. Un enlace simbólico se borra él solo: nunca se entra. */
@@ -1125,7 +1268,12 @@ final class TorrentEngine {
             if (!f.delete()) LOG.fine("No se pudo borrar el enlace " + f);
             return;
         }
-        if (!f.exists()) return;
+        if (!f.exists()) {
+            // exists() sigue el enlace: uno roto (apunta a algo que ya no está) da false, e
+            // isSymlink no lo ve (la ruta canónica de uno roto es la suya). delete() lo borra a él.
+            f.delete();
+            return;
+        }
         File[] kids = f.isDirectory() ? f.listFiles() : null;
         if (kids != null) {
             for (File k : kids) deleteTree(k);

@@ -40,9 +40,10 @@ import java.util.logging.Logger;
 final class TorrentServer {
 
     private static final Logger LOG = Logger.getLogger("SpTorrent");
-    // Pedido entero (línea + cabeceras). La URL más larga de la web (20 trackers + nombre del archivo)
-    // anda por los 2-3 KB; el reproductor suma unos 300 B de cabeceras.
-    private static final int MAX_HEADER_BYTES = 4 * 1024;
+    // Pedido entero (línea + cabeceras). La web recorta la URL a 3,5 KB (MAX_ENGINE_URL en addons.ts,
+    // sacando trackers del final); el reproductor suma unos 300 B de cabeceras. 8 KB deja margen de
+    // sobra (un nombre de archivo largo en UTF-8 se triplica al codificarlo) y sigue siendo un tope.
+    static final int MAX_HEADER_BYTES = 8 * 1024;
     // Para mandar el pedido entero: uno que manda de a un byte no tiene un hilo tomado 15 s por byte.
     private static final int HEADER_TIMEOUT_MS = 5_000;
     private static final int SOCKET_TIMEOUT_MS = 15_000;

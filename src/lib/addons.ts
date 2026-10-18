@@ -372,6 +372,13 @@ export async function getSubtitles(addons: InstalledAddon[], type: string, video
 /** Tope de trackers en la URL del motor de la app (Torrentio manda decenas; con unos pocos alcanza). */
 export const MAX_ENGINE_TRACKERS = 20
 
+/**
+ * Largo máximo de la URL del motor. Su servidor acepta pedidos de hasta 8 KB (línea + cabeceras); con 3,5 KB
+ * queda lugar de sobra para las cabeceras del reproductor. Si no entra, se sacan trackers del final (los
+ * primeros son los del addon, los mejores); el nombre del archivo (`f`) queda siempre.
+ */
+export const MAX_ENGINE_URL = 3500
+
 const TRACKER_RE = /^(udp|https?|wss):\/\/\S+$/i
 
 /** Trackers que manda el addon en `sources` (`tracker:udp://…`), sin repetir y solo udp/http/https/wss. */
@@ -408,8 +415,17 @@ export function streamingServerUrl(server: string, stream: Stream, engine = fals
   const idx = stream.fileIdx ?? -1
   const base = `${server.replace(/\/+$/, '')}/${hash}/${idx}`
   if (!engine) return base
-  const params = streamTrackers(stream).map((tr) => `tr=${encodeURIComponent(tr)}`)
+  const trackers = streamTrackers(stream).map((tr) => `tr=${encodeURIComponent(tr)}`)
   const file = stream.behaviorHints?.filename?.trim()
-  if (file) params.push(`f=${encodeURIComponent(file)}`)
-  return params.length ? `${base}?${params.join('&')}` : base
+  const tail = file ? [`f=${encodeURIComponent(file)}`] : []
+  const build = () => {
+    const params = [...trackers, ...tail]
+    return params.length ? `${base}?${params.join('&')}` : base
+  }
+  let url = build()
+  while (url.length > MAX_ENGINE_URL && trackers.length) {
+    trackers.pop()
+    url = build()
+  }
+  return url
 }

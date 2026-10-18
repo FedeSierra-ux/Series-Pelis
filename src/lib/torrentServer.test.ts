@@ -12,14 +12,15 @@ vi.mock('idb-keyval', () => ({
   clear: async () => undefined,
 }))
 
-import { cleanStream, MAX_ENGINE_TRACKERS, normalizeInfoHash, streamingServerUrl, streamTrackers } from './addons'
-import { resetNativeInfo } from './native'
+import { cleanStream, MAX_ENGINE_TRACKERS, MAX_ENGINE_URL, normalizeInfoHash, streamingServerUrl, streamTrackers } from './addons'
+import { nativeInfo, resetNativeInfo } from './native'
 import { settingsStore } from './store'
 import {
   engineBaseOf,
   needsNativePlayer,
   pickTorrentServer,
   resetTorrentEngine,
+  TORRENT_LOADING,
   TORRENT_NEEDS_PC,
   TORRENT_NEEDS_PLAYER,
   TORRENT_NEEDS_UPDATE,
@@ -34,7 +35,47 @@ function stubApp(info: Record<string, unknown>) {
   vi.stubGlobal('window', { Capacitor: { isNativePlatform: () => true, Plugins: { SpNative: { getInfo: async () => info } } } })
 }
 
+/**
+ * Un APK cuyo motor todavía arranca: `getInfo` contesta `torrentLoading` hasta que se llama a `ready()`, que
+ * además manda el evento `torrentReady` si alguien lo escucha (`event: false` = el aviso nunca llega).
+ */
+function stubLoadingApp({ event = true } = {}) {
+  let loaded = false
+  const calls = { getInfo: 0 }
+  let listener: ((e: unknown) => void) | undefined
+  vi.stubGlobal('window', {
+    Capacitor: {
+      isNativePlatform: () => true,
+      Plugins: {
+        SpNative: {
+          getInfo: async () => {
+            calls.getInfo++
+            return loaded ? { player: true, torrent: ENGINE } : { player: true, torrentLoading: true }
+          },
+          addListener: (name: string, fn: (e: unknown) => void) => {
+            if (name === 'torrentReady') listener = fn
+            return {
+              remove: () => {
+                if (listener === fn) listener = undefined
+              },
+            }
+          },
+        },
+      },
+    },
+  })
+  return {
+    calls,
+    listening: () => listener !== undefined,
+    ready() {
+      loaded = true
+      if (event) listener?.({ torrent: ENGINE })
+    },
+  }
+}
+
 afterEach(() => {
+  vi.useRealTimers()
   vi.unstubAllGlobals()
   resetNativeInfo()
   resetTorrentEngine()
@@ -57,6 +98,9 @@ describe('pickTorrentServer', () => {
     expect(pickTorrentServer({ ...base, native: false, engine: undefined })).toEqual({ url: '', missing: TORRENT_NEEDS_PC })
     // APK viejo, sin motor.
     expect(pickTorrentServer({ ...base, engine: undefined })).toEqual({ url: '', missing: TORRENT_NEEDS_UPDATE })
+    // El motor todavía arranca: no es un APK viejo.
+    expect(pickTorrentServer({ ...base, engine: undefined, pending: true })).toEqual({ url: '', missing: TORRENT_LOADING })
+    expect(pickTorrentServer({ ...base, pending: true })).toEqual({ url: ENGINE, engine: true })
     expect(TORRENT_NEEDS_PLAYER).toBe('Torrent: activá el reproductor de Android (Ajustes → Reproductor) o usá un addon con debrid')
     expect(TORRENT_NEEDS_PC).toBe('Torrent: abrí Stremio en la PC (servidor local) o usá un addon con debrid')
   })
@@ -98,6 +142,44 @@ describe('torrentServer (estado)', () => {
     expect(await torrentServerReady()).toEqual({ url: '', missing: TORRENT_NEEDS_UPDATE })
     expect(needsNativePlayer('http://127.0.0.1:11470/abc/0')).toBe(false)
   })
+
+  it('motor arrancando: nunca "actualizá la app", y lo toma apenas avisa torrentReady', async () => {
+    const app = stubLoadingApp()
+    const ready = torrentServerReady()
+    expect(torrentServer()).toEqual({ url: '', missing: TORRENT_LOADING })
+    await vi.waitFor(() => expect(app.listening()).toBe(true))
+    expect(torrentServer()).toEqual({ url: '', missing: TORRENT_LOADING })
+    expect(needsNativePlayer(`${ENGINE}/abc/0`)).toBe(true)
+    app.ready()
+    expect(await ready).toEqual({ url: ENGINE, engine: true })
+    expect(app.calls.getInfo).toBe(2)
+    expect(app.listening()).toBe(false)
+  })
+
+  it('motor arrancando sin aviso: vuelve a preguntar solo', async () => {
+    vi.useFakeTimers()
+    const app = stubLoadingApp({ event: false })
+    let result: unknown
+    void torrentServerReady().then((r) => (result = r))
+    await vi.advanceTimersByTimeAsync(1000)
+    expect(app.calls.getInfo).toBe(2)
+    expect(result).toBeUndefined()
+    expect(torrentServer()).toEqual({ url: '', missing: TORRENT_LOADING })
+    app.ready()
+    await vi.advanceTimersByTimeAsync(1000)
+    expect(result).toEqual({ url: ENGINE, engine: true })
+  })
+
+  it('nativeInfo no se guarda la respuesta "arrancando"; la definitiva, sí', async () => {
+    const app = stubLoadingApp()
+    expect((await nativeInfo()).torrentLoading).toBe(true)
+    expect((await nativeInfo()).torrentLoading).toBe(true)
+    expect(app.calls.getInfo).toBe(2)
+    app.ready()
+    expect((await nativeInfo()).torrent).toBe(ENGINE)
+    expect((await nativeInfo()).torrent).toBe(ENGINE)
+    expect(app.calls.getInfo).toBe(3)
+  })
 })
 
 describe('URL del motor', () => {
@@ -128,6 +210,26 @@ describe('URL del motor', () => {
     expect(url.search).not.toContain('+')
     // Sin trackers ni nombre: sin "?".
     expect(streamingServerUrl(ENGINE, { infoHash: 'abc', fileIdx: 3 }, true)).toBe(`${ENGINE}/abc/3`)
+  })
+
+  it('URL del motor larga: saca trackers del final hasta que entra, y el nombre queda', () => {
+    const trackers = Array.from({ length: 20 }, (_, i) => `https://tracker-${i}.${'x'.repeat(180)}.example/announce`)
+    const filename = `${'Una peli con un nombre larguísimo '.repeat(8)}1080p.mkv`
+    const stream = { infoHash: 'a'.repeat(40), fileIdx: 2, sources: trackers.map((t) => `tracker:${t}`), behaviorHints: { filename } }
+    const raw = streamingServerUrl(ENGINE, stream, true)!
+    expect(raw.length).toBeLessThanOrEqual(MAX_ENGINE_URL)
+    const url = new URL(raw)
+    const kept = url.searchParams.getAll('tr')
+    expect(kept.length).toBeGreaterThan(0)
+    expect(kept.length).toBeLessThan(trackers.length)
+    // Quedan los primeros, en orden.
+    expect(kept).toEqual(trackers.slice(0, kept.length))
+    expect(url.searchParams.get('f')).toBe(filename)
+    // Con uno más ya no entraba.
+    expect(raw.length + `tr=${encodeURIComponent(trackers[kept.length])}&`.length).toBeGreaterThan(MAX_ENGINE_URL)
+    // Una corta queda entera.
+    const short = { ...stream, sources: stream.sources.slice(0, 3) }
+    expect(new URL(streamingServerUrl(ENGINE, short, true)!).searchParams.getAll('tr')).toEqual(trackers.slice(0, 3))
   })
 
   it('cleanStream deja solo los textos de `sources`', () => {

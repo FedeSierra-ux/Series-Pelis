@@ -157,6 +157,11 @@ final class NativePlayer {
         return root != null;
     }
 
+    /** ¿Está abierto con un video del motor de torrents? */
+    boolean playingTorrent() {
+        return isOpen() && torrentHash != null;
+    }
+
     // ---------- contrato con la web ----------
 
     void open(JSONObject o) {
@@ -552,7 +557,9 @@ final class NativePlayer {
     private void onError(PlaybackException error) {
         if (player == null) return;
         // A mitad de la peli se reintenta una vez en el mismo lugar (un corte de red, por ejemplo).
-        // Un torrent que ya esperó el plazo entero (504 o tiempo agotado) no se reintenta: sería otra espera igual.
+        // Un torrent que ya esperó el plazo entero (504 o tiempo agotado) no se reintenta: sería otra
+        // espera igual. Los demás errores del motor (un 503 porque la sesión se estaba reiniciando, un
+        // 410 de un torrent quitado) sí: el segundo pedido suele andar.
         if (started && !retryUsed && !(torrentHash != null && torrentGaveUp(error))) {
             retryUsed = true;
             retryAt = SystemClock.elapsedRealtime();
@@ -616,8 +623,8 @@ final class NativePlayer {
     }
 
     /**
-     * Sin los reintentos de Media3 para el motor: un 4xx/5xx ya es la respuesta (esperó la metadata o
-     * el pedazo hasta 2 minutos); un tiempo agotado se reintenta una sola vez.
+     * Pocos reintentos de Media3 para el motor: un 504 o un tiempo agotado ya esperaron la metadata o
+     * el pedazo hasta 2 minutos (no se reintentan); cualquier otro error, una sola vez al segundo.
      */
     private static final class TorrentErrorPolicy extends DefaultLoadErrorHandlingPolicy {
         @Override
@@ -629,10 +636,16 @@ final class NativePlayer {
         }
     }
 
-    /** ¿El motor ya contestó (4xx/5xx, el 504 incluido) o el pedido agotó el tiempo de lectura? */
+    /**
+     * ¿El motor ya esperó el plazo entero? Solo un 504 (no llegó la metadata o el pedazo) o el tiempo
+     * de lectura agotado. Un 503 (sesión reiniciándose, motor cerrándose) u otro código no: esos
+     * siguen los reintentos de siempre.
+     */
     private static boolean torrentGaveUp(Throwable e) {
         for (Throwable c = e; c != null; c = c.getCause()) {
-            if (c instanceof HttpDataSource.InvalidResponseCodeException || c instanceof SocketTimeoutException) return true;
+            if (c instanceof SocketTimeoutException) return true;
+            if (c instanceof HttpDataSource.InvalidResponseCodeException
+                && ((HttpDataSource.InvalidResponseCodeException) c).responseCode == 504) return true;
         }
         return false;
     }
