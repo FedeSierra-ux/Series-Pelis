@@ -122,8 +122,7 @@ npm run preview    # sirve dist/ en http://localhost:4173
   fijo porque el servidor espera el campo. Pendiente preguntar si el celular del Tema 2 quiere la hoja "Más".
 - v0.12.0 hecha: **Series con la portada grande** igual que Películas. `MoviesHero` pasó a
   `pages/discover/DiscoverHero.tsx` (prop `type`: `movie` | `tv`, con `key` para que reinicie al cambiar de menú) y
-  `useTrendingMovies` a `useTrendingOf(type, …)`. La duración de una serie sale de `last_episode_to_air.runtime`
-  (TMDB deja `episode_run_time` vacío). A las series muy nuevas a veces les falta el IMDb en Cinemeta: se deja así.
+  `useTrendingMovies` a `useTrendingOf(type, …)`. Desde la v0.22.1 las series no muestran duración. A las series muy nuevas a veces les falta el IMDb en Cinemeta: se deja así.
 - v0.12.1 hecha: **Buscar sin saltos**. Cada grupo conserva los resultados anteriores mientras carga (`.is-stale`,
   atenuado, `aria-busy`); esqueletos solo en la primera búsqueda (`SKELETONS = 12`). `usePeople` devuelve `stale` y
   `PeopleRow` tiene su propio esqueleto redondo (`CastSkeleton`, mismo alto que `.cast-card`); `Row` acepta `stale`.
@@ -294,6 +293,14 @@ npm run preview    # sirve dist/ en http://localhost:4173
   (`series-pelis-*`), las claves de localStorage, el campo `app: 'series-pelis'` de las copias exportadas (así se
   importan las viejas) y `OS_AGENT` de OpenSubtitles. Las notas de v0.19–v0.21 con `ar.seriespelis.tv`,
   `SeriesPelisApp`, `seriespelis://` y `series-pelis-tv.apk` son de antes del cambio.
+- v0.22.1 hecha (rama `claude/onboarding-v0.22.1`): **asistente de una sola pantalla** (`components/Onboarding.tsx`):
+  idioma del audio, subtítulos y "Activarlos solos", botón "Empezar" (lleva la clase `ob-skip` para Playwright). Sin
+  pasos de addons/TMDB/Listo (pedido del usuario: TMDB viene del sitio, addons los pone el admin). Los idiomas siguen
+  **por casa** (decisión del usuario). Con login espera la primera sincronización (`useHouseReady`: `lastSync`, error o
+  10 s) para no mostrar los de fábrica ni que el servidor pise lo elegido; mientras, deja `.ob-pending` para que
+  `TvHints` no se adelante. **Series**: sin duración en minutos (ficha, `buildInfo`, `TmdbHero`; las pelis sí) y
+  `seriesYear`/`seasonCount` (`lib/format.ts`): con una sola temporada "2026–" → "2026". Los pósters, Buscar y la
+  portada de Inicio (catálogo de Cinemeta) no saben las temporadas y siguen con el guion.
 - **Decisiones para la v0.17 (reemplazan el reparto del plan de abajo)**: addons y TorBox **iguales para todas las
   casas**, solo los cambia el admin (opción A). Ajustes generales (subtítulos, idiomas, autoplay, saltar intro, sin
   spoilers, reglas de fuentes) **iguales en toda la casa**; lo físico (modo TV, tamaño de la interfaz, protector,

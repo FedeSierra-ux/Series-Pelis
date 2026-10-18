@@ -42,6 +42,12 @@ describe('fondo que sigue al foco: datos', () => {
     expect(info.background).toBe('https://images.metahub.space/background/medium/tt1/img')
   })
 
+  it('series: sin duración y, con una sola temporada, el año sin guion', () => {
+    const meta = { id: 'tt2', type: 'series', name: 'Nueva', releaseInfo: '2026–', runtime: '50 min', videos: [{ id: 'tt2:1:1', season: 1, episode: 1 }] }
+    expect(buildInfo('series:tt2', meta, undefined).facts).toEqual(['2026'])
+    expect(buildInfo('series:tt2', meta, { id: 9, number_of_seasons: 2, first_air_date: '2026-01-10' }).facts).toEqual(['2026–'])
+  })
+
   it('sin datos usa el nombre de la tarjeta', () => {
     expect(buildInfo('movie:x', undefined, undefined, 'Algo').name).toBe('Algo')
   })

@@ -7,7 +7,7 @@ import { KeyboardToggle } from './OnScreenKeyboard'
 type Msg = { ok: boolean; text: string; enableUrl?: string }
 
 /**
- * Campo para pegar la URL de un addon (Ajustes y asistente inicial). Es `type="text"` a propósito: con
+ * Campo para pegar la URL de un addon (Ajustes). Es `type="text"` a propósito: con
  * `type="url"` el navegador frena "addon.com/manifest.json" con su propio cartel antes de que la limpiemos.
  */
 export function AddonUrlForm({ disableEmpty }: { disableEmpty?: boolean }) {

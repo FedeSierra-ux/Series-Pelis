@@ -1,5 +1,18 @@
 # Changelog
 
+## [0.22.1] - 2026-10-18
+
+### Cambiado
+- **Asistente de la primera vez en una sola pantalla**: en un aparato nuevo solo pregunta el idioma del audio y de
+  los subtítulos (y si se activan solos), con un botón "Empezar". Se fueron los pasos de addons, TMDB y "Listo":
+  TMDB ya viene del sitio y los addons los carga el administrador para todas las casas.
+  - Con login, los idiomas son de la casa: el asistente espera la primera sincronización (hasta 10 s) para mostrar
+    lo que la casa ya eligió, y lo que se cambie ahí vale para toda la casa.
+- **Series con una sola temporada (por ahora)**: el año va solo, sin el guion ("2026" en vez de "2026–"), en la
+  ficha y en la portada que sigue al foco. "2019–2019" también queda "2019".
+- **Las series ya no muestran la duración** ("50 min") en la ficha ni en las portadas, porque cambia en cada
+  episodio. Las películas la siguen mostrando.
+
 ## [0.22.0] - 2026-10-16
 
 ### Cambiado

@@ -4477,8 +4477,7 @@ input[type='password']:focus-visible {
   margin: -12px 0 20px;
   max-width: 100%;
 }
-.settings-section .osk-wrap,
-.ob-body .osk-wrap {
+.settings-section .osk-wrap {
   margin: 0;
 }
 .osk-toggle.active {
@@ -4590,49 +4589,6 @@ input[type='password']:focus-visible {
   background: var(--bg-2);
   box-shadow: 0 30px 80px rgba(0, 0, 0, 0.5);
 }
-.ob-steps {
-  display: flex;
-  gap: 8px;
-  margin: 0;
-  padding: 0;
-  list-style: none;
-}
-.ob-steps li {
-  flex: 1;
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  min-width: 0;
-  color: var(--muted);
-  font-size: 0.85rem;
-}
-.ob-dot {
-  flex: none;
-  display: grid;
-  place-items: center;
-  width: 26px;
-  height: 26px;
-  border-radius: 50%;
-  border: 1px solid var(--line);
-  background: var(--bg-3);
-  font-size: 0.8rem;
-  font-weight: 700;
-}
-.ob-steps li.active {
-  color: var(--text);
-  font-weight: 700;
-}
-.ob-steps li.active .ob-dot,
-.ob-steps li.done .ob-dot {
-  background: var(--accent);
-  border-color: var(--accent);
-  color: var(--text);
-}
-.ob-step-label {
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
 .ob-body {
   display: flex;
   flex-direction: column;
@@ -4649,38 +4605,6 @@ input[type='password']:focus-visible {
   margin: 0;
   line-height: 1.5;
 }
-.ob-addons,
-.ob-summary {
-  margin: 0;
-  padding: 0;
-  list-style: none;
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-}
-.ob-addons li {
-  color: var(--ok);
-  font-weight: 600;
-}
-.ob-summary li {
-  line-height: 1.4;
-}
-.ob-howto summary {
-  cursor: pointer;
-  color: var(--accent);
-  font-weight: 600;
-  border-radius: 6px;
-}
-.ob-howto ol {
-  margin: 8px 0 0;
-  padding-left: 22px;
-  line-height: 1.6;
-  color: var(--muted);
-}
-.ob-howto a {
-  color: var(--text);
-  text-decoration: underline;
-}
 .ob-actions {
   display: flex;
   flex-wrap: wrap;
@@ -4688,29 +4612,6 @@ input[type='password']:focus-visible {
   gap: 10px;
   padding-top: 6px;
   border-top: 1px solid var(--line);
-}
-@media (max-width: 760px) {
-  .ob-steps li {
-    flex: 0 0 auto;
-  }
-  .ob-steps li.active {
-    flex: 1 1 auto;
-  }
-  .ob-step-label {
-    display: none;
-  }
-  .ob-steps li.active .ob-step-label {
-    display: inline;
-  }
-  .ob-actions .btn {
-    padding: 10px 14px;
-  }
-  /* "Saltar" abajo de todo, así Atrás/Siguiente quedan juntos. */
-  .ob-actions .ob-skip {
-    order: 10;
-    flex-basis: 100%;
-    justify-content: center;
-  }
 }
 
 /* Protector de pantalla. */
