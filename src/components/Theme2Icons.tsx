@@ -21,12 +21,6 @@ const PATHS = {
       <path d="M8 21h8" />
     </>
   ),
-  live: (
-    <>
-      <rect x="3" y="7" width="18" height="13" rx="2" />
-      <path d="M8 3l4 4 4-4" />
-    </>
-  ),
   list: <path d="M6 3h12v18l-6-4-6 4z" />,
   history: (
     <>

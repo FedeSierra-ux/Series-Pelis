@@ -26,7 +26,6 @@ const RAIL: Item[] = [
   { to: '/', label: 'Inicio', icon: 'home', end: true },
   { to: '/discover/movie', label: 'Películas', icon: 'movie' },
   { to: '/discover/series', label: 'Series', icon: 'series' },
-  { to: '/tv', label: 'TV en vivo', icon: 'live' },
   { to: '/me', label: 'Vos', icon: 'user' },
 ]
 
@@ -34,7 +33,6 @@ const TABS: Item[] = [
   { to: '/', label: 'Inicio', icon: 'home', end: true },
   { to: '/discover/movie', label: 'Películas', icon: 'movie' },
   { to: '/discover/series', label: 'Series', icon: 'series' },
-  { to: '/tv', label: 'TV', icon: 'live' },
   { to: '/me', label: 'Vos', icon: 'user' },
 ]
 
