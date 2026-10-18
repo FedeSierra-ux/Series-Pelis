@@ -88,6 +88,37 @@ const PATHS = {
       <path d="M12 10v5M12 18v.01" />
     </>
   ),
+  /** Subtítulos (CC): un cuadro con dos "c". */
+  cc: (
+    <>
+      <rect x="3" y="5" width="18" height="14" rx="3" />
+      <path d="M10.5 10.2a2 2 0 1 0 0 3.6" />
+      <path d="M16.5 10.2a2 2 0 1 0 0 3.6" />
+    </>
+  ),
+  /** Fuentes: capas apiladas. */
+  sources: (
+    <>
+      <path d="M12 3 2 8l10 5 10-5-10-5z" />
+      <path d="m2 12 10 5 10-5" />
+      <path d="m2 16 10 5 10-5" />
+    </>
+  ),
+  /** Siguiente episodio: play con una barra. */
+  next: (
+    <>
+      <path d="M5 5v14l10-7z" fill="currentColor" />
+      <path d="M19 5v14" />
+    </>
+  ),
+  /** Abrir en otro reproductor: un cuadro con una flecha que sale. */
+  external: (
+    <>
+      <path d="M14 4h6v6" />
+      <path d="M20 4 10 14" />
+      <path d="M19 14v5a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V6a1 1 0 0 1 1-1h5" />
+    </>
+  ),
 }
 
 export type PlayerIconName = keyof typeof PATHS

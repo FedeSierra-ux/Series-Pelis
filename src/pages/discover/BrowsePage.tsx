@@ -45,7 +45,7 @@ export function BrowsePage({ kind }: { kind: BrowseKind }) {
   const hidden = useHiddenIds()
   const topItems = useMemo(() => withoutHidden(top10.data?.items ?? [], hidden).slice(0, 10), [top10.data, hidden])
   const first = topItems[0]
-  const firstTarget = useMemo(() => first && { type: first.type, id: first.id, name: first.name }, [first])
+  const firstTarget = useMemo(() => first && { type: first.type, id: first.id, name: first.name, poster: first.poster }, [first])
   const topTitle = top10.data && !top10.data.trending ? `Top 10 ${label.toLowerCase()} populares` : TOP10_TITLE[kind]
 
   return (

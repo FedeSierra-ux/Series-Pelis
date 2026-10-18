@@ -43,6 +43,7 @@ export function Me() {
     [progress],
   )
   const { undo, hide, restore } = useUndoHide()
+  const hasHistory = Object.keys(progress).length > 0
 
   return (
     <div className="page me-page">
@@ -81,10 +82,15 @@ export function Me() {
       <section className="me-history" aria-labelledby="me-history-title">
         <header className="me-history-head">
           <h2 id="me-history-title">Lo que viste</h2>
-          <HistoryStats className="stats me-stats" />
-          <Link to="/history" className="row-more">
-            Historial completo
-          </Link>
+          {/* v0.26: sin historial no hay números en cero ni "Historial completo": solo el estado vacío. */}
+          {hasHistory && (
+            <>
+              <HistoryStats className="stats me-stats" />
+              <Link to="/history" className="row-more">
+                Historial completo
+              </Link>
+            </>
+          )}
         </header>
         <HistoryFeed limit={HISTORY_PREVIEW} monthHeading="h3" />
       </section>
@@ -92,7 +98,7 @@ export function Me() {
       {undo && (
         <div className="undo-toast" role="status">
           <span>
-            Quitado de Seguir viendo<span className="muted"> · {undo.name}</span>
+            Eliminado de Seguir viendo<span className="muted"> · {undo.name}</span>
           </span>
           <button type="button" className="btn btn-small" onClick={restore}>
             Deshacer
@@ -136,7 +142,7 @@ function MeShortcuts() {
   )
 }
 
-/** "Quitado de Seguir viendo · Deshacer" (igual que en Inicio). */
+/** "Eliminado de Seguir viendo · Deshacer" (igual que en Inicio). */
 function useUndoHide() {
   const [undo, setUndo] = useState<{ name: string; ids: string[] }>()
   const timer = useRef<ReturnType<typeof setTimeout>>(undefined)

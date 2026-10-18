@@ -52,6 +52,29 @@ html[data-tv] .page.discover {
   object-fit: cover;
   object-position: center 22%;
 }
+/* v0.26 (explorar-02): mientras el fondo no llegó, la imagen de la tarjeta (ya en caché) difuminada hace de
+   fondo; el de verdad aparece encima con un fundido (`Layer`, estado del fondo). */
+.fbb-bg-ph {
+  position: absolute;
+  inset: 0 0 0 auto;
+  width: 78%;
+  height: 100%;
+  object-fit: cover;
+  filter: blur(36px) saturate(1.25);
+  transform: scale(1.2);
+  opacity: 0.6;
+}
+.fbb-bg {
+  transition: opacity 400ms ease;
+}
+.fbb-bg.is-loading {
+  opacity: 0;
+}
+/* Mientras el logo carga no ocupa lugar: se ve el nombre (`.fbb-title`). */
+.fbb-logo.is-loading {
+  position: absolute;
+  opacity: 0;
+}
 .fbb-shade {
   position: absolute;
   inset: 0;
@@ -78,7 +101,8 @@ html[data-tv] .page.discover {
   height: auto;
   object-fit: contain;
   object-position: left bottom;
-  filter: drop-shadow(0 2px 14px color-mix(in srgb, var(--bg) 65%, transparent));
+  /* Halo claro sutil: un logo negro (Severance) se lee sobre el fondo oscuro; en uno claro casi no se nota. */
+  filter: drop-shadow(0 0 1px rgba(255, 255, 255, 0.6)) drop-shadow(0 0 16px rgba(255, 255, 255, 0.3)) drop-shadow(0 2px 8px rgba(0, 0, 0, 0.45));
 }
 .fbb-title {
   margin: 0;

@@ -115,6 +115,38 @@
   margin: 0;
 }
 
+/* v0.26: en el celular, Mi lista en 3 columnas (entran el doble de títulos por pantalla). Las estrellas propias
+   bajan a la esquina de abajo a la izquierda del póster (2:3, alto = 150 % del ancho) para no pisar el IMDb. */
+@media (max-width: 560px) {
+  [data-theme='2'] .me-list > .grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 14px 8px;
+  }
+  [data-theme='2'] .me-list > .grid .poster-title {
+    font-size: 0.85rem;
+  }
+  [data-theme='2'] .me-list > .grid .poster-sub {
+    font-size: 0.75rem;
+  }
+  [data-theme='2'] .me-list > .grid .rated-card {
+    container-type: inline-size;
+  }
+  [data-theme='2'] .me-list > .grid .user-stars.on-poster {
+    top: calc(150cqw - 30px);
+    left: 6px;
+    font-size: 0.72rem;
+    padding: 2px 7px;
+  }
+  [data-theme='2'] .me-list > .grid .poster-rating {
+    font-size: 0.7rem;
+  }
+}
+
+/* v0.26: los estados vacíos de Vos (Mi lista, Lo que viste) más bajos: son dos seguidos con la cuenta nueva. */
+[data-theme='2'] .me-page .empty-state {
+  padding-block: 22px;
+}
+
 /* ---------- Lo que viste ---------- */
 
 .me-history {
@@ -150,6 +182,23 @@
 }
 .history-filters {
   row-gap: 10px;
+}
+/* v0.26: en el celular los filtros van en un solo renglón que se desliza, a sangre hasta el borde. */
+@media (max-width: 700px) {
+  [data-theme='2'] .history-filter-tabs {
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    scrollbar-width: none;
+    margin-inline: calc(-1 * var(--gutter));
+    padding-inline: var(--gutter);
+    scroll-padding-inline: var(--gutter);
+  }
+  [data-theme='2'] .history-filter-tabs::-webkit-scrollbar {
+    display: none;
+  }
+  [data-theme='2'] .history-filter-tabs > * {
+    flex: none;
+  }
 }
 .history-more {
   margin: 4px 0 24px;

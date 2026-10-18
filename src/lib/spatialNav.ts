@@ -217,19 +217,22 @@ export function visibleTop(): number {
   return parseFloat(getComputedStyle(document.documentElement).scrollPaddingTop) || 0
 }
 
-/** Lo que apaga la sombra de la portada fija debajo de ella (`bh-edge` en discover/browse.css: 32 px + 48 de difuminado). */
-export const SHADE_PX = 80
+/**
+ * Dónde queda el título de la fila debajo de la portada fija (PC). La sombra `bh-edge` (discover/browse.css)
+ * llega a ~28 px (10 px + 18 de difuminado): el título queda justo afuera. v0.26 (explorar-01): con 32 px, lo
+ * de la fila anterior (nombre y año, ~60 px arriba del título) queda tapado por la portada.
+ */
+export const ROW_HEAD_GAP = 32
 
 /**
- * Scroll vertical para una tarjeta de una fila debajo de una portada fija (PC): centrada en lo que se ve,
- * pero sin dejar el título de la fila dentro de la sombra de la portada; si no entra todo, gana la tarjeta
- * entera. Puro, para poder probarlo.
+ * Scroll vertical para una tarjeta de una fila debajo de una portada fija (PC): el título de la fila pegado
+ * debajo de la portada (como en la TV), así no asoma la fila anterior; si la tarjeta no entra, gana la
+ * tarjeta entera. Puro, para poder probarlo.
  */
 export function rowRevealTop(o: { scrollY: number; viewTop: number; viewH: number; cardTop: number; cardBottom: number; headTop: number }): number {
-  const center = o.scrollY + (o.cardTop + o.cardBottom) / 2 - (o.viewTop + (o.viewH - o.viewTop) / 2)
-  const keepHead = o.scrollY + o.headTop - o.viewTop - SHADE_PX
+  const keepHead = o.scrollY + o.headTop - o.viewTop - ROW_HEAD_GAP
   const keepCard = o.scrollY + o.cardBottom - o.viewH
-  return Math.max(0, Math.round(Math.max(Math.min(center, keepHead), keepCard)))
+  return Math.max(0, Math.round(Math.max(keepHead, keepCard)))
 }
 
 /** Lleva a la vista el elemento recién enfocado. En la TV, anclado; si no, centrado como siempre. */
@@ -244,7 +247,7 @@ function reveal(el: HTMLElement, instant: boolean) {
       el.scrollIntoView({ block: 'center', inline: 'center', behavior })
       return
     }
-    // Debajo de la portada fija de Películas/Series: centrada, con el título de la fila fuera de la sombra.
+    // Debajo de la portada fija de Películas/Series: el título de la fila pegado debajo de la portada.
     const item = (el.closest('.row-scroller > *') as HTMLElement | null) ?? el
     const ir = item.getBoundingClientRect()
     const sr = scroller.getBoundingClientRect()
@@ -433,6 +436,10 @@ export function initSpatialNav(onBack: () => void) {
       next.focus({ preventScroll: true })
       // Con la tecla mantenida, sin animación: el scroll suave quedaba atrás del foco.
       reveal(next, e.repeat)
+    } else if ((dir === 'up' || dir === 'down') && active?.closest('.page.browse .row-scroller')) {
+      // Películas/Series: en la última fila, ↓ no hace el scroll de 40 px del navegador (el título de la
+      // fila se metía debajo de la portada fija y asomaba la anterior).
+      e.preventDefault()
     }
   }
   window.addEventListener('keydown', handler)

@@ -104,6 +104,22 @@ describe('mejor resultado', () => {
     expect(pickBestResult('x', [])).toBeUndefined()
   })
 
+  it('gana una persona que se parece igual o más que el mejor título (v0.26)', () => {
+    const groups = [{ items: [m('tt1', 'Ricardo Del Rey')] }]
+    expect(pickBestResult('ricardo', groups, [{ name: 'Ricardo Darín' }])).toBeUndefined()
+    expect(pickBestResult('taylor swift', [{ items: [m('tt2', 'Taylor Swift: The Eras Tour')] }], [{ name: 'Taylor Swift' }])).toBeUndefined()
+    // Sin personas, como siempre.
+    expect(pickBestResult('ricardo', groups, [])?.id).toBe('tt1')
+  })
+
+  it('el título gana si se parece más que las personas', () => {
+    expect(pickBestResult('joker', [{ items: [m('tt7286456', 'Joker')] }], [{ name: 'Joker Xue' }])?.id).toBe('tt7286456')
+    // Una persona que no se parece (o muy abajo en la lista) no cuenta.
+    expect(pickBestResult('dune', [{ items: [m('tt1160419', 'Dune')] }], [{ name: 'Denis Villeneuve' }])?.id).toBe('tt1160419')
+    const far = ['A', 'B', 'C', 'D', 'E', 'Dune Person'].map((name) => ({ name }))
+    expect(pickBestResult('dune', [{ items: [m('tt1160419', 'Dune Part')] }], far)?.id).toBe('tt1160419')
+  })
+
   it('solo mira los primeros de cada grupo', () => {
     const items = ['A', 'B', 'C', 'D', 'E', 'Matrix'].map((n, i) => m(String(i), n))
     expect(pickBestResult('matrix', [{ items }])).toBeUndefined()

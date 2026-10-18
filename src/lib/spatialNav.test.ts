@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { SHADE_PX, anchoredScrollLeft, backStep, ladderApplies, navScore, rowAnchorY, rowRevealTop } from './spatialNav'
+import { ROW_HEAD_GAP, anchoredScrollLeft, backStep, ladderApplies, navScore, rowAnchorY, rowRevealTop } from './spatialNav'
 
 describe('"Atrás" en escalera', () => {
   it('vale en Inicio, Películas, Series y Vos', () => {
@@ -85,16 +85,15 @@ describe('navScore (a qué se mueve el foco)', () => {
 describe('rowRevealTop (fila debajo de la portada fija en PC)', () => {
   const base = { scrollY: 1000, viewTop: 300, viewH: 900 }
 
-  it('centra la tarjeta en lo visible si el título de la fila entra', () => {
-    // Tarjeta de 300 px, título 50 px arriba: centrada en 300..900 queda en 450..750.
+  it('deja el título de la fila pegado debajo de la portada (no asoma la fila anterior)', () => {
     const top = rowRevealTop({ ...base, cardTop: 700, cardBottom: 1000, headTop: 650 })
-    expect(top).toBe(1000 + 850 - 600)
+    // El título queda a ROW_HEAD_GAP del borde de la portada (300).
+    expect(1000 + 650 - top).toBe(300 + ROW_HEAD_GAP)
   })
 
-  it('no deja el título debajo de la sombra de la portada', () => {
-    const top = rowRevealTop({ ...base, viewH: 1100, cardTop: 700, cardBottom: 1000, headTop: 600 })
-    // El título queda a SHADE_PX debajo del borde de la portada.
-    expect(1000 + 600 - top).toBeGreaterThanOrEqual(300 + SHADE_PX)
+  it('si la tarjeta no entra entera, gana la tarjeta', () => {
+    const top = rowRevealTop({ ...base, viewH: 600, cardTop: 700, cardBottom: 1000, headTop: 650 })
+    expect(1000 + 1000 - top).toBe(600)
   })
 
   it('nunca negativo', () => {

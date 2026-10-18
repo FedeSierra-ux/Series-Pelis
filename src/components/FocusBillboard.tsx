@@ -1,4 +1,4 @@
-import { useEffect, useState, type ReactNode } from 'react'
+import { useEffect, useLayoutEffect, useRef, useState, type ReactNode } from 'react'
 import { useTvMode } from '../lib/tv'
 import { loadBillboard, parseDetailHref, type BillboardInfo, type BillboardTarget } from './focusBillboardData'
 import { ImdbRating } from './Rating'
@@ -19,8 +19,12 @@ export function cardTarget(el: Element | null): BillboardTarget | undefined {
   const card = el?.closest?.('a[href^="/detail/"]')
   if (!card || !card.closest('main') || !card.closest('.row-scroller, .grid')) return undefined
   const t = parseDetailHref(card.getAttribute('href'))
-  return t && { ...t, name: card.getAttribute('title') ?? undefined }
+  const poster = card.querySelector<HTMLImageElement>('.poster-img > img')?.src || undefined
+  return t && { ...t, name: card.getAttribute('title') ?? undefined, poster }
 }
+
+/** La imagen ya está bajada (de la caché): se puede mostrar sin esperar el `load`. */
+const isLoaded = (img: HTMLImageElement | null) => !!img && img.complete && img.naturalWidth > 0
 
 const inRows = (el: Element | null) => !!el?.closest?.('main .row-scroller, main .grid')
 
@@ -117,14 +121,47 @@ function Billboard() {
 export function Layer({ info, media }: { info: BillboardInfo; media?: ReactNode }) {
   const [brokenLogo, setBrokenLogo] = useState(false)
   const [brokenBg, setBrokenBg] = useState(false)
+  // v0.26 (explorar-02): mientras el fondo no llegó, la imagen de la tarjeta (ya en caché) difuminada hace de
+  // fondo y el fondo de verdad aparece con un fundido encima; mientras el logo no llegó, se ve el nombre.
+  // 'cached' = ya estaba al montar: ni fondo provisorio ni nombre de más por un cuadro.
+  const [bgState, setBgState] = useState<'wait' | 'loaded' | 'cached'>('wait')
+  const [logoReady, setLogoReady] = useState(false)
+  const bgRef = useRef<HTMLImageElement>(null)
+  const logoRef = useRef<HTMLImageElement>(null)
+  useLayoutEffect(() => {
+    if (isLoaded(bgRef.current)) setBgState('cached')
+    if (isLoaded(logoRef.current)) setLogoReady(true)
+  }, [])
   const logo = info.logo && !brokenLogo ? info.logo : undefined
+  const bg = info.background && !brokenBg ? info.background : undefined
   return (
     <div className="fbb-layer">
-      {info.background && !brokenBg && <img className="fbb-bg" src={info.background} alt="" decoding="async" onError={() => setBrokenBg(true)} />}
+      {info.poster && bgState !== 'cached' && <img className="fbb-bg-ph" src={info.poster} alt="" decoding="async" />}
+      {bg && (
+        <img
+          ref={bgRef}
+          className={`fbb-bg${bgState === 'wait' ? ' is-loading' : ''}`}
+          src={bg}
+          alt=""
+          decoding="async"
+          onLoad={() => setBgState((s) => (s === 'wait' ? 'loaded' : s))}
+          onError={() => setBrokenBg(true)}
+        />
+      )}
       {media}
       <div className="fbb-shade" />
       <div className="fbb-info">
-        {logo ? <img className="fbb-logo" src={logo} alt="" onError={() => setBrokenLogo(true)} /> : <p className="fbb-title">{info.name}</p>}
+        {logo && (
+          <img
+            ref={logoRef}
+            className={`fbb-logo${logoReady ? '' : ' is-loading'}`}
+            src={logo}
+            alt=""
+            onLoad={() => setLogoReady(true)}
+            onError={() => setBrokenLogo(true)}
+          />
+        )}
+        {(!logo || !logoReady) && <p className="fbb-title">{info.name}</p>}
         {(info.rating || info.facts.length > 0) && (
           <p className="fbb-facts">
             <ImdbRating value={info.rating} />

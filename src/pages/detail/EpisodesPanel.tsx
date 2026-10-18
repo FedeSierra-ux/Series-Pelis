@@ -1,18 +1,23 @@
-import type { ReactNode, RefObject } from 'react'
+import { useEffect, useRef, type ReactNode, type RefObject } from 'react'
 import { Picker } from '../../components/Picker'
 import { ImdbRating } from '../../components/Rating'
 import { remainingLabel } from '../../lib/remaining'
 import { RESUME_MIN_S, setWatched, setWatchedMany, type WatchEntry } from '../../lib/store'
+import { useTvMode } from '../../lib/tv'
 import type { Video } from '../../lib/types'
 import {
   episodeBadge,
+  episodeHeading,
   episodeNumber,
   formatReleaseDate,
   isReleased,
   seasonLabel,
   seasonsAsDropdown,
   seasonStatus,
+  suggestedForPanel,
 } from './episodes'
+import { TOUCH_QUERY, useMediaQuery } from './useMediaQuery'
+import { useSeasonOverviews } from './useSeasonOverviews'
 
 // Pestaña "Episodios" de la ficha: selector de temporada, lista de episodios y fuentes del elegido.
 // v0.14 (U20): con más de 6 temporadas, desplegable "Temporada 3 ▾" (el Picker, que anda con el
@@ -35,6 +40,10 @@ interface Props {
   suggested?: Video
   /** Ya vio algo de la serie (sin eso no se marca "Siguiente"). */
   started: boolean
+  /** El primer episodio de la serie (el de "Volver a ver"; su imagen no se difumina en el panel). */
+  first?: Video
+  /** Id de la serie en TMDB: con eso, la sinopsis de los episodios va en español (ficha-11). */
+  tmdbId?: number
   hideSpoiler: (v: Video) => boolean
   watchBase: WatchBase
   /** Celular: las fuentes van dentro de la lista, debajo del episodio elegido. */
@@ -50,6 +59,21 @@ export function EpisodesPanel(p: Props) {
   // "Marcar temporada como vista" solo cuenta los episodios ya estrenados.
   const { released: seasonReleased, complete: seasonComplete } = seasonStatus(seasonVideos, progress)
   const dropdown = seasonsAsDropdown(seasons)
+  // v0.26 (ficha-11): sinopsis en español de TMDB (si está); si no, la de Cinemeta.
+  const overviews = useSeasonOverviews(p.tmdbId, season, seasonVideos)
+  // v0.26 (ficha-06): en el celular se toca; con mouse o control remoto, se elige.
+  const tv = useTvMode()
+  const touch = useMediaQuery(TOUCH_QUERY) && !tv
+  // v0.26 (ficha-04): con el panel de fuentes vacío, el episodio sugerido con un botón para ver sus fuentes.
+  const panelEp = !selectedVideoId && !p.inlineStreams ? suggestedForPanel(p.suggested, p.first, progress, p.started) : undefined
+  // Al tocar "Ver fuentes de este episodio" el botón desaparece: el foco pasa al episodio elegido (control remoto).
+  const focusAfterSelect = useRef<string>(undefined)
+  useEffect(() => {
+    const want = focusAfterSelect.current
+    if (!want || want !== selectedVideoId) return
+    focusAfterSelect.current = undefined
+    p.listRef.current?.querySelector<HTMLElement>('.episode-main[aria-current]')?.focus()
+  }, [selectedVideoId, season])
 
   return (
     <section className="episodes-section" aria-label="Episodios">
@@ -100,14 +124,18 @@ export function EpisodesPanel(p: Props) {
             const upcoming = !isReleased(v)
             const rating = Number(v.rating)
             const selected = v.id === selectedVideoId
-            // Sin spoilers: lo que no viste va difuminado hasta que lo elegís.
-            const spoil = !selected && p.hideSpoiler(v)
+            // Sin spoilers: lo que no viste va difuminado hasta que lo elegís. v0.26 (ficha-04, nota del usuario):
+            // el primer episodio de la serie siempre se ve.
+            const spoil = !selected && v.id !== p.first?.id && p.hideSpoiler(v)
             const started = !!w && w.duration > 0 && !w.watched && w.position > RESUME_MIN_S
             const left = started ? remainingLabel(w.position, w.duration) : ''
             const badge = episodeBadge(v, p.suggested, progress, p.started)
             const title = v.title ?? v.name ?? `Episodio ${episodeNumber(v)}`
+            const overview = overviews.get(v.id) ?? v.overview ?? v.description
+            // v0.26 (ficha-04, "Vistos atenuados"): el siguiente a ver, resaltado.
+            const next = v.id === p.suggested?.id
             return [
-              <li key={v.id} className={`episode ${selected ? 'selected' : ''} ${w?.watched ? 'watched' : ''}`}>
+              <li key={v.id} className={`episode ${selected ? 'selected' : ''} ${w?.watched ? 'watched' : ''}${next ? ' is-next' : ''}`}>
                 <button
                   type="button"
                   className="episode-main"
@@ -140,11 +168,14 @@ export function EpisodesPanel(p: Props) {
                       )}
                     </span>
                     {left && <span className="ep-left">{left.charAt(0).toUpperCase() + left.slice(1)}</span>}
-                    {(v.overview ?? v.description) &&
+                    {overview &&
                       (spoil ? (
-                        <span className="episode-desc spoiler-hidden">Sinopsis oculta · elegilo para verla</span>
+                        <span className="episode-desc spoiler-hidden">
+                          <SpoilerIcon />
+                          Sin spoilers · {touch ? 'tocalo' : 'elegilo'} para ver la sinopsis
+                        </span>
                       ) : (
-                        <span className="episode-desc">{v.overview ?? v.description}</span>
+                        <span className="episode-desc">{overview}</span>
                       ))}
                   </div>
                 </button>
@@ -169,11 +200,51 @@ export function EpisodesPanel(p: Props) {
           })}
         </ol>
         {!p.inlineStreams && (
-          <aside className="episode-streams" aria-label="Fuentes del episodio" data-nav-left=".episode-main[aria-current]">
-            {p.streamsPanel ?? <div className="streams-empty muted">Elegí un episodio para ver las fuentes disponibles.</div>}
+          <aside
+            className="episode-streams"
+            aria-label="Fuentes del episodio"
+            data-nav-left={selectedVideoId ? '.episode-main[aria-current]' : '.episode-main[data-autofocus]'}
+          >
+            {p.streamsPanel ??
+              (panelEp ? (
+                <div className="streams-empty sx-empty">
+                  <span className="sx-kicker">{panelEp.kicker}</span>
+                  <p className="sx-ep">{episodeHeading(panelEp.video)}</p>
+                  {panelEp.video.thumbnail && (
+                    <div
+                      className={`sx-empty-thumb${p.hideSpoiler(panelEp.video) && panelEp.video.id !== p.first?.id ? ' spoiler-blur' : ''}`}
+                    >
+                      <img src={panelEp.video.thumbnail} alt="" loading="lazy" decoding="async" />
+                    </div>
+                  )}
+                  <button
+                    type="button"
+                    className="btn btn-primary"
+                    onClick={() => {
+                      focusAfterSelect.current = panelEp.video.id
+                      p.onSelect(panelEp.video)
+                    }}
+                  >
+                    Ver fuentes de este episodio
+                  </button>
+                  <p className="sx-hint">O elegí cualquier episodio de la lista.</p>
+                </div>
+              ) : (
+                <div className="streams-empty muted">Elegí un episodio para ver las fuentes disponibles.</div>
+              ))}
           </aside>
         )}
       </div>
     </section>
+  )
+}
+
+/** Ojo tachado, con el trazo de los íconos de la ficha (ficha-06). */
+function SpoilerIcon() {
+  return (
+    <svg className="spoiler-icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden focusable="false">
+      <path d="M2.5 12S6 5.5 12 5.5c1.6 0 3 .4 4.2 1M21.5 12S18 18.5 12 18.5c-1.6 0-3-.4-4.2-1" />
+      <path d="M9.9 9.9a3 3 0 0 0 4.2 4.2M4 20 20 4" />
+    </svg>
   )
 }

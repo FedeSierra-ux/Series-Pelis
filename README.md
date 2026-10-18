@@ -40,6 +40,8 @@ y un **historial** de todo lo que viste. Funciona en la PC, el celular y el nave
   con Real-Debrid o TorBox, los streams llegan como enlaces directos y arrancan rápido (siempre van primero).
 - **Torrents sin debrid (v0.25)**: la app de Android (Android 9+) trae su propio motor de torrents, como Stremio. En la
   PC, con Stremio abierto (servidor local).
+- **Rediseño (v0.26)**: Inicio, Películas/Series, Buscar, ficha, reproductor y Vos con los ajustes de la auditoría visual
+  (filas alineadas bajo la portada, fuentes con idioma y tamaño, episodios vistos atenuados, subtítulo que no tapa "Saltar" en el celular).
 - **Ficha de las series** con pestaña **Detalles**: reparto, creación, países y dónde verla en Argentina.
 - **Reproductor** propio: MP4/WebM directos y HLS (`hls.js`, se descarga solo si hace falta), subtítulos de los
   addons (convierte SRT a VTT), pistas de audio, siguiente episodio automático con la misma fuente.
@@ -177,6 +179,7 @@ Para probar localmente igual que en Cloudflare (con la función y los headers): 
 
 ## Roadmap
 
+- **v0.27**: debrid (TorBox) dentro del addon, con "Reproducir por torrent" si falla.
 - **Pendiente de confirmar**: variantes del Tema 2 (negro OLED, acento a elección, color del póster).
 - **Próximo**: cuenta con código de vinculación (como Netflix) y sincronización del historial en Cloudflare (Workers + D1).
 - Importar addons desde la cuenta de Stremio.

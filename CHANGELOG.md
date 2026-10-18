@@ -1,5 +1,64 @@
 # Changelog
 
+## [0.26.0] - 2026-10-18
+
+Rediseño con las **45 propuestas visuales aprobadas** en la página de la auditoría (4 votadas "no" quedan como
+estaban: explorar-11, ficha-09, reproductor-07 y vos-ajustes-04). El debrid (TorBox) que estaba planeado para
+esta versión pasa a la **v0.27.0**.
+
+### Cambiado
+- **Inicio**
+  - Halo claro en los logos de la portada y las tarjetas apaisadas, así los logos oscuros se leen en la TV.
+  - Las filas corridas ya no dejan asomar el póster anterior (PC con mouse y TV).
+  - Top 10 en el celular con el número más chico y metido debajo del póster; el esqueleto reserva el lugar del
+    número, así la fila no salta al cargar.
+  - "Para vos" muestra la razón una sola vez, debajo del título ("Porque viste…"), si es la misma para toda la
+    fila. Las filas de recomendaciones no repiten la etiqueta "Top 10".
+  - "¿Quién está mirando?" más grande en la TV; asistente inicial y editor de perfil más prolijos en el celular
+    (la barra de Guardar queda abajo sin tapar los colores).
+  - Los avisos dicen **"Eliminado de Seguir viendo"** y **"Eliminado del historial"**; en el celular ocupan todo
+    el ancho.
+- **Películas, Series, Buscar y Persona**
+  - El título de la fila enfocada queda a la vista debajo de la portada fija.
+  - La portada que sigue al foco muestra el póster difuminado mientras carga el fondo.
+  - Top 10 más chico en el celular y sin la etiqueta "Top 10" repetida sobre el póster.
+  - Tira de listas curadas con fundido al borde; chips de género tonales en Buscar.
+  - "Mejor resultado": si buscás a una persona (por ejemplo "ricardo darín"), gana la persona y la fila
+    Personas va primero; sin imagen, la caja no ocupa alto de más.
+  - Buscar en la TV con el teclado en pantalla: teclado a un costado y resultados al otro.
+  - Pestañas de Buscar compactas en el celular (arregla "Personas" cortada en pantallas chicas).
+  - Persona en el celular: foto al lado de los datos y biografía con "Leer más".
+- **Ficha**
+  - En el celular la portada es más baja y "Reproducir" se ve en la primera pantalla.
+  - Sinopsis con "Leer más" / "Leer menos"; títulos largos más chicos.
+  - Las fuentes muestran etiquetas (calidad, HDR, audio, idioma, peso, servicio, en caché) en vez del texto crudo
+    del addon, que queda al pasar el mouse; en PC grande van en dos columnas. Arriba, un resumen: "6 listas para
+    ver · 2 torrents sin debrid · 1 oculta por tus filtros".
+  - Series: los episodios vistos se ven atenuados y el siguiente, resaltado. Sin episodio elegido, el panel de
+    fuentes muestra ese siguiente episodio (T1 E1 si no viste nada) con "Ver fuentes de este episodio".
+  - Episodios más prolijos en el celular; "Sin spoilers" con un ícono de ojo tachado en vez del 🙈; el episodio
+    1 nunca va difuminado.
+  - Reparto en dos renglones; la ayuda de las estrellas dice "Tocá una estrella" en el celular.
+  - Sinopsis de los episodios en español desde TMDB (solo si la fecha de estreno coincide).
+- **Reproductor**
+  - Barra de arriba más legible, spinner con el acento, y los subtítulos se esconden mientras arrastrás la barra.
+  - Botones de la barra con íconos y **una etiqueta que dice qué hace cada uno** al pasar el mouse o el foco.
+  - En el celular, una sola fila de íconos de 44 px; "Abrir en…" y "Ventana flotante" pasan a ⚙ → "Más
+    opciones". La tarjeta del siguiente episodio ocupa una fila.
+  - En la TV, botones e íconos más grandes.
+  - En el celular, con los controles a la vista, el subtítulo sube para que "Saltar intro" no lo tape.
+- **Vos y Ajustes**
+  - Mi lista en 3 columnas en el celular; filtros del historial en un renglón; Vos vacío sin estadísticas ni
+    filtros de más.
+  - Metas y logros más prolijos; Tu año sin columna vacía en la TV.
+  - "Estilo de subtítulos" con rótulos (Tamaño, Color, Fondo, Letra, Posición).
+  - "Sacar" un aparato en el mismo renglón; Explorar addons más prolijo.
+  - **Tu año ya no estima horas**: lo marcado como visto sin reproducirlo cuenta como peli o episodio, pero no
+    suma tiempo (se fue el "(aprox.)").
+
+### Arreglado
+- La saga de la ficha queda sin «Estás acá» (votaste no a ficha-09): el cambio no había llegado a la v0.25.1.
+
 ## [0.25.1] - 2026-10-18
 
 Arreglos de la auditoría visual (50 de 53 puntos) y de la revisión del motor de torrents.

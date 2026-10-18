@@ -83,7 +83,6 @@ export function YearReview() {
               <span className="year-big">{hours >= 1 ? hours.toLocaleString('es-AR') : Math.floor(s.seconds / 60)}</span>
               <span className="year-big-label">
                 {hours >= 1 ? (hours === 1 ? 'hora' : 'horas') : 'minutos'} de pelis y series en {year}
-                {s.approx && <span className="muted small"> (aprox.)</span>}
               </span>
             </div>
             <dl className="year-kpis">

@@ -123,8 +123,16 @@ export const MIN_BEST_SCORE = 30
  * El título que va destacado arriba en "Todo". Gana el nombre que más se parece a lo buscado; a igual
  * parecido, el que el addon puso más arriba y, después, el del grupo que va primero (Películas). Si
  * ninguno se parece (por ejemplo, buscaste a una persona) no hay mejor resultado.
+ *
+ * v0.26 (explorar-07): `people` son las personas encontradas (TMDB), en el orden en que llegan. Si una se
+ * parece a lo buscado igual o más que el mejor título ("ricardo" → Ricardo Darín antes que "Ricardo Del Rey"),
+ * gana la persona: no hay mejor resultado y la fila de Personas queda primera.
  */
-export function pickBestResult(query: string, groups: readonly Pick<SearchGroup, 'items'>[]): MetaPreview | undefined {
+export function pickBestResult(
+  query: string,
+  groups: readonly Pick<SearchGroup, 'items'>[],
+  people: readonly { name: string }[] = [],
+): MetaPreview | undefined {
   let best: { meta: MetaPreview; score: number } | undefined
   groups.forEach((g, gi) => {
     g.items.slice(0, CANDIDATES).forEach((meta, i) => {
@@ -135,7 +143,14 @@ export function pickBestResult(query: string, groups: readonly Pick<SearchGroup,
       if (!best || score > best.score) best = { meta, score }
     })
   })
-  return best?.meta
+  if (!best) return undefined
+  const top = best
+  // Misma vara que los títulos (parecido menos la posición); a igual puntaje gana la persona.
+  const personWins = people.slice(0, CANDIDATES).some((p, i) => {
+    const base = titleScore(query, p.name)
+    return base >= MIN_BEST_SCORE && base - i * 3 >= top.score
+  })
+  return personWins ? undefined : top.meta
 }
 
 // ---------- Pestañas ----------

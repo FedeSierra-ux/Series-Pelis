@@ -1,4 +1,4 @@
-import { PosterCard } from '../../components/PosterCard'
+import { PosterCard, PosterSkeleton } from '../../components/PosterCard'
 import { Row } from '../../components/Row'
 import { BECAUSE_ROW_KEY, TRENDING_WEEK_ROW_KEY } from '../../lib/catalogPrefs'
 import { useRowShape } from '../../lib/catalogRows'
@@ -40,6 +40,14 @@ export function useTrending(window: 'day' | 'week', tmdbKey: string, enabled = t
   )
 }
 
+/** Esqueleto del Top 10 (v0.26): el lugar del número en contorno, así la fila no salta al llegar los datos. */
+const TOP10_SKELETON = Array.from({ length: 8 }, (_, i) => (
+  <div key={i} className="top10-item" aria-hidden>
+    <span className="top10-rank is-skel">{i + 1}</span>
+    <PosterSkeleton />
+  </div>
+))
+
 /** "Top 10 de hoy" con el número grande al costado del póster. */
 export function Top10Row({ state, title = 'Top 10 de hoy' }: { state: TmdbState<TmdbPage>; title?: string }) {
   const hidden = useHiddenIds()
@@ -47,7 +55,7 @@ export function Top10Row({ state, title = 'Top 10 de hoy' }: { state: TmdbState<
     .filter((i) => !hidden.has(`tmdb:${i.media_type}:${i.id}`))
     .slice(0, 10)
   return (
-    <Row title={title} loading={state.loading} error={state.failed ? 'error' : undefined} empty={items.length === 0}>
+    <Row title={title} loading={state.loading} error={state.failed ? 'error' : undefined} empty={items.length === 0} skeleton={TOP10_SKELETON}>
       {items.map((item, i) => (
         <div key={`${item.media_type}:${item.id}`} className="top10-item">
           <span className="top10-rank" aria-hidden>
@@ -76,7 +84,7 @@ export function TrendingWeekRow({ tmdbKey }: { tmdbKey: string }) {
         landscape={landscape}
       >
         {items.map((item) => (
-          <PosterCard key={`${item.media_type}:${item.id}`} meta={tmdbToPreview(item)} landscape={landscape} />
+          <PosterCard key={`${item.media_type}:${item.id}`} meta={tmdbToPreview(item)} landscape={landscape} hideTop10Label />
         ))}
       </Row>
     </div>
@@ -115,7 +123,7 @@ export function BecauseRow({ seed, tmdbKey }: { seed: Seed; tmdbKey: string }) {
         landscape={landscape}
       >
         {items.map((item) => (
-          <PosterCard key={`${item.media_type ?? tmdbType}:${item.id}`} meta={tmdbToPreview(item, tmdbType)} landscape={landscape} />
+          <PosterCard key={`${item.media_type ?? tmdbType}:${item.id}`} meta={tmdbToPreview(item, tmdbType)} landscape={landscape} hideTop10Label />
         ))}
       </Row>
     </div>

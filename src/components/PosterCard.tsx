@@ -27,9 +27,11 @@ interface Props {
    * Sin logo va el nombre. La forma de cada fila se elige en el gestor de catálogos.
    */
   landscape?: boolean
+  /** Sin la etiqueta "Top 10" (v0.26: filas de recomendaciones de Inicio, que ya tiene la fila del Top 10). */
+  hideTop10Label?: boolean
 }
 
-export const PosterCard = memo(function PosterCard({ meta, progress, watched, subtitle, to, eager, onRemove, removeLabel, landscape }: Props) {
+export const PosterCard = memo(function PosterCard({ meta, progress, watched, subtitle, to, eager, onRemove, removeLabel, landscape, hideTop10Label }: Props) {
   const prefetched = useRef(false)
   // Precargamos la ficha cuando el usuario se detiene en el póster: al entrar ya está lista.
   const prefetch = () => {
@@ -52,7 +54,7 @@ export const PosterCard = memo(function PosterCard({ meta, progress, watched, su
   const showLogo = !!logo && logo !== brokenLogo
   // v0.5: puntaje sobre el póster, etiqueta y tráiler al quedarse encima.
   const { posterRating, posterLabels } = useStore(settingsStore)
-  const posterLabel = usePosterLabel(meta, posterLabels)
+  const posterLabel = usePosterLabel(meta, posterLabels, hideTop10Label)
   const linkRef = useRef<HTMLAnchorElement>(null)
   useEffect(() => {
     const el = linkRef.current

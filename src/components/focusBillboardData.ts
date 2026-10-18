@@ -11,6 +11,8 @@ export interface BillboardTarget {
   id: string
   /** Nombre que muestra la tarjeta (por si no llegan los datos). */
   name?: string
+  /** La imagen de la tarjeta (ya en caché): fondo provisorio mientras llega el de verdad. */
+  poster?: string
 }
 
 export interface BillboardInfo {
@@ -18,6 +20,8 @@ export interface BillboardInfo {
   name: string
   logo?: string
   background?: string
+  /** Fondo provisorio (difuminado) hasta que carga `background`. */
+  poster?: string
   rating?: string
   facts: string[]
   description?: string
@@ -84,5 +88,5 @@ export async function loadBillboard(target: BillboardTarget): Promise<BillboardI
     getMeta(addonsStore.get(), target.type, imdb ?? target.id).catch(() => undefined),
     !tmdb && imdb && hasTmdb() ? getDetailsByImdb(imdb, target.type).catch(() => undefined) : Promise.resolve(tmdb),
   ])
-  return buildInfo(key, meta, details, target.name)
+  return { ...buildInfo(key, meta, details, target.name), poster: target.poster || meta?.poster }
 }

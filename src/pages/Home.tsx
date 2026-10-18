@@ -107,7 +107,7 @@ function Hero({ addon, catalog }: { addon: InstalledAddon; catalog: CatalogDef }
 
 const UNDO_MS = 5000
 
-/** Aviso "Quitado de Seguir viendo · Deshacer" que se va solo a los 5 s. */
+/** Aviso "Eliminado de Seguir viendo · Deshacer" que se va solo a los 5 s. */
 function useUndoHide() {
   const [undo, setUndo] = useState<{ name: string; ids: string[] }>()
   const timer = useRef<ReturnType<typeof setTimeout>>(undefined)
@@ -282,7 +282,7 @@ export function Home() {
       {undo && (
         <div className="undo-toast" role="status">
           <span>
-            Quitado de Seguir viendo<span className="muted"> · {undo.name}</span>
+            Eliminado de Seguir viendo<span className="muted"> · {undo.name}</span>
           </span>
           <button type="button" className="btn btn-small" onClick={restore}>
             Deshacer

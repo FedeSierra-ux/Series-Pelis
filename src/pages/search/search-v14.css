@@ -150,6 +150,17 @@
   max-width: min(560px, 100%);
   padding: 28px 30px;
 }
+/* v0.26 (explorar-07): sin imagen (ni fondo ni póster) la caja se achica y lleva un degradé tonal en vez
+   del vacío oscuro. */
+[data-theme='2'] .search-best:has(.search-best-art:empty) {
+  min-height: 0;
+  background:
+    radial-gradient(120% 140% at 100% 0%, color-mix(in srgb, var(--accent) 16%, transparent), transparent 60%),
+    var(--bg-2);
+}
+[data-theme='2'] .search-best:has(.search-best-art:empty) .search-best-body {
+  padding: 22px 26px;
+}
 .search-best-eyebrow {
   color: var(--accent);
   font-size: 0.8rem;
@@ -363,9 +374,18 @@
   align-items: center;
   height: 42px;
   padding: 0 16px;
+  /* v0.26 (explorar-06): también el color de .fb-chip (antes, fondo transparente con borde de theme2.css). */
+  border: 1px solid transparent;
   border-radius: 999px;
+  background: var(--bg-2);
+  color: var(--text-soft);
   font-size: 0.9rem;
   font-weight: 600;
+}
+[data-theme='2'] .chip.search-genre-chip:hover,
+[data-theme='2'] .chip.search-genre-chip:focus-visible {
+  background: var(--bg-3);
+  color: var(--text);
 }
 @media (pointer: coarse), (max-width: 760px) {
   [data-theme='2'] .chip.search-genre-chip {
@@ -424,6 +444,53 @@ html[data-tv] .search-best-btn {
 html[data-tv] .search-trending-item img,
 html[data-tv] .search-trending-noimg {
   width: 48px;
+}
+
+/* v0.26 (explorar-08): TV con el teclado en pantalla abierto: dos columnas, el teclado fijo a la izquierda y los
+   resultados a la derecha, así se ven mientras se escribe. */
+html[data-tv] .search-page:has(.osk) {
+  display: grid;
+  grid-template-columns: 600px minmax(0, 1fr);
+  column-gap: 40px;
+  align-items: start;
+}
+html[data-tv] .search-page:has(.osk) > * {
+  grid-column: 2;
+  min-width: 0;
+}
+html[data-tv] .search-page:has(.osk) > .page-header,
+html[data-tv] .search-page:has(.osk) > .search-form {
+  grid-column: 1 / -1;
+}
+html[data-tv] .search-page:has(.osk) > .osk-wrap {
+  grid-column: 1;
+  grid-row: 3 / span 40;
+  position: sticky;
+  top: 24px;
+  margin: 0;
+}
+html[data-tv] .search-page:has(.osk) .search-best {
+  min-height: 260px;
+}
+
+/* v0.26 (explorar-09): celular: pestañas más compactas (conteo pegado, menos relleno) para que entren las
+   cuatro; si igual no entran, fundido a la derecha. */
+@media (max-width: 760px) {
+  [data-theme='2'] .search-tabs {
+    gap: 6px;
+    -webkit-mask-image: linear-gradient(90deg, #000 calc(100% - 28px), transparent);
+    mask-image: linear-gradient(90deg, #000 calc(100% - 28px), transparent);
+  }
+  [data-theme='2'] .search-tab {
+    padding: 8px 11px;
+    gap: 5px;
+    font-size: 0.9rem;
+  }
+  [data-theme='2'] .search-tab-count {
+    min-width: 0;
+    padding: 0 5px;
+    font-size: 0.72rem;
+  }
 }
 
 @media (prefers-reduced-motion: reduce) {

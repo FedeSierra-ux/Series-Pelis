@@ -211,7 +211,19 @@ export function whyLine(c: Candidate): string {
   if (c.actor && c.actor.count >= 2) return `Con ${c.actor.name}, que viste en ${c.actor.count} títulos`
   if (c.because.length >= 2) return `Porque viste ${c.because[0].seed.name} y ${c.because[1].seed.name}`
   if (top) return `Porque viste ${top.seed.name}`
-  return 'Para vos'
+  return WHY_FALLBACK
+}
+
+/** Porqué de relleno (sin título de partida): no dice nada que no diga ya el título de la fila. */
+export const WHY_FALLBACK = 'Para vos'
+
+/**
+ * v0.26: si todas las tarjetas de "Para vos" tienen el mismo porqué (y son al menos 2), se muestra una sola
+ * vez debajo del título de la fila. Devuelve ese porqué, o `undefined` si varían (cada tarjeta lleva el suyo).
+ */
+export function sharedWhy(whys: string[]): string | undefined {
+  if (whys.length < 2) return undefined
+  return whys.every((w) => w === whys[0]) ? whys[0] : undefined
 }
 
 // ---------- "Ya no me interesa" ----------
