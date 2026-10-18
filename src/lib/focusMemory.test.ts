@@ -1,5 +1,13 @@
-import { describe, expect, it } from 'vitest'
-import { MAX_ENTRIES, STORAGE_KEY, recallSnapshot, rememberSnapshot, selectorFor, type SnapshotStore } from './focusMemory'
+import { beforeAll, describe, expect, it } from 'vitest'
+import {
+  MAX_ENTRIES,
+  STORAGE_KEY,
+  needsReveal,
+  recallSnapshot,
+  rememberSnapshot,
+  selectorFor,
+  type SnapshotStore,
+} from './focusMemory'
 
 function fakeStore(): SnapshotStore & { data: Map<string, string> } {
   const data = new Map<string, string>()
@@ -81,5 +89,42 @@ describe('selectorFor', () => {
 
   it('escapa comillas en el valor', () => {
     expect(selectorFor({ href: '/a"b' })).toBe('a[href="/a\\"b"]')
+  })
+})
+
+describe('needsReveal (póster debajo de la portada fija)', () => {
+  it('sin nada fijo arriba, solo se recentra lo que se sale de la ventana', () => {
+    expect(needsReveal({ top: 10, bottom: 300 }, 0, 900)).toBe(false)
+    expect(needsReveal({ top: -5, bottom: 300 }, 0, 900)).toBe(true)
+    expect(needsReveal({ top: 700, bottom: 950 }, 0, 900)).toBe(true)
+  })
+
+  it('un póster con la parte de arriba tapada por la portada se recentra (antes volvía tapado)', () => {
+    // 1440×900: la portada termina en 380 y el póster del Top 10 quedaba en 285.
+    expect(needsReveal({ top: 285, bottom: 600 }, 380, 900)).toBe(true)
+    expect(needsReveal({ top: 400, bottom: 700 }, 380, 900)).toBe(false)
+  })
+})
+
+describe('browse.css: la portada fija no cuenta como lugar visible', () => {
+  // Con `?raw` vitest devuelve vacío para los .css: se lee el archivo (con `node:fs`, como `d1.testutil.ts`).
+  let browseCss = ''
+  beforeAll(async () => {
+    const mod = 'node:fs'
+    const { readFileSync } = (await import(/* @vite-ignore */ mod)) as { readFileSync: (p: URL, enc: 'utf8') => string }
+    browseCss = readFileSync(new URL('../pages/discover/browse.css', import.meta.url), 'utf8')
+  })
+  // Si cambia el alto de `.browse-hero`, `scroll-padding-top` tiene que seguirlo: si no, las flechas, Tab y
+  // "Atrás" vuelven a dejar los pósters tapados por la portada.
+  it('`scroll-padding-top` usa el mismo alto que `.browse-hero`, solo donde la portada es fija', () => {
+    const hero = /\.browse-hero \{[^}]*height: var\(--billboard-h\);[^}]*min-height: 300px;/.test(browseCss)
+    expect(hero).toBe(true)
+    const padding = browseCss.match(
+      /@media \(min-width: 761px\) and \(min-height: 561px\) \{\s*html:has\(\.browse-hero\) \{\s*scroll-padding-top: ([^;]+);/,
+    )
+    expect(padding?.[1]).toBe('calc(max(300px, var(--billboard-h)) * var(--ui-zoom, 1))')
+    // Los cortes del media query coinciden con donde la portada deja de ser fija.
+    expect(browseCss).toContain('@media (max-height: 560px)')
+    expect(browseCss).toContain('@media (max-width: 760px)')
   })
 })

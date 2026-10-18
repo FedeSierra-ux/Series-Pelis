@@ -172,6 +172,19 @@ export function restoredElement(): HTMLElement | undefined {
 const RETRY_MS = 2000
 
 /**
+ * ¿Hay que volver a centrar el elemento? Sí si se sale por abajo o si su parte de arriba queda tapada por lo
+ * fijo de arriba (`top` = alto de la portada fija, o 0). Puro, para poder probarlo.
+ */
+export function needsReveal(rect: { top: number; bottom: number }, top: number, viewportHeight: number): boolean {
+  return rect.top < top || rect.bottom > viewportHeight
+}
+
+/** Desde dónde se ve la página: 0, o el alto de lo fijo de arriba si la pantalla lo declara con `scroll-padding-top`. */
+function visibleTop(): number {
+  return parseFloat(getComputedStyle(document.documentElement).scrollPaddingTop) || 0
+}
+
+/**
  * Vuelve al scroll y al foco guardados para `key`. Las filas cargan de a poco, así que espera (con
  * requestAnimationFrame, hasta ~2 s) a que el elemento aparezca. Devuelve `false` si no había nada guardado.
  */
@@ -195,8 +208,9 @@ export function restoreFocus(key: string): boolean {
       // El contenido pudo haber cambiado de alto al cargar: volvemos al scroll guardado y enfocamos.
       window.scrollTo(0, snap.scrollY)
       el.focus({ preventScroll: true })
-      const r = el.getBoundingClientRect()
-      if (r.top < 0 || r.bottom > window.innerHeight) el.scrollIntoView({ block: 'center', inline: 'center' })
+      // Lo que tapa una portada fija (`scroll-padding-top`, ver discover/browse.css) no cuenta como visible:
+      // un póster a medias debajo de ella se vuelve a centrar.
+      if (needsReveal(el.getBoundingClientRect(), visibleTop(), window.innerHeight)) el.scrollIntoView({ block: 'center', inline: 'center' })
       lastFocus = selector
       return
     }
