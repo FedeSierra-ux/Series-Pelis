@@ -12,6 +12,8 @@ import {
   hiddenIdSet,
   pickSeeds,
   scoreCandidates,
+  sharedWhy,
+  WHY_FALLBACK,
   whyLine,
   type Seed,
   type SeedRecs,
@@ -148,11 +150,14 @@ export function ForYouRow({ tmdbKey }: { tmdbKey: string }) {
     () => (depKey ? memory.get(depKey) : undefined),
   )
   const items = (state.data ?? []).filter((i) => !hidden.has(i.meta.id)).slice(0, SHOW)
+  // v0.26: el mismo porqué en todas las tarjetas va una sola vez, debajo del título.
+  const same = sharedWhy(items.map((i) => i.why))
   return (
     <div ref={ref}>
       {seedsKey && (
         <Row
           title="Para vos"
+          subtitle={same && same !== WHY_FALLBACK ? same : undefined}
           loading={state.loading || !visible}
           error={state.failed ? 'error' : undefined}
           empty={items.length === 0}
@@ -160,10 +165,13 @@ export function ForYouRow({ tmdbKey }: { tmdbKey: string }) {
         >
           {items.map((it, i) => (
             <div key={it.meta.id} className={landscape ? 'foryou-item is-landscape' : 'foryou-item'}>
-              <PosterCard meta={it.meta} eager={i < 6} landscape={landscape} />
-              <p className="foryou-why" title={it.why}>
-                {it.why}
-              </p>
+              {/* En Inicio ya está la fila del Top 10: la etiqueta "Top 10" sobra acá (v0.26). */}
+              <PosterCard meta={it.meta} eager={i < 6} landscape={landscape} hideTop10Label />
+              {!same && (
+                <p className="foryou-why" title={it.why}>
+                  {it.why}
+                </p>
+              )}
             </div>
           ))}
         </Row>

@@ -63,10 +63,12 @@ export function Onboarding() {
     return () => window.removeEventListener(OPEN_EVENT, onOpen)
   }, [])
 
-  // Con el control remoto: el foco arranca en el primer idioma.
+  // Con el control remoto: el foco arranca en el primer idioma. En pantallas táctiles (v0.26) va a la caja
+  // del diálogo: si no, el primer chip arrancaba con el anillo de foco, como si estuviera elegido de otra forma.
   useEffect(() => {
     if (!visible) return
-    const first = boxRef.current?.querySelector<HTMLElement>('.ob-body button, .ob-body input, .ob-actions .btn-primary')
+    const touch = !document.documentElement.hasAttribute('data-tv') && typeof matchMedia === 'function' && matchMedia('(pointer: coarse)').matches
+    const first = touch ? boxRef.current : boxRef.current?.querySelector<HTMLElement>('.ob-body button, .ob-body input, .ob-actions .btn-primary')
     first?.focus({ preventScroll: true })
   }, [visible])
 
@@ -90,7 +92,7 @@ export function Onboarding() {
 
   return (
     <div className="onboarding" data-nav-scope data-no-screensaver onKeyDown={onKeyDown}>
-      <div ref={boxRef} className="ob-box" role="dialog" aria-modal="true" aria-labelledby="ob-title">
+      <div ref={boxRef} className="ob-box" role="dialog" aria-modal="true" aria-labelledby="ob-title" tabIndex={-1}>
         <div className="ob-body">
           <h2 id="ob-title">¡Hola! ¿En qué idioma preferís ver?</h2>
           <p className="muted">

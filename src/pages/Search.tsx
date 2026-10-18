@@ -150,6 +150,26 @@ function useCatalogSearch(query: string, retry: number): SearchSource[] {
   return sources
 }
 
+const NARROW = '(max-width: 760px)'
+
+/** Pantalla de celular (el mismo corte que el CSS). */
+function useNarrow(): boolean {
+  const [narrow, setNarrow] = useState(() => typeof matchMedia === 'function' && matchMedia(NARROW).matches)
+  useEffect(() => {
+    if (typeof matchMedia !== 'function') return
+    const mq = matchMedia(NARROW)
+    const update = () => {
+      setNarrow(mq.matches)
+    }
+    update()
+    mq.addEventListener('change', update)
+    return () => {
+      mq.removeEventListener('change', update)
+    }
+  }, [])
+  return narrow
+}
+
 export function Search() {
   useTitle('Buscar')
   const addons = useAddons()
@@ -197,10 +217,12 @@ export function Search() {
     people: tmdbOn ? { count: people.people.length, loading: people.loading, failed: people.failed } : undefined,
   })
   const failed = failedAddons(sources)
+  // Se espera también a las personas: si una se parece más que el mejor título, gana ella (v0.26, explorar-07).
   const best = useMemo(
-    () => (active && groups.every((g) => !g.loading) ? pickBestResult(query, groups) : undefined),
-    [active, groups, query],
+    () => (active && groups.every((g) => !g.loading) && !people.loading ? pickBestResult(query, groups, people.people) : undefined),
+    [active, groups, query, people.loading, people.people],
   )
+  const narrow = useNarrow()
   const tabs = SEARCH_TABS.filter((t) => t.id !== 'people' || tmdbOn)
   const shownTab: SearchTab = tab === 'people' && !tmdbOn ? 'all' : tab
 
@@ -283,7 +305,8 @@ export function Search() {
             type="search"
             // En la TV el foco arranca en el teclado en pantalla (así no salta el teclado del sistema).
             autoFocus={!tv}
-            placeholder={tmdbOn ? 'Película, serie, actor… o “Darín y Francella”' : 'Película, serie, actor...'}
+            // En el celular el largo se cortaba ("…o “Dar"): uno corto (v0.26, explorar-09).
+            placeholder={narrow ? 'Peli, serie o actor' : tmdbOn ? 'Película, serie, actor… o “Darín y Francella”' : 'Película, serie, actor...'}
             aria-label="Buscar"
             value={text}
             onChange={(e) => change(e.target.value)}

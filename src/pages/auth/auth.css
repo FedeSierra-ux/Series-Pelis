@@ -203,6 +203,34 @@
   flex-wrap: wrap;
   gap: 6px;
 }
+/* v0.26: "Sacar" (aparatos de la casa) con fondo y color de peligro, para que se lea como botón. Solo el botón
+   suelto: el "No" de la confirmación y los de Ajustes → Casas quedan como estaban. */
+[data-theme='2'] .house-item > .house-item-actions > .btn-ghost {
+  background: var(--bg-3);
+  color: var(--danger);
+}
+[data-theme='2'] .house-item > .house-item-actions > .btn-ghost:focus-visible {
+  background: var(--tonal);
+}
+@media (hover: hover) {
+  [data-theme='2'] .house-item > .house-item-actions > .btn-ghost:hover {
+    background: var(--tonal);
+  }
+}
+/* En el celular, "Sacar" queda en el mismo renglón (antes bajaba y duplicaba el alto de cada aparato). Mientras
+   se confirma ("¿Sacarlo de la casa? Sí, sacar · No") sigue bajando: en un renglón no entra. */
+@media (max-width: 700px) {
+  [data-theme='2'] .house-item:not(:has(.confirm-inline)) {
+    flex-wrap: nowrap;
+    padding: 10px 10px 10px 14px;
+  }
+  [data-theme='2'] .house-item:not(:has(.confirm-inline)) .house-item-text {
+    flex: 1 1 0;
+  }
+  [data-theme='2'] .house-item:not(:has(.confirm-inline)) .house-item-actions {
+    flex: none;
+  }
+}
 .house-card {
   display: grid;
   gap: 12px;

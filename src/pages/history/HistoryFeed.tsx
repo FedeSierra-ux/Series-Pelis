@@ -108,27 +108,30 @@ export function HistoryFeed({ initialFilter = 'all', initialQuery = '', onChange
 
   return (
     <>
-      <div className="filters history-filters">
-        <div className="history-filter-tabs" role="group" aria-label="Qué mostrar">
-          {HISTORY_FILTERS.map((f) => (
-            <button key={f.id} type="button" className={`tab ${filter === f.id ? 'active' : ''}`} aria-pressed={filter === f.id} onClick={() => pick(f.id)}>
-              {f.label}
-            </button>
-          ))}
+      {/* v0.26: sin nada en el historial, los filtros y la búsqueda sobran (queda solo el estado vacío). */}
+      {all.length > 0 && (
+        <div className="filters history-filters">
+          <div className="history-filter-tabs" role="group" aria-label="Qué mostrar">
+            {HISTORY_FILTERS.map((f) => (
+              <button key={f.id} type="button" className={`tab ${filter === f.id ? 'active' : ''}`} aria-pressed={filter === f.id} onClick={() => pick(f.id)}>
+                {f.label}
+              </button>
+            ))}
+          </div>
+          {/* UX 5: el filtro tenía solo placeholder; ahora tiene etiqueta (oculta a la vista). */}
+          <label className="sp-sr-only" htmlFor={inputId}>
+            Buscar en el historial por nombre
+          </label>
+          <input
+            id={inputId}
+            className="filter-input"
+            type="search"
+            placeholder="Buscar en lo que viste…"
+            value={query}
+            onChange={(e) => type(e.target.value)}
+          />
         </div>
-        {/* UX 5: el filtro tenía solo placeholder; ahora tiene etiqueta (oculta a la vista). */}
-        <label className="sp-sr-only" htmlFor={inputId}>
-          Buscar en el historial por nombre
-        </label>
-        <input
-          id={inputId}
-          className="filter-input"
-          type="search"
-          placeholder="Buscar en lo que viste…"
-          value={query}
-          onChange={(e) => type(e.target.value)}
-        />
-      </div>
+      )}
 
       {entries.length === 0 &&
         (all.length === 0 ? (
@@ -196,7 +199,7 @@ export function HistoryFeed({ initialFilter = 'all', initialQuery = '', onChange
       {undo && (
         <div className="undo-toast" role="status">
           <span>
-            Quitado del historial<span className="muted"> · {undo.name}</span>
+            Eliminado del historial<span className="muted"> · {undo.name}</span>
           </span>
           <button type="button" className="btn btn-small" onClick={restore}>
             Deshacer

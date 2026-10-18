@@ -27,11 +27,11 @@ interface Props {
    * Sin logo va el nombre. La forma de cada fila se elige en el gestor de catálogos.
    */
   landscape?: boolean
-  /** Es el título de la página actual (por ejemplo en la saga): se muestra sin enlace. */
-  current?: boolean
+  /** Sin la etiqueta "Top 10" (v0.26: filas de recomendaciones de Inicio, que ya tiene la fila del Top 10). */
+  hideTop10Label?: boolean
 }
 
-export const PosterCard = memo(function PosterCard({ meta, progress, watched, subtitle, to, eager, onRemove, removeLabel, landscape, current }: Props) {
+export const PosterCard = memo(function PosterCard({ meta, progress, watched, subtitle, to, eager, onRemove, removeLabel, landscape, hideTop10Label }: Props) {
   const prefetched = useRef(false)
   // Precargamos la ficha cuando el usuario se detiene en el póster: al entrar ya está lista.
   const prefetch = () => {
@@ -54,7 +54,7 @@ export const PosterCard = memo(function PosterCard({ meta, progress, watched, su
   const showLogo = !!logo && logo !== brokenLogo
   // v0.5: puntaje sobre el póster, etiqueta y tráiler al quedarse encima.
   const { posterRating, posterLabels } = useStore(settingsStore)
-  const posterLabel = usePosterLabel(meta, posterLabels)
+  const posterLabel = usePosterLabel(meta, posterLabels, hideTop10Label)
   const linkRef = useRef<HTMLAnchorElement>(null)
   useEffect(() => {
     const el = linkRef.current
@@ -72,9 +72,21 @@ export const PosterCard = memo(function PosterCard({ meta, progress, watched, su
     if (e.currentTarget.matches(':focus-visible')) armTrailer({ anchor: e.currentTarget, meta, via: 'focus' })
   }
 
-  const cls = landscape ? 'poster-card is-landscape' : `poster-card shape-${meta.posterShape ?? 'poster'}`
-  const body = (
-    <>
+  const card = (
+    <Link
+      to={to ?? `/detail/${meta.type}/${encodeURIComponent(meta.id)}`}
+      ref={linkRef}
+      data-focus-id={meta.id}
+      className={landscape ? 'poster-card is-landscape' : `poster-card shape-${meta.posterShape ?? 'poster'}`}
+      // Apaisada: el nombre está en el logo, así que no se repite abajo (sí para el lector de pantalla).
+      aria-label={landscape ? [meta.name, landInfo(meta)].filter(Boolean).join(', ') : undefined}
+      onMouseEnter={onEnter}
+      onMouseLeave={(e) => disarmTrailer(e.currentTarget, 'mouse')}
+      onFocus={onFocus}
+      onBlur={(e) => disarmTrailer(e.currentTarget, 'focus')}
+      onTouchStart={prefetch}
+      title={meta.name}
+    >
       <div className="poster-img" ref={landscape ? imgRef : undefined}>
         {src && src !== brokenSrc ? (
           <img
@@ -119,29 +131,6 @@ export const PosterCard = memo(function PosterCard({ meta, progress, watched, su
           {posterRating === 'below' && <ImdbRating value={meta.imdbRating} size="sm" />}
         </span>
       </div>
-    </>
-  )
-  // El título que ya estás viendo no lleva a ningún lado (volver a abrirlo sumaba una entrada al historial).
-  const card = current ? (
-    <div className={`${cls} is-current`} aria-current="page" title={meta.name}>
-      {body}
-    </div>
-  ) : (
-    <Link
-      to={to ?? `/detail/${meta.type}/${encodeURIComponent(meta.id)}`}
-      ref={linkRef}
-      data-focus-id={meta.id}
-      className={cls}
-      // Apaisada: el nombre está en el logo, así que no se repite abajo (sí para el lector de pantalla).
-      aria-label={landscape ? [meta.name, landInfo(meta)].filter(Boolean).join(', ') : undefined}
-      onMouseEnter={onEnter}
-      onMouseLeave={(e) => disarmTrailer(e.currentTarget, 'mouse')}
-      onFocus={onFocus}
-      onBlur={(e) => disarmTrailer(e.currentTarget, 'focus')}
-      onTouchStart={prefetch}
-      title={meta.name}
-    >
-      {body}
     </Link>
   )
   if (!onRemove) return card

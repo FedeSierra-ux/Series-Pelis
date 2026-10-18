@@ -533,13 +533,20 @@ html[data-tv] .next-thumb {
   }
 }
 
-/* Celular vertical: la tarjeta del siguiente va con la imagen arriba. */
+/* Celular vertical: la tarjeta del siguiente queda en una fila (miniatura chica a la izquierda) y no tapa el
+   video (v0.26, reproductor-06: antes iba en columna con la imagen arriba y medía 358×322). */
 @media (max-width: 520px) {
   .next-card.next-card-v14 {
-    flex-direction: column;
+    flex-direction: row;
+    align-items: center;
+    padding: 10px;
+    gap: 12px;
   }
   .next-thumb {
-    width: 100%;
+    width: 112px;
+  }
+  .next-card-v14 .next-card-actions .btn {
+    padding-inline: 14px;
   }
   .postplay-items {
     grid-template-columns: repeat(3, minmax(0, 1fr));
@@ -579,4 +586,178 @@ html[data-tv] .player-menu {
 }
 html[data-tv] .player-chip ~ .player-rate {
   margin-top: 60px;
+}
+
+/* ---------- Rediseño v0.26 ---------- */
+
+/* reproductor-01: con una escena clara el título y el addon no se leían. Degradado más largo y oscuro,
+   sombra suave en el texto y el nombre del addon más claro. En el celular apaisado (poco alto) el
+   relleno de abajo no crece: le sacaría lugar al video para tocar. */
+[data-theme='2'] .player-top {
+  background: linear-gradient(to bottom, rgba(0, 0, 0, 0.82) 0%, rgba(0, 0, 0, 0.5) 55%, transparent 100%);
+}
+@media (min-height: 501px) {
+  [data-theme='2'] .player-top {
+    padding-bottom: 56px;
+  }
+}
+[data-theme='2'] .player-title,
+[data-theme='2'] .player-top .btn {
+  text-shadow:
+    0 1px 2px rgba(0, 0, 0, 0.9),
+    0 0 14px rgba(0, 0, 0, 0.55);
+}
+[data-theme='2'] .player-title .muted {
+  color: rgba(255, 255, 255, 0.78);
+}
+
+/* reproductor-02: el spinner se perdía sobre un fotograma claro. Más grande, con un disco oscuro detrás y
+   el arco en el acento; con movimiento reducido gira más lento. */
+[data-theme='2'] .player-spinner {
+  width: 64px;
+  height: 64px;
+  margin: -32px 0 0 -32px;
+  border-width: 5px;
+  border-color: rgba(255, 255, 255, 0.22);
+  border-top-color: var(--accent);
+  background: rgba(0, 0, 0, 0.5);
+  box-shadow: 0 0 0 14px rgba(0, 0, 0, 0.5);
+}
+@media (prefers-reduced-motion: reduce) {
+  .player-spinner {
+    animation-duration: 2.4s;
+  }
+}
+
+/* reproductor-03: mientras se elige el destino (scrub), los subtítulos se esconden: la miniatura grande ya
+   muestra la escena y no se mezclan dos textos. Vuelven solos al soltar. */
+.player.is-scrubbing .player-video::cue {
+  visibility: hidden;
+}
+
+/* reproductor-04: CC, Fuentes, Siguiente y "Abrir en…" con la misma familia de íconos de línea que el resto. */
+.controls-row button[aria-label='Subtítulos'],
+.controls-row button[aria-label='Fuentes'],
+.controls-row button[aria-label='Siguiente episodio'],
+.controls-row button[aria-label^='Abrir en'] {
+  min-width: 44px;
+  padding-inline: 10px;
+}
+
+/* Etiqueta de cada botón (pedido del usuario en reproductor-04): aparece arriba al pasar el mouse o con el
+   foco (teclado y control remoto). Los de las puntas se alinean al borde del botón para no cortarse. Con su
+   menú abierto no se muestra (el menú ya dice qué es). */
+.controls-row [data-tip] {
+  position: relative;
+}
+.controls-row [data-tip]::after {
+  --tip-x: -50%;
+  content: attr(data-tip);
+  position: absolute;
+  bottom: calc(100% + 10px);
+  left: 50%;
+  z-index: 4;
+  padding: 6px 10px;
+  border-radius: 10px;
+  color: var(--text, #fff);
+  background: rgba(28, 26, 34, 0.96);
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.45);
+  font-family: var(--font-body, inherit);
+  font-size: 0.82rem;
+  font-weight: 600;
+  line-height: 1.2;
+  letter-spacing: normal;
+  text-shadow: none;
+  white-space: nowrap;
+  pointer-events: none;
+  opacity: 0;
+  transform: translate(var(--tip-x), 4px);
+  transition:
+    opacity 0.15s ease-out,
+    transform 0.15s ease-out;
+}
+.controls-row > [data-tip]:first-child::after {
+  --tip-x: 0;
+  left: 0;
+}
+.controls-row > [data-tip]:last-child::after {
+  --tip-x: 0;
+  left: auto;
+  right: 0;
+}
+@media (hover: hover) {
+  .controls-row [data-tip]:not([aria-expanded='true']):hover::after {
+    opacity: 1;
+    transform: translate(var(--tip-x), 0);
+  }
+}
+.controls-row [data-tip]:not([aria-expanded='true']):focus-visible::after {
+  opacity: 1;
+  transform: translate(var(--tip-x), 0);
+}
+/* En la TV el foco siempre se ve (regla aparte: un navegador sin :focus-visible descarta la regla entera). */
+html[data-tv] .controls-row [data-tip]:not([aria-expanded='true']):focus::after {
+  opacity: 1;
+  transform: translate(var(--tip-x), 0);
+}
+html[data-tv] .controls-row [data-tip]::after {
+  bottom: calc(100% + 14px);
+  padding: 8px 16px;
+  border-radius: 14px;
+  font-size: 22px;
+}
+@media (prefers-reduced-motion: reduce) {
+  .controls-row [data-tip]::after {
+    transition: none;
+  }
+}
+
+/* reproductor-05: celular vertical en una sola fila de íconos de 44 px (debajo de −10 / play / +10).
+   "Abrir en…", ventana flotante y Ajustar pasan al ⚙ (Player.tsx: `useCompactBar`, misma consulta). */
+@media (max-width: 760px) and (pointer: coarse) {
+  .controls-row button {
+    min-width: 44px;
+    min-height: 44px;
+    padding: 10px;
+  }
+  .controls-row {
+    justify-content: space-between;
+    column-gap: 0;
+  }
+  .controls-row .spacer ~ button {
+    padding: 10px 6px;
+  }
+  .controls-row .external-btn,
+  .controls-row .pip-btn,
+  .controls-row .fit-btn {
+    display: none;
+  }
+}
+
+/* reproductor-08: TV a escala de 3 m (botones de 64 px, íconos de 32 px, tiempo y títulos más grandes). */
+html[data-tv] .controls-row {
+  gap: 10px;
+}
+html[data-tv] .controls-row button {
+  min-width: 64px;
+  min-height: 60px;
+  padding: 12px 16px;
+  font-size: 26px;
+}
+html[data-tv] .controls-row .play-btn {
+  min-width: 84px;
+  min-height: 68px;
+}
+html[data-tv] .controls-row .player-icon {
+  width: 32px;
+  height: 32px;
+}
+html[data-tv] .controls-row .time {
+  font-size: 26px;
+}
+html[data-tv] .player-title strong {
+  font-size: 32px;
+}
+html[data-tv] .player-title span {
+  font-size: 24px;
 }

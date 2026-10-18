@@ -47,8 +47,10 @@ import { SeriesDetailsPanel } from './detail/SeriesDetailsPanel'
 import { StreamList, type DetailLocationState } from './detail/StreamList'
 import { isYtId, originalTitle } from './detail/trailers'
 import { NARROW_QUERY, useMediaQuery } from './detail/useMediaQuery'
+import { ReadMore } from './detail/ReadMore'
 import './detail/detail-fixes.css'
 import './detail/detail-v14.css'
+import './detail/detail-v26.css'
 
 export type { PlayState } from './detail/StreamList'
 
@@ -152,20 +154,22 @@ function TmdbOnlyDetail({ details: d, type, tmdbType }: { details: TmdbDetails; 
 
   return (
     <div className="page detail">
-      <section className="detail-hero" style={{ backgroundImage: bg ? `url(${bg})` : undefined }}>
+      <section className={`detail-hero${bg ? ' has-bg' : ''}`} style={{ backgroundImage: bg ? `url(${bg})` : undefined }}>
         <DetailBack />
         <div className="hero-shade" />
         <div className="detail-head">
           {poster && <img className="detail-poster" src={poster} alt="" />}
           <div className="detail-info">
-            <h1 className="detail-title">{logo ? <img className="detail-logo" src={logo} alt={title} /> : title}</h1>
+            <h1 className={`detail-title${!logo && isLongTitle(title) ? ' is-long' : ''}`}>
+              {logo ? <img className="detail-logo" src={logo} alt={title} /> : title}
+            </h1>
             {d.tagline && <p className="detail-tagline">{d.tagline}</p>}
             <div className="hero-meta">
               <span>{typeLabel(type, false)}</span>
               {year && <span>{year}</span>}
             </div>
             <GenreChips type={type} tmdbGenres={d.genres} />
-            {d.overview && <p className="detail-desc">{d.overview}</p>}
+            {d.overview && <ReadMore className="detail-desc" text={d.overview} />}
             {trailer && isYtId(trailer.key) && (
               <div className="hero-actions">
                 <button type="button" className="btn" onClick={() => setTrailerOpen(true)} data-autofocus>
@@ -186,6 +190,8 @@ function TmdbOnlyDetail({ details: d, type, tmdbType }: { details: TmdbDetails; 
 }
 
 const NOT_FOUND = 'No encontramos este título'
+/** v0.26 (ficha-02): un título en texto (sin logo) de más de 40 letras va con la letra un poco más chica. */
+const isLongTitle = (t: string) => t.length > 40
 const reducedMotion = () => typeof matchMedia === 'function' && matchMedia('(prefers-reduced-motion: reduce)').matches
 /** "T2 E4" para el botón principal. */
 const shortEp = (v: Video) => `T${v.season ?? 0} E${episodeNumber(v) ?? '?'}`
@@ -483,6 +489,8 @@ function DetailPage({ type, id, onRetry }: { type: string; id: string; onRetry: 
               focusVideoId={focusVideoId}
               suggested={continueEp}
               started={seriesProgress}
+              first={firstEp}
+              tmdbId={tmdb?.id}
               hideSpoiler={(v) => hideEpisodeSpoiler({ metaId: id, videoId: v.id, season: v.season, episode: episodeNumber(v) })}
               watchBase={watchBase}
               inlineStreams={inlineStreams}
@@ -544,7 +552,7 @@ function DetailPage({ type, id, onRetry }: { type: string; id: string; onRetry: 
     })
   return (
     <div className="page detail">
-      <section className="detail-hero" style={{ backgroundImage: bg ? `url(${bg})` : undefined }}>
+      <section className={`detail-hero${bg ? ' has-bg' : ''}`} style={{ backgroundImage: bg ? `url(${bg})` : undefined }}>
         <DetailBack />
         {trailerKey && backdropAllowed && <HeroTrailer ytId={trailerKey} title={name} suspended={!!trailer} />}
         <div className="hero-shade" />
@@ -552,7 +560,7 @@ function DetailPage({ type, id, onRetry }: { type: string; id: string; onRetry: 
           {meta.poster && <img className="detail-poster" src={meta.poster} alt="" />}
           <div className="detail-info">
             {/* El h1 siempre está (auditoría de uso, UX 4): con logo, el logo es su contenido y su texto alternativo, el nombre. */}
-            <h1 className="detail-title">
+            <h1 className={`detail-title${!logo && isLongTitle(name) ? ' is-long' : ''}`}>
               {logo ? <img className="detail-logo" src={logo} alt={name} onError={() => setLogoFailed(true)} /> : name}
             </h1>
             {tmdb?.tagline && <p className="detail-tagline">{tmdb.tagline}</p>}
@@ -566,7 +574,7 @@ function DetailPage({ type, id, onRetry }: { type: string; id: string; onRetry: 
             <GenreChips type={type} tmdbGenres={tmdb?.genres} names={meta.genre ?? meta.genres} />
             {description && (
               <SpoilerText key={id} hidden={hideSynopsis}>
-                <p className="detail-desc">{description}</p>
+                <ReadMore key={description} className="detail-desc" text={description} />
               </SpoilerText>
             )}
             {(meta.director?.length || (meta.cast?.length && !hasTmdbCast)) ? (

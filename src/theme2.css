@@ -169,6 +169,20 @@
   color: var(--accent);
   font-weight: 700;
 }
+/* v0.26: en el asistente la caja es --bg-2 como los chips: los idiomas sin elegir llevan contorno (si no,
+   "Portugués" parecía texto suelto). */
+[data-theme='2'] .ob-box .tab:not(.active) {
+  background: transparent;
+  box-shadow: inset 0 0 0 1.5px var(--line);
+  color: var(--text);
+}
+[data-theme='2'] .ob-box .tab:not(.active):hover {
+  background: var(--bg-3);
+}
+/* En el celular el foco arranca en la caja (no en el primer chip): sin anillo. */
+.ob-box:focus {
+  outline: none;
+}
 
 [data-theme='2'] .chip {
   background: transparent;
@@ -495,6 +509,23 @@ html[data-tv][data-theme='2'] .row-scroller {
   font-family: var(--font-display);
   -webkit-text-stroke-color: rgba(196, 176, 255, 0.7);
 }
+/* v0.26: celular → número más chico y un poco más metido debajo del póster (asoma el 3.º) y borde más opaco. */
+@media (max-width: 760px) {
+  [data-theme='2'] .top10-rank {
+    font-size: calc(var(--poster-w) * 0.72);
+    margin-right: calc(var(--poster-w) * -0.1);
+    -webkit-text-stroke-color: color-mix(in srgb, var(--accent) 95%, transparent);
+  }
+}
+/* v0.26: esqueleto del Top 10 (Top10Row): el lugar del número en contorno, sin corrimiento al cargar.
+   El relleno queda en --bg (como el número de verdad): transparente dejaba ver los trazos internos de la fuente. */
+[data-theme='2'] .top10-rank.is-skel {
+  -webkit-text-stroke-color: var(--line);
+}
+/* Los esqueletos no son tarjetas: sin agrandarse al pasar el mouse. */
+[data-theme='2'] .skeleton-card {
+  pointer-events: none;
+}
 
 /* "Seguir viendo" apaisado (ContinueCard). */
 .t2-cont-wrap {
@@ -749,6 +780,13 @@ html[data-tv][data-theme='2'] .row-scroller {
   border: 0;
   background: var(--surface-2);
 }
+/* Entrada del aviso en el celular (a todo el ancho, sin el translateX(-50%) de `toast-in`). */
+@keyframes toast-in-up {
+  from {
+    opacity: 0;
+    transform: translateY(12px);
+  }
+}
 
 /* ---------- Reproductor ---------- */
 
@@ -946,6 +984,22 @@ html[data-tv][data-theme='2'] .player-float .btn:focus {
   }
   [data-theme='2'] .undo-toast {
     bottom: calc(86px + env(safe-area-inset-bottom));
+    /* v0.26: a todo el ancho y en hasta 2 líneas: el nombre del título ya no se corta. */
+    left: 12px;
+    right: 12px;
+    transform: none;
+    max-width: none;
+    border-radius: 18px;
+    padding: 10px 8px 10px 16px;
+    animation-name: toast-in-up;
+  }
+  [data-theme='2'] .undo-toast > span {
+    white-space: normal;
+    display: -webkit-box;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 2;
+    line-clamp: 2;
+    line-height: 1.3;
   }
 
   /* Esqueleto de la ficha y sombra de su portada (imagen arriba, texto abajo). */

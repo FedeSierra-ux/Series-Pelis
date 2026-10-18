@@ -7,7 +7,9 @@ import {
   hiddenIdSet,
   pickSeeds,
   scoreCandidates,
+  sharedWhy,
   starWeight,
+  WHY_FALLBACK,
   whyLine,
   withoutHidden,
   type Seed,
@@ -164,6 +166,15 @@ describe('actores y "por qué"', () => {
       new Set(),
     )[0]
     expect(whyLine(two)).toBe('Porque viste Breaking Bad y Ozark')
+  })
+
+  it('da el porqué compartido solo si es el mismo para toda la fila (y hay al menos 2)', () => {
+    const a = 'Porque viste Inception y Breaking Bad'
+    expect(sharedWhy([a, a, a])).toBe(a)
+    expect(sharedWhy([a, a, 'Porque viste Dark'])).toBeUndefined()
+    expect(sharedWhy([a])).toBeUndefined()
+    expect(sharedWhy([])).toBeUndefined()
+    expect(sharedWhy([WHY_FALLBACK, WHY_FALLBACK])).toBe(WHY_FALLBACK)
   })
 })
 

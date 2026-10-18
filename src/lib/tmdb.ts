@@ -463,6 +463,12 @@ export function getEpisodeInfo(tvId: number, season: number, episode: number): P
   return tmdbCached<TmdbEpisode>(`/tv/${tvId}/season/${season}/episode/${episode}`, { language: LANG })
 }
 
+/** v0.26 (ficha-11): la temporada entera en español, en un solo pedido (para la sinopsis de cada episodio en la ficha). */
+export async function getSeasonInfo(tvId: number, season: number): Promise<(TmdbEpisode & { episode_number: number })[]> {
+  const res = await tmdbCached<{ episodes?: (TmdbEpisode & { episode_number: number })[] }>(`/tv/${tvId}/season/${season}`, { language: LANG })
+  return Array.isArray(res.episodes) ? res.episodes : []
+}
+
 export type CreditsStinger = 'after' | 'during'
 
 // Palabras clave de TMDB (verificadas contra /keyword/{id}); por las dudas también se compara el nombre.

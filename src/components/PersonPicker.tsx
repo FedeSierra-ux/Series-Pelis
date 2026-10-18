@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import { searchPeople, type TmdbPersonResult } from '../lib/discoverApi'
 import { debounce, MIN_QUERY, normalizeQuery } from '../lib/searchHistory'
 import { departmentLabel, PersonAvatar } from './PeopleRow'
+import { Theme2Icon } from './Theme2Icons'
 
 // "Buscar con otra persona…": en la página de una persona, elegís a otra y vas a
 // /together con los títulos que hicieron juntas.
@@ -43,7 +44,8 @@ export function TogetherPicker({ personId, personName }: { personId: number; per
   if (!open)
     return (
       <button ref={toggle} type="button" className="btn btn-small together-open" onClick={() => setOpen(true)}>
-        👥 Buscar con otra persona…
+        <Theme2Icon name="users" size={18} />
+        Buscar con otra persona…
       </button>
     )
 

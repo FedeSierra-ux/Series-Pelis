@@ -68,7 +68,7 @@ export function hasKeyword(text: string, keyword: string): boolean {
 }
 
 /** Marcas de "ya está en el debrid" que ponen varios addons. */
-const CACHED_MARKERS = /⚡|\[(rd|tb|ad|pm|dl|ed|oc)\+\]|\binstant\b|\bcached\b/i
+export const CACHED_MARKERS = /⚡|\[(rd|tb|ad|pm|dl|ed|oc)\+\]|\binstant\b|\bcached\b/i
 
 /** Primera línea del nombre sin la calidad: "Torrentio\n4k" y "Torrentio\n1080p" son la misma fuente. */
 export function nameKey(name: string | undefined): string {

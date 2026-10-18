@@ -48,7 +48,20 @@ function Row<T extends string | boolean>({ label, hint, value, options, onPick }
   )
 }
 
-export function QuickSettings({ fit, onFit, onChange }: { fit: VideoFit; onFit: (f: VideoFit) => void; onChange: () => void }) {
+/** Acción suelta del ⚙ (en el celular vertical: ventana flotante y "Abrir en…", que no entran en la barra). */
+export type QuickAction = { label: string; active?: boolean; onClick: () => void }
+
+export function QuickSettings({
+  fit,
+  onFit,
+  onChange,
+  more,
+}: {
+  fit: VideoFit
+  onFit: (f: VideoFit) => void
+  onChange: () => void
+  more?: QuickAction[]
+}) {
   const settings = useStore(settingsStore)
   const update = (patch: Partial<Settings>) => {
     settingsStore.set((s) => ({ ...s, ...patch }))
@@ -81,6 +94,18 @@ export function QuickSettings({ fit, onFit, onChange }: { fit: VideoFit; onFit: 
           onChange()
         }}
       />
+      {more && more.length > 0 && (
+        <div className="qs-row" data-qs-row>
+          <span className="qs-label">Más opciones</span>
+          <div className="qs-chips">
+            {more.map((a) => (
+              <button key={a.label} className={a.active ? 'active' : ''} aria-pressed={a.active} onClick={a.onClick}>
+                {a.label}
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
     </>
   )
 }

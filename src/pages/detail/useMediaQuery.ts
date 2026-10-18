@@ -16,3 +16,6 @@ export function useMediaQuery(query: string): boolean {
 
 /** Celular: la ficha pone las fuentes debajo del episodio elegido en vez de a la derecha. */
 export const NARROW_QUERY = '(max-width: 760px)'
+
+/** Pantalla táctil (celular, tablet): sin mouse ni flechas. Las TV dicen `pointer: none`, no entran. */
+export const TOUCH_QUERY = '(hover: none) and (pointer: coarse)'

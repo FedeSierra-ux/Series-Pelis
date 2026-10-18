@@ -1,3 +1,4 @@
+import { useId } from 'react'
 import { Advanced } from '../../components/Advanced'
 import { saveDataOn } from '../../lib/dataSaver'
 import { effectivePlayer, playersFor } from '../../lib/externalPlayers'
@@ -14,20 +15,33 @@ export function Choice<T extends string | number>({
   value,
   options,
   onChange,
+  showLabel = false,
 }: {
   label: string
   value: T
   options: [T, string][]
   onChange: (v: T) => void
+  /** v0.26: muestra el rótulo arriba de los chips (si no, queda solo para lectores de pantalla). */
+  showLabel?: boolean
 }) {
-  return (
-    <div className="chips" role="radiogroup" aria-label={label}>
+  const labelId = useId()
+  const group = (
+    <div className="chips" role="radiogroup" {...(showLabel ? { 'aria-labelledby': labelId } : { 'aria-label': label })}>
       {options.map(([v, text]) => (
         <button key={String(v)} role="radio" aria-checked={value === v} className={`tab ${value === v ? 'active' : ''}`} onClick={() => onChange(v)}>
           {text}
         </button>
       ))}
     </div>
+  )
+  if (!showLabel) return group
+  return (
+    <>
+      <span className="choice-label" id={labelId}>
+        {label}
+      </span>
+      {group}
+    </>
   )
 }
 
@@ -98,6 +112,7 @@ export function PlayerSettings() {
       <h3>Estilo de subtítulos</h3>
       <Choice
         label="Tamaño"
+        showLabel
         value={style.size}
         options={[
           ['s', 'Chico'],
@@ -110,6 +125,7 @@ export function PlayerSettings() {
       <Advanced>
       <Choice
         label="Color"
+        showLabel
         value={style.color}
         options={[
           ['white', 'Blanco'],
@@ -119,6 +135,7 @@ export function PlayerSettings() {
       />
       <Choice
         label="Fondo"
+        showLabel
         value={style.background}
         options={[
           ['none', 'Sin fondo'],
@@ -134,6 +151,7 @@ export function PlayerSettings() {
       </label>
       <Choice
         label="Letra"
+        showLabel
         value={style.font}
         options={[
           ['system', 'Sistema'],
@@ -145,6 +163,7 @@ export function PlayerSettings() {
       />
       <Choice
         label="Posición"
+        showLabel
         value={style.position}
         options={[
           [0, 'Abajo'],

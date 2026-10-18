@@ -368,7 +368,7 @@ npm run preview    # sirve dist/ en http://localhost:4173
   JustWatch"); las pelis no cambian. **Pósters cortados en Películas/Series**: `html:has(.browse-hero)` con
   `scroll-padding-top` (alto de la portada) y `needsReveal`/`visibleTop` en `lib/focusMemory.ts` al restaurar el
   foco; con la rueda las filas pasan por debajo con un degradé.
-  **Plan v0.26 (debrid, decidido por el usuario)**: la key de TorBox va **dentro del addon** (Torrentio/Comet; la
+  **Plan v0.27 (debrid, decidido por el usuario; antes era la v0.26)**: la key de TorBox va **dentro del addon** (Torrentio/Comet; la
   usan todas las casas). Si el debrid falla: cartel con botón **"Reproducir por torrent"** (no automático). Si no
   está cacheado: arranca por torrent y en paralelo abre el link "descargar" del addon para que TorBox lo baje.
   Falta ver cómo sacar el infoHash (del link de Torrentio o con un Torrentio sin debrid).
@@ -379,8 +379,8 @@ npm run preview    # sirve dist/ en http://localhost:4173
   `revealRestored`); `lib/spatialNav.ts` con `rowRevealTop` (`SHADE_PX = 80` bajo la portada), `railTarget` (←
   entra al riel por la página actual), `navScore` por distancia entre bordes, zonas `data-nav-zone` (Ajustes:
   contenido vs índice), saltea tarjetas recortadas, `summary` enfocable. Hovers pegajosos dentro de
-  `@media (hover: hover)`. `StreamList` guarda el orden (`orderRef`). `PosterCard current` (`aria-current`, "Estás
-  acá"). Datos: `removeHistory` devuelve lo borrado y `restoreHistory` lo repone (toast "Deshacer" 6 s);
+  `@media (hover: hover)`. `StreamList` guarda el orden (`orderRef`). La saga **sin "Estás acá"** (el usuario votó no a
+  ficha-09: la peli actual sigue siendo una tarjeta con enlace). Datos: `removeHistory` devuelve lo borrado y `restoreHistory` lo repone (toast "Deshacer" 6 s);
   `wholeHours` (horas para abajo en Tu año/meta/historial); `groupHistory(entries, limit)` cuenta el mes entero;
   `lib/i18n.ts` `RESOURCE_LABEL`/`resourceLabel`. Reproductor: avisos en `.player-toasts`, zona segura 5vw/5vh en la
   TV. Motor: `getInfo.torrentLoading` + evento `torrentReady` (`retainUntilConsumed`); `TORRENT_LOADING`,
@@ -389,6 +389,26 @@ npm run preview    # sirve dist/ en http://localhost:4173
   (flush perdido / ticket viejo); papelera `<home>-basura-<nano>` + `LIVE` + `sweepRoot()`; `playerReopened()` en
   `handleOnResume`; `torrentGaveUp` solo con 504 o timeout. Falta probar en un aparato: puente `torrentReady`,
   volver tras +5 min en segundo plano, reintento de Media3 con 503, ahorro de la máscara de alertas.
+- v0.26.0 hecha (rama `claude/rediseno-v0.26.0`): las **45 propuestas aprobadas** de la auditoría visual (votos en la
+  colección `decisiones` del artifact). El usuario votó **NO** a explorar-11, ficha-09, reproductor-07 y
+  vos-ajustes-04: no volver a proponerlas. El debrid (TorBox) pasó a la **v0.27.0**. El PR #43 (v0.25.1) se mergeó
+  antes del revert de la saga: ese revert entra con la v0.26.
+  - Inicio: `Row` con `subtitle` y `skeleton`, `recommend.ts` `sharedWhy`/`WHY_FALLBACK` (línea "Porque viste"),
+    `TOP10_SKELETON` en `TmdbRows`, `PosterCard hideTop10Label`, halo en los logos de la portada.
+  - Películas/Series/Buscar: `FocusBillboard` `Layer` con póster borroso mientras carga; `pickBestResult(query,
+    groups, people)` (una persona gana con empate); en PC `rowRevealTop` deja el título de la fila
+    `ROW_HEAD_GAP = 32` px debajo de la portada (como en la TV) y ↑/↓ sin destino en `.page.browse .row-scroller`
+    hace `preventDefault`; la última fila tiene alto mínimo para poder subir. `SHADE_PX` de `focusMemory.ts` queda.
+  - Ficha: `pages/detail/detail-v26.css`, `ReadMore.tsx` ("Leer más/menos"), `useSeasonOverviews.ts`
+    (`getSeasonInfo` de TMDB), `lib/streamFacts.ts` (idioma/tamaño/cacheado de cada fuente; usa `CACHED_MARKERS`
+    exportado de `streamPicker`), `TOUCH_QUERY`. Episodios vistos **atenuados** (0,55, vuelven a 1 con foco/hover).
+  - Reproductor: `pages/player/controlBar.ts` (`tip(label)`, `useCompactBar`, `useMediaQuery`, `NARROW_QUERY`),
+    íconos nuevos, `QuickSettings more`. **Subtítulo arriba de "Saltar"** solo en el celular (≤760 px), con los
+    controles a la vista y "Saltar" sola en la esquina (`skipClear` + `SUB_SKIP_GAP = 14` px, vía `controlsClear`);
+    sin controles, PC y TV quedan igual (decisión del usuario).
+  - Vos/Ajustes: toasts **"Eliminado de Seguir viendo" / "Eliminado del historial"**; el "Deshacer" del historial
+    se queda. `Choice showLabel` en Ajustes del reproductor. **Tu año no estima horas**: `stats.ts` `entrySeconds`
+    (lo marcado como visto sin reproducir cuenta como título pero no suma tiempo); se fue el "(aprox.)".
 - **Decisiones para la v0.17 (reemplazan el reparto del plan de abajo)**: addons y TorBox **iguales para todas las
   casas**, solo los cambia el admin (opción A). Ajustes generales (subtítulos, idiomas, autoplay, saltar intro, sin
   spoilers, reglas de fuentes) **iguales en toda la casa**; lo físico (modo TV, tamaño de la interfaz, protector,

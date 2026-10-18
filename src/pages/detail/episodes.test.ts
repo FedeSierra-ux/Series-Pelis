@@ -3,16 +3,19 @@ import type { WatchEntry } from '../../lib/store'
 import type { Video } from '../../lib/types'
 import {
   episodeBadge,
+  episodeHeading,
   episodeToContinue,
   firstEpisode,
   formatReleaseDate,
   isReleased,
   localToday,
   nextReleased,
+  overviewsByEpisode,
   seasonLabel,
   seasonsAsDropdown,
   seasonStatus,
   sortVideos,
+  suggestedForPanel,
 } from './episodes'
 
 const NOW = new Date(2026, 9, 13, 15).getTime() // 13 oct 2026, 15:00 local
@@ -119,5 +122,47 @@ describe('episodios de la ficha', () => {
     expect(episodeBadge(e1, e2, { [e1.id]: watched(e1) }, true)).toBeUndefined()
     expect(episodeBadge(e2, e2, { [e2.id]: watched(e2, false) }, true)).toBe('Continuar')
     expect(episodeBadge(e2, undefined, {}, true)).toBeUndefined()
+  })
+})
+
+describe('suggestedForPanel (ficha-04)', () => {
+  const e1 = v(1, 1)
+  const e2 = v(1, 2)
+  it('sin nada visto: el primero, "Para empezar"', () => {
+    expect(suggestedForPanel(e1, e1, {}, false)).toEqual({ video: e1, kicker: 'Para empezar' })
+  })
+  it('viendo la serie: "Siguiente" o "Continuar" si quedó a medias', () => {
+    expect(suggestedForPanel(e2, e1, { [e1.id]: watched(e1) }, true)).toEqual({ video: e2, kicker: 'Siguiente' })
+    expect(suggestedForPanel(e2, e1, { [e2.id]: watched(e2, false) }, true)).toEqual({ video: e2, kicker: 'Continuar' })
+  })
+  it('terminada: el primero para volver a ver; sin episodios, nada', () => {
+    expect(suggestedForPanel(undefined, e1, { [e1.id]: watched(e1) }, true)).toEqual({ video: e1, kicker: 'Volver a ver' })
+    expect(suggestedForPanel(undefined, undefined, {}, false)).toBeUndefined()
+  })
+  it('título "T1 · E1 · Pilot"', () => {
+    expect(episodeHeading({ ...e1, title: 'Pilot' })).toBe('T1 · E1 · Pilot')
+    expect(episodeHeading(e2)).toBe('T1 · E2')
+  })
+})
+
+describe('overviewsByEpisode (ficha-11)', () => {
+  const eps = [v(1, 1, '2008-01-20T00:00:00.000Z'), v(1, 2, '2008-01-27T00:00:00.000Z'), v(1, 3)]
+  it('usa la sinopsis de TMDB del mismo número de episodio, si tiene texto', () => {
+    const m = overviewsByEpisode(eps, [
+      { episode_number: 1, overview: 'Walter White, profesor de química…', air_date: '2008-01-20' },
+      { episode_number: 2, overview: '  ', air_date: '2008-01-27' },
+      { episode_number: 3, overview: 'Tercero', air_date: '2008-02-10' },
+    ])
+    expect([...m]).toEqual([
+      [eps[0].id, 'Walter White, profesor de química…'],
+      [eps[2].id, 'Tercero'],
+    ])
+  })
+  it('si la fecha de estreno no coincide, es otro episodio: queda la de Cinemeta', () => {
+    expect(overviewsByEpisode(eps, [{ episode_number: 1, overview: 'Otro', air_date: '2009-05-01' }]).size).toBe(0)
+    expect(overviewsByEpisode(eps, [{ episode_number: 1, overview: 'Un día después', air_date: '2008-01-21' }]).get(eps[0].id)).toBe('Un día después')
+  })
+  it('sin datos de TMDB, nada', () => {
+    expect(overviewsByEpisode(eps, undefined).size).toBe(0)
   })
 })

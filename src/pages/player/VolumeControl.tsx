@@ -1,4 +1,5 @@
 import { useEffect, useState, type RefObject } from 'react'
+import { tip } from './controlBar'
 import { PlayerIcon } from './PlayerIcons'
 import { clampVolume, readVolume, storeVolume, volumeIcon, type VolumeState } from './volume'
 
@@ -41,7 +42,7 @@ export function VolumeControl({ state, onToggleMute, onSet }: Props) {
   const level = state.muted ? 0 : Math.round(state.volume * 100)
   return (
     <div className="vol" style={{ ['--vol' as string]: `${level}%` }}>
-      <button onClick={onToggleMute} aria-label={state.muted ? 'Activar el sonido' : 'Silenciar'} aria-pressed={state.muted} data-vol-btn>
+      <button onClick={onToggleMute} {...tip(state.muted ? 'Activar el sonido' : 'Silenciar')} aria-pressed={state.muted} data-vol-btn>
         <PlayerIcon name={volumeIcon(state)} />
       </button>
       <input

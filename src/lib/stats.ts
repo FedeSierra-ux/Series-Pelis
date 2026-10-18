@@ -6,13 +6,11 @@ import type { InstalledAddon, Meta } from './types'
 import { mapLimit } from './upNext'
 
 // Estadísticas de "Tu año", calculadas solo con el historial local (y las fichas que ya
-// estén en caché para géneros y duraciones).
+// estén en caché para los géneros). Las horas son solo lo reproducido: no se estiman.
 
 const DAY = 24 * 60 * 60 * 1000
-/** Cuántas fichas se piden como máximo a la red para completar géneros/duración. */
+/** Cuántas fichas se piden como máximo a la red para completar los géneros. */
 const MAX_META_FETCH = 40
-/** Duración supuesta cuando se marcó como vista sin reproducir (y no hay ficha). */
-const DEFAULT_RUNTIME = { movie: 105 * 60, series: 42 * 60 }
 
 export interface TitleStat {
   metaId: string
@@ -34,8 +32,6 @@ export interface DayCell {
 export interface YearStats {
   year: number
   seconds: number
-  /** Hay duraciones estimadas (títulos marcados como vistos sin reproducir). */
-  approx: boolean
   movies: number
   episodes: number
   series: number
@@ -65,21 +61,13 @@ export function availableYears(progress: Record<string, WatchEntry>): number[] {
   return [...years].sort((a, b) => b - a)
 }
 
-/** "45 min", "2h 10min", "1 h", "120" → segundos. */
-export function parseRuntime(raw?: string): number | undefined {
-  if (!raw) return undefined
-  const h = /(\d+)\s*h/i.exec(raw)
-  const m = /(\d+)\s*m/i.exec(raw)
-  if (h || m) return ((h ? +h[1] * 60 : 0) + (m ? +m[1] : 0)) * 60 || undefined
-  const n = parseInt(raw, 10)
-  return Number.isFinite(n) && n > 0 ? n * 60 : undefined
-}
-
-function entrySeconds(e: WatchEntry, meta?: Meta): { seconds: number; estimated: boolean } {
-  if (!e.watched) return { seconds: e.position || 0, estimated: false }
-  if (e.duration > 0) return { seconds: e.duration, estimated: false }
-  const runtime = parseRuntime(meta?.runtime) ?? (e.type === 'movie' ? DEFAULT_RUNTIME.movie : DEFAULT_RUNTIME.series)
-  return { seconds: runtime, estimated: true }
+/**
+ * Segundos reproducidos de verdad. Lo marcado como visto sin reproducir cuenta como título
+ * pero no suma tiempo: el usuario no quiere horas estimadas.
+ */
+function entrySeconds(e: WatchEntry): number {
+  if (!e.watched) return e.position || 0
+  return e.duration > 0 ? e.duration : e.position || 0
 }
 
 /** Entradas con actividad en el año (por la última vez que se vio). */
@@ -117,7 +105,6 @@ export function computeYearStats(progress: Record<string, WatchEntry>, year: num
   const moviesSeen = new Set<string>()
   let seconds = 0
   let episodes = 0
-  let approx = false
 
   const touch = (idx: number, name: string, secs: number) => {
     const cell = days[idx]
@@ -128,8 +115,7 @@ export function computeYearStats(progress: Record<string, WatchEntry>, year: num
 
   for (const e of entries) {
     const meta = metas.get(e.metaId)
-    const { seconds: secs, estimated } = entrySeconds(e, meta)
-    approx ||= estimated
+    const secs = entrySeconds(e)
     seconds += secs
 
     if (e.type === 'series') {
@@ -182,7 +168,6 @@ export function computeYearStats(progress: Record<string, WatchEntry>, year: num
   return {
     year,
     seconds,
-    approx,
     movies: moviesSeen.size,
     episodes,
     series: seriesSeen.size,
@@ -210,7 +195,7 @@ export async function loadYearMetas(addons: InstalledAddon[], entries: WatchEntr
   const weight = new Map<string, { type: string; seconds: number }>()
   for (const e of entries) {
     const w = weight.get(e.metaId) ?? { type: e.type, seconds: 0 }
-    w.seconds += entrySeconds(e).seconds
+    w.seconds += entrySeconds(e)
     weight.set(e.metaId, w)
   }
   const ids = [...weight.entries()].sort((a, b) => b[1].seconds - a[1].seconds)

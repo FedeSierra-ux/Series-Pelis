@@ -18,6 +18,10 @@ interface Props {
   stale?: boolean
   /** Fila de tarjetas apaisadas: los esqueletos de carga tienen esa forma. */
   landscape?: boolean
+  /** Bajada debajo del título (ej. el porqué de "Para vos" cuando es el mismo para toda la fila). */
+  subtitle?: string
+  /** Esqueletos de carga propios (ej. el Top 10 con el lugar del número); si no, 8 pósters grises. */
+  skeleton?: ReactNode
   children: ReactNode
 }
 
@@ -72,7 +76,7 @@ function useRowPaging(deps: unknown) {
 // Las flechas no se quedan con el foco al tocarlas (si no, el anillo queda pintado).
 const noFocus = (e: React.MouseEvent) => e.preventDefault()
 
-export function Row({ title, moreTo, loading, error, empty, errorNotice, reportContext, stale, landscape, children }: Props) {
+export function Row({ title, moreTo, loading, error, empty, errorNotice, reportContext, stale, landscape, subtitle, skeleton, children }: Props) {
   const showSkeleton = !!(loading && empty)
   const { ref, edges, page } = useRowPaging(showSkeleton ? 'skeleton' : children)
 
@@ -95,7 +99,14 @@ export function Row({ title, moreTo, loading, error, empty, errorNotice, reportC
     // `data-row-loading`: todavía no llegaron las tarjetas, hay que esperarla.
     <section className="row" data-row-key={title} data-row-loading={showSkeleton || undefined}>
       <header className="row-header">
-        <h2>{title}</h2>
+        {subtitle ? (
+          <div className="row-titles">
+            <h2>{title}</h2>
+            <p className="row-sub">{subtitle}</p>
+          </div>
+        ) : (
+          <h2>{title}</h2>
+        )}
         {moreTo && (
           <Link to={moreTo} className="row-more">
             Ver todo
@@ -104,7 +115,7 @@ export function Row({ title, moreTo, loading, error, empty, errorNotice, reportC
       </header>
       <div className="row-body">
         <div ref={ref} className={stale ? 'row-scroller is-stale' : 'row-scroller'} aria-busy={stale || undefined}>
-          {showSkeleton ? Array.from({ length: 8 }, (_, i) => <PosterSkeleton key={i} landscape={landscape} />) : children}
+          {showSkeleton ? (skeleton ?? Array.from({ length: 8 }, (_, i) => <PosterSkeleton key={i} landscape={landscape} />)) : children}
         </div>
         {!showSkeleton && (
           <>

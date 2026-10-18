@@ -28,6 +28,7 @@ import { SeekPreview } from './player/SeekPreview'
 import { SourcesMenu, useSwitchSource, type Resume, type SwitchState } from './player/SourcesMenu'
 import { ReportButton } from '../components/ReportButton'
 import { PlayerIcon } from './player/PlayerIcons'
+import { NARROW_QUERY, tip, useCompactBar, useMediaQuery } from './player/controlBar'
 import { formatRate, readRate, SpeedMenu, stepRate, storeRate, type Rate } from './player/SpeedMenu'
 import { SubtitleMenu } from './player/SubtitleMenu'
 import { useMediaSession, usePictureInPicture, useWakeLock } from './player/useMediaSession'
@@ -58,6 +59,8 @@ const HLS_NETWORK_RETRIES = 2
 const HLS_RETRY_MS = 1000
 const SLEEP_KEY = 'sp-sleep-at'
 const VOLUME_STEP = 0.1
+/** Px entre el subtítulo y "Saltar intro" en el celular con controles (más el 2 % que deja `placeCue`). */
+const SUB_SKIP_GAP = 14
 
 type Menu = 'subs' | 'audio' | 'sleep' | 'sources' | 'speed' | 'quick'
 type Sleep = { kind: 'off' } | { kind: 'time'; at: number; minutes?: number } | { kind: 'episode' }
@@ -330,8 +333,22 @@ function PlayerView({ state, resume, notice }: { state: PlayState; resume?: Resu
       ro.disconnect()
     }
   }, [])
-  const subs = useSubtitles({ videoRef, hlsRef, state, audioLang, flash, closeMenu: () => setMenu(null), controlsClear })
+  // Pantalla angosta con controles y "Saltar intro/resumen/créditos": lo que ocupa desde el botón hasta abajo
+  // (lo calcula un efecto más abajo, donde se sabe si está el botón). En PC/TV o sin controles queda en 0.
+  const [skipClear, setSkipClear] = useState(0)
+  const subs = useSubtitles({
+    videoRef,
+    hlsRef,
+    state,
+    audioLang,
+    flash,
+    closeMenu: () => setMenu(null),
+    controlsClear: Math.max(controlsClear, skipClear),
+  })
   const pip = usePictureInPicture(videoRef)
+  // Celular vertical: "Abrir en…", ventana flotante y Ajustar van dentro del ⚙ (el CSS los saca de la barra).
+  const compactBar = useCompactBar()
+  const narrow = useMediaQuery(NARROW_QUERY)
   // Pantalla prendida mientras se reproduce; se suelta en pausa y al salir.
   useWakeLock(playing)
 
@@ -894,6 +911,7 @@ function PlayerView({ state, resume, notice }: { state: PlayState; resume?: Resu
   }
 
   // ---------- Reproductor externo ----------
+  const externalLabel = `Abrir en ${externalLaunch(settings.externalPlayer, state.playUrl, currentPlatform().os).label}`
   const openExternal = () => {
     const url = state.playUrl
     videoRef.current?.pause()
@@ -1197,6 +1215,22 @@ function PlayerView({ state, resume, notice }: { state: PlayState; resume?: Resu
     rootRef.current?.querySelector<HTMLElement>('.player-corner > .skip-btn')?.focus({ preventScroll: true })
     // Solo cuando aparece el botón (o cambia de intro a resumen/créditos).
   }, [skipFocusKey])
+  // Celular con controles: el botón de saltar le tapaba el final al subtítulo. El subtítulo sube hasta
+  // SUB_SKIP_GAP px por arriba del botón, más el 2 % que ya deja `placeCue`. Chromium no implementa `lineAlign`
+  // y baja el cuadro (1 − line) × su alto, así que en un 390×844 quedan 17 px de aire con 2 renglones y 24 con 1.
+  // La esquina no se mueve con los controles (bottom fijo, sin transición), así que offsetTop ya es el final.
+  const liftForSkip = narrow && controls && skipAlone
+  useEffect(() => {
+    const root = rootRef.current
+    const skip = root?.querySelector<HTMLElement>('.player-corner > .skip-btn')
+    if (!liftForSkip || !root || !skip || !root.clientHeight) {
+      setSkipClear(0)
+      return
+    }
+    let top = 0
+    for (let el: HTMLElement | null = skip; el && el !== root; el = el.offsetParent as HTMLElement | null) top += el.offsetTop
+    setSkipClear(Math.round(((root.clientHeight - top + SUB_SKIP_GAP) / root.clientHeight) * 1000) / 10)
+  }, [liftForSkip])
   // Cuenta regresiva de la tarjeta del siguiente: con escena post-créditos, hasta el final del video.
   const nextLeft = plan.afterCredits ? duration - time : countdown
   const nextTotal = plan.afterCredits && nextAt !== undefined ? duration - nextAt : NEXT_COUNTDOWN_S
@@ -1492,7 +1526,23 @@ function PlayerView({ state, resume, notice }: { state: PlayState; resume?: Resu
           role={menu === 'quick' ? 'group' : 'menu'}
           aria-label={menu === 'quick' ? 'Ajustes rápidos' : undefined}
         >
-          {menu === 'quick' && <QuickSettings fit={fit} onFit={(f) => setFit(f, false)} onChange={showControls} />}
+          {menu === 'quick' && (
+            <QuickSettings
+              fit={fit}
+              onFit={(f) => setFit(f, false)}
+              onChange={showControls}
+              more={
+                compactBar
+                  ? [
+                      ...(pip.supported
+                        ? [{ label: pip.active ? 'Cerrar la ventana flotante' : 'Ventana flotante', active: pip.active, onClick: () => { setMenu(null); togglePip() } }]
+                        : []),
+                      ...(settings.externalPlayer !== 'none' ? [{ label: externalLabel, onClick: () => { setMenu(null); openExternal() } }] : []),
+                    ]
+                  : undefined
+              }
+            />
+          )}
           {menu === 'subs' && <SubtitleMenu subs={subs} isSeries={!!video} onInteract={showControls} />}
           {menu === 'audio' &&
             audioTracks.map((t) => (
@@ -1560,13 +1610,13 @@ function PlayerView({ state, resume, notice }: { state: PlayState; resume?: Resu
           scrubAt={scrub?.target}
         />
         <div className="controls-row">
-          <button onClick={() => seek(-SEEK_STEP)} aria-label="Retroceder 10 segundos">
+          <button onClick={() => seek(-SEEK_STEP)} {...tip('Retroceder 10 segundos')}>
             <PlayerIcon name="back10" />
           </button>
-          <button ref={playBtnRef} onClick={togglePlay} aria-label={playing ? 'Pausa' : 'Reproducir'} className="play-btn">
+          <button ref={playBtnRef} onClick={togglePlay} {...tip(playing ? 'Pausa' : 'Reproducir')} className="play-btn">
             <PlayerIcon name={playing ? 'pause' : 'play'} size={28} />
           </button>
-          <button onClick={() => seek(SEEK_STEP)} aria-label="Adelantar 10 segundos">
+          <button onClick={() => seek(SEEK_STEP)} {...tip('Adelantar 10 segundos')}>
             <PlayerIcon name="fwd10" />
           </button>
           <VolumeControl state={volume} onToggleMute={toggleMute} onSet={setVolume} />
@@ -1574,21 +1624,21 @@ function PlayerView({ state, resume, notice }: { state: PlayState; resume?: Resu
             {formatTime(scrub ? scrub.target : time)} / {formatTime(duration)}
           </span>
           <span className="spacer" />
-          <button onClick={(e) => toggleMenu('subs', e)} data-menu="subs" aria-label="Subtítulos" aria-expanded={menu === 'subs'}>
-            CC
+          <button onClick={(e) => toggleMenu('subs', e)} data-menu="subs" {...tip('Subtítulos')} aria-expanded={menu === 'subs'}>
+            <PlayerIcon name="cc" />
           </button>
           {audioTracks.length > 1 && (
-            <button onClick={(e) => toggleMenu('audio', e)} aria-label="Idioma de audio" aria-expanded={menu === 'audio'}>
+            <button onClick={(e) => toggleMenu('audio', e)} {...tip('Idioma de audio')} aria-expanded={menu === 'audio'}>
               Audio
             </button>
           )}
-          <button onClick={(e) => toggleMenu('sources', e)} data-menu="sources" aria-label="Fuentes" aria-expanded={menu === 'sources'}>
-            Fuentes
+          <button onClick={(e) => toggleMenu('sources', e)} data-menu="sources" {...tip('Fuentes')} aria-expanded={menu === 'sources'}>
+            <PlayerIcon name="sources" />
           </button>
           <button
             onClick={(e) => toggleMenu('speed', e)}
             data-menu="speed"
-            aria-label={`Velocidad de reproducción: ${formatRate(rate)}`}
+            {...tip(`Velocidad de reproducción: ${formatRate(rate)}`)}
             aria-expanded={menu === 'speed'}
             className={`speed-btn ${rate !== 1 ? 'active' : ''}`}
           >
@@ -1596,7 +1646,7 @@ function PlayerView({ state, resume, notice }: { state: PlayState; resume?: Resu
           </button>
           <button
             onClick={(e) => toggleMenu('sleep', e)}
-            aria-label="Temporizador para dormir"
+            {...tip('Temporizador para dormir')}
             aria-expanded={menu === 'sleep'}
             className={sleep.kind !== 'off' ? 'active' : ''}
           >
@@ -1604,21 +1654,21 @@ function PlayerView({ state, resume, notice }: { state: PlayState; resume?: Resu
             {sleep.kind === 'time' ? `${sleepMinutesLeft} min` : sleep.kind === 'episode' ? 'Fin' : ''}
           </button>
           {settings.externalPlayer !== 'none' && (
-            <button onClick={openExternal} aria-label={`Abrir en ${externalLaunch(settings.externalPlayer, state.playUrl, currentPlatform().os).label}`}>
-              Abrir en…
+            <button onClick={openExternal} className="external-btn" {...tip(externalLabel)}>
+              <PlayerIcon name="external" />
             </button>
           )}
           {state.nextVideoId && (
-            <button onClick={() => goNext()} disabled={nextLoading} aria-label="Siguiente episodio">
-              {nextLoading ? '…' : '⏭ Siguiente'}
+            <button onClick={() => goNext()} disabled={nextLoading} {...tip('Siguiente episodio')}>
+              {nextLoading ? '…' : <PlayerIcon name="next" />}
             </button>
           )}
           {pip.supported && (
             <button
               onClick={togglePip}
-              aria-label={pip.active ? 'Cerrar la ventana flotante' : 'Ventana flotante (picture-in-picture)'}
+              {...tip(pip.active ? 'Cerrar la ventana flotante' : 'Ventana flotante (picture-in-picture)')}
               aria-pressed={pip.active}
-              className={pip.active ? 'active' : ''}
+              className={`pip-btn ${pip.active ? 'active' : ''}`}
             >
               <PlayerIcon name="pip" />
             </button>
@@ -1626,6 +1676,7 @@ function PlayerView({ state, resume, notice }: { state: PlayState; resume?: Resu
           <button
             onClick={cycleFit}
             aria-label={`Imagen: ${FIT_LABELS[fit]} (${FIT_HINTS[fit]}). Cambiar entre ajustar, llenar y estirar`}
+            data-tip={`Imagen: ${FIT_LABELS[fit]}`}
             className={`fit-btn ${fit !== 'contain' ? 'active' : ''}`}
           >
             <PlayerIcon name="fit" />
@@ -1634,12 +1685,12 @@ function PlayerView({ state, resume, notice }: { state: PlayState; resume?: Resu
           <button
             onClick={(e) => toggleMenu('quick', e)}
             data-menu="quick"
-            aria-label="Ajustes rápidos"
+            {...tip('Ajustes rápidos')}
             aria-expanded={menu === 'quick'}
           >
             <PlayerIcon name="gear" />
           </button>
-          <button onClick={toggleFullscreen} aria-label="Pantalla completa">
+          <button onClick={toggleFullscreen} {...tip('Pantalla completa')}>
             <PlayerIcon name="fullscreen" />
           </button>
         </div>

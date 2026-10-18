@@ -4,6 +4,7 @@ import { getStreams } from '../../lib/addons'
 import { useAddons } from '../../lib/hooks'
 import { isOnline } from '../../lib/online'
 import { lastSourceStore, settingsStore, useStore } from '../../lib/store'
+import { sourceCounts, streamFacts } from '../../lib/streamFacts'
 import { analyzeStreams, lastSourceOf, playable, streamKey, type RankedStream } from '../../lib/streamPicker'
 import { useTorrentServer } from '../../lib/torrentServer'
 import type { AddonStreams, InstalledAddon, Meta, Stream, Video } from '../../lib/types'
@@ -165,53 +166,108 @@ export function StreamList({ meta, video, nextVideoId }: { meta: Meta; video?: V
     )
   }
 
+  // Las fuentes de cada addon, en el orden fijado: las que se pueden abrir y los torrents sin debrid aparte.
+  const isDeadTorrent = (s: Stream) => {
+    const p = playable(s, server)
+    return !p.url && !p.external && !!s.infoHash
+  }
+  const parts = groups.map((g, addonIndex) => {
+    const bestIndex = best?.addon.transportUrl === g.addon.transportUrl ? best.streamIndex : -1
+    // El recomendado va primero dentro de su addon solo si ya se sabía al mostrarlo por primera vez
+    // (ver `orderRef`); los que esconden los filtros van aparte.
+    const frozen = orderRef.current.byAddon
+    let order = frozen.get(g.addon.transportUrl)
+    if (!order || order.length !== g.streams.length) {
+      order = g.streams.map((_, i) => i)
+      if (bestIndex >= 0) order.sort((a, b) => Number(b === bestIndex) - Number(a === bestIndex))
+      if (order.length > 0) frozen.set(g.addon.transportUrl, order)
+    }
+    const items = order.map((i) => ({ s: g.streams[i], i })).filter(({ i }) => !hidden.has(streamKey(addonIndex, i)))
+    // Los torrents que no se pueden abrir (sin debrid ni servidor de Stremio) van plegados, así no tapan los que sí andan.
+    const usable = items.filter(({ s }) => !isDeadTorrent(s))
+    const torrents = items.filter(({ s }) => isDeadTorrent(s))
+    return { g, bestIndex, items, usable, torrents }
+  })
+
   const total = groups.reduce((n, g) => n + g.streams.length, 0)
   const totalLabel = total === 1 ? '1 fuente' : `${total} fuentes`
+  // v0.26 (ficha-10): se cuentan las que se pueden abrir, no todas ("6 listas para ver · 2 torrents sin debrid · 1 oculta…").
+  const counts = sourceCounts({
+    ready: parts.reduce((n, pt) => n + pt.usable.filter(({ s }) => { const p = playable(s, server); return !!(p.url || p.external) }).length, 0),
+    torrents: parts.reduce((n, pt) => n + pt.torrents.length, 0),
+    hidden: hidden.size,
+  })
+  const countsText = (
+    <>
+      <strong>{counts.lead}</strong>
+      {counts.rest.map((t) => ` · ${t}`).join('')}
+    </>
+  )
   // Un addon lento no deja la lista "buscando" para siempre: se dice cuál falta y, pasada la espera,
   // lo que ya llegó se da por bueno (se recomienda y se puede reproducir) mientras ese termina.
   const waiting = pendingNames(groups)
-  const statusText = !loading
-    ? `${totalLabel} encontrada${total === 1 ? '' : 's'}`
-    : settled
-      ? `${totalLabel} · ${waiting} sigue${groups.filter((g) => g.loading).length > 1 ? 'n' : ''} buscando`
-      : `Buscando fuentes… (${totalLabel} hasta ahora${waiting ? ` · esperando a ${waiting}` : ''})`
+  const statusText = !loading ? (
+    countsText
+  ) : settled ? (
+    <>
+      {countsText} · {waiting} sigue{groups.filter((g) => g.loading).length > 1 ? 'n' : ''} buscando
+    </>
+  ) : (
+    `Buscando fuentes… (${totalLabel} hasta ahora${waiting ? ` · esperando a ${waiting}` : ''})`
+  )
 
   /** `hiddenReason`: está en "Ocultos por tus filtros" (se puede reproducir igual). */
   const renderItem = (s: Stream, i: number, addon: InstalledAddon, recommended: boolean, hiddenReason?: string, key: string | number = i) => {
     const { name, lines } = streamLabel(s)
     const p = playable(s, server)
+    // v0.26 (ficha-03): etiquetas grandes (calidad, HDR, audio, idioma, peso), el servicio en palabras y el
+    // archivo chico abajo. El texto crudo del addon queda en el `title` (al pasar el mouse).
+    const f = streamFacts(s, addon.manifest.name)
+    const chips = [
+      f.quality && { k: 'q', t: f.quality, cls: 'sx-q' },
+      f.hdr && { k: 'hdr', t: f.hdr },
+      f.audio && { k: 'audio', t: f.audio },
+      f.lang && { k: 'lang', t: f.lang, cls: f.latino ? 'sx-lat' : undefined },
+      f.size && { k: 'size', t: f.size },
+    ].filter((c): c is { k: string; t: string; cls?: string } => !!c)
+    const service = [f.service, f.state, hiddenReason && f.service !== addon.manifest.name ? addon.manifest.name : undefined].filter(Boolean).join(' · ')
+    // Sin etiquetas ni archivo (un tráiler, un enlace suelto): el nombre que manda el addon.
+    const file = f.file ?? (chips.length === 0 && name !== f.service ? name : undefined)
     const content = (
       <>
         {recommended && <span className="stream-badge">Recomendado</span>}
-        <span className="stream-name">
-          {name || addon.manifest.name}
-          {hiddenReason && <span className="muted small"> · {addon.manifest.name}</span>}
-        </span>
-        <span className="stream-title">
-          {lines.map((l, j) => (
-            <span key={j}>{l}</span>
-          ))}
-        </span>
+        {chips.length > 0 && (
+          <span className="sx-row">
+            {chips.map((c) => (
+              <span key={c.k} className={`sx-chip${c.cls ? ` ${c.cls}` : ''}`}>
+                {c.t}
+              </span>
+            ))}
+          </span>
+        )}
+        {service && <span className="sx-src">{service}</span>}
+        {file && <span className="sx-file">{file}</span>}
         {hiddenReason && <span className="stream-hidden-reason">{hiddenReason}</span>}
         {p.reason && <span className="stream-warn">{p.reason}</span>}
         {s.behaviorHints?.notWebReady && p.url && <span className="stream-warn">Puede no reproducirse en el navegador (formato MKV/HEVC)</span>}
       </>
     )
-    const cls = `stream-item${recommended ? ' recommended' : ''}`
+    const cls = `stream-item sx${recommended ? ' recommended' : ''}`
+    const raw = [name, ...lines].filter(Boolean).join('\n') || undefined
     if (p.url)
       return (
-        <button key={key} className={cls} data-autofocus={recommended || undefined} onClick={() => play(s, p.url!, addon)}>
+        <button key={key} className={cls} title={raw} data-autofocus={recommended || undefined} onClick={() => play(s, p.url!, addon)}>
           {content}
         </button>
       )
     if (p.external)
       return (
-        <a key={key} className={cls} data-autofocus={recommended || undefined} href={p.external} target="_blank" rel="noreferrer">
+        <a key={key} className={cls} title={raw} data-autofocus={recommended || undefined} href={p.external} target="_blank" rel="noreferrer">
           {content}
         </a>
       )
     return (
-      <div key={key} className="stream-item disabled" tabIndex={-1}>
+      <div key={key} className="stream-item sx disabled" title={raw} tabIndex={-1}>
         {content}
       </div>
     )
@@ -236,25 +292,7 @@ export function StreamList({ meta, video, nextVideoId }: { meta: Meta; video?: V
         </div>
       )}
       <div className="streams-status muted" aria-live="polite">{statusText}</div>
-      {groups.map((g, addonIndex) => {
-        const bestIndex = best?.addon.transportUrl === g.addon.transportUrl ? best.streamIndex : -1
-        // El recomendado va primero dentro de su addon solo si ya se sabía al mostrarlo por primera vez
-        // (ver `orderRef`); los que esconden los filtros van aparte.
-        const frozen = orderRef.current.byAddon
-        let order = frozen.get(g.addon.transportUrl)
-        if (!order || order.length !== g.streams.length) {
-          order = g.streams.map((_, i) => i)
-          if (bestIndex >= 0) order.sort((a, b) => Number(b === bestIndex) - Number(a === bestIndex))
-          if (order.length > 0) frozen.set(g.addon.transportUrl, order)
-        }
-        const items = order.map((i) => ({ s: g.streams[i], i })).filter(({ i }) => !hidden.has(streamKey(addonIndex, i)))
-        // Los torrents que no se pueden abrir (sin debrid ni servidor de Stremio) van plegados, así no tapan los que sí andan.
-        const isDeadTorrent = (s: Stream) => {
-          const p = playable(s, server)
-          return !p.url && !p.external && !!s.infoHash
-        }
-        const usable = items.filter(({ s }) => !isDeadTorrent(s))
-        const torrents = items.filter(({ s }) => isDeadTorrent(s))
+      {parts.map(({ g, bestIndex, items, usable, torrents }) => {
         const torrentsOpen = openTorrents.has(g.addon.transportUrl)
         const toggleTorrents = () =>
           setOpenTorrents((prev) => {

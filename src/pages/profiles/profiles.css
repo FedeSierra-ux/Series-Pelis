@@ -59,6 +59,32 @@ html[data-tv] .pf-tile:focus-visible {
 html[data-tv] .pf-tile {
   width: 200px;
 }
+/* v0.26: en la TV, avatares de 160 px en una sola fila (se ven desde el sillón, igual que el aro de la cuenta). */
+html[data-tv] .pf-box {
+  width: min(1500px, 100%);
+}
+/* Entran los 6 (200 × 6 + 36 × 5 = 1380 px) en una fila en 1920; en una TV de 1280 bajan a otra fila en vez de
+   salirse de la pantalla (por eso no va `nowrap`). */
+html[data-tv] .pf-grid {
+  gap: 36px;
+}
+html[data-tv] .pf-tile {
+  gap: 20px;
+}
+html[data-tv] .pf-tile-art {
+  width: 176px;
+  height: 176px;
+}
+html[data-tv] .pf-tile-art .pf-avatar,
+html[data-tv] .pf-add-icon {
+  width: 160px !important;
+  height: 160px !important;
+  font-size: 72px !important;
+}
+html[data-tv] .pf-name {
+  hyphens: auto;
+  font-size: 1.1rem;
+}
 .pf-tile-art {
   position: relative;
   display: grid;
@@ -314,6 +340,41 @@ html[data-tv] .pf-tile {
   background: #fca5a5;
 }
 
+/* v0.26: celular → Guardar / Cancelar / Borrar en una barra pegada abajo y personajes de 5 por fila.
+   La barra va al final del formulario: al terminar de bajar queda en su lugar, con aire arriba (margin-top), y
+   no tapa los colores ni los personajes; sin sombra hacia arriba, que los oscurecía. `scroll-padding-bottom`:
+   lo que se enfoca con el teclado queda arriba de la barra. */
+@media (max-width: 760px) {
+  .pf-layer {
+    scroll-padding-bottom: 96px;
+  }
+  .pf-editor > .pf-actions {
+    position: sticky;
+    /* −32 px = el padding-block de .pf-layer: si no, la barra quedaba 32 px arriba del borde y asomaban los
+       colores por debajo. */
+    bottom: -32px;
+    z-index: 2;
+    flex-wrap: nowrap;
+    gap: 4px;
+    margin: 8px -24px -24px;
+    padding: 12px 24px calc(12px + env(safe-area-inset-bottom, 0px));
+    background: var(--bg-2);
+    border-top: 1px solid var(--line);
+    border-radius: 0 0 var(--radius-lg) var(--radius-lg);
+  }
+  .pf-editor > .pf-actions .btn {
+    padding-inline: 12px;
+    white-space: nowrap;
+  }
+  .pf-editor > .pf-actions .btn-primary {
+    padding-inline: 20px;
+  }
+  .pf-avatars {
+    grid-template-columns: repeat(auto-fill, minmax(52px, 1fr));
+    gap: 10px;
+  }
+}
+
 @media (max-width: 560px) {
   .pf-grid {
     gap: 12px;
@@ -347,6 +408,10 @@ html[data-tv] .pf-tile {
   }
   .pf-editor-top > .pf-avatar {
     align-self: center;
+  }
+  .pf-editor > .pf-actions {
+    margin: 8px -18px -18px;
+    padding: 12px 18px calc(12px + env(safe-area-inset-bottom, 0px));
   }
 }
 

@@ -94,3 +94,57 @@ export function seasonStatus(seasonVideos: Video[], progress: Record<string, Wat
   const complete = released.length > 0 && released.every((v) => progress[v.id]?.watched)
   return { released, complete }
 }
+
+/**
+ * v0.26 (ficha-04): el episodio que muestra el panel de fuentes mientras no se eligió ninguno, con su título.
+ * Es el mismo de "Reproducir T1 E1" / "Continuar": sin nada visto, el primero; si ya la terminaste, el primero
+ * para volver a verla.
+ */
+export function suggestedForPanel(
+  suggested: Video | undefined,
+  first: Video | undefined,
+  progress: Record<string, WatchEntry>,
+  started: boolean,
+): { video: Video; kicker: string } | undefined {
+  if (suggested) return { video: suggested, kicker: started ? (episodeBadge(suggested, suggested, progress, true) ?? 'Siguiente') : 'Para empezar' }
+  return first && { video: first, kicker: 'Volver a ver' }
+}
+
+/** "T1 · E1 · Pilot" (sin nombre si no tiene). */
+export function episodeHeading(v: Video): string {
+  const name = v.title ?? v.name
+  return `T${v.season ?? 0} · E${episodeNumber(v) ?? '?'}${name ? ` · ${name}` : ''}`
+}
+
+/** Un episodio de la temporada según TMDB (`/tv/{id}/season/{n}`). */
+export interface SeasonEpisodeInfo {
+  episode_number: number
+  overview?: string
+  air_date?: string | null
+}
+
+const DAY_MS = 24 * 60 * 60 * 1000
+/** Hasta cuántos días puede diferir el estreno entre Cinemeta y TMDB (husos horarios, estrenos a medianoche). */
+const SAME_EPISODE_DAYS = 3
+
+/**
+ * v0.26 (ficha-11): la sinopsis en español de cada episodio de la temporada (por id de Cinemeta). Solo las que
+ * TMDB tiene escritas, y si los dos dicen la fecha de estreno, tiene que coincidir (si la numeración de Cinemeta
+ * y TMDB no es la misma, queda la de Cinemeta en vez de la sinopsis de otro episodio).
+ */
+export function overviewsByEpisode(seasonVideos: Video[], tmdbEpisodes: SeasonEpisodeInfo[] | undefined): Map<string, string> {
+  const out = new Map<string, string>()
+  if (!tmdbEpisodes?.length) return out
+  const byNumber = new Map(tmdbEpisodes.map((e) => [e.episode_number, e]))
+  for (const v of seasonVideos) {
+    const n = episodeNumber(v)
+    const e = n === undefined ? undefined : byNumber.get(n)
+    const text = e?.overview?.trim()
+    if (!e || !text) continue
+    const ours = releaseDate(v)
+    const m = e.air_date ? /^(\d{4})-(\d{2})-(\d{2})/.exec(e.air_date) : null
+    if (ours && m && Math.abs(new Date(+m[1], +m[2] - 1, +m[3]).getTime() - ours.at) > SAME_EPISODE_DAYS * DAY_MS) continue
+    out.set(v.id, text)
+  }
+  return out
+}

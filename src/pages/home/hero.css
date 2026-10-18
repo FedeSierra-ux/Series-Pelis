@@ -122,7 +122,8 @@
   height: auto;
   object-fit: contain;
   object-position: left bottom;
-  filter: drop-shadow(0 2px 14px color-mix(in srgb, var(--bg) 65%, transparent));
+  /* Halo claro sutil para los logos oscuros (igual que .fbb-logo y .land-logo). */
+  filter: drop-shadow(0 0 1px rgba(255, 255, 255, 0.6)) drop-shadow(0 0 16px rgba(255, 255, 255, 0.3)) drop-shadow(0 2px 8px rgba(0, 0, 0, 0.45));
 }
 
 /* IMDb y datos en una línea, separados por puntos (sin chips). */

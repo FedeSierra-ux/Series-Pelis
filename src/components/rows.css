@@ -52,6 +52,34 @@
   }
 }
 
+/* v0.26: fila corrida (‹ visible) → el margen izquierdo se esfuma y no asoma una tira del póster anterior
+   junto al riel. La primera tarjeta entera queda igual (el degradé termina 2 px antes de ella).
+   Solo PC con mouse y TV (en el celular la fila se desliza con el dedo). */
+@media (hover: hover) and (pointer: fine) {
+  html:not([data-tv])[data-theme='2'] .row-body:has(> .row-page.is-prev:not([hidden])) > .row-scroller {
+    -webkit-mask-image: linear-gradient(90deg, transparent calc(var(--gutter) - 16px), #000 calc(var(--gutter) - 2px));
+    mask-image: linear-gradient(90deg, transparent calc(var(--gutter) - 16px), #000 calc(var(--gutter) - 2px));
+  }
+}
+html[data-tv][data-theme='2'] .row-body:has(> .row-page.is-prev:not([hidden])) > .row-scroller {
+  -webkit-mask-image: linear-gradient(90deg, transparent calc(var(--gutter) - 16px), #000 calc(var(--gutter) - 2px));
+  mask-image: linear-gradient(90deg, transparent calc(var(--gutter) - 16px), #000 calc(var(--gutter) - 2px));
+}
+
+/* v0.26: bajada debajo del título de la fila ("Para vos": el porqué cuando es el mismo para todas). */
+.row-titles {
+  min-width: 0;
+}
+[data-theme='2'] .row-sub {
+  margin: 4px 0 0;
+  font-size: 0.85rem;
+  line-height: 1.35;
+  color: var(--muted);
+}
+html[data-tv][data-theme='2'] .row-sub {
+  font-size: 1rem;
+}
+
 /* ---------- Tarjeta apaisada: ⓘ y ✕ arriba, ▶ al enfocar, "Buscando fuente…" y etiqueta ---------- */
 
 .t2-cont-actions {
