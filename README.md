@@ -14,9 +14,6 @@ y un **historial** de todo lo que viste. Funciona en la PC, el celular y el nave
 - **Más sólida en la TV (v0.9)**: texto más grande a tres metros, el foco se centra y se recuerda al volver,
   selectores que andan con el control remoto, aviso de versión nueva, "Continuar" / "Ver desde el principio" y
   "Marcar temporada como vista" en las series, y 40 bugs arreglados (reproductor, fechas, Descubrir, copia de seguridad).
-- **TV en vivo (v0.7, lista fija desde la v0.22.6)**: noticias, públicos, aire de Buenos Aires y música, solo con
-  señales oficiales (el stream de cada canal o su vivo de YouTube). Zapping con CH+/CH− o con los números del
-  control, favoritos y pantalla completa.
 - **Dos temas (v0.6)**: el clásico y el **Tema 2** (riel lateral, tarjetas redondeadas, barra abajo en el celular),
   en Ajustes → Apariencia.
 - **Addons (v0.6)**: explorar los oficiales, activar o desactivar, gestor de catálogos (renombrar, ocultar,
@@ -27,14 +24,15 @@ y un **historial** de todo lo que viste. Funciona en la PC, el celular y el nave
   listas curadas (Oscar, mejor puntaje IMDb, sagas) y etiquetas clickeables en la ficha.
 - **Pósters (v0.5)**: puntaje sobre el póster, etiquetas (episodio nuevo, Top 10…) y tráiler al pasar por encima.
 - **Biblioteca (v0.5)**: tu puntaje con estrellas, "Para vos" con el porqué, "Ya no me interesa", modo sin spoilers,
-  Tu año y metas y logros. "¿Sabías que?" con datos de Wikipedia.
+  Tu año y metas y logros.
 - **Reproductor (v0.4)**: vista previa al adelantar, sinopsis al pausar, aviso de escena post-créditos,
   "¿Ver el resumen?" si hace días que no ves la serie y **cambiar de fuente** sin perder el minuto.
 - **Subtítulos (v0.4)**: cargar un archivo propio (o arrastrarlo), más estilo (letra, altura, contorno), ocultar SDH,
   forzados automáticos e idioma recordado por serie o peli.
 - **Fuentes (v0.4)**: filtros por tamaño, códec, HDR/Dolby Vision y repetidos. Los clips cortos no cuentan en el historial.
 - **TMDB (opcional)**: ficha en español con logo, reparto y páginas de actores, sagas, "Más como esto" y
-  dónde verla en Argentina. En Inicio: portada con tráiler sin sonido, Top 10 de hoy, "Porque viste…" y tendencias.
+  tráiler con subtítulos en latino primero. En Inicio y en Películas/Series: portada, Top 10 de la semana,
+  "Porque viste…" y tendencias.
   Al pausar muestra quién actúa en el episodio.
 - **Catálogo** de Cinemeta (populares, nuevas y mejor puntuadas) y de cualquier addon que agregues.
 - **Puntaje de IMDb** en pósters, portada y ficha.

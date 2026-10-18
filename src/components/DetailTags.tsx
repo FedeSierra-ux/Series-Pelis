@@ -1,12 +1,11 @@
-import { Fragment, useEffect, useState } from 'react'
+import { Fragment } from 'react'
 import { Link } from 'react-router-dom'
 import { CINEMETA_URL } from '../lib/addons'
-import { getKeywords, type Keyword } from '../lib/discoverApi'
 import { genreLabel } from '../lib/i18n'
 import type { TmdbDetails } from '../lib/tmdb'
 
-// Etiquetas clickeables de la ficha (v0.5): género → Descubrir filtrado, persona → su página,
-// palabra clave → títulos con esa palabra clave (TMDB discover).
+// Etiquetas clickeables de la ficha (v0.5): género → Descubrir filtrado, persona → su página.
+// (Las palabras clave se fueron con la pestaña Detalles en la v0.24.)
 
 /** Géneros de TMDB ({id, name} en español) o, sin TMDB, los de Cinemeta (en inglés). */
 export function GenreChips({ type, tmdbGenres, names }: { type: string; tmdbGenres?: { id: number; name: string }[]; names?: string[] }) {
@@ -64,48 +63,5 @@ export function PeopleLinks({ names, index }: { names: string[]; index?: Map<str
         )
       })}
     </>
-  )
-}
-
-const KEYWORDS_SHOWN = 8
-
-/** Palabras clave de TMDB (vienen en inglés: TMDB no las traduce). */
-export function KeywordChips({ type, tmdbId }: { type: string; tmdbId: number }) {
-  const [state, setState] = useState<{ id: number; list: Keyword[] }>()
-  const [all, setAll] = useState(false)
-
-  useEffect(() => {
-    let alive = true
-    setAll(false)
-    getKeywords(type, tmdbId)
-      .then((list) => alive && setState({ id: tmdbId, list }))
-      .catch(() => {})
-    return () => {
-      alive = false
-    }
-  }, [type, tmdbId])
-
-  const list = state?.id === tmdbId ? state.list : []
-  if (list.length === 0) return null
-  const shown = all ? list : list.slice(0, KEYWORDS_SHOWN)
-
-  return (
-    <div className="keyword-chips" aria-label="Palabras clave">
-      <span className="muted small">Palabras clave:</span>
-      {shown.map((k) => (
-        <Link
-          key={k.id}
-          to={`/discover/${type}?src=tmdb&keyword=${k.id}&kw=${encodeURIComponent(k.name)}`}
-          className="chip chip-link small"
-        >
-          {k.name}
-        </Link>
-      ))}
-      {list.length > KEYWORDS_SHOWN && (
-        <button type="button" className="chip chip-link small chip-more" onClick={() => setAll((v) => !v)}>
-          {all ? 'menos' : `+${list.length - KEYWORDS_SHOWN}`}
-        </button>
-      )}
-    </div>
   )
 }

@@ -532,14 +532,6 @@ export interface TrackPref {
 }
 
 /** Por metaId (serie o peli): le gana a los idiomas generales de Ajustes. */
-/** TV en vivo: canales favoritos y el último que se vio (ids de `LIVE_CHANNELS`). */
-export interface LiveTvState {
-  favorites: string[]
-  last?: string
-}
-
-export const liveTvStore = new PersistedStore<LiveTvState>('liveTv', { favorites: [] })
-
 export const trackPrefsStore = new PersistedStore<Record<string, TrackPref>>('trackPrefs', {})
 
 export function rememberTracks(metaId: string, patch: Partial<TrackPref>) {
@@ -807,7 +799,6 @@ export function exportData() {
     recentSearches: recentSearchesStore.get(),
     disabledAddons: addons.filter((a) => a.disabled).map((a) => a.transportUrl),
     catalogPrefs: catalogPrefsStore.get(),
-    liveTv: liveTvStore.get(),
   }
 }
 
@@ -935,10 +926,6 @@ export async function importData(raw: unknown): Promise<ImportReport> {
   }
   stringList(data.disabledAddons).forEach((url) => setAddonEnabled(url, false))
   if (isPlain(data.catalogPrefs)) catalogPrefsStore.set(normalizePrefs(data.catalogPrefs as Partial<CatalogPrefs>))
-  if (isPlain(data.liveTv) && Array.isArray(data.liveTv.favorites)) {
-    const favorites = stringList(data.liveTv.favorites)
-    liveTvStore.set((s) => ({ ...s, favorites: [...new Set([...s.favorites, ...favorites])] }))
-  }
   return report
 }
 
@@ -991,7 +978,6 @@ export async function hydrateStores() {
     goalsStore.hydrate(),
     recentSearchesStore.hydrate(),
     catalogPrefsStore.hydrate(),
-    liveTvStore.hydrate(),
   ])
   // La primera vez el diario se arma con lo que ya estaba marcado como visto.
   if (diaryStore.get().v === 0) diaryStore.set({ v: 1, entries: rebuildFromProgress(progressStore.get()) })

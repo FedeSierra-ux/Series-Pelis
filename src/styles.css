@@ -614,8 +614,7 @@ select option {
   background: linear-gradient(to top, var(--bg) 2%, rgba(11, 11, 16, 0.4) 40%, rgba(11, 11, 16, 0.1)),
     linear-gradient(to right, rgba(11, 11, 16, 0.94) 0%, rgba(11, 11, 16, 0.86) 45%, rgba(11, 11, 16, 0.3) 78%, transparent);
 }
-.detail-info .credits,
-.detail-info .keyword-chips {
+.detail-info .credits {
   max-width: 62ch;
 }
 /* Reservamos lugar para lo que llega después (TMDB, streams) así la ficha no salta al cargar. */
@@ -1251,7 +1250,6 @@ html[data-tv] .chip.small {
 }
 /* Pestañas y chips de filtros: se eligen con el control remoto, tienen que verse y enfocarse bien. */
 html[data-tv] .tab,
-html[data-tv] .ltv-filter,
 html[data-tv] .goal-presets .tab {
   font-size: 1rem;
   padding: 12px 20px;
@@ -1276,10 +1274,6 @@ html[data-tv] .episode-thumb {
 html[data-tv] .episode-check {
   width: 44px;
   height: 44px;
-}
-/* El nombre del canal hereda el tamaño por defecto de <button> (13 px): en la TV no se lee. */
-html[data-tv] .ltv-ch {
-  font-size: 1rem;
 }
 html[data-tv] input[type='search'],
 html[data-tv] input[type='url'],
@@ -1316,31 +1310,12 @@ html[data-tv] .player-error-sources button {
     width: 44px;
     height: 44px;
   }
-  .ltv-filter,
   .btn-small,
   .tab {
     min-height: 44px;
   }
   .goal-stepper .btn {
     min-width: 44px;
-  }
-}
-
-/* ---------- TV en vivo: la lista de canales con su propio scroll (PC/TV) ---------- */
-
-/* Sin esto la página medía miles de píxeles y el reproductor fijo quedaba solo arriba. La lista
-   se desplaza adentro; con las flechas, spatialNav hace scrollIntoView del canal enfocado. */
-@media (min-width: 961px) {
-  .ltv-list {
-    /* 96 px: el título de la página arriba y un respiro abajo. */
-    max-height: calc(100vh - var(--nav-h) - 96px);
-    overflow-y: auto;
-    overscroll-behavior: contain;
-    scrollbar-width: thin;
-    /* Lugar para el anillo de foco: con overflow se recortaría en los bordes. */
-    padding: 4px 6px 4px 4px;
-    margin: -4px 0 -4px -4px;
-    scroll-padding: 12px 0;
   }
 }
 
@@ -2888,64 +2863,11 @@ html[data-tv] .player-error-sources button {
   font-size: 0.72rem;
 }
 
-/* "¿Sabías que?" en la ficha (Wikipedia en español). */
-.wiki-trivia-sentinel {
-  height: 1px;
-}
-.wiki-trivia {
-  margin: 22px 0 8px;
-  padding: 0 var(--gutter);
-  max-width: calc(900px + 2 * var(--gutter));
-}
-.wiki-trivia h2 {
-  font-size: clamp(1.05rem, 1.6vw, 1.35rem);
-  margin-bottom: 12px;
-}
-.wiki-trivia-list {
-  list-style: none;
-  margin: 0;
-  padding: 0;
-  display: grid;
-  gap: 10px;
-}
-.wiki-trivia-list li {
-  position: relative;
-  padding: 11px 14px 11px 40px;
-  border-radius: var(--radius);
-  background: var(--bg-2);
-  border: 1px solid var(--line);
-  line-height: 1.5;
-  overflow-wrap: anywhere;
-}
-.wiki-trivia-list li::before {
-  content: '✦';
-  position: absolute;
-  left: 15px;
-  top: 11px;
-  color: var(--accent);
-}
-.wiki-trivia-source {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 8px 12px;
-  margin: 12px 0 0;
-}
-.wiki-trivia-source a:not(.btn) {
-  text-decoration: underline;
-}
 @media (max-width: 760px) {
   .poster-label {
     top: 6px;
     left: 6px;
     padding: 2px 6px;
-  }
-  .wiki-trivia-list li {
-    padding: 10px 12px 10px 34px;
-  }
-  .wiki-trivia-list li::before {
-    left: 12px;
-    top: 10px;
   }
 }
 
@@ -3616,14 +3538,6 @@ button.chip-link {
 .person-link:focus-visible {
   text-decoration-color: currentColor;
 }
-.keyword-chips {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 6px;
-  margin: 10px 0 4px;
-}
-
 /* Persona: "Buscar con otra persona…" y página /together */
 .together-open {
   margin-top: 12px;
@@ -4322,312 +4236,6 @@ input[type='password']:focus-visible {
   word-break: break-word;
   max-height: 40vh;
   overflow: auto;
-}
-
-/* ---------- v0.7 TV en vivo ---------- */
-
-/* PC/TV: reproductor fijo a la izquierda y la lista a la derecha, así el canal se sigue viendo
-   mientras se recorre la grilla con el control. En el celular, uno abajo del otro. */
-.ltv-source {
-  margin: 4px 0 0;
-  color: var(--muted);
-  font-size: 0.9rem;
-}
-.ltv-layout {
-  display: grid;
-  grid-template-columns: minmax(0, 1.5fr) minmax(0, 1fr);
-  gap: 24px;
-  align-items: start;
-}
-.ltv-stage {
-  position: sticky;
-  top: 16px;
-  display: grid;
-  gap: 12px;
-  min-width: 0;
-}
-.ltv-screen {
-  position: relative;
-  aspect-ratio: 16 / 9;
-  max-width: 100%;
-  background: #000;
-  border-radius: var(--radius-lg);
-  overflow: hidden;
-}
-.ltv-screen:fullscreen {
-  border-radius: 0;
-}
-.ltv-screen video {
-  position: absolute;
-  inset: 0;
-  width: 100%;
-  height: 100%;
-  object-fit: contain;
-  background: #000;
-}
-/* El vivo de YouTube: sin eventos del mouse, así el foco y las teclas del control quedan en la página. */
-.ltv-yt {
-  position: absolute;
-  inset: 0;
-  width: 100%;
-  height: 100%;
-  border: 0;
-  pointer-events: none;
-}
-.ltv-live {
-  position: absolute;
-  top: 12px;
-  left: 12px;
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  padding: 3px 10px 3px 8px;
-  border-radius: 999px;
-  background: rgba(0, 0, 0, 0.6);
-  color: #fff;
-  font-size: 0.72rem;
-  font-weight: 700;
-  letter-spacing: 0.08em;
-}
-.ltv-live i {
-  width: 8px;
-  height: 8px;
-  border-radius: 50%;
-  background: #ff5a6e;
-  animation: ltv-pulse 1.6s infinite;
-}
-@keyframes ltv-pulse {
-  50% {
-    opacity: 0.35;
-  }
-}
-@media (prefers-reduced-motion: reduce) {
-  .ltv-live i {
-    animation: none;
-  }
-}
-.ltv-osd {
-  position: absolute;
-  inset: auto 0 0 0;
-  display: flex;
-  align-items: flex-end;
-  gap: 14px;
-  padding: 40px 16px 14px;
-  background: linear-gradient(to top, rgba(0, 0, 0, 0.85), transparent);
-  color: #fff;
-  pointer-events: none;
-}
-.ltv-num {
-  font-family: var(--font-display);
-  font-size: 2rem;
-  font-weight: 700;
-  line-height: 1;
-  color: var(--accent);
-  font-variant-numeric: tabular-nums;
-}
-.ltv-name {
-  display: block;
-  font-family: var(--font-display);
-  font-size: 1.1rem;
-  font-weight: 600;
-}
-.ltv-meta {
-  display: block;
-  font-size: 0.8rem;
-  opacity: 0.85;
-}
-.ltv-error {
-  position: absolute;
-  inset: 0;
-  display: grid;
-  place-content: center;
-  justify-items: center;
-  gap: 12px;
-  padding: 16px;
-  text-align: center;
-  background: rgba(0, 0, 0, 0.75);
-  color: #fff;
-}
-.ltv-error p {
-  margin: 0;
-}
-.ltv-error-actions,
-.ltv-controls {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-}
-.ltv-controls .btn[aria-pressed='true'] {
-  color: var(--accent);
-  border-color: var(--accent);
-}
-.ltv-hint {
-  margin: 0;
-  color: var(--muted);
-  font-size: 0.82rem;
-}
-.ltv-list {
-  display: grid;
-  gap: 12px;
-  min-width: 0;
-}
-.ltv-filters {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-}
-.ltv-filter {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  padding: 7px 14px;
-  border: 1px solid var(--line);
-  border-radius: 999px;
-  background: transparent;
-  color: var(--muted);
-  font-size: 0.88rem;
-  cursor: pointer;
-}
-.ltv-filter:hover,
-.ltv-filter:focus-visible {
-  color: var(--text);
-  border-color: var(--accent);
-}
-.ltv-filter[aria-pressed='true'] {
-  background: var(--accent-fill);
-  border-color: var(--accent-fill);
-  color: var(--on-accent);
-  font-weight: 700;
-}
-.ltv-count {
-  opacity: 0.7;
-  font-variant-numeric: tabular-nums;
-}
-.ltv-channels {
-  list-style: none;
-  margin: 0;
-  padding: 0;
-  display: grid;
-  gap: 6px;
-}
-.ltv-row {
-  display: flex;
-  gap: 6px;
-}
-.ltv-ch {
-  flex: 1;
-  min-width: 0;
-  display: grid;
-  grid-template-columns: 36px 44px minmax(0, 1fr);
-  align-items: center;
-  gap: 12px;
-  padding: 8px 12px;
-  border: 2px solid transparent;
-  border-radius: var(--radius);
-  background: var(--bg-2);
-  color: var(--text);
-  text-align: left;
-  cursor: pointer;
-}
-.ltv-ch:hover,
-.ltv-ch:focus-visible {
-  background: var(--bg-3);
-}
-.ltv-ch:focus-visible {
-  outline: var(--focus-ring);
-  outline-offset: 2px;
-}
-.ltv-ch[aria-current='true'] {
-  border-color: var(--accent);
-  background: var(--bg-3);
-}
-.ltv-no {
-  color: var(--muted);
-  font-size: 0.8rem;
-  font-variant-numeric: tabular-nums;
-}
-.ltv-logo {
-  width: 44px;
-  height: 44px;
-  display: grid;
-  place-items: center;
-  border-radius: 10px;
-  overflow: hidden;
-  background: var(--bg-3);
-  color: #fff;
-  font-family: var(--font-display);
-  font-size: 0.8rem;
-  font-weight: 700;
-}
-.ltv-logo img {
-  width: 100%;
-  height: 100%;
-  object-fit: contain;
-  padding: 4px;
-  background: #fff;
-}
-.ltv-cat-aire {
-  background: #4b3a7a;
-}
-.ltv-cat-noticias {
-  background: #7a2f3d;
-}
-.ltv-cat-publicos {
-  background: #2b6b4a;
-}
-.ltv-cat-musica {
-  background: #7a5426;
-}
-.ltv-text {
-  min-width: 0;
-  display: grid;
-}
-.ltv-ch-name {
-  font-weight: 600;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-.ltv-note {
-  color: var(--muted);
-  font-size: 0.76rem;
-}
-.ltv-note.warn {
-  color: #f0c36a;
-}
-/* Canales que este navegador no puede reproducir (sin CORS): atenuados, pero en su lugar y con su número. */
-.ltv-row.is-blocked .ltv-ch {
-  opacity: 0.55;
-}
-.ltv-row.is-blocked .ltv-ch:focus-visible,
-.ltv-row.is-blocked .ltv-ch[aria-current='true'] {
-  opacity: 1;
-}
-.ltv-fav {
-  flex: none;
-  width: 48px;
-  border: 2px solid transparent;
-  border-radius: var(--radius);
-  background: var(--bg-2);
-  color: var(--muted);
-  font-size: 1.15rem;
-  cursor: pointer;
-}
-.ltv-fav[aria-pressed='true'] {
-  color: var(--accent);
-}
-.ltv-fav:hover,
-.ltv-fav:focus-visible {
-  background: var(--bg-3);
-  color: var(--accent);
-}
-@media (max-width: 960px) {
-  .ltv-layout {
-    grid-template-columns: 1fr;
-  }
-  .ltv-stage {
-    position: static;
-  }
 }
 
 /* ---------- v0.8 reproductor: tarjeta de error e íconos de los controles ---------- */

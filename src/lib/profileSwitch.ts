@@ -34,23 +34,24 @@ export async function switchProfile(id: string) {
   location.replace('/')
 }
 
-export function createProfile(fields: { name: string; color?: string; art?: string }): Profile | undefined {
+export function createProfile(fields: { name: string; color?: string; avatar?: string }): Profile | undefined {
   const name = cleanName(fields.name)
   const list = listProfiles(profilesStore.get())
   if (!name || list.length >= MAX_PROFILES) return undefined
-  const profile: Profile = { id: newProfileId(), name, color: fields.color ?? nextColor(list), ...(fields.art ? { art: fields.art } : {}), at: Date.now() }
+  const profile: Profile = { id: newProfileId(), name, color: fields.color ?? nextColor(list), ...(fields.avatar ? { avatar: fields.avatar } : {}), at: Date.now() }
   profilesStore.set((all) => ({ ...all, [profile.id]: profile }))
   return profile
 }
 
-export function updateProfile(id: string, fields: { name: string; color: string; art?: string }) {
+export function updateProfile(id: string, fields: { name: string; color: string; avatar?: string }) {
   const name = cleanName(fields.name)
   if (!name) return
   profilesStore.set((all) => {
     const cur = listProfiles(all).find((p) => p.id === id)
     if (!cur) return all
-    const { art: _art, ...rest } = cur
-    return { ...all, [id]: { ...rest, name, color: fields.color, ...(fields.art ? { art: fields.art } : {}), at: Date.now() } }
+    // `art` (el fondo de una peli, hasta la v0.23) se va al guardar.
+    const { avatar: _avatar, art: _art, ...rest } = cur as Profile & { art?: string }
+    return { ...all, [id]: { ...rest, name, color: fields.color, ...(fields.avatar ? { avatar: fields.avatar } : {}), at: Date.now() } }
   })
 }
 

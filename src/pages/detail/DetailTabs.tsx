@@ -1,6 +1,6 @@
 import { useRef, useState, type KeyboardEvent, type ReactNode } from 'react'
 
-// Pestañas de la ficha (v0.14): "Episodios | Más como esto | Extras | Detalles". Patrón de pestañas
+// Pestañas de la ficha (v0.14): "Episodios (o Fuentes) | Más como esto" (Extras y Detalles se fueron en la v0.24). Patrón de pestañas
 // accesible (tablist / tab / tabpanel) con activación automática: ← → mueven y eligen, Inicio y Fin
 // van a la primera y la última. Solo la pestaña elegida entra en el orden del foco, así que con el
 // control remoto ↓ desde los botones de la portada cae justo en ella y ↓ otra vez entra al contenido.

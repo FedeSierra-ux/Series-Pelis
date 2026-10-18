@@ -1,9 +1,9 @@
 // Películas y Series como página de filas (v0.15, U11). Lógica pura: qué filas van, de dónde sale
 // cada una y los parámetros de TMDB. Sin dependencias del navegador para poder probarla con vitest.
 //
-// - "Top 10 en Argentina": ni TMDB ni Cinemeta saben qué se mira en cada país. Lo más parecido es
-//   `discover` de TMDB limitado a lo que está en las plataformas de suscripción de Argentina
-//   (JustWatch), ordenado por popularidad. Sin TMDB, los 10 primeros de "Popular" de Cinemeta.
+// - "Top 10 de la semana" (v0.24): tendencias de la semana de TMDB (mundial). Hasta la v0.23 era
+//   `discover` por popularidad en las plataformas de Argentina, pero en series ganaban las de muchas
+//   temporadas (La Ley y el Orden, Los Simpson). Sin TMDB, los 10 primeros de "Popular" de Cinemeta.
 // - "Bien calificadas" y los géneros salen de "Popular" de Cinemeta: traen el puntaje de IMDb (el
 //   cartelito del póster) y no necesitan key.
 // - "Argentinas" necesita TMDB (Cinemeta no sabe el país de origen).
@@ -16,12 +16,6 @@ export type BrowseKind = 'movie' | 'series'
 
 /** Puntaje mínimo de IMDb para "Bien calificadas". */
 export const MIN_IMDB = 7
-
-/**
- * Plataformas de suscripción más usadas en Argentina (ids de proveedor de TMDB / JustWatch):
- * Netflix, Disney+, Prime Video (los dos ids), Max / HBO Max, Apple TV+ y Paramount+.
- */
-export const AR_PROVIDERS = '8|337|119|9|1899|384|350|531'
 
 /** Noticieros, reality y programas de entrevistas: inflan la popularidad de las series y no son lo que se busca acá. */
 export const TV_NOISE = '10763|10764|10767'
@@ -49,28 +43,21 @@ export const GENRE_ROWS: Record<BrowseKind, GenreRow[]> = {
 }
 
 export const TOP10_TITLE: Record<BrowseKind, string> = {
-  movie: 'Top 10 películas en Argentina',
-  series: 'Top 10 series en Argentina',
+  movie: 'Top 10 películas de la semana',
+  series: 'Top 10 series de la semana',
 }
 
 const tmdbKind = (kind: BrowseKind) => (kind === 'movie' ? 'movie' : 'tv')
 const dateField = (kind: BrowseKind) => (kind === 'movie' ? 'primary_release_date' : 'first_air_date')
 
-/** `/discover` del Top 10: lo más popular que está en las plataformas de Argentina y ya se estrenó. */
-export function top10Params(kind: BrowseKind, today: string): Record<string, string | number | undefined> {
-  return {
-    language: 'es-MX',
-    page: 1,
-    sort_by: 'popularity.desc',
-    include_adult: 'false',
-    watch_region: 'AR',
-    with_watch_monetization_types: 'flatrate',
-    with_watch_providers: AR_PROVIDERS,
-    // Unos votos mínimos: si no, aparecen cosas que nadie vio.
-    'vote_count.gte': kind === 'movie' ? 20 : 10,
-    [`${dateField(kind)}.lte`]: today,
-    without_genres: kind === 'series' ? TV_NOISE : undefined,
-  }
+/** Tendencias de la semana en TMDB (el Top 10). */
+export const trendingPath = (kind: BrowseKind) => `/trending/${tmdbKind(kind)}/week`
+
+const NOISE_IDS = new Set(TV_NOISE.split('|').map(Number))
+
+/** Saca de las tendencias lo que no sirve para la fila: sin póster y, en series, noticieros, reality y entrevistas. */
+export function cleanTrending<T extends { poster_path?: string | null; genre_ids?: number[] }>(items: readonly T[], kind: BrowseKind): T[] {
+  return items.filter((i) => !!i.poster_path && (kind === 'movie' || !i.genre_ids?.some((g) => NOISE_IDS.has(g))))
 }
 
 /** `/discover` de "Argentinas": país de origen AR, por popularidad. */

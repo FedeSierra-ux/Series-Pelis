@@ -3,7 +3,8 @@ import { ErrorBoundary } from './ErrorBoundary'
 import { HoverTrailerLayer } from './HoverTrailer'
 import { OfflineBanner } from './OfflineBanner'
 import { ProfileAvatar } from './ProfileAvatar'
-import { useActiveProfile, useProfiles } from '../lib/profileSwitch'
+import { openProfilePicker } from '../lib/profiles'
+import { useActiveProfile } from '../lib/profileSwitch'
 import { Theme2Icon, type Theme2IconName } from './Theme2Icons'
 import './layout-v14.css'
 
@@ -26,7 +27,6 @@ const RAIL: Item[] = [
   { to: '/', label: 'Inicio', icon: 'home', end: true },
   { to: '/discover/movie', label: 'Películas', icon: 'movie' },
   { to: '/discover/series', label: 'Series', icon: 'series' },
-  { to: '/tv', label: 'TV en vivo', icon: 'live' },
   { to: '/me', label: 'Vos', icon: 'user' },
 ]
 
@@ -34,19 +34,25 @@ const TABS: Item[] = [
   { to: '/', label: 'Inicio', icon: 'home', end: true },
   { to: '/discover/movie', label: 'Películas', icon: 'movie' },
   { to: '/discover/series', label: 'Series', icon: 'series' },
-  { to: '/tv', label: 'TV', icon: 'live' },
   { to: '/me', label: 'Vos', icon: 'user' },
 ]
 
 /** "Vos" queda marcado también en lo que se abre desde ahí: historial, calendario, metas y Tu año. */
 const isVosPath = (pathname: string) => /^\/(me|history|calendar)(\/|$)/.test(pathname)
 
-/** Ícono del ítem; "Vos" muestra el avatar del perfil activo cuando hay más de uno (v0.18). */
-function ItemIcon({ item, size }: { item: Item; size?: number }) {
-  const multi = useProfiles().length > 1
+const ItemIcon = ({ item, size }: { item: Item; size?: number }) => <Theme2Icon name={item.icon} size={size} />
+
+/**
+ * El perfil activo arriba de todo, donde estaba el logo (v0.24): un toque abre "¿Quién está mirando?" para
+ * cambiar de perfil, agregar uno o editarlos (antes estaba escondido en Vos).
+ */
+function ProfileButton({ size, className }: { size: number; className: string }) {
   const profile = useActiveProfile()
-  if (item.to === '/me' && multi) return <ProfileAvatar profile={profile} size={size ?? 24} className="t2-avatar" />
-  return <Theme2Icon name={item.icon} size={size} />
+  return (
+    <button type="button" className={className} onClick={() => openProfilePicker()} aria-label={`Perfil: ${profile.name}. Cambiar de perfil`} title={`${profile.name} · Cambiar de perfil`}>
+      <ProfileAvatar profile={profile} size={size} />
+    </button>
+  )
 }
 
 function RailLink({ item, forceActive }: { item: Item; forceActive?: boolean }) {
@@ -70,9 +76,7 @@ export function Theme2Layout() {
   return (
     <div className="app t2-app">
       <nav className="t2-rail" aria-label="Principal">
-        <Link to="/" className="t2-logo" aria-label="Flix, inicio">
-          <img src="/favicon.svg" alt="" />
-        </Link>
+        <ProfileButton size={48} className="t2-profile" />
         {RAIL.map((item) => (
           <RailLink key={item.to} item={item} forceActive={item.to === '/me' && inVos} />
         ))}
@@ -81,11 +85,9 @@ export function Theme2Layout() {
       </nav>
 
       <header className="t2-top">
+        <ProfileButton size={36} className="t2-profile t2-profile-sm" />
         <Link to="/" className="t2-brand">
-          <span className="t2-logo t2-logo-sm" aria-hidden>
-            <img src="/favicon.svg" alt="" />
-          </span>
-          <span>Flix</span>
+          Flix
         </Link>
         <NavLink to="/search" className="t2-round" aria-label="Buscar">
           <Theme2Icon name="search" size={20} />

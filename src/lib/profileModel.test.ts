@@ -33,9 +33,10 @@ describe('profileModel', () => {
 
   it('limpia lo que llega de otro aparato', () => {
     expect(cleanProfile('abc123', { name: '  Ana   María ', color: PROFILE_COLORS[2], at: 5 })).toEqual({ id: 'abc123', name: 'Ana María', color: PROFILE_COLORS[2], at: 5 })
-    // Color fuera de la paleta → el primero; arte que no es https → afuera.
-    expect(cleanProfile('abc123', { name: 'Ana', color: 'red', art: 'javascript:alert(1)', at: 1 })).toEqual({ id: 'abc123', name: 'Ana', color: PROFILE_COLORS[0], at: 1 })
-    expect(cleanProfile('abc123', { name: 'Ana', color: PROFILE_COLORS[0], art: 'https://img/x.jpg', at: 1 })?.art).toBe('https://img/x.jpg')
+    // Color fuera de la paleta → el primero; avatar que no es de la lista → afuera; el fondo viejo (`art`) se va.
+    expect(cleanProfile('abc123', { name: 'Ana', color: 'red', avatar: '../x', at: 1 })).toEqual({ id: 'abc123', name: 'Ana', color: PROFILE_COLORS[0], at: 1 })
+    expect(cleanProfile('abc123', { name: 'Ana', color: PROFILE_COLORS[0], avatar: 'fox', at: 1 })?.avatar).toBe('fox')
+    expect(cleanProfile('abc123', { name: 'Ana', color: PROFILE_COLORS[0], art: 'https://img/x.jpg', at: 1 })).not.toHaveProperty('art')
     expect(cleanProfile('abc123', { name: 'x'.repeat(50), at: 1 })?.name).toHaveLength(20)
     expect(cleanProfile('abc123', { name: '   ' })).toBeUndefined()
     expect(cleanProfile('mal id', { name: 'Ana' })).toBeUndefined()

@@ -226,7 +226,6 @@ describe('copia de seguridad (B25, B26)', () => {
       goals: { byYear: 'no', seen: 'no' },
       addons: [123, null],
       disabledAddons: 'no',
-      liveTv: { favorites: 'no' },
       catalogPrefs: 'no',
     })
     expect(Object.keys(progressStore.get())).toEqual(['tt9'])

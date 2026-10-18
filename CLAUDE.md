@@ -45,7 +45,7 @@ npm run preview    # sirve dist/ en http://localhost:4173
 - `src/lib/streamPicker.ts` — puntaje de streams y elección automática. `src/lib/nextEpisode.ts` — siguiente episodio y precarga.
 - `src/lib/segments.ts` + `functions/api/segments.ts` — saltar intro (IntroDB vía Pages Function; en dev, proxy de Vite).
 - `src/lib/upNext.ts`, `src/lib/stats.ts` — siguiente episodio de tus series / calendario, y estadísticas de "Tu año".
-- `src/pages/` — Inicio, Películas/Series (`discover/BrowsePage`, filas) y Descubrir (grilla), Buscar, Detalle, Reproductor, Historial, Tu año, Calendario, Mi lista, Ajustes
+- `src/pages/` — Inicio, Películas/Series (`discover/BrowsePage`, filas) y Descubrir (grilla), Buscar, Detalle, Reproductor, Historial, Tu año, Calendario, Vos (con Mi lista), Ajustes
   (`settings/PlayerSettings.tsx`, `settings/SourceSettings.tsx`).
 - `vite.config.ts` — PWA (Workbox): pósters CacheFirst, Cinemeta StaleWhileRevalidate.
 - `.claude/agents/` — agentes de agency-agents útiles para este proyecto. `.claude/skills/` + `.mcp.json` — rea.
@@ -73,7 +73,7 @@ npm run preview    # sirve dist/ en http://localhost:4173
   TV: `platform`, `externalPlayers`, `idle`, `screensaver`, `osk`, `online`; en Ajustes `data-advanced` / `<Advanced>`
   marca lo avanzado. El asistente inicial tapa la pantalla en un perfil nuevo: los tests de Playwright lo saltean
   con `.ob-skip`.
-- v0.7.0 hecha: **TV en vivo** (`lib/liveTv.ts`, `pages/LiveTv.tsx`, `liveTvStore` en store). Lista
+- v0.7.0 hecha (se sacó en la v0.24): **TV en vivo** (`lib/liveTv.ts`, `pages/LiveTv.tsx`, `liveTvStore` en store). Lista
   `iptv-org` de Argentina; el usuario eligió solo Aire, Noticias, Deportes y Música, con canales como botones
   seleccionables en la TV. Se filtran los de cable pago (`PAY_TV`), los que piden `http-referrer` (no falseamos
   cabeceras) y los `http://` cuando la app corre en https.
@@ -339,6 +339,19 @@ npm run preview    # sirve dist/ en http://localhost:4173
   `pages/Diary.tsx` y `/history/diary` → `/history` (el `diaryStore` sigue: lo usan Metas y la importación).
   **Tu año** sin mapa de actividad, racha, día favorito, "De punta a punta", tarjeta de películas ni modo historia
   (se borraron `year/YearStory.tsx`, `year/shareCard.ts` y `lib/yearStory.ts`). El Calendario queda como estaba.
+- v0.24.0 hecha (rama `claude/perfiles-avatares-v0.24.0`): **se sacó TV en vivo** entera (`lib/liveTv.ts`,
+  `pages/LiveTv.tsx`, `liveTvStore`, menú y atajos; `/tv` → Inicio). **Perfil arriba del riel** (`ProfileButton` en
+  `Theme2Layout.tsx`, en lugar de la sigla; en el celular, en la cabecera): abre `openProfilePicker()`. Perfiles ya no
+  está en Vos. **Avatares fijos**: `lib/avatars.ts` (80, grupos Animales/Personajes/Criaturas, `isAvatarId`,
+  `avatarUrl`, `randomAvatar`) + `public/avatars/<id>.webp` (Fluent Emoji 3D de Microsoft, licencia MIT, 160 px;
+  un test vigila que coincidan); el SW los guarda con CacheFirst (`avatars`). `Profile.avatar` reemplaza a `art`
+  (`cleanProfile` descarta `art`); el usuario NO quiere el fondo de una peli como avatar. **Top 10 = tendencias
+  de la semana de TMDB** (`trendingPath`/`cleanTrending`, clave de caché `top10w|…`): JustWatch no tiene API
+  pública. **Ficha**: se fueron las pestañas Extras y Detalles (`DetailPanels.tsx`, `WikiTrivia`, `lib/wikiTrivia`,
+  `KeywordChips`, `getKeywords`, `extrasFromTmdb`); en las pelis el reparto va arriba de las pestañas (en las series
+  sigue abajo). **Tráiler**: `pickTrailer(videos, original_language)` con `trailerLangScore` en `lib/tmdb.ts`:
+  latino subtitulado > latino doblado > España subtitulado > original (`ORIGINAL_TRAILER`) > España doblado; si la
+  peli es en español, gana el de audio latino. `hoverTrailer` usa el de TMDB si supera al original.
 - **Decisiones para la v0.17 (reemplazan el reparto del plan de abajo)**: addons y TorBox **iguales para todas las
   casas**, solo los cambia el admin (opción A). Ajustes generales (subtítulos, idiomas, autoplay, saltar intro, sin
   spoilers, reglas de fuentes) **iguales en toda la casa**; lo físico (modo TV, tamaño de la interfaz, protector,

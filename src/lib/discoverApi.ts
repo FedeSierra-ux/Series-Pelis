@@ -159,21 +159,6 @@ export async function getProviders(type: string, region = REGION): Promise<Provi
     .map((p) => ({ id: p.provider_id, name: p.provider_name, logo: tmdbImg(p.logo_path, 'w92') }))
 }
 
-export interface Keyword {
-  id: number
-  name: string
-}
-
-/** Palabras clave de un título. Las de pelis usan la misma clave de caché que la escena post-créditos. */
-export async function getKeywords(type: string, id: number): Promise<Keyword[]> {
-  if (tmdbKind(type) === 'movie') {
-    const res = await tmdbCached<{ keywords?: Keyword[] }>(`/movie/${id}/keywords`, {}, 30 * DAY)
-    return res.keywords ?? []
-  }
-  const res = await tmdbCached<{ results?: Keyword[] }>(`/tv/${id}/keywords`, {}, 30 * DAY)
-  return res.results ?? []
-}
-
 export async function getKeywordName(id: number): Promise<string | undefined> {
   return (await tmdbCached<{ name?: string }>(`/keyword/${id}`, {}, 30 * DAY)).name
 }

@@ -35,7 +35,6 @@ const Person = lazy(() => import('./pages/Person').then((m) => ({ default: m.Per
 const Together = lazy(() => import('./pages/Together').then((m) => ({ default: m.Together })))
 const ListsIndex = lazy(() => import('./pages/Lists').then((m) => ({ default: m.ListsIndex })))
 const ListPage = lazy(() => import('./pages/Lists').then((m) => ({ default: m.ListPage })))
-const LiveTv = lazy(() => import('./pages/LiveTv').then((m) => ({ default: m.LiveTv })))
 const LinkDevice = lazy(() => import('./pages/auth/LinkDevice').then((m) => ({ default: m.LinkDevice })))
 const CatalogManager = lazy(() => import('./pages/CatalogManager').then((m) => ({ default: m.CatalogManager })))
 
@@ -136,7 +135,8 @@ export function App() {
               <Route path="together" element={<Suspense fallback={pageFallback}><Together /></Suspense>} />
               <Route path="lists" element={<Suspense fallback={pageFallback}><ListsIndex /></Suspense>} />
               <Route path="lists/:id" element={<Suspense fallback={pageFallback}><ListPage /></Suspense>} />
-              <Route path="tv" element={<Suspense fallback={pageFallback}><LiveTv /></Suspense>} />
+              {/* v0.24: TV en vivo se sacó (pedido del usuario); el link viejo va a Inicio. */}
+              <Route path="tv" element={<Navigate to="/" replace />} />
               {/* v0.23: Mi lista vive en Vos y el Diario se unificó con el Historial. */}
               <Route path="list" element={<Navigate to="/me" replace />} />
               <Route path="me" element={<Me />} />

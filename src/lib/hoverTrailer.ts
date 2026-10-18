@@ -2,7 +2,7 @@ import { useSyncExternalStore } from 'react'
 import { getMeta } from './addons'
 import { saveDataOn } from './dataSaver'
 import { addonsStore, settingsStore } from './store'
-import { getDetails, getDetailsByImdb, hasTmdb, parseTmdbId, pickTrailer, tmdbImg } from './tmdb'
+import { getDetails, getDetailsByImdb, hasTmdb, ORIGINAL_TRAILER, parseTmdbId, pickTrailer, tmdbImg, trailerLangScore } from './tmdb'
 import type { Meta, MetaPreview } from './types'
 
 // Tráiler al pasar por un póster: si el mouse (o el foco del control remoto) se queda ~2 s sobre una
@@ -108,9 +108,9 @@ export async function resolveTrailer(meta: MetaPreview & TrailerFields): Promise
     try {
       const d = tmdb ? await getDetails(tmdb.type, tmdb.id) : await getDetailsByImdb(meta.id, meta.type)
       backdrop ??= tmdbImg(d?.backdrop_path, 'w780')
-      const t = pickTrailer(d?.videos?.results)
-      // Un tráiler en español le gana al de Cinemeta (que casi siempre está en inglés).
-      if (t && (t.iso_639_1 === 'es' || !fromCatalog)) return { ytId: t.key, backdrop }
+      const t = pickTrailer(d?.videos?.results, d?.original_language)
+      // Un buen tráiler en español (latino, o el de España subtitulado) le gana al de Cinemeta (casi siempre en inglés).
+      if (t && (trailerLangScore(t, d?.original_language) > ORIGINAL_TRAILER || !fromCatalog)) return { ytId: t.key, backdrop }
     } catch {
       // Sin TMDB seguimos con Cinemeta.
     }

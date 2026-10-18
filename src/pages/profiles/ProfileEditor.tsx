@@ -1,46 +1,22 @@
-import { useEffect, useMemo, useRef, useState, type FormEvent } from 'react'
+import { useEffect, useRef, useState, type FormEvent } from 'react'
 import { KeyboardToggle } from '../../components/OnScreenKeyboard'
 import { ProfileAvatar } from '../../components/ProfileAvatar'
+import { AVATAR_GROUPS, AVATARS, avatarById, avatarUrl, randomAvatar, type AvatarGroup } from '../../lib/avatars'
 import { MAIN_PROFILE, MAX_NAME, PROFILE_COLORS, type Profile } from '../../lib/profileModel'
 import { createProfile, deleteProfile, updateProfile } from '../../lib/profileSwitch'
-import { progressStore, useStore, watchlistStore } from '../../lib/store'
-
-const ART_MAX = 12
-
-/** Imágenes para el avatar: fondos de lo último que se vio y pósters de Mi lista (del perfil activo). */
-function useArtChoices(current?: string): string[] {
-  const progress = useStore(progressStore)
-  const list = useStore(watchlistStore)
-  return useMemo(() => {
-    const seen = new Set<string>()
-    const out: string[] = []
-    const add = (url?: string) => {
-      if (!url || !url.startsWith('https://') || seen.has(url) || out.length >= ART_MAX) return
-      seen.add(url)
-      out.push(url)
-    }
-    add(current)
-    Object.values(progress)
-      .sort((a, b) => b.updatedAt - a.updatedAt)
-      .forEach((e) => add(e.background))
-    Object.values(list)
-      .sort((a, b) => b.addedAt - a.addedAt)
-      .forEach((e) => add(e.poster))
-    return out
-  }, [progress, list, current])
-}
 
 /**
- * Crear o editar un perfil: nombre, color o fondo de una peli. Borrar pide confirmar acá mismo
+ * Crear o editar un perfil: nombre, personaje (animales, personajes o criaturas, v0.24) y color de fondo.
+ * Un perfil nuevo arranca con un personaje al azar que no use otro. Borrar pide confirmar acá mismo
  * (el principal no se borra).
  */
-export function ProfileEditor({ profile, defaultColor, onClose }: { profile?: Profile; defaultColor: string; onClose: () => void }) {
+export function ProfileEditor({ profile, defaultColor, takenAvatars = [], onClose }: { profile?: Profile; defaultColor: string; takenAvatars?: (string | undefined)[]; onClose: () => void }) {
   const [name, setName] = useState(profile?.name ?? '')
   const [color, setColor] = useState(profile?.color ?? defaultColor)
-  const [art, setArt] = useState(profile?.art)
+  const [avatar, setAvatar] = useState<string | undefined>(() => (profile ? avatarById(profile.avatar)?.id : randomAvatar(takenAvatars)))
+  const [group, setGroup] = useState<AvatarGroup>(() => avatarById(avatar)?.group ?? 'animales')
   const [confirming, setConfirming] = useState(false)
   const [error, setError] = useState<string>()
-  const arts = useArtChoices(profile?.art)
   const nameRef = useRef<HTMLInputElement>(null)
   const deleteRef = useRef<HTMLButtonElement>(null)
 
@@ -58,8 +34,8 @@ export function ProfileEditor({ profile, defaultColor, onClose }: { profile?: Pr
       nameRef.current?.focus()
       return
     }
-    if (profile) updateProfile(profile.id, { name, color, art })
-    else if (!createProfile({ name, color, art })) {
+    if (profile) updateProfile(profile.id, { name, color, avatar })
+    else if (!createProfile({ name, color, avatar })) {
       setError('No se pudo crear el perfil.')
       return
     }
@@ -71,7 +47,7 @@ export function ProfileEditor({ profile, defaultColor, onClose }: { profile?: Pr
     <form className="pf-editor" onSubmit={submit} aria-labelledby="pf-editor-title">
       <h2 id="pf-editor-title">{title}</h2>
       <div className="pf-editor-top">
-        <ProfileAvatar profile={{ name: name || '?', color, art }} size={96} />
+        <ProfileAvatar profile={{ name: name || '?', color, avatar }} size={96} />
         <div className="pf-editor-name">
           <label className="pf-label" htmlFor="pf-name">
             Nombre
@@ -93,37 +69,34 @@ export function ProfileEditor({ profile, defaultColor, onClose }: { profile?: Pr
       </div>
 
       <fieldset className="pf-field">
-        <legend className="pf-label">Color</legend>
-        <div className="pf-swatches">
-          {PROFILE_COLORS.map((c, i) => (
-            <button
-              key={c}
-              type="button"
-              className="pf-swatch"
-              style={{ background: c }}
-              aria-pressed={!art && color === c}
-              aria-label={`Color ${i + 1}`}
-              onClick={() => {
-                setColor(c)
-                setArt(undefined)
-              }}
-            />
+        <legend className="pf-label">Personaje</legend>
+        <div className="pf-groups">
+          {AVATAR_GROUPS.map((g) => (
+            <button key={g.id} type="button" className="pf-group" aria-pressed={group === g.id} onClick={() => setGroup(g.id)}>
+              {g.label}
+            </button>
+          ))}
+        </div>
+        <div className="pf-avatars">
+          <button type="button" className="pf-pick pf-pick-initial" style={{ background: color }} aria-pressed={!avatar} aria-label="Sin personaje, la inicial" title="Sin personaje, la inicial" onClick={() => setAvatar(undefined)}>
+            {name.trim() ? [...name.trim()][0].toLocaleUpperCase('es-AR') : 'Aa'}
+          </button>
+          {AVATARS.filter((a) => a.group === group).map((a) => (
+            <button key={a.id} type="button" className="pf-pick" style={{ background: color }} aria-pressed={avatar === a.id} aria-label={a.label} title={a.label} onClick={() => setAvatar(a.id)}>
+              <img src={avatarUrl(a.id)} alt="" loading="lazy" decoding="async" draggable={false} />
+            </button>
           ))}
         </div>
       </fieldset>
 
-      {arts.length > 0 && (
-        <fieldset className="pf-field">
-          <legend className="pf-label">O el fondo de algo que viste</legend>
-          <div className="pf-arts">
-            {arts.map((url) => (
-              <button key={url} type="button" className="pf-art" aria-pressed={art === url} aria-label="Usar este fondo" onClick={() => setArt(url)}>
-                <img src={url} alt="" loading="lazy" decoding="async" />
-              </button>
-            ))}
-          </div>
-        </fieldset>
-      )}
+      <fieldset className="pf-field">
+        <legend className="pf-label">Color de fondo</legend>
+        <div className="pf-swatches">
+          {PROFILE_COLORS.map((c, i) => (
+            <button key={c} type="button" className="pf-swatch" style={{ background: c }} aria-pressed={color === c} aria-label={`Color ${i + 1}`} onClick={() => setColor(c)} />
+          ))}
+        </div>
+      </fieldset>
 
       {error && (
         <p className="login-error" role="alert">

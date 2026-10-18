@@ -25,21 +25,6 @@
 .me-header > div {
   min-width: 0;
 }
-/* Perfiles (v0.18): quién está mirando y el botón para cambiar. */
-.me-profile {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 12px;
-}
-.me-profile-text {
-  display: grid;
-  min-width: 0;
-  line-height: 1.25;
-}
-.me-profile-text .muted {
-  font-size: 0.85rem;
-}
 .me-sub {
   margin: 4px 0 0;
 }

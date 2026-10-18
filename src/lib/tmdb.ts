@@ -189,6 +189,8 @@ export interface TmdbVideo {
   type: string
   official?: boolean
   iso_639_1?: string
+  /** País del video: `MX`, `AR`… (latino) o `ES` (España). */
+  iso_3166_1?: string
   name?: string
 }
 
@@ -214,6 +216,8 @@ export interface TmdbDetails {
   name?: string
   original_title?: string
   original_name?: string
+  /** Idioma original (ISO 639-1): con `es`, el tráiler en español es el audio original. */
+  original_language?: string
   tagline?: string
   overview?: string
   poster_path?: string | null
@@ -346,10 +350,43 @@ export function formatRuntime(minutes: number | undefined): string {
 }
 export const itemYear = (i: { release_date?: string; first_air_date?: string }) => (i.release_date || i.first_air_date || '').slice(0, 4)
 
-/** Tráiler de YouTube: primero en español, después oficial, después cualquiera. */
-export function pickTrailer(videos: TmdbVideo[] | undefined): TmdbVideo | undefined {
-  const yt = (videos ?? []).filter((v) => v.site === 'YouTube' && (v.type === 'Trailer' || v.type === 'Teaser'))
-  const score = (v: TmdbVideo) => (v.iso_639_1 === 'es' ? 4 : 0) + (v.type === 'Trailer' ? 2 : 0) + (v.official ? 1 : 0)
+// ---------- Tráiler (v0.24: latino primero) ----------
+
+/** Países cuyo español es latino (EE. UU. incluido: los tráileres en español de allá van con doblaje neutro). */
+const LATAM = new Set(['AR', 'MX', 'CO', 'CL', 'PE', 'VE', 'UY', 'PY', 'BO', 'EC', 'CR', 'GT', 'HN', 'SV', 'NI', 'PA', 'DO', 'PR', 'CU', 'US'])
+const SPAIN_NAME = /castellano|españa|\bvose?\b/i
+const LATINO_NAME = /latino|latam|latinoam|m[eé]xico/i
+const SUBBED_NAME = /subtitulad|\bsubt?s?\b|\bvose?\b|leyendas/i
+
+/** Un tráiler en español de España (por el país del video o por el nombre). */
+export function isSpainTrailer(v: Pick<TmdbVideo, 'iso_3166_1' | 'name'>): boolean {
+  const name = v.name ?? ''
+  if (LATINO_NAME.test(name)) return false
+  return SPAIN_NAME.test(name) || (!!v.iso_3166_1 && !LATAM.has(v.iso_3166_1))
+}
+
+/** Puntaje del tráiler en su idioma, sin contar tipo ni "oficial". Arriba de `ORIGINAL_TRAILER` = buen tráiler en español. */
+export const ORIGINAL_TRAILER = 30
+
+/**
+ * Qué tan bien le viene el tráiler al usuario (pedido de la v0.24): subtitulado en latino; si no, con audio
+ * latino; después el de España subtitulado; después el idioma original (YouTube le fuerza subtítulos en español
+ * si los tiene) y el doblado de España, al final. Si la peli es de habla hispana, el tráiler en español es el audio
+ * original: latino primero, igual.
+ */
+export function trailerLangScore(v: Pick<TmdbVideo, 'iso_639_1' | 'iso_3166_1' | 'name'>, originalLanguage?: string): number {
+  if (v.iso_639_1 !== 'es') return v.iso_639_1 === originalLanguage || v.iso_639_1 === 'en' ? ORIGINAL_TRAILER : 10
+  const spain = isSpainTrailer(v)
+  if (originalLanguage === 'es') return spain ? 50 : 60
+  const subbed = SUBBED_NAME.test(v.name ?? '')
+  if (!spain) return subbed ? 60 : 50
+  return subbed ? 35 : 15
+}
+
+/** Tráiler de YouTube para la ficha y los pósters: el mejor por idioma, después tráiler antes que avance, y oficial. */
+export function pickTrailer(videos: TmdbVideo[] | undefined, originalLanguage?: string): TmdbVideo | undefined {
+  const yt = (Array.isArray(videos) ? videos : []).filter((v) => v && v.site === 'YouTube' && (v.type === 'Trailer' || v.type === 'Teaser'))
+  const score = (v: TmdbVideo) => trailerLangScore(v, originalLanguage) * 4 + (v.type === 'Trailer' ? 2 : 0) + (v.official ? 1 : 0)
   return yt.sort((a, b) => score(b) - score(a))[0]
 }
 
