@@ -17,9 +17,13 @@ describe('seriesYear', () => {
     expect(seriesYear('2026–', 1)).toBe('2026')
     expect(seriesYear('2026-', 1)).toBe('2026')
   })
-  it('con más temporadas o sin saberlo, deja el guion', () => {
+  it('con más temporadas, deja el guion', () => {
+    expect(seriesYear('2026–', 2, 2026)).toBe('2026–')
     expect(seriesYear('2024–', 2)).toBe('2024–')
-    expect(seriesYear('2024–', undefined)).toBe('2024–')
+  })
+  it('sin saber las temporadas, solo saca el guion si arrancó este año', () => {
+    expect(seriesYear('2026–', undefined, 2026)).toBe('2026')
+    expect(seriesYear('2025–', undefined, 2026)).toBe('2025–')
   })
   it('mismo año al principio y al final: uno solo', () => {
     expect(seriesYear('2019–2019', 1)).toBe('2019')

@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState, type ReactNode } from 'react'
+import { seriesYear } from '../../lib/format'
 import { hiddenIdSet, withoutHidden } from '../../lib/recommend'
 import { notInterestedStore, useStore } from '../../lib/store'
 import { getDetailsByImdb, hasTmdb, tmdbImg, tmdbToPreview, type TmdbDetails, type TmdbListItem } from '../../lib/tmdb'
@@ -70,11 +71,11 @@ export function PostPlay({ imdbId, due, onOpen, onClose, autoFocus, children }: 
             className="postplay-item"
             autoFocus={autoFocus && i === 0}
             onClick={() => onOpen(p)}
-            aria-label={`${p.name}${p.releaseInfo ? ` (${p.releaseInfo})` : ''}: ver la ficha`}
+            aria-label={`${p.name}${p.releaseInfo ? ` (${seriesYear(p.releaseInfo)})` : ''}: ver la ficha`}
           >
             {p.still || p.poster ? <img src={p.still ?? p.poster} alt="" loading="lazy" decoding="async" /> : <span className="postplay-ph" aria-hidden />}
             <span className="postplay-name">{p.name}</span>
-            {p.releaseInfo && <span className="postplay-year muted small">{p.releaseInfo}</span>}
+            {p.releaseInfo && <span className="postplay-year muted small">{seriesYear(p.releaseInfo)}</span>}
           </button>
         ))}
       </div>

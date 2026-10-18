@@ -6,6 +6,7 @@ import { PosterCard } from '../components/PosterCard'
 import { Row } from '../components/Row'
 import { splitLeadingVirtual, visibleRows, WATCHLIST_ROW_KEY, type CatalogRowDef } from '../lib/catalogPrefs'
 import { useCatalogRows, useRowShape } from '../lib/catalogRows'
+import { seriesYear } from '../lib/format'
 import { useCatalog, useTitle } from '../lib/hooks'
 import { catalogLabel, genreLabel } from '../lib/i18n'
 import { useHiddenIds } from '../lib/ratings'
@@ -89,7 +90,7 @@ function Hero({ addon, catalog }: { addon: InstalledAddon; catalog: CatalogDef }
         title={meta.name}
         logo={logo}
         rating={meta.imdbRating}
-        facts={[meta.releaseInfo ?? '', type === 'movie' ? 'Película' : type === 'series' ? 'Serie' : ''].filter(Boolean)}
+        facts={[seriesYear(meta.releaseInfo) ?? '', type === 'movie' ? 'Película' : type === 'series' ? 'Serie' : ''].filter(Boolean)}
         genres={genres}
         overview={meta.description}
         to={`/detail/${type}/${encodeURIComponent(meta.id)}`}

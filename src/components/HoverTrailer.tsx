@@ -14,6 +14,7 @@ import {
   ytPlayerState,
   type OpenTrailer,
 } from '../lib/hoverTrailer'
+import { seriesYear } from '../lib/format'
 import { ImdbRating } from './Rating'
 
 // Si YouTube no manda su estado (la API de mensajes no responde), mostramos el video igual pasado esto.
@@ -144,7 +145,7 @@ function HoverTrailerCard({ t }: { t: OpenTrailer }) {
   }
 
   const { meta } = t
-  const year = meta.releaseInfo ?? meta.year
+  const year = seriesYear(meta.releaseInfo ?? meta.year)
   const origin = typeof location !== 'undefined' ? location.origin : undefined
 
   return (

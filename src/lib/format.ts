@@ -52,11 +52,12 @@ export function seasonCount(videos: { season?: number }[] | undefined): number |
 
 /**
  * Año de una serie: "2026–" con una sola temporada (por ahora) queda "2026", y "2019–2019" siempre queda "2019".
- * Sin saber las temporadas se deja como viene.
+ * Sin saber las temporadas (pósters, Buscar), se adivina: si arrancó este año, casi seguro va por la primera.
  */
-export function seriesYear(releaseInfo: string | undefined, seasons: number | undefined): string | undefined {
+export function seriesYear(releaseInfo: string | undefined, seasons?: number, thisYear = new Date().getFullYear()): string | undefined {
   const m = /^(\d{4})\s*[–-]\s*(\d{4})?$/.exec(releaseInfo?.trim() ?? '')
   if (!m) return releaseInfo
-  if (m[2] === m[1] || (!m[2] && seasons === 1)) return m[1]
+  if (m[2] === m[1]) return m[1]
+  if (!m[2] && (seasons === 1 || (seasons === undefined && Number(m[1]) === thisYear))) return m[1]
   return releaseInfo
 }
