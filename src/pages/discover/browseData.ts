@@ -1,5 +1,5 @@
 import { CINEMETA_ADDON, getCatalog } from '../../lib/addons'
-import { argentinasParams, discoverPath, top10Params, wellRated, type BrowseKind } from '../../lib/browseRows'
+import { argentinasParams, cleanTrending, discoverPath, trendingPath, wellRated, type BrowseKind } from '../../lib/browseRows'
 import { today } from '../../lib/discoverApi'
 import { tmdbCached, tmdbToPreview, type TmdbPage } from '../../lib/tmdb'
 import type { MetaPreview } from '../../lib/types'
@@ -23,21 +23,22 @@ const tmdbList = async (kind: BrowseKind, params: Record<string, string | number
 
 export interface Top10 {
   items: MetaPreview[]
-  /** Salió de TMDB con las plataformas de Argentina (si no, es "Popular" de Cinemeta). */
-  argentina: boolean
+  /** Salió de las tendencias de TMDB (si no, es "Popular" de Cinemeta). */
+  trending: boolean
 }
 
-/** Top 10: TMDB con las plataformas de Argentina; sin key (o si falla), "Popular" de Cinemeta. */
+/** Top 10: tendencias de la semana de TMDB; sin key (o si falla), "Popular" de Cinemeta. */
 export async function loadTop10(kind: BrowseKind, tmdbOn: boolean): Promise<Top10> {
   if (tmdbOn) {
     try {
-      const items = await tmdbList(kind, top10Params(kind, today()))
-      if (items.length >= 5) return { items, argentina: true }
+      const res = await tmdbCached<TmdbPage>(trendingPath(kind), { language: 'es-MX' }, 3 * HOUR)
+      const items = cleanTrending(res.results ?? [], kind).map((i) => tmdbToPreview(i, kind === 'movie' ? 'movie' : 'tv'))
+      if (items.length >= 5) return { items, trending: true }
     } catch {
       // Seguimos con Cinemeta.
     }
   }
-  return { items: await cinemetaTop(kind), argentina: false }
+  return { items: await cinemetaTop(kind), trending: false }
 }
 
 /** Lo popular con IMDb ≥ 7: dos páginas de "Popular" (~100 títulos) para que la fila quede llena. */

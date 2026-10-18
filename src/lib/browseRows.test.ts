@@ -1,15 +1,15 @@
 import { describe, expect, it } from 'vitest'
 import { CINEMETA_URL } from './addons'
 import {
-  AR_PROVIDERS,
   argentinasMoreTo,
   argentinasParams,
+  cleanTrending,
   discoverPath,
   exploreAllTo,
   GENRE_ROWS,
   genreMoreTo,
   isBrowseKind,
-  top10Params,
+  trendingPath,
   TV_NOISE,
   wantsGrid,
   wellRated,
@@ -19,24 +19,22 @@ import type { MetaPreview } from './types'
 
 const meta = (id: string, imdbRating?: string): MetaPreview => ({ id, type: 'movie', name: id, imdbRating })
 
-describe('top10Params', () => {
-  it('pide lo popular en las plataformas de Argentina y ya estrenado', () => {
-    const p = top10Params('movie', '2026-10-14')
-    expect(p).toMatchObject({
-      sort_by: 'popularity.desc',
-      watch_region: 'AR',
-      with_watch_monetization_types: 'flatrate',
-      with_watch_providers: AR_PROVIDERS,
-      'primary_release_date.lte': '2026-10-14',
-    })
-    expect(p.without_genres).toBeUndefined()
+describe('Top 10 de la semana', () => {
+  it('pide las tendencias de la semana de TMDB', () => {
+    expect(trendingPath('movie')).toBe('/trending/movie/week')
+    expect(trendingPath('series')).toBe('/trending/tv/week')
   })
 
-  it('en series usa la fecha de estreno de la serie y saca noticieros y reality', () => {
-    const p = top10Params('series', '2026-10-14')
-    expect(p['first_air_date.lte']).toBe('2026-10-14')
-    expect(p['primary_release_date.lte']).toBeUndefined()
-    expect(p.without_genres).toBe(TV_NOISE)
+  it('saca lo que no tiene póster y, en series, noticieros, reality y entrevistas', () => {
+    const items = [
+      { id: 1, poster_path: '/a.jpg', genre_ids: [18] },
+      { id: 2, poster_path: null, genre_ids: [18] },
+      { id: 3, poster_path: '/c.jpg', genre_ids: [10764] },
+      { id: 4, poster_path: '/d.jpg', genre_ids: [35, 10767] },
+      { id: 5, poster_path: '/e.jpg' },
+    ]
+    expect(cleanTrending(items, 'series').map((i) => i.id)).toEqual([1, 5])
+    expect(cleanTrending(items, 'movie').map((i) => i.id)).toEqual([1, 3, 4, 5])
   })
 })
 
