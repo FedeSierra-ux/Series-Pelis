@@ -49,9 +49,11 @@ y un **historial** de todo lo que viste. Funciona en la PC, el celular y el nave
 - **Elección automática de fuente** según calidad y palabras clave, y recuerda la fuente que usaste en cada serie.
 - **Seguir viendo** (con opción de quitar) y **reanudar** donde quedaste. Fila con el siguiente episodio de tus series.
 - **Calendario** de estrenos de tus series y resumen **Tu año**.
-- **Historial** por mes y día (con el formato del diario), con filtros y estadísticas. Marcar episodios o pelis como vistas.
+- **Historial** por mes y día (con el formato del diario), con filtros, estadísticas y "Deshacer" al quitar algo.
+  Marcar episodios o pelis como vistas.
 - **Mi lista** para guardar lo que querés ver: es lo principal de **Vos**.
-- **Control remoto**: se navega con las flechas, Enter y Atrás (Fire TV / Android TV / navegador de la TV).
+- **Control remoto**: se navega con las flechas, Enter y Atrás (Fire TV / Android TV / navegador de la TV). Al volver
+  de una ficha, el foco vuelve a la misma tarjeta y fila.
 - **Copia de seguridad**: exportar e importar tus datos en JSON.
 
 ## Por qué carga rápido

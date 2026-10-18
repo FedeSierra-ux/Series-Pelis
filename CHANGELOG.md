@@ -1,5 +1,67 @@
 # Changelog
 
+## [0.25.1] - 2026-10-18
+
+Arreglos de la auditoría visual (51 de 53 puntos) y de la revisión del motor de torrents.
+
+### Arreglado
+- **Inicio y navegación con el control remoto**
+  - Al volver de una ficha, el foco vuelve a la misma fila (aunque el título esté repetido en el Top 10), la fila
+    queda corrida igual que la dejaste y la tarjeta entera a la vista. También en filas lejanas que cargan tarde,
+    y la portada muestra el título correcto.
+  - ← desde la primera tarjeta entra al riel por la página actual, no por "Ajustes" o "Vos".
+  - El anillo de foco de los pósters ya no se corta arriba (Inicio, Películas, Series y Vos).
+  - En la TV los números del Top 10 no se meten debajo de la tarjeta anterior.
+  - La etiqueta "Estreno" deja lugar al badge de IMDb.
+  - En el celular, la portada ya no tiene una muesca abajo.
+  - "¿Quién está mirando?": los nombres no se cortan a mitad de palabra. En el editor, el campo "Nombre" se ve
+    sin enfocarlo.
+- **Películas, Series y Buscar**
+  - **El arreglo de pósters cortados de la v0.25.0 estaba incompleto**: al volver de una ficha o al bajar con las
+    flechas, la fila y su título quedan debajo de la portada, fuera del fundido.
+  - La portada sigue al póster enfocado; el mouse solo la cambia si se mueve de verdad.
+  - "Mejor resultado" usa el póster si el fondo no carga (antes quedaba una caja vacía).
+  - Los chips de género de Buscar tienen el mismo tamaño que los de Filtros, y en el celular el botón "Filtros"
+    tapa bien los chips de atrás.
+  - Los puestos del equipo técnico (dirección, guion, música…) salen en español.
+- **Ficha**
+  - Con el control se llega a las fuentes de una peli desde las pestañas.
+  - En el celular, la fuente que tocaste ya no queda resaltada.
+  - La lista de fuentes ya no se reordena sola a los pocos segundos.
+  - En una serie, → desde un episodio ya no salta a la portada, y ← desde las fuentes vuelve al episodio.
+  - En la saga, la peli actual dice "Estás acá" en vez de ser un enlace a sí misma.
+- **Reproductor**
+  - El temporizador para dormir recuerda y marca los minutos elegidos.
+  - "Saltar intro/resumen" ya no le roba el foco a los controles o a un menú abierto, y no muestra un anillo de
+    foco que nadie pidió. En el celular sube para no pisar la barra.
+  - El aviso de escena post-créditos, "¿Qué te pareció?", el reparto de la pausa y los avisos ("Continuando
+    desde…") ya no se pisan entre sí.
+  - La ayuda "← → para elegir" de las estrellas sale solo con teclado o control.
+  - En la TV, los controles y los menús respetan la zona segura (5 %).
+- **Vos, Ajustes y login**
+  - → ya no salta a "Quitar de Seguir viendo" fuera de pantalla (ni lo borra con OK sin verlo).
+  - En el número de la meta, ← y → salen del campo.
+  - Tu año, la meta y el historial cuentan las horas igual.
+  - Ajustes: ↓ se queda en el contenido, el índice marca la sección donde está el foco, sus anillos entran
+    enteros y "Soy el administrador" y los desplegables se alcanzan con las flechas.
+  - Los campos de email y número tienen la misma píldora que el resto; "Apaisada" prendida se ve con un ✓; al
+    renombrar un catálogo en el celular el campo ocupa todo el ancho.
+  - "addon_catalog" dice "lista de addons"; los episodios dicen "✓ Visto" / "Empezado".
+  - El botón "Entrar" de la invitación queda dentro de la tarjeta; tras un código inválido el foco vuelve al campo.
+- **Motor de torrents (app de Android)**
+  - Si la web abre antes de que arranque el motor, espera unos segundos en vez de pedir "actualizá la app".
+  - Una lectura ya no se puede trabar si se pierde un aviso interno del motor, y gasta menos CPU.
+  - Las carpetas temporales se borran al cerrar y las que quedaron de antes se limpian solas.
+  - Volver a la app después de un rato en segundo plano no borra el torrent que estabas viendo.
+  - En pausa no vuelve a anunciarse a los pares.
+  - Los links de torrent con muchos trackers ya no fallan (se recortan trackers si hace falta).
+  - Solo se da por perdido un torrent cuando nadie lo comparte (504) o se corta por tiempo; los otros errores
+    se reintentan.
+
+### Cambiado
+- **Quitar algo del historial** muestra "Quitado del historial" con **Deshacer** durante 6 segundos.
+- El resumen de cada mes cuenta lo terminado y aparte dice "N sin terminar"; coincide entre Vos e Historial.
+
 ## [0.25.0] - 2026-10-18
 
 ### Agregado

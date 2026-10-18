@@ -372,6 +372,23 @@ npm run preview    # sirve dist/ en http://localhost:4173
   usan todas las casas). Si el debrid falla: cartel con botón **"Reproducir por torrent"** (no automático). Si no
   está cacheado: arranca por torrent y en paralelo abre el link "descargar" del addon para que TorBox lo baje.
   Falta ver cómo sacar el infoHash (del link de Torrentio o con un Torrentio sin debrid).
+- v0.25.1 hecha (rama `claude/auditoria-v0.25.1`): arreglos de la **auditoría visual** (página con propuestas y
+  votos en el artifact de la auditoría; las propuestas **no se implementan hasta que el usuario las apruebe**;
+  explorar-8 y explorar-12 dependen de las propuestas 09 y 11) y de la revisión del motor. Navegación:
+  `lib/focusMemory.ts` guarda fila (`data-row-key`), índice y `scrollLeft`; `pickMatch` + `restoreFocus` (App,
+  `revealRestored`); `lib/spatialNav.ts` con `rowRevealTop` (`SHADE_PX = 80` bajo la portada), `railTarget` (←
+  entra al riel por la página actual), `navScore` por distancia entre bordes, zonas `data-nav-zone` (Ajustes:
+  contenido vs índice), saltea tarjetas recortadas, `summary` enfocable. Hovers pegajosos dentro de
+  `@media (hover: hover)`. `StreamList` guarda el orden (`orderRef`). `PosterCard current` (`aria-current`, "Estás
+  acá"). Datos: `removeHistory` devuelve lo borrado y `restoreHistory` lo repone (toast "Deshacer" 6 s);
+  `wholeHours` (horas para abajo en Tu año/meta/historial); `groupHistory(entries, limit)` cuenta el mes entero;
+  `lib/i18n.ts` `RESOURCE_LABEL`/`resourceLabel`. Reproductor: avisos en `.player-toasts`, zona segura 5vw/5vh en la
+  TV. Motor: `getInfo.torrentLoading` + evento `torrentReady` (`retainUntilConsumed`); `TORRENT_LOADING`,
+  `ENGINE_RETRY_MS`/`ENGINE_MAX_TRIES` en `torrentServer.ts` (no cachear la respuesta "cargando");
+  `MAX_ENGINE_URL = 3500` recorta trackers (nunca `f`); `MAX_HEADER_BYTES` 8 KB; `FLUSH_LOST_MS` + `minTicket`
+  (flush perdido / ticket viejo); papelera `<home>-basura-<nano>` + `LIVE` + `sweepRoot()`; `playerReopened()` en
+  `handleOnResume`; `torrentGaveUp` solo con 504 o timeout. Falta probar en un aparato: puente `torrentReady`,
+  volver tras +5 min en segundo plano, reintento de Media3 con 503, ahorro de la máscara de alertas.
 - **Decisiones para la v0.17 (reemplazan el reparto del plan de abajo)**: addons y TorBox **iguales para todas las
   casas**, solo los cambia el admin (opción A). Ajustes generales (subtítulos, idiomas, autoplay, saltar intro, sin
   spoilers, reglas de fuentes) **iguales en toda la casa**; lo físico (modo TV, tamaño de la interfaz, protector,
