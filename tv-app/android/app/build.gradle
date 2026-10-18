@@ -38,6 +38,13 @@ android {
     buildFeatures {
         buildConfig = true
     }
+    packaging {
+        jniLibs {
+            // Las .so se descomprimen al instalar (nativeLibraryDir): SpNativePlugin mira que esté
+            // libtorrent4j.so antes de prender el motor de torrents, y el APK pesa menos.
+            useLegacyPackaging = true
+        }
+    }
     buildTypes {
         release {
             if (keystorePath) signingConfig signingConfigs.release
@@ -65,6 +72,13 @@ dependencies {
     implementation "androidx.media3:media3-ui:$media3Version"
     // Filas del inicio de Android TV (v0.21): "A continuación" y el canal "Mi lista".
     implementation "androidx.tvprovider:tvprovider:$tvproviderVersion"
+    // Motor de torrents (v0.25): libtorrent por JNI, solo Android 9+ (las .so piden API 28; en uno más
+    // viejo no hay motor). arm = Fire TV Stick y teles de 32 bits, arm64 = celulares y teles nuevas,
+    // x86_64 = emulador y Chromebooks. Sin x86 de 32 bits (+6 MB por casi nadie).
+    implementation "org.libtorrent4j:libtorrent4j:$libtorrent4jVersion"
+    implementation "org.libtorrent4j:libtorrent4j-android-arm:$libtorrent4jVersion"
+    implementation "org.libtorrent4j:libtorrent4j-android-arm64:$libtorrent4jVersion"
+    implementation "org.libtorrent4j:libtorrent4j-android-x86_64:$libtorrent4jVersion"
     testImplementation "junit:junit:$junitVersion"
     androidTestImplementation "androidx.test.ext:junit:$androidxJunitVersion"
     androidTestImplementation "androidx.test.espresso:espresso-core:$androidxEspressoCoreVersion"

@@ -4,6 +4,7 @@ import android.app.Activity;
 import android.content.ActivityNotFoundException;
 import android.content.Intent;
 import android.net.Uri;
+import android.util.Log;
 import android.view.WindowManager;
 import android.widget.Toast;
 import com.getcapacitor.JSObject;
@@ -11,6 +12,7 @@ import com.getcapacitor.Plugin;
 import com.getcapacitor.PluginCall;
 import com.getcapacitor.PluginMethod;
 import com.getcapacitor.annotation.CapacitorPlugin;
+import java.io.File;
 import java.net.URISyntaxException;
 import java.util.List;
 
@@ -18,15 +20,42 @@ import java.util.List;
 @CapacitorPlugin(name = "SpNative")
 public class SpNativePlugin extends Plugin {
 
+    private static final String TAG = "SpNative";
+
     // Reproductor nativo (v0.20): se crea con el primer playerOpen y vive en el hilo de la interfaz.
     private NativePlayer player;
     // Actualizaciones desde GitHub Releases (v0.21).
     private AppUpdater updater;
+    // Motor de torrents (v0.25): el puerto se abre ya; libtorrent arranca con el primer pedido.
+    private TorrentServer torrent;
 
     @Override
     public void load() {
         updater = new AppUpdater(getContext(), (e) -> notifyListeners("update", e));
         updater.cleanupOnStart();
+        startTorrentServer();
+    }
+
+    /**
+     * Si falta la librería de libtorrent para este aparato, o no linkea, no hay motor (la web no ve
+     * `torrent`). La .so de libtorrent4j se compiló para Android 9 (usa aligned_alloc de API 28): en
+     * Android 7/8 (Fire OS 6, por ejemplo) loadLibrary falla y la app sigue como siempre.
+     */
+    private void startTorrentServer() {
+        String libDir = getContext().getApplicationInfo().nativeLibraryDir;
+        if (libDir == null || !new File(libDir, "libtorrent4j.so").isFile()) {
+            Log.w(TAG, "Sin libtorrent4j para este aparato: no hay motor de torrents");
+            return;
+        }
+        try {
+            // Se carga ya: mejor no ofrecer torrents que fallar recién al darle a reproducir.
+            System.loadLibrary("torrent4j");
+            File root = new File(getContext().getCacheDir(), "torrents");
+            torrent = new TorrentServer(new TorrentEngine(root, new TorrentEngine.Options()));
+        } catch (Throwable e) {
+            Log.w(TAG, "No arrancó el servidor de torrents", e);
+            torrent = null;
+        }
     }
 
     @PluginMethod
@@ -39,6 +68,8 @@ public class SpNativePlugin extends Plugin {
         res.put("update", true);
         res.put("home", HomeRows.isAvailable(getContext()));
         res.put("fireTv", HomeRows.isFireTv(getContext()));
+        // v0.25: base del motor de torrents (http://127.0.0.1:<puerto>/<token>); sin motor, no va.
+        if (torrent != null) res.put("torrent", torrent.baseUrl());
         call.resolve(res);
     }
 
@@ -94,7 +125,7 @@ public class SpNativePlugin extends Plugin {
 
     private NativePlayer ensurePlayer() {
         if (player == null) {
-            player = new NativePlayer(getActivity(), getBridge().getWebView(), (e) -> notifyListeners("player", e));
+            player = new NativePlayer(getActivity(), getBridge().getWebView(), torrent, (e) -> notifyListeners("player", e));
         }
         return player;
     }
@@ -172,10 +203,35 @@ public class SpNativePlugin extends Plugin {
         if (player != null) player.onHostPause();
     }
 
+    /** Cómo va un torrent del motor: pares, velocidad, avance. Sin motor o sin ese torrent, vacío. */
+    @PluginMethod
+    public void torrentStatus(PluginCall call) {
+        JSObject res = new JSObject();
+        String hash = call.getString("hash", "");
+        TorrentEngine.Status st = torrent != null && hash != null ? torrent.engine().status(hash.toLowerCase(java.util.Locale.ROOT)) : null;
+        if (st != null) {
+            res.put("metadata", st.metadata);
+            res.put("peers", st.peers);
+            res.put("seeds", st.seeds);
+            res.put("downloadRate", st.downloadRate);
+            res.put("progress", (double) st.progress);
+        }
+        call.resolve(res);
+    }
+
     @Override
     protected void handleOnDestroy() {
         if (player != null) player.onHostDestroy();
         player = null;
+        if (torrent != null) {
+            // Parar libtorrent tarda (cierra conexiones y borra la caché): en otro hilo.
+            TorrentServer t = torrent;
+            torrent = null;
+            t.shutdown();
+            Thread stop = new Thread(() -> t.engine().stop(), "sp-torrent-stop");
+            stop.setDaemon(true);
+            stop.start();
+        }
         super.handleOnDestroy();
     }
 
