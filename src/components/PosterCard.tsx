@@ -1,7 +1,7 @@
 import { memo, useEffect, useRef, useState, type FocusEvent, type KeyboardEvent, type MouseEvent } from 'react'
 import { Link } from 'react-router-dom'
 import { prefetchMeta } from '../lib/addons'
-import { smallPoster } from '../lib/format'
+import { seriesYear, smallPoster } from '../lib/format'
 import { genreLabel } from '../lib/i18n'
 import { armTrailer, disarmTrailer } from '../lib/hoverTrailer'
 import { LABEL_TEXT, usePosterLabel } from '../lib/posterLabels'
@@ -125,7 +125,7 @@ export const PosterCard = memo(function PosterCard({ meta, progress, watched, su
       <div className="poster-info">
         {!landscape && <span className="poster-title">{meta.name}</span>}
         <span className="poster-sub">
-          {subtitle ?? (landscape ? landInfo(meta) : (meta.releaseInfo ?? meta.year))}
+          {subtitle ?? (landscape ? landInfo(meta) : seriesYear(meta.releaseInfo ?? meta.year))}
           {posterRating === 'below' && <ImdbRating value={meta.imdbRating} size="sm" />}
         </span>
       </div>
@@ -166,7 +166,7 @@ export const PosterCard = memo(function PosterCard({ meta, progress, watched, su
 /** Debajo de la tarjeta apaisada: "2024 · Ciencia ficción". */
 function landInfo(meta: MetaPreview): string {
   const genre = (meta.genres ?? meta.genre ?? [])[0]
-  return [meta.releaseInfo ?? meta.year, genre ? genreLabel(genre) : undefined].filter(Boolean).join(' · ')
+  return [seriesYear(meta.releaseInfo ?? meta.year), genre ? genreLabel(genre) : undefined].filter(Boolean).join(' · ')
 }
 
 export function PosterSkeleton({ landscape }: { landscape?: boolean }) {

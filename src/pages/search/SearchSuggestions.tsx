@@ -1,7 +1,7 @@
 import { useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { CINEMETA_URL } from '../../lib/addons'
-import { smallPoster } from '../../lib/format'
+import { seriesYear, smallPoster } from '../../lib/format'
 import { useAddons, useCatalog } from '../../lib/hooks'
 import { genreLabel, typeLabel } from '../../lib/i18n'
 import { useHiddenIds } from '../../lib/ratings'
@@ -56,7 +56,7 @@ function useTrendingSuggestions(): { items: Suggestion[]; loading: boolean; titl
         to: `/detail/${m.type}/${encodeURIComponent(m.id)}`,
         title: m.name,
         poster: smallPoster(m.id, m.poster),
-        sub: [m.releaseInfo ?? m.year, typeLabel(m.type, false)].filter(Boolean).join(' · '),
+        sub: [seriesYear(m.releaseInfo ?? m.year), typeLabel(m.type, false)].filter(Boolean).join(' · '),
       }))
     return { items, loading: topMovies.loading || topSeries.loading, title: 'Populares ahora' }
   }, [tmdbKey, trending.data, trending.loading, hidden, topMovies.data, topMovies.loading, topSeries.data, topSeries.loading])

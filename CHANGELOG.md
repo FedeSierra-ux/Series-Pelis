@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.22.2] - 2026-10-18
+
+### Cambiado
+- **Año sin guion también en los pósters**: en las tarjetas, Buscar, la portada de Inicio, el tráiler al pasar por un
+  póster, "Más como esto" y el protector de pantalla, una serie que **arrancó este año** se ve con el año solo
+  ("2026" en vez de "2026–"). Ahí no se sabe cuántas temporadas tiene, así que se adivina: si una serie sacó dos
+  temporadas en el mismo año, también va sin guion. En la ficha se siguen contando las temporadas de verdad.
+
 ## [0.22.1] - 2026-10-18
 
 ### Cambiado

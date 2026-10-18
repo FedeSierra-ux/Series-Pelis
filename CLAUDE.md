@@ -301,6 +301,10 @@ npm run preview    # sirve dist/ en http://localhost:4173
   `TvHints` no se adelante. **Series**: sin duración en minutos (ficha, `buildInfo`, `TmdbHero`; las pelis sí) y
   `seriesYear`/`seasonCount` (`lib/format.ts`): con una sola temporada "2026–" → "2026". Los pósters, Buscar y la
   portada de Inicio (catálogo de Cinemeta) no saben las temporadas y siguen con el guion.
+- v0.22.2 hecha (rama `claude/anio-series-v0.22.2`): donde no se saben las temporadas (`PosterCard`, Buscar,
+  portada de Inicio, `HoverTrailer`, `PostPlay`, protector) `seriesYear(x)` saca el guion si la serie **arrancó este
+  año** (el usuario aceptó que a veces una serie con dos temporadas en el mismo año quede sin guion). Con las
+  temporadas conocidas (ficha, `buildInfo` con TMDB) manda el conteo real.
 - **Decisiones para la v0.17 (reemplazan el reparto del plan de abajo)**: addons y TorBox **iguales para todas las
   casas**, solo los cambia el admin (opción A). Ajustes generales (subtítulos, idiomas, autoplay, saltar intro, sin
   spoilers, reglas de fuentes) **iguales en toda la casa**; lo físico (modo TV, tamaño de la interfaz, protector,
