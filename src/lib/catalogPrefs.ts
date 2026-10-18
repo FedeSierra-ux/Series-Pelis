@@ -62,8 +62,8 @@ export interface VirtualRowDef {
 }
 
 export const VIRTUAL_TYPE = 'home'
-export const WATCHLIST_ROW_KEY = 'home:watchlist'
-export const HOME_VIRTUAL_ROWS: VirtualRowDef[] = [{ key: WATCHLIST_ROW_KEY, name: 'Mi lista' }]
+/** v0.22.5: sin filas propias. "Mi lista" se sacó de Inicio (pedido del usuario: ya está en el menú). */
+export const HOME_VIRTUAL_ROWS: VirtualRowDef[] = []
 
 /**
  * Filas de TMDB de Inicio. No se mueven ni se ocultan desde el gestor: solo se elige su forma.

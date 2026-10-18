@@ -24,7 +24,7 @@ export const defaultCatalogLabel = (s: CatalogSource) => catalogLabel(s.catalog.
 
 /**
  * Todas las filas (también las ocultas) en el orden elegido. Los addons desactivados no aparecen.
- * Con `withHome`, también las filas propias de Inicio ("Mi lista"), para Inicio y el gestor.
+ * Con `withHome`, también las filas propias de Inicio (`HOME_VIRTUAL_ROWS`), para Inicio y el gestor.
  */
 export function useCatalogRows(withHome = false): CatalogRowDef[] {
   const addons = useAddons()

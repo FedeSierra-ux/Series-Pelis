@@ -316,6 +316,10 @@ npm run preview    # sirve dist/ en http://localhost:4173
   en `detail-v14.css`) arriba a la izquierda de la portada de la ficha, **solo en la ficha** y **no en la TV**
   (`html[data-tv]` lo oculta; decisión del usuario). `useGoBack`: sin historial va a `/`. En PC la portada tiene
   `padding-top: 68px` para que no tape el título cuando no hay póster.
+- v0.22.5 hecha (rama `claude/inicio-orden-v0.22.5`): **Inicio** = portada → Seguir viendo → **Top 10 de hoy** →
+  Para vos → Porque viste → Tendencias → listas → catálogos (pedido del usuario). **Sin fila "Mi lista"** (ya está en
+  el riel): `HOME_VIRTUAL_ROWS` quedó vacío (el mecanismo de filas propias sigue, con su test), se fueron
+  `WatchlistRow`, `VirtualRow` y `unstartedWatchlist`.
 - **Decisiones para la v0.17 (reemplazan el reparto del plan de abajo)**: addons y TorBox **iguales para todas las
   casas**, solo los cambia el admin (opción A). Ajustes generales (subtítulos, idiomas, autoplay, saltar intro, sin
   spoilers, reglas de fuentes) **iguales en toda la casa**; lo físico (modo TV, tamaño de la interfaz, protector,

@@ -13,8 +13,6 @@ import {
   splitLeadingVirtual,
   splitMerge,
   visibleRows,
-  WATCHLIST_ROW_KEY,
-  HOME_VIRTUAL_ROWS,
   FORYOU_ROW_KEY,
   TRENDING_WEEK_ROW_KEY,
   type CatalogPrefs,
@@ -161,7 +159,7 @@ describe('forma de las filas (U10)', () => {
     expect(rowShape(DEFAULT_CATALOG_PREFS, FORYOU_ROW_KEY)).toBe('landscape')
     expect(rowShape(DEFAULT_CATALOG_PREFS, TRENDING_WEEK_ROW_KEY)).toBe('landscape')
     expect(rowShape(DEFAULT_CATALOG_PREFS, 'cat:a|movie|top')).toBe('poster')
-    expect(rowShape(DEFAULT_CATALOG_PREFS, WATCHLIST_ROW_KEY)).toBe('poster')
+    expect(rowShape(DEFAULT_CATALOG_PREFS, 'home:watchlist')).toBe('poster')
     // Prefs viejas sin el campo.
     expect(rowShape({ order: [] }, FORYOU_ROW_KEY)).toBe('landscape')
     expect(normalizePrefs({ order: [] }).shapes).toEqual({})
@@ -193,8 +191,10 @@ describe('interleaveMetas', () => {
   })
 })
 
-describe('filas propias de Inicio ("Mi lista")', () => {
-  const arrange = (prefs: Partial<CatalogPrefs>) => arrangeCatalogs(sources, prefs, label, HOME_VIRTUAL_ROWS)
+describe('filas propias de Inicio', () => {
+  // Desde la v0.22.5 Inicio no tiene ninguna; se prueba con la "Mi lista" de antes.
+  const WATCHLIST_ROW_KEY = 'home:watchlist'
+  const arrange = (prefs: Partial<CatalogPrefs>) => arrangeCatalogs(sources, prefs, label, [{ key: WATCHLIST_ROW_KEY, name: 'Mi lista' }])
 
   it('de entrada va arriba de los catálogos (después de "Seguir viendo")', () => {
     const rows = arrange(DEFAULT_CATALOG_PREFS)

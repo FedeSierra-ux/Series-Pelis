@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.22.5] - 2026-10-18
+
+### Cambiado
+- **Orden de Inicio**: arriba va "Seguir viendo" y enseguida el **"Top 10 de hoy"**. Después siguen "Para vos",
+  "Porque viste…", las tendencias de la semana y los catálogos de los addons, como antes.
+- **Se sacó la fila "Mi lista" de Inicio**: ya está en el menú del costado. Tampoco aparece en Ajustes → Catálogos.
+
 ## [0.22.4] - 2026-10-18
 
 ### Agregado

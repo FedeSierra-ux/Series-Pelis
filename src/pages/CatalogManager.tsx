@@ -23,7 +23,7 @@ import { useTmdbKey } from '../lib/tmdb'
 /** Gestor de catálogos: renombrar, ocultar, reordenar y fusionar las filas de Inicio y Descubrir. */
 export function CatalogManager() {
   useTitle('Catálogos')
-  // Con las filas propias de Inicio ("Mi lista"), que se ocultan y mueven igual que un catálogo.
+  // Con las filas propias de Inicio (`HOME_VIRTUAL_ROWS`), que se ocultan y mueven igual que un catálogo.
   const rows = useCatalogRows(true)
   const [filter, setFilter] = useState('all')
   const types = useMemo(() => [...new Set(rows.filter((r) => !r.virtual).map((r) => r.type))], [rows])
@@ -57,8 +57,7 @@ export function CatalogManager() {
       </header>
       <p className="muted catalog-manager-intro">
         Elegí qué filas ves en Inicio y en Películas/Series, en qué orden y con qué nombre. También podés juntar dos
-        catálogos del mismo tipo en una sola fila. “Mi lista” es la fila de Inicio con lo que agregaste y todavía
-        no empezaste. Con “Apaisada” la fila de Inicio muestra tarjetas anchas con el fondo y el logo del título.
+        catálogos del mismo tipo en una sola fila. Con “Apaisada” la fila de Inicio muestra tarjetas anchas con el fondo y el logo del título.
         Los addons desactivados no aparecen acá.
       </p>
 
@@ -226,7 +225,7 @@ function CatalogItem({
             </strong>
           )}
           <span className="muted small">
-            {row.virtual ? 'Solo en Inicio · lo que agregaste a Mi lista y no empezaste' : `${typeLabel(row.type)} · ${addonNames}`}
+            {row.virtual ? 'Solo en Inicio' : `${typeLabel(row.type)} · ${addonNames}`}
             {row.renamed && !editing && <> · antes “{row.defaultName}”</>}
           </span>
           {row.merged && (

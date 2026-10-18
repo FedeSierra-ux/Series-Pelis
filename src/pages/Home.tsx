@@ -4,7 +4,7 @@ import { backdropFor, ContinueCard, LandscapeCard } from '../components/Continue
 import { FocusBillboard } from '../components/FocusBillboard'
 import { PosterCard } from '../components/PosterCard'
 import { Row } from '../components/Row'
-import { splitLeadingVirtual, visibleRows, WATCHLIST_ROW_KEY, type CatalogRowDef } from '../lib/catalogPrefs'
+import { visibleRows } from '../lib/catalogPrefs'
 import { useCatalogRows, useRowShape } from '../lib/catalogRows'
 import { seriesYear } from '../lib/format'
 import { useCatalog, useTitle } from '../lib/hooks'
@@ -13,7 +13,7 @@ import { useHiddenIds } from '../lib/ratings'
 import { withoutHidden } from '../lib/recommend'
 import { continueWatching, hideFromContinue, progressStore, toggleWatchlist, useStore, watchlistStore, type WatchEntry } from '../lib/store'
 import { useTmdbKey } from '../lib/tmdb'
-import { continueRowItems, episodeLink, unstartedWatchlist, useUpNext, type ContinueItem } from '../lib/upNext'
+import { continueRowItems, episodeLink, useUpNext, type ContinueItem } from '../lib/upNext'
 import type { CatalogDef, InstalledAddon, MetaPreview } from '../lib/types'
 import { ForYouRow } from './home/ForYouRow'
 import { HeroCarousel } from './home/HeroCarousel'
@@ -202,32 +202,6 @@ function ContinueRow({ onHide }: { onHide: (metaId: string, name: string) => voi
   )
 }
 
-/** Fila "Mi lista" de Inicio (U7). Se oculta, mueve y renombra desde el gestor de catálogos. */
-function WatchlistRow({ title }: { title: string }) {
-  const landscape = useRowShape(WATCHLIST_ROW_KEY) === 'landscape'
-  const watchlist = useStore(watchlistStore)
-  const progress = useStore(progressStore)
-  const items = useMemo(() => unstartedWatchlist(watchlist, progress, ROW_LIMIT), [watchlist, progress])
-  if (items.length === 0) return null
-  return (
-    <Row title={title} moreTo="/list" landscape={landscape}>
-      {items.map((item) => (
-        <PosterCard
-          key={item.id}
-          meta={{ id: item.id, type: item.type as MetaPreview['type'], name: item.name, poster: item.poster, releaseInfo: item.year, imdbRating: item.imdbRating }}
-          landscape={landscape}
-        />
-      ))}
-    </Row>
-  )
-}
-
-/** Una fila propia de Inicio (no de un addon) según su clave del gestor de catálogos. */
-function VirtualRow({ row }: { row: CatalogRowDef }) {
-  if (row.key === WATCHLIST_ROW_KEY) return <WatchlistRow title={row.name} />
-  return null
-}
-
 /** Los 2 títulos distintos vistos más recientemente (para "Porque viste…"). */
 function recentSeeds(progress: Record<string, WatchEntry>): Seed[] {
   const seeds: Seed[] = []
@@ -245,10 +219,8 @@ function recentSeeds(progress: Record<string, WatchEntry>): Seed[] {
 export function Home() {
   useTitle(undefined)
   const progress = useStore(progressStore)
-  // Filas con lo elegido en el gestor de catálogos (orden, nombres, ocultas, fusionadas), con "Mi lista".
-  const rows = visibleRows(useCatalogRows(true))
-  const { lead, rest } = splitLeadingVirtual(rows)
-  const catalogs = rows.filter((r) => !r.virtual)
+  // Filas con lo elegido en el gestor de catálogos (orden, nombres, ocultas, fusionadas).
+  const catalogs = visibleRows(useCatalogRows(true)).filter((r) => !r.virtual)
   const heroSource = (catalogs.find((c) => c.type === 'movie') ?? catalogs[0])?.sources[0]
   const { undo, hide, restore } = useUndoHide()
   // TMDB es opcional: sin key, Inicio queda igual que siempre.
@@ -277,16 +249,13 @@ export function Home() {
         heroSource && <Hero addon={heroSource.addon} catalog={heroSource.catalog} />
       )}
 
+      {/* v0.22.5: Seguir viendo y enseguida el Top 10 de hoy (pedido del usuario). */}
       <ContinueRow onHide={hide} />
-
-      {lead.map((row) => (
-        <VirtualRow key={row.key} row={row} />
-      ))}
 
       {tmdbKey && (
         <>
-          <ForYouRow tmdbKey={tmdbKey} />
           <Top10Row state={trendingDay} />
+          <ForYouRow tmdbKey={tmdbKey} />
           {seeds.map((seed) => (
             <BecauseRow key={seed.metaId} seed={seed} tmdbKey={tmdbKey} />
           ))}
@@ -296,10 +265,8 @@ export function Home() {
 
       <CuratedRows />
 
-      {rest.map((row, i) =>
-        row.virtual ? (
-          <VirtualRow key={row.key} row={row} />
-        ) : row.merged ? (
+      {catalogs.map((row, i) =>
+        row.merged ? (
           <MergedCatalogRow key={row.key} row={row} eager={i < 3} />
         ) : (
           <CatalogRow key={row.key} rowKey={row.key} addon={row.sources[0].addon} catalog={row.sources[0].catalog} title={row.name} eager={i < 3} />
