@@ -41,7 +41,7 @@ export function BrowsePage({ kind }: { kind: BrowseKind }) {
     return release
   }, [])
 
-  const top10 = useTmdbQuery(`top10|${kind}|${tmdbKey}`, () => loadTop10(kind, tmdbOn))
+  const top10 = useTmdbQuery(`top10w|${kind}|${tmdbKey}`, () => loadTop10(kind, tmdbOn))
   const hidden = useHiddenIds()
   const topItems = useMemo(() => withoutHidden(top10.data?.items ?? [], hidden).slice(0, 10), [top10.data, hidden])
   const first = topItems[0]
