@@ -107,4 +107,19 @@
         android:textColor="#FFFFFFFF"
         android:textSize="17sp"
         android:visibility="gone" />
+
+    <!-- v0.25: cómo va el torrent mientras carga ("Buscando pares…", "12 pares · 3,4 MB/s"). -->
+    <TextView android:id="@+id/sp_torrent_status"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_gravity="center"
+        android:layout_marginTop="88dp"
+        android:background="@drawable/sp_toast_bg"
+        android:paddingStart="20dp"
+        android:paddingTop="8dp"
+        android:paddingEnd="20dp"
+        android:paddingBottom="8dp"
+        android:textColor="#FFFFFFFF"
+        android:textSize="16sp"
+        android:visibility="gone" />
 </FrameLayout>

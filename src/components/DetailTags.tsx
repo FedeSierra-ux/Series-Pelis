@@ -39,8 +39,7 @@ const norm = (s: string) =>
 export function tmdbPeopleIndex(details: TmdbDetails | undefined): Map<string, number> {
   const map = new Map<string, number>()
   const add = (p: { id: number; name: string }) => !map.has(norm(p.name)) && map.set(norm(p.name), p.id)
-  const extra = details as (TmdbDetails & { created_by?: { id: number; name: string }[] }) | undefined
-  extra?.created_by?.forEach(add)
+  details?.created_by?.forEach(add)
   details?.credits?.crew.forEach(add)
   details?.credits?.cast.forEach(add)
   details?.aggregate_credits?.cast.forEach(add)

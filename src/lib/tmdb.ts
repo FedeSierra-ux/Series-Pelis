@@ -183,6 +183,14 @@ export interface TmdbCast {
   roles?: { character: string; episode_count: number }[]
 }
 
+export interface TmdbAggregateCrew {
+  id: number
+  name: string
+  department?: string
+  jobs?: { job: string; episode_count?: number }[]
+  total_episode_count?: number
+}
+
 export interface TmdbVideo {
   key: string
   site: string
@@ -235,7 +243,13 @@ export interface TmdbDetails {
   external_ids?: { imdb_id?: string | null }
   imdb_id?: string | null
   credits?: { cast: TmdbCast[]; crew: { id: number; name: string; job: string; department: string }[] }
-  aggregate_credits?: { cast: TmdbCast[] }
+  /** Series: el equipo agregado trae los trabajos de cada persona en `jobs` (no en `job`). */
+  aggregate_credits?: { cast: TmdbCast[]; crew?: TmdbAggregateCrew[] }
+  /** Series: quién la creó (vacío en muchas series de otros países). */
+  created_by?: { id: number; name: string }[]
+  /** Series: países de origen (ISO 3166-1, `US`, `AR`…). */
+  origin_country?: string[]
+  production_countries?: { iso_3166_1: string; name: string }[]
   videos?: { results: TmdbVideo[] }
   images?: { logos: { file_path: string; iso_639_1: string | null; aspect_ratio: number }[] }
   recommendations?: TmdbPage

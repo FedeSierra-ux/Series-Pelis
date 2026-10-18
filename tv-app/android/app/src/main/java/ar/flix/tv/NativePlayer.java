@@ -40,12 +40,15 @@ import androidx.media3.datasource.HttpDataSource;
 import androidx.media3.exoplayer.DefaultRenderersFactory;
 import androidx.media3.exoplayer.ExoPlayer;
 import androidx.media3.exoplayer.source.DefaultMediaSourceFactory;
+import androidx.media3.exoplayer.upstream.DefaultLoadErrorHandlingPolicy;
+import androidx.media3.exoplayer.upstream.LoadErrorHandlingPolicy;
 import androidx.media3.ui.CaptionStyleCompat;
 import androidx.media3.ui.DefaultTimeBar;
 import androidx.media3.ui.PlayerView;
 import androidx.media3.ui.SubtitleView;
 import com.getcapacitor.JSArray;
 import com.getcapacitor.JSObject;
+import java.net.SocketTimeoutException;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -79,12 +82,16 @@ final class NativePlayer {
     private static final long COUNTDOWN_MS = 10000;
     private static final long TOAST_MS = 3000;
     private static final long RETRY_RESET_MS = 30000;
+    private static final long TORRENT_STATUS_MS = 1000;
     private static final long NEXT_DEBOUNCE_MS = 1500;
     private static final Locale ES = Locale.forLanguageTag("es-AR");
 
     private final Activity activity;
     private final WebView web;
     private final Events events;
+    // Motor de torrents (v0.25); null si este aparato no lo tiene.
+    private final TorrentServer torrent;
+    private DefaultMediaSourceFactory torrentSources;
     private final Handler ui = new Handler(Looper.getMainLooper());
 
     // Vistas (null con el reproductor cerrado).
@@ -100,6 +107,7 @@ final class NativePlayer {
     private TextView nextStatus;
     private Button nextNow;
     private TextView toast;
+    private TextView torrentStatus;
     private ExoPlayer player;
     private AlertDialog dialog;
     private boolean controllerShown;
@@ -129,10 +137,14 @@ final class NativePlayer {
     private long lastNextRequest;
     private long lastTick, lastProgress;
     private String shownCues = "";
+    // El infoHash si el video viene del motor de torrents (si no, null).
+    private String torrentHash;
+    private long lastTorrentStatus;
 
-    NativePlayer(Activity activity, WebView web, Events events) {
+    NativePlayer(Activity activity, WebView web, TorrentServer torrent, Events events) {
         this.activity = activity;
         this.web = web;
+        this.torrent = torrent;
         this.events = events;
     }
 
@@ -164,11 +176,18 @@ final class NativePlayer {
         player.setPlaybackSpeed(rate > 0 && rate <= 4 ? (float) rate : 1f);
 
         String url = o.optString("url", "");
+        String hash = torrent != null ? torrent.hashOf(url) : null;
+        // Se cambió de un torrent a otra cosa: el motor puede ir limpiando (en un minuto).
+        if (torrentHash != null && hash == null) torrent.engine().playerClosed();
+        torrentHash = hash;
+        lastTorrentStatus = 0;
+        torrentStatus.setVisibility(View.GONE);
         MediaItem.Builder item = new MediaItem.Builder().setUri(url);
-        if (url.toLowerCase(Locale.ROOT).contains(".m3u8")) item.setMimeType(MimeTypes.APPLICATION_M3U8);
+        if (hash == null && url.toLowerCase(Locale.ROOT).contains(".m3u8")) item.setMimeType(MimeTypes.APPLICATION_M3U8);
         double startAt = o.optDouble("startAt", 0);
         long startMs = startAt > 0 ? (long) (startAt * 1000) : 0;
-        player.setMediaItem(item.build(), startMs);
+        if (hash != null) player.setMediaSource(torrentSources.createMediaSource(item.build()), startMs);
+        else player.setMediaItem(item.build(), startMs);
         boolean paused = o.optBoolean("paused", false);
         player.setPlayWhenReady(!paused);
         player.prepare();
@@ -330,6 +349,7 @@ final class NativePlayer {
         nextStatus = root.findViewById(R.id.sp_next_status);
         nextNow = root.findViewById(R.id.sp_next_now);
         toast = root.findViewById(R.id.sp_toast);
+        torrentStatus = root.findViewById(R.id.sp_torrent_status);
 
         root.findViewById(R.id.sp_btn_audio).setOnClickListener((v) -> showAudioMenu());
         root.findViewById(R.id.sp_btn_subs).setOnClickListener((v) -> showSubsMenu());
@@ -363,6 +383,15 @@ final class NativePlayer {
             .setConnectTimeoutMs(15_000)
             .setReadTimeoutMs(20_000);
         if (ua != null && !ua.isEmpty()) http.setUserAgent(ua);
+        if (torrent != null) {
+            // El motor de torrents contesta recién cuando tiene el pedazo: puede tardar (buscar pares,
+            // bajar la metadata). Por eso otros tiempos y sin los reintentos de siempre.
+            DefaultHttpDataSource.Factory local = new DefaultHttpDataSource.Factory()
+                .setConnectTimeoutMs(30_000)
+                .setReadTimeoutMs(130_000);
+            torrentSources = new DefaultMediaSourceFactory(new DefaultDataSource.Factory(activity, local))
+                .setLoadErrorHandlingPolicy(new TorrentErrorPolicy());
+        }
         DefaultRenderersFactory renderers = new DefaultRenderersFactory(activity).setEnableDecoderFallback(true);
         AudioAttributes audio = new AudioAttributes.Builder()
             .setUsage(C.USAGE_MEDIA)
@@ -436,6 +465,11 @@ final class NativePlayer {
         ViewGroup parent = (ViewGroup) root.getParent();
         if (parent != null) parent.removeView(root);
         root = null;
+        if (torrentHash != null) {
+            // En un minuto se borra lo bajado (salvo que se vuelva a abrir algo del motor antes).
+            torrent.engine().playerClosed();
+            torrentHash = null;
+        }
         controllerShown = false;
         activity.getWindow().clearFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
         WindowCompat.getInsetsController(activity.getWindow(), activity.getWindow().getDecorView())
@@ -507,7 +541,7 @@ final class NativePlayer {
             return;
         }
         JSObject ev = event("error");
-        ev.put("message", errorText(error));
+        ev.put("message", torrentHash != null ? torrentErrorText(error) : errorText(error));
         ev.put("position", seconds(player.getCurrentPosition()));
         events.emit(ev);
         teardown();
@@ -529,6 +563,61 @@ final class NativePlayer {
         return "No se pudo reproducir el video";
     }
 
+    /** Mensajes para lo que falla con el motor de torrents (el 504 es "no hay pares"). */
+    private static String torrentErrorText(PlaybackException e) {
+        Throwable c = e.getCause();
+        while (c != null && !(c instanceof HttpDataSource.InvalidResponseCodeException) && !(c instanceof SocketTimeoutException)) {
+            c = c.getCause();
+        }
+        if (c instanceof HttpDataSource.InvalidResponseCodeException) {
+            int status = ((HttpDataSource.InvalidResponseCodeException) c).responseCode;
+            if (status == 504) return "No hay nadie compartiendo este torrent ahora. Probá otra fuente.";
+            if (status == 404) return "Este torrent no tiene un video para reproducir. Probá otra fuente.";
+            if (status == 503) return "El motor de torrents no está disponible en este aparato. Elegí otra fuente.";
+            return "El motor de torrents falló (" + status + "). Probá de nuevo o elegí otra fuente.";
+        }
+        if (c instanceof SocketTimeoutException || e.errorCode == PlaybackException.ERROR_CODE_IO_NETWORK_CONNECTION_TIMEOUT) {
+            return "El torrent está bajando muy lento. Probá otra fuente.";
+        }
+        if (e.errorCode >= 3000 && e.errorCode < 6000) return "Este formato no se puede reproducir en este aparato";
+        return "El motor de torrents falló. Probá de nuevo o elegí otra fuente.";
+    }
+
+    /**
+     * Sin los reintentos de Media3 para el motor: un 4xx/5xx ya es la respuesta (esperó la metadata o
+     * el pedazo hasta 2 minutos); un tiempo agotado se reintenta una sola vez.
+     */
+    private static final class TorrentErrorPolicy extends DefaultLoadErrorHandlingPolicy {
+        @Override
+        public long getRetryDelayMsFor(LoadErrorHandlingPolicy.LoadErrorInfo info) {
+            if (info.exception instanceof HttpDataSource.InvalidResponseCodeException) return C.TIME_UNSET;
+            if (info.errorCount > 1) return C.TIME_UNSET;
+            return 1000;
+        }
+    }
+
+    /** "Buscando pares…" o "12 pares · 3,4 MB/s" mientras carga un torrent (una vez por segundo). */
+    private void updateTorrentStatus(int state, long now) {
+        boolean show = torrentHash != null && state == Player.STATE_BUFFERING;
+        if (!show) {
+            if (torrentStatus.getVisibility() != View.GONE) torrentStatus.setVisibility(View.GONE);
+            lastTorrentStatus = 0;
+            return;
+        }
+        if (now - lastTorrentStatus < TORRENT_STATUS_MS) return;
+        lastTorrentStatus = now;
+        TorrentEngine.Status st = torrent.engine().status(torrentHash);
+        String text;
+        if (st == null || !st.metadata || st.peers == 0) {
+            text = "Buscando pares…";
+        } else {
+            String peers = st.peers == 1 ? "1 par" : st.peers + " pares";
+            text = String.format(ES, "%s · %.1f MB/s", peers, st.downloadRate / 1_000_000.0);
+        }
+        torrentStatus.setText(text);
+        torrentStatus.setVisibility(View.VISIBLE);
+    }
+
     // ---------- reloj (cada 100 ms) ----------
 
     private final Runnable tick = new Runnable() {
@@ -544,6 +633,7 @@ final class NativePlayer {
             updateExtSub(pos);
             updateSkip(pos, active);
             updateNext(pos, dt, state != Player.STATE_IDLE);
+            updateTorrentStatus(state, now);
             if (player.isPlaying() && now - lastProgress >= PROGRESS_MS) emitProgress();
             if (retryUsed && player.isPlaying() && now - retryAt > RETRY_RESET_MS) retryUsed = false;
             ui.postDelayed(this, TICK_MS);

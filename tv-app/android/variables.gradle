@@ -15,4 +15,5 @@ ext {
     cordovaAndroidVersion = '14.0.1'
     media3Version = '1.10.1'
     tvproviderVersion = '1.1.0'
+    libtorrent4jVersion = '2.1.0-39'
 }

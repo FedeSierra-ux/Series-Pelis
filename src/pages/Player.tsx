@@ -9,6 +9,7 @@ import { episodeLabel, formatTime, isHls } from '../lib/format'
 import { useTitle } from '../lib/hooks'
 import { langLabel } from '../lib/i18n'
 import { isNativeApp } from '../lib/native'
+import { needsNativePlayer } from '../lib/torrentServer'
 import { nativePlayerAvailable, probeNativePlayer } from '../lib/nativePlayer'
 import { findNextStream, nextEpisodeSeason, prefetchNextStreams } from '../lib/nextEpisode'
 import { setReturnVideo } from '../lib/returnVideo'
@@ -33,6 +34,7 @@ import { useMediaSession, usePictureInPicture, useWakeLock } from './player/useM
 import { useSubtitles } from './player/useSubtitles'
 import { launchUrl } from './player/externalLaunch'
 import { NativePlayerView } from './player/NativePlayer'
+import { EngineError } from './player/EngineError'
 import { MIN_HISTORY_EPISODE_S, MIN_HISTORY_S, NEXT_FALLBACK_S, readAutoCount, writeAutoCount } from './player/autoNext'
 import { detailPathFor } from './player/fallback'
 import { isPhoneLike, toggleFullscreen as toggleScreen, usePlayerScreen } from './player/fullscreen'
@@ -129,6 +131,8 @@ export function Player() {
 function PlayerChoice({ state, resume }: { state: PlayState; resume?: Resume }) {
   const [native, setNative] = useState(() => (settingsStore.get().nativePlayer && isNativeApp() ? nativePlayerAvailable() : false))
   const [fallback, setFallback] = useState<Resume>()
+  const [engineFail, setEngineFail] = useState<{ at: number; message?: string }>()
+  const [retry, setRetry] = useState<Resume>()
   useEffect(() => {
     if (native !== undefined) return
     let alive = true
@@ -140,7 +144,38 @@ function PlayerChoice({ state, resume }: { state: PlayState; resume?: Resume }) 
     }
   }, [native])
   if (native === undefined) return <div className="player player-native" />
-  if (native && !fallback) return <NativePlayerView state={state} resume={resume} onFallback={(at) => setFallback({ at })} />
+  // Torrent del motor de la app (http a 127.0.0.1): el reproductor de la web no lo puede abrir. Si falla el
+  // nativo no se le pasa; se muestra el error de Android y se ofrece otra fuente.
+  const engineOnly = needsNativePlayer(state.playUrl)
+  if (native && !fallback && !engineFail) {
+    return (
+      <NativePlayerView
+        state={state}
+        resume={retry ?? resume}
+        onFallback={(at, message) => (engineOnly ? setEngineFail({ at, message }) : setFallback({ at }))}
+      />
+    )
+  }
+  if (engineOnly) {
+    const message = engineFail
+      ? `El reproductor de Android no pudo con este torrent${engineFail.message ? `: ${engineFail.message}` : '.'}`
+      : 'Este torrent solo se reproduce con el reproductor de Android (Ajustes → Reproductor).'
+    return (
+      <EngineError
+        state={state}
+        message={message}
+        at={engineFail?.at ?? resume?.at}
+        onRetry={
+          native && engineFail
+            ? () => {
+                setRetry({ ...resume, at: engineFail.at })
+                setEngineFail(undefined)
+              }
+            : undefined
+        }
+      />
+    )
+  }
   return (
     <PlayerView
       state={state}

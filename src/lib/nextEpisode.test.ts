@@ -16,6 +16,8 @@ vi.mock('idb-keyval', () => ({
 const fake = vi.hoisted(() => ({
   meta: undefined as unknown,
   streams: {} as Record<string, unknown[]>,
+  /** Respuestas sucesivas (un addon contesta antes que otro). */
+  sequence: {} as Record<string, unknown[][]>,
   requested: [] as string[],
 }))
 vi.mock('./addons', async (orig) => ({
@@ -24,12 +26,13 @@ vi.mock('./addons', async (orig) => ({
   prefetchMeta: () => {},
   getStreams: (_addons: unknown[], _type: string, id: string, onUpdate: (g: unknown[]) => void) => {
     fake.requested.push(id)
-    const t = setTimeout(() => onUpdate(fake.streams[id] ?? []), 0)
-    return () => clearTimeout(t)
+    const seq = fake.sequence[id] ?? [fake.streams[id] ?? []]
+    const timers = seq.map((groups, i) => setTimeout(() => onUpdate(groups), i * 5))
+    return () => timers.forEach(clearTimeout)
   },
 }))
 
-import { acceptsPick, episodeToResume, findResumeStream, locateNextEpisode } from './nextEpisode'
+import { acceptsPick, episodeToResume, findNextStream, findResumeStream, locateNextEpisode } from './nextEpisode'
 import { lastSourceStore, progressStore, settingsStore, type WatchEntry } from './store'
 import type { InstalledAddon, Video } from './types'
 
@@ -198,5 +201,59 @@ describe('findResumeStream', () => {
     const pending = findResumeStream({ type: 'movie', metaId: 'tt9' }, ctrl.signal)
     ctrl.abort()
     expect(await pending).toBeUndefined()
+  })
+})
+
+describe('siguiente episodio: debrid primero (v0.25)', () => {
+  const addonOf = (name: string): InstalledAddon => ({
+    transportUrl: `https://${name}.example/manifest.json`,
+    manifest: { id: name, version: '1', name, resources: ['stream'], types: ['series'], catalogs: [] },
+  })
+  const torrentio = addonOf('torrentio')
+  const debrid = addonOf('debrid')
+  const torrent = { name: 'Torrentio\n1080p', title: 'Serie.S01E02.1080p 🇲🇽 Latino', infoHash: 'abc', fileIdx: 1, behaviorHints: { bingeGroup: 'tio-1080' } }
+  const rules = settingsStore.get().sourceRules
+  const state = {
+    stream: { name: 'Torrentio\n1080p', infoHash: 'old', behaviorHints: { bingeGroup: 'tio-1080' } },
+    playUrl: 'http://127.0.0.1:11470/old/0',
+    meta: { id: 'tt1', type: 'series', name: 'Serie' },
+    video: { id: 'tt1:1:1', season: 1, episode: 1 },
+    nextVideoId: 'tt1:1:2',
+    addonName: 'torrentio',
+    addonUrl: torrentio.transportUrl,
+  }
+
+  beforeEach(() => {
+    fake.requested = []
+    fake.streams = {}
+    fake.sequence = {}
+    fake.meta = { id: 'tt1', type: 'series', name: 'Serie', videos: [{ id: 'tt1:1:1', season: 1, episode: 1 }, { id: 'tt1:1:2', season: 1, episode: 2 }] }
+    settingsStore.set((s) => ({ ...s, streamingServerUrl: 'http://127.0.0.1:11470', sourceRules: { ...rules, mode: 'auto' } }))
+  })
+  afterEach(() => {
+    settingsStore.set((s) => ({ ...s, streamingServerUrl: '', sourceRules: rules }))
+  })
+
+  it('el torrent de la misma fuente contesta primero: espera al debrid y elige el debrid', async () => {
+    const direct = { name: 'Debrid 720p', url: 'https://debrid.example/e2.mkv' }
+    fake.sequence['tt1:1:2'] = [
+      [
+        { addon: torrentio, streams: [torrent], loading: false },
+        { addon: debrid, streams: [], loading: true },
+      ],
+      [
+        { addon: torrentio, streams: [torrent], loading: false },
+        { addon: debrid, streams: [direct], loading: false },
+      ],
+    ]
+    const next = await findNextStream(state as never)
+    expect(next?.playUrl).toBe('https://debrid.example/e2.mkv')
+    expect(next?.video?.id).toBe('tt1:1:2')
+  })
+
+  it('sin nada directo, sigue con el torrent de la misma fuente', async () => {
+    fake.streams['tt1:1:2'] = [{ addon: torrentio, streams: [torrent], loading: false }]
+    const next = await findNextStream(state as never)
+    expect(next?.playUrl).toBe('http://127.0.0.1:11470/abc/1')
   })
 })

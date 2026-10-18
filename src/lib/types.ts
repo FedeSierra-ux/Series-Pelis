@@ -100,6 +100,8 @@ export interface Stream {
   ytId?: string
   infoHash?: string
   fileIdx?: number
+  /** Fuentes del torrent (`tracker:udp://…`, `dht:<hash>`), como las manda Torrentio. */
+  sources?: string[]
   externalUrl?: string
   name?: string
   title?: string

@@ -37,7 +37,10 @@ y un **historial** de todo lo que viste. Funciona en la PC, el celular y el nave
 - **Catálogo** de Cinemeta (populares, nuevas y mejor puntuadas) y de cualquier addon que agregues.
 - **Puntaje de IMDb** en pósters, portada y ficha.
 - **Addons de Stremio**: pegás la URL del manifest y listo. Si tu addon (por ejemplo Torrentio) está configurado
-  con Real-Debrid o TorBox, los streams llegan como enlaces directos y arrancan rápido.
+  con Real-Debrid o TorBox, los streams llegan como enlaces directos y arrancan rápido (siempre van primero).
+- **Torrents sin debrid (v0.25)**: la app de Android (Android 9+) trae su propio motor de torrents, como Stremio. En la
+  PC, con Stremio abierto (servidor local).
+- **Ficha de las series** con pestaña **Detalles**: reparto, creación, países y dónde verla en Argentina.
 - **Reproductor** propio: MP4/WebM directos y HLS (`hls.js`, se descarga solo si hace falta), subtítulos de los
   addons (convierte SRT a VTT), pistas de audio, siguiente episodio automático con la misma fuente.
 - **Saltar intro / resumen / créditos** (tiempos de IntroDB), **siguiente episodio con cuenta regresiva**,

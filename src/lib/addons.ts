@@ -146,6 +146,7 @@ export function cleanStream(x: Record<string, unknown>): Stream | undefined {
   const s = textFields(x, ['url', 'ytId', 'infoHash', 'externalUrl', 'name', 'title', 'description'])
   if (s.behaviorHints !== undefined && !isObj(s.behaviorHints)) delete s.behaviorHints
   if (s.fileIdx !== undefined && typeof s.fileIdx !== 'number') delete s.fileIdx
+  if (s.sources !== undefined) s.sources = strList(s.sources)
   if (s.subtitles !== undefined) s.subtitles = Array.isArray(s.subtitles) ? s.subtitles.filter(isObj).map(cleanSubtitle).filter(Boolean) : undefined
   // Sin nada para reproducir no sirve ni para mostrarlo.
   if (!s.url && !s.ytId && !s.infoHash && !s.externalUrl) return undefined
@@ -368,9 +369,47 @@ export async function getSubtitles(addons: InstalledAddon[], type: string, video
   return results.flatMap((r) => (r.status === 'fulfilled' ? r.value : []))
 }
 
-/** URL para reproducir un torrent a través del servidor de streaming de Stremio instalado en la PC. */
-export function streamingServerUrl(server: string, stream: Stream): string | undefined {
-  if (!stream.infoHash || !server) return undefined
+/** Tope de trackers en la URL del motor de la app (Torrentio manda decenas; con unos pocos alcanza). */
+export const MAX_ENGINE_TRACKERS = 20
+
+const TRACKER_RE = /^(udp|https?|wss):\/\/\S+$/i
+
+/** Trackers que manda el addon en `sources` (`tracker:udp://…`), sin repetir y solo udp/http/https/wss. */
+export function streamTrackers(stream: Stream, max = MAX_ENGINE_TRACKERS): string[] {
+  const out: string[] = []
+  for (const src of stream.sources ?? []) {
+    if (out.length >= max) break
+    if (typeof src !== 'string' || !src.startsWith('tracker:')) continue
+    const tr = src.slice('tracker:'.length).trim()
+    if (TRACKER_RE.test(tr) && !out.includes(tr)) out.push(tr)
+  }
+  return out
+}
+
+/**
+ * URL para reproducir un torrent a través del servidor de streaming de Stremio instalado en la PC. Con
+ * `engine` es el motor de la app de Android: además lleva los trackers (`tr`, repetido) y el nombre del
+ * archivo (`f`). Se codifica con `encodeURIComponent` (espacio = %20, no "+").
+ */
+/** infoHash en hex de 40 en minúsculas: también pasa el base32 de 32 (como en algunos magnet). Otro formato
+ *  queda igual (el servidor lo rechaza con su propio error). */
+export function normalizeInfoHash(raw: string): string {
+  const h = raw.trim()
+  if (/^[0-9a-f]{40}$/i.test(h)) return h.toLowerCase()
+  if (!/^[a-z2-7]{32}$/i.test(h)) return h
+  let bits = ''
+  for (const c of h.toUpperCase()) bits += 'ABCDEFGHIJKLMNOPQRSTUVWXYZ234567'.indexOf(c).toString(2).padStart(5, '0')
+  return bits.match(/.{4}/g)!.map((b) => parseInt(b, 2).toString(16)).join('')
+}
+
+export function streamingServerUrl(server: string, stream: Stream, engine = false): string | undefined {
+  const hash = stream.infoHash && normalizeInfoHash(stream.infoHash)
+  if (!hash || !server) return undefined
   const idx = stream.fileIdx ?? -1
-  return `${server.replace(/\/+$/, '')}/${stream.infoHash}/${idx}`
+  const base = `${server.replace(/\/+$/, '')}/${hash}/${idx}`
+  if (!engine) return base
+  const params = streamTrackers(stream).map((tr) => `tr=${encodeURIComponent(tr)}`)
+  const file = stream.behaviorHints?.filename?.trim()
+  if (file) params.push(`f=${encodeURIComponent(file)}`)
+  return params.length ? `${base}?${params.join('&')}` : base
 }

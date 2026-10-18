@@ -34,7 +34,16 @@ const SAVE_EVERY_MS = 5000
  */
 let closeTimer: ReturnType<typeof setTimeout> | undefined
 
-export function NativePlayerView({ state, resume, onFallback }: { state: PlayState; resume?: Resume; onFallback: (at: number) => void }) {
+/** `onFallback`: Android no pudo con el video; `at` es dónde iba y `message`, lo que dijo Android. */
+export function NativePlayerView({
+  state,
+  resume,
+  onFallback,
+}: {
+  state: PlayState
+  resume?: Resume
+  onFallback: (at: number, message?: string) => void
+}) {
   const navigate = useNavigate()
   const settings = useStore(settingsStore)
   const addons = useAddons()
@@ -348,7 +357,7 @@ export function NativePlayerView({ state, resume, onFallback }: { state: PlaySta
       case 'error':
         // Android no pudo con este video: sigue el reproductor de la web desde el mismo lugar.
         if (readyRef.current) persist(last.current.position, last.current.duration)
-        onFallback(readyRef.current ? e.position || last.current.position : 0)
+        onFallback(readyRef.current ? e.position || last.current.position : 0, e.message)
         break
     }
   }

@@ -121,6 +121,44 @@
   padding-top: 4px;
 }
 
+/* Con la portada fija, las filas pasan por debajo de ella: al bajar con las flechas (la tarjeta se centraba
+   en toda la ventana) la fila enfocada quedaba con los pósters tapados arriba, y así volvía al salir de una
+   ficha. La parte de la pantalla que tapa la portada no cuenta como lugar visible: `scroll-padding-top` lo
+   respetan `scrollIntoView`, el foco con Tab, Re Pág y la memoria de foco (`lib/focusMemory.ts`). Mismo
+   alto que `.browse-hero` (con su mínimo y el tamaño de la interfaz). Celular y pantallas bajas no: ahí la
+   portada va con la página. */
+@media (min-width: 761px) and (min-height: 561px) {
+  html:has(.browse-hero) {
+    scroll-padding-top: calc(max(300px, var(--billboard-h)) * var(--ui-zoom, 1));
+  }
+}
+
+/* Con la rueda o el touchpad las filas sí pasan por debajo (la portada queda fija a propósito): en vez del
+   corte seco, los pósters se funden con la portada. La sombra (del color del fondo) aparece recién al bajar,
+   así no apaga el título del Top 10 arriba de todo. En la TV no: ahí la fila enfocada va pegada a la
+   portada (`spatialNav`) y la sombra le comería el título. Al moverse con las flechas o Tab, el margen de la
+   tarjeta (40 px de theme2.css + los 56 px de la sombra) deja el título de la fila enfocada fuera de ella. */
+@supports (animation-timeline: scroll()) {
+  @media (min-width: 761px) and (min-height: 561px) {
+    html:not([data-tv]) .browse-hero {
+      animation: bh-edge linear both;
+      animation-timeline: scroll(root block);
+      animation-range: 0px 56px;
+    }
+    html:not([data-tv]) .browse-rows .poster-card {
+      scroll-margin-top: 96px;
+    }
+  }
+}
+@keyframes bh-edge {
+  from {
+    box-shadow: 0 32px 48px transparent;
+  }
+  to {
+    box-shadow: 0 32px 48px var(--bg);
+  }
+}
+
 /* "Ver todo" al final de la fila: solo en la TV y el celular (en la PC está el link del título). */
 .row-more-card {
   display: none;

@@ -2,8 +2,9 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import { useLocation, useNavigate } from 'react-router-dom'
 import { getStreams } from '../../lib/addons'
 import { useAddons } from '../../lib/hooks'
-import { lastSourceStore, settingsStore, useStore } from '../../lib/store'
+import { lastSourceStore, settingsStore } from '../../lib/store'
 import { lastSourceOf, playable } from '../../lib/streamPicker'
+import { useTorrentServer } from '../../lib/torrentServer'
 import type { AddonStreams, InstalledAddon, Stream } from '../../lib/types'
 import type { PlayState } from '../Detail'
 
@@ -61,7 +62,7 @@ function lines(s: Stream) {
 /** Opciones del menú "Fuentes": los streams reproducibles del video, con la actual marcada. */
 export function SourcesMenu({ state, onPick }: { state: PlayState; onPick: (pick: Pick) => void }) {
   const addons = useAddons()
-  const server = useStore(settingsStore).streamingServerUrl
+  const server = useTorrentServer()
   const [groups, setGroups] = useState<AddonStreams[]>()
   const ref = useRef<HTMLSpanElement>(null)
   const videoId = state.video?.id ?? state.meta.id
@@ -82,7 +83,9 @@ export function SourcesMenu({ state, onPick }: { state: PlayState; onPick: (pick
   useEffect(() => {
     const menu = ref.current?.closest('.player-menu, .player-error-sources')
     if (!count || !menu || menu.contains(document.activeElement)) return
-    ;(menu.querySelector<HTMLElement>('button.active') ?? menu.querySelector<HTMLElement>('button'))?.focus()
+    // En la pantalla de error, la actual es la que falló: el foco va a otra.
+    const first = menu.matches('.player-error-sources') ? 'button:not(.active)' : 'button.active'
+    ;(menu.querySelector<HTMLElement>(first) ?? menu.querySelector<HTMLElement>('button'))?.focus()
   }, [count])
 
   return (
