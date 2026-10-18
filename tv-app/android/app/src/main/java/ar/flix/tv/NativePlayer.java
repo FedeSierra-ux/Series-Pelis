@@ -56,6 +56,7 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
+import java.util.function.Supplier;
 import org.json.JSONArray;
 import org.json.JSONObject;
 
@@ -89,9 +90,13 @@ final class NativePlayer {
     private final Activity activity;
     private final WebView web;
     private final Events events;
-    // Motor de torrents (v0.25); null si este aparato no lo tiene.
-    private final TorrentServer torrent;
+    // Motor de torrents (v0.25). Arranca en otro hilo: se pide al plugin al abrir cada video hasta
+    // que esté (null si este aparato no lo tiene o todavía no arrancó).
+    private final Supplier<TorrentServer> torrentServer;
+    private TorrentServer torrent;
     private DefaultMediaSourceFactory torrentSources;
+    // Con un torrent y la app en segundo plano se cortó la carga (stop): al volver, prepare().
+    private boolean stoppedInBackground;
     private final Handler ui = new Handler(Looper.getMainLooper());
 
     // Vistas (null con el reproductor cerrado).
@@ -141,10 +146,10 @@ final class NativePlayer {
     private String torrentHash;
     private long lastTorrentStatus;
 
-    NativePlayer(Activity activity, WebView web, TorrentServer torrent, Events events) {
+    NativePlayer(Activity activity, WebView web, Supplier<TorrentServer> torrentServer, Events events) {
         this.activity = activity;
         this.web = web;
-        this.torrent = torrent;
+        this.torrentServer = torrentServer;
         this.events = events;
     }
 
@@ -176,7 +181,10 @@ final class NativePlayer {
         player.setPlaybackSpeed(rate > 0 && rate <= 4 ? (float) rate : 1f);
 
         String url = o.optString("url", "");
+        if (torrent == null) torrent = torrentServer.get();
         String hash = torrent != null ? torrent.hashOf(url) : null;
+        if (hash != null && torrentSources == null) torrentSources = torrentSourceFactory();
+        stoppedInBackground = false;
         // Se cambió de un torrent a otra cosa: el motor puede ir limpiando (en un minuto).
         if (torrentHash != null && hash == null) torrent.engine().playerClosed();
         torrentHash = hash;
@@ -270,6 +278,25 @@ final class NativePlayer {
     void onHostPause() {
         if (!isOpen()) return;
         if (player.getPlayWhenReady()) player.pause(); // el listener manda el progreso
+    }
+
+    /**
+     * La app ya no se ve (onStop). Con un torrent, además se corta la carga: ExoPlayer en pausa
+     * sigue llenando el búfer y, con el motor en pausa, ese pedido quedaría colgado hasta el tiempo
+     * de lectura y volvería como error. stop() cierra las conexiones y guarda la posición.
+     */
+    void onHostStop() {
+        onHostPause();
+        if (!isOpen() || torrentHash == null || player.getPlaybackState() == Player.STATE_IDLE) return;
+        player.stop();
+        stoppedInBackground = true;
+    }
+
+    /** Volvió la app: si se cortó la carga de un torrent, sigue en el mismo lugar (en pausa). */
+    void onHostResume() {
+        if (!isOpen() || !stoppedInBackground) return;
+        stoppedInBackground = false;
+        player.prepare();
     }
 
     void onHostDestroy() {
@@ -383,15 +410,6 @@ final class NativePlayer {
             .setConnectTimeoutMs(15_000)
             .setReadTimeoutMs(20_000);
         if (ua != null && !ua.isEmpty()) http.setUserAgent(ua);
-        if (torrent != null) {
-            // El motor de torrents contesta recién cuando tiene el pedazo: puede tardar (buscar pares,
-            // bajar la metadata). Por eso otros tiempos y sin los reintentos de siempre.
-            DefaultHttpDataSource.Factory local = new DefaultHttpDataSource.Factory()
-                .setConnectTimeoutMs(30_000)
-                .setReadTimeoutMs(130_000);
-            torrentSources = new DefaultMediaSourceFactory(new DefaultDataSource.Factory(activity, local))
-                .setLoadErrorHandlingPolicy(new TorrentErrorPolicy());
-        }
         DefaultRenderersFactory renderers = new DefaultRenderersFactory(activity).setEnableDecoderFallback(true);
         AudioAttributes audio = new AudioAttributes.Builder()
             .setUsage(C.USAGE_MEDIA)
@@ -534,7 +552,8 @@ final class NativePlayer {
     private void onError(PlaybackException error) {
         if (player == null) return;
         // A mitad de la peli se reintenta una vez en el mismo lugar (un corte de red, por ejemplo).
-        if (started && !retryUsed) {
+        // Un torrent que ya esperó el plazo entero (504 o tiempo agotado) no se reintenta: sería otra espera igual.
+        if (started && !retryUsed && !(torrentHash != null && torrentGaveUp(error))) {
             retryUsed = true;
             retryAt = SystemClock.elapsedRealtime();
             player.prepare();
@@ -584,16 +603,38 @@ final class NativePlayer {
     }
 
     /**
+     * El motor de torrents contesta recién cuando tiene el pedazo: puede tardar (buscar pares, bajar
+     * la metadata). Por eso otros tiempos y sin los reintentos de siempre. El servidor siempre
+     * contesta antes de 115 s (TorrentEngine.Options.requestTimeoutMs): 130 s de lectura le dejan margen.
+     */
+    private DefaultMediaSourceFactory torrentSourceFactory() {
+        DefaultHttpDataSource.Factory local = new DefaultHttpDataSource.Factory()
+            .setConnectTimeoutMs(30_000)
+            .setReadTimeoutMs(130_000);
+        return new DefaultMediaSourceFactory(new DefaultDataSource.Factory(activity, local))
+            .setLoadErrorHandlingPolicy(new TorrentErrorPolicy());
+    }
+
+    /**
      * Sin los reintentos de Media3 para el motor: un 4xx/5xx ya es la respuesta (esperó la metadata o
      * el pedazo hasta 2 minutos); un tiempo agotado se reintenta una sola vez.
      */
     private static final class TorrentErrorPolicy extends DefaultLoadErrorHandlingPolicy {
         @Override
         public long getRetryDelayMsFor(LoadErrorHandlingPolicy.LoadErrorInfo info) {
-            if (info.exception instanceof HttpDataSource.InvalidResponseCodeException) return C.TIME_UNSET;
+            // Un 504 o un tiempo de lectura agotado ya esperaron el plazo entero: reintentar lo duplica.
+            if (torrentGaveUp(info.exception)) return C.TIME_UNSET;
             if (info.errorCount > 1) return C.TIME_UNSET;
             return 1000;
         }
+    }
+
+    /** ¿El motor ya contestó (4xx/5xx, el 504 incluido) o el pedido agotó el tiempo de lectura? */
+    private static boolean torrentGaveUp(Throwable e) {
+        for (Throwable c = e; c != null; c = c.getCause()) {
+            if (c instanceof HttpDataSource.InvalidResponseCodeException || c instanceof SocketTimeoutException) return true;
+        }
+        return false;
     }
 
     /** "Buscando pares…" o "12 pares · 3,4 MB/s" mientras carga un torrent (una vez por segundo). */

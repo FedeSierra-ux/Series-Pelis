@@ -40,7 +40,12 @@ import java.util.logging.Logger;
 final class TorrentServer {
 
     private static final Logger LOG = Logger.getLogger("SpTorrent");
-    private static final int MAX_HEADER_BYTES = 16 * 1024;
+    // Pedido entero (línea + cabeceras). La URL más larga de la web (20 trackers + nombre del archivo)
+    // anda por los 2-3 KB; el reproductor suma unos 300 B de cabeceras.
+    private static final int MAX_HEADER_BYTES = 4 * 1024;
+    // Para mandar el pedido entero: uno que manda de a un byte no tiene un hilo tomado 15 s por byte.
+    private static final int HEADER_TIMEOUT_MS = 5_000;
+    private static final int SOCKET_TIMEOUT_MS = 15_000;
     private static final int MAX_TRACKERS = 30;
     private static final int MAX_THREADS = 12;
     private static final int BUFFER = 64 * 1024;
@@ -159,17 +164,17 @@ final class TorrentServer {
 
     private void handle(Socket s) {
         try {
-            s.setSoTimeout(15_000);
             s.setTcpNoDelay(true);
-            InputStream in = s.getInputStream();
             OutputStream out = new BufferedOutputStream(s.getOutputStream(), BUFFER);
             Request req;
             try {
-                req = Request.parse(in);
+                // Antes de mirar el token: tope de tamaño y de tiempo para las cabeceras.
+                req = Request.parse(s, HEADER_TIMEOUT_MS);
             } catch (IOException e) {
                 simple(out, 400, "Pedido inválido", false);
                 return;
             }
+            s.setSoTimeout(SOCKET_TIMEOUT_MS);
             if (req == null) return;
             boolean head = req.method.equals("HEAD");
             if (!head && !req.method.equals("GET")) {
@@ -187,6 +192,9 @@ final class TorrentServer {
     }
 
     private void serve(Socket s, Request req, boolean head, OutputStream out) throws IOException {
+        // Un solo plazo desde que entra el pedido para la metadata y el primer pedazo (menos que el
+        // tiempo de lectura del reproductor): si vence, 504.
+        long deadline = engine.requestDeadline();
         // Ruta: /<token>/<hash>/<idx>
         String[] parts = req.path.split("/", -1);
         if (parts.length != 4 || !parts[0].isEmpty()) {
@@ -221,7 +229,7 @@ final class TorrentServer {
         TorrentEngine.Cancel cancel = () -> clientGone(s);
         TorrentEngine.Selection sel;
         try {
-            sel = engine.open(hash, trackers, fileIdx, fileName, cancel);
+            sel = engine.open(hash, trackers, fileIdx, fileName, cancel, deadline);
         } catch (TorrentEngine.EngineException e) {
             simple(out, e.status, e.getMessage(), head);
             return;
@@ -268,7 +276,7 @@ final class TorrentServer {
             long pos = start;
             int n;
             try {
-                n = reader.read(pos, buf, 0, (int) Math.min(buf.length, length), cancel);
+                n = reader.read(pos, buf, 0, (int) Math.min(buf.length, length), cancel, deadline);
             } catch (TorrentEngine.EngineException e) {
                 simple(out, e.status, e.getMessage(), false);
                 return;
@@ -413,22 +421,32 @@ final class TorrentServer {
         String range;
         final List<String[]> query = new ArrayList<>();
 
-        /** null si la conexión se cerró sin mandar nada. */
-        static Request parse(InputStream in) throws IOException {
+        /**
+         * Lee en bloques hasta la línea vacía (\r\n\r\n o \n\n), con `timeoutMs` para todo y
+         * MAX_HEADER_BYTES de tope. GET y HEAD no traen cuerpo: lo que venga después se ignora.
+         * null si la conexión se cerró sin mandar nada.
+         */
+        static Request parse(Socket s, int timeoutMs) throws IOException {
+            InputStream in = s.getInputStream();
             byte[] buf = new byte[MAX_HEADER_BYTES];
             int len = 0;
-            // Lee hasta la línea vacía (\r\n\r\n o \n\n), de a un byte: son pocos y no hay cuerpo.
-            while (true) {
-                int c = in.read();
-                if (c < 0) {
+            int end = -1;
+            long deadline = System.nanoTime() / 1_000_000 + timeoutMs;
+            while (end < 0) {
+                long left = deadline - System.nanoTime() / 1_000_000;
+                if (left <= 0) throw new SocketTimeoutException("Cabeceras lentas");
+                if (len == buf.length) throw new IOException("Cabeceras muy largas");
+                s.setSoTimeout((int) Math.max(1, left));
+                int n = in.read(buf, len, buf.length - len);
+                if (n < 0) {
                     if (len == 0) return null;
                     throw new IOException("Cabeceras cortadas");
                 }
-                if (len == buf.length) throw new IOException("Cabeceras muy largas");
-                buf[len++] = (byte) c;
-                if (len >= 2 && buf[len - 1] == '\n' && (buf[len - 2] == '\n' || (len >= 4 && buf[len - 2] == '\r' && buf[len - 3] == '\n'))) break;
+                int from = Math.max(0, len - 3);
+                len += n;
+                end = headerEnd(buf, from, len);
             }
-            String text = new String(buf, 0, len, StandardCharsets.ISO_8859_1);
+            String text = new String(buf, 0, end, StandardCharsets.ISO_8859_1);
             String[] lines = text.split("\r?\n");
             String[] first = lines[0].split(" ");
             if (first.length != 3 || !first[2].startsWith("HTTP/")) throw new IOException("Primera línea inválida");
@@ -452,6 +470,16 @@ final class TorrentServer {
                 if (lines[i].substring(0, colon).trim().equalsIgnoreCase("range")) r.range = lines[i].substring(colon + 1).trim();
             }
             return r;
+        }
+
+        /** Dónde termina la línea vacía (índice después de ella) buscando desde `from`; -1 si no está. */
+        private static int headerEnd(byte[] b, int from, int len) {
+            for (int i = from; i < len; i++) {
+                if (b[i] != '\n') continue;
+                if (i >= 1 && b[i - 1] == '\n') return i + 1;
+                if (i >= 2 && b[i - 1] == '\r' && b[i - 2] == '\n') return i + 1;
+            }
+            return -1;
         }
 
         private static String decode(String s) throws IOException {
