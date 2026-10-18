@@ -140,14 +140,58 @@ export function subtitleClasses(style: SubtitleStyle) {
     .join(' ')
 }
 
+/** Dónde va el cue: `line` en % (undefined = donde lo pone el navegador) y `shift` = % que sube la caja entera. */
+export type CuePlacement = { line: number | undefined; shift: number }
+
+/**
+ * Lógica de `placeCue`, sin el navegador. `bottom` (0 = no) es el % desde arriba donde tiene que terminar el
+ * subtítulo, tenga los renglones que tenga (celular con controles y algo en la esquina). Chromium no implementa
+ * `lineAlign`: con `line` = L ubica el cuadro y lo baja (1 − L) × su alto, así que con 4 renglones o letra muy
+ * grande el final quedaba sobre el botón. Por eso, si el navegador deja mover la caja de los subtítulos
+ * (`shiftBox`, ver `canShiftCueBox`), los cues quedan donde los pone el navegador (`line` auto: el último
+ * renglón apoyado abajo, sin pasarse) y la caja entera sube `shift` % con un transform: el final queda en
+ * `bottom` o apenas más arriba, sin importar el alto, y no se toca ningún cue al mostrar u ocultar los controles.
+ * (Si el cue en pantalla venía con `line` en %, Chromium le deja pegado el corrimiento viejo al pasarlo a auto:
+ * `player-v14.css` se lo saca mientras la caja está subida.)
+ * Firefox no tiene ese pseudoelemento pero sí respeta `lineAlign: 'end'`: ahí `line` es directamente el final.
+ * El ajuste "Posición" gana si deja el subtítulo más arriba.
+ */
+export function cuePlacement(position: number, clear = 0, bottom = 0, shiftBox = false): CuePlacement {
+  if (bottom > 0) {
+    let end = Math.min(bottom, clear > 0 ? 98 - clear : 100)
+    if (position > 0) end = Math.min(end, 92 - position)
+    end = Math.max(0, Math.floor(end * 10) / 10)
+    return shiftBox ? { line: undefined, shift: Math.round((100 - end) * 10) / 10 } : { line: end, shift: 0 }
+  }
+  return { line: clear > 0 ? Math.min(92 - position, 98 - clear) : position > 0 ? 92 - position : undefined, shift: 0 }
+}
+
+let shiftsBox: boolean | undefined
+/**
+ * ¿Se puede mover la caja de los subtítulos con CSS (`video::-webkit-media-text-track-container`)? Chromium
+ * (Android, Android TV, Chrome, Edge) y Safari sí; Firefox no. Sin `CSS.supports` / `selector()` (navegadores
+ * muy viejos) da falso y se usa `line` directo, como antes.
+ */
+export function canShiftCueBox(): boolean {
+  if (shiftsBox !== undefined) return shiftsBox
+  try {
+    shiftsBox =
+      typeof CSS !== 'undefined' && typeof CSS.supports === 'function' && CSS.supports('selector(video::-webkit-media-text-track-container)')
+  } catch {
+    shiftsBox = false
+  }
+  return shiftsBox
+}
+
 /**
  * Sube el cue `position` % (0 = donde lo pone el navegador). `clear` es el % de abajo que tiene que quedar
- * libre (la barra de controles cuando se ve), así el subtítulo no queda tapado.
+ * libre (la barra de controles cuando se ve), así el subtítulo no queda tapado. Con `bottom` (ver
+ * `cuePlacement`) el final del subtítulo queda fijo; el transform de la caja lo pone `useSubtitles`.
  */
-export function placeCue(cue: TextTrackCue, position: number, clear = 0) {
+export function placeCue(cue: TextTrackCue, position: number, clear = 0, bottom = 0, shiftBox = false) {
   if (!('line' in cue)) return
   const c = cue as VTTCue
-  const line = clear > 0 ? Math.min(92 - position, 98 - clear) : position > 0 ? 92 - position : undefined
+  const { line } = cuePlacement(position, clear, bottom, shiftBox)
   // Solo se asigna lo que cambia: cada cambio vuelve a dibujar los subtítulos.
   if (line !== undefined) {
     if (c.snapToLines) c.snapToLines = false

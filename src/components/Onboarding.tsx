@@ -1,8 +1,8 @@
 import { useEffect, useRef, useState, type KeyboardEvent } from 'react'
 import { useLocation } from 'react-router-dom'
 import { CINEMETA_URL } from '../lib/addons'
-import { useAuth } from '../lib/auth'
-import { useSyncStatus } from '../lib/cloudSync'
+import { useAuth, type AuthState } from '../lib/auth'
+import { useSyncStatus, type SyncStatus } from '../lib/cloudSync'
 import { addonsStore, progressStore, settingsStore, useStore, watchlistStore, type Settings } from '../lib/store'
 import { LangChips } from '../pages/settings/PlayerSettings'
 
@@ -27,12 +27,15 @@ function isFirstRun() {
 /**
  * Con login, los idiomas son de la casa: el asistente espera la primera sincronización para mostrar lo que ya
  * eligió la casa (y para que lo que se cambie acá no lo pise el servidor). Una vez listo, queda listo.
+ * También con la sesión guardada (`offline` hasta que `/me` responde): si la app se cerró antes de la primera
+ * sincronización, al volver a abrirla mostraba los de fábrica. Sin conexión la vuelta falla enseguida (`error`).
  */
+export function houseSynced(auth: AuthState, sync: SyncStatus): boolean {
+  return auth.status !== 'in' || sync.lastSync !== undefined || sync.phase === 'error'
+}
+
 function useHouseReady(): boolean {
-  const auth = useAuth()
-  const sync = useSyncStatus()
-  const needsSync = auth.status === 'in' && !auth.offline
-  const synced = !needsSync || sync.lastSync !== undefined || sync.phase === 'error'
+  const synced = houseSynced(useAuth(), useSyncStatus())
   const [ready, setReady] = useState(synced)
   useEffect(() => {
     if (ready) return

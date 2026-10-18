@@ -41,7 +41,7 @@ y un **historial** de todo lo que viste. Funciona en la PC, el celular y el nave
 - **Torrents sin debrid (v0.25)**: la app de Android (Android 9+) trae su propio motor de torrents, como Stremio. En la
   PC, con Stremio abierto (servidor local).
 - **Rediseño (v0.26)**: Inicio, Películas/Series, Buscar, ficha, reproductor y Vos con los ajustes de la auditoría visual
-  (filas alineadas bajo la portada, fuentes con idioma y tamaño, episodios vistos atenuados, subtítulo que no tapa "Saltar" en el celular).
+  (filas alineadas bajo la portada, fuentes con idioma y tamaño, episodios vistos atenuados, subtítulo que no tapa "Saltar" ni la tarjeta del siguiente episodio en el celular, desde la v0.26.1).
 - **Ficha de las series** con pestaña **Detalles**: reparto, creación, países y dónde verla en Argentina.
 - **Reproductor** propio: MP4/WebM directos y HLS (`hls.js`, se descarga solo si hace falta), subtítulos de los
   addons (convierte SRT a VTT), pistas de audio, siguiente episodio automático con la misma fuente.

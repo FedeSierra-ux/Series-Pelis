@@ -1,5 +1,19 @@
 # Changelog
 
+## [0.26.1] - 2026-10-18
+
+### Cambiado
+- **Subtítulos en el celular**: con los controles a la vista, el subtítulo sube por encima de **todo** lo que haya
+  en la esquina: "Saltar", la tarjeta "Siguiente episodio", la oferta de resumen y "Más como esto". Queda arriba
+  aunque tenga 4 o 5 renglones o esté en tamaño "Muy grande" (antes se encimaba). Sin controles, en PC y en la TV,
+  igual que antes.
+
+### Arreglado
+- Series de una sola temporada: el año sin guion ("2025" y no "2025–") también en los pósters, Buscar, la portada
+  de Inicio, el tráiler al pasar, el protector y "Más como esto", cuando la ficha de la serie ya se cargó.
+- Asistente inicial: con la sesión guardada también espera la primera sincronización, así muestra los idiomas de
+  la casa y no los de fábrica.
+
 ## [0.26.0] - 2026-10-18
 
 Rediseño con las **45 propuestas visuales aprobadas** en la página de la auditoría (4 votadas "no" quedan como

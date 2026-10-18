@@ -409,6 +409,17 @@ npm run preview    # sirve dist/ en http://localhost:4173
   - Vos/Ajustes: toasts **"Eliminado de Seguir viendo" / "Eliminado del historial"**; el "Deshacer" del historial
     se queda. `Choice showLabel` en Ajustes del reproductor. **Tu año no estima horas**: `stats.ts` `entrySeconds`
     (lo marcado como visto sin reproducir cuenta como título pero no suma tiempo); se fue el "(aprox.)".
+- v0.26.1 hecha (rama `claude/pendientes-v0.26.1`): **subtítulo arriba de la esquina en el celular** (≤760 px, con
+  controles): "Saltar", NextCard, RecapOffer y PostPlay (`cornerKind` en `Player.tsx`, `ResizeObserver` sobre
+  `.player-corner`, `SUB_CORNER_GAP = 16`, estado `cueBottom`). Lógica pura `cuePlacement()` en `subtitlePrefs.ts`:
+  en Chromium los cues quedan en `line: auto` y sube la caja entera (`--sp-sub-shift` + `data-sub-shift` en el
+  `<video>`, regla `::-webkit-media-text-track-container` en `player-v14.css`, y `transform: none !important` en
+  `-display` contra el `translate(0,-100%)` que deja Chromium); en Firefox (`canShiftCueBox()` falso) `line` = final
+  con `lineAlign: 'end'`. Anda con cualquier cantidad de renglones. PC y TV sin cambios.
+  `lib/yearLabel.ts` `displayYear(item)`: usa la cuenta de temporadas de la ficha en caché (`peekMemory`, nunca pide
+  nada) para el año sin guion en tarjetas/Buscar/Inicio/protector/PostPlay. `Onboarding.tsx` `houseSynced()`: con login
+  espera la primera sincronización también con sesión guardada (tope 10 s). Los pendientes "asistente de una
+  pantalla", "año sin guion" y "series sin duración" ya estaban desde la v0.22.1/v0.22.2.
 - **Decisiones para la v0.17 (reemplazan el reparto del plan de abajo)**: addons y TorBox **iguales para todas las
   casas**, solo los cambia el admin (opción A). Ajustes generales (subtítulos, idiomas, autoplay, saltar intro, sin
   spoilers, reglas de fuentes) **iguales en toda la casa**; lo físico (modo TV, tamaño de la interfaz, protector,
