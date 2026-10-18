@@ -163,7 +163,7 @@ html[data-tv] .pf-tile:focus-visible {
 /* ---------- Editor ---------- */
 
 .pf-editor {
-  width: min(560px, 100%);
+  width: min(640px, 100%);
   display: grid;
   gap: 22px;
   padding: 24px;
@@ -218,30 +218,65 @@ html[data-tv] .pf-tile:focus-visible {
   cursor: pointer;
 }
 .pf-swatch[aria-pressed='true'],
-.pf-art[aria-pressed='true'] {
+.pf-pick[aria-pressed='true'] {
   box-shadow: 0 0 0 3px var(--bg-2), 0 0 0 6px var(--text);
 }
-.pf-arts {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(64px, 1fr));
-  gap: 12px;
+/* Personajes (v0.24): chips por grupo y una grilla de círculos con el color elegido de fondo. */
+.pf-groups {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
 }
-/* Redondas, como va a quedar el avatar. */
-.pf-art {
+.pf-group {
+  padding: 6px 14px;
+  border: 1px solid var(--outline, var(--line));
+  border-radius: 999px;
+  background: transparent;
+  color: var(--text);
+  font: inherit;
+  font-size: 0.9rem;
+  cursor: pointer;
+}
+.pf-group[aria-pressed='true'] {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: var(--on-accent);
+  font-weight: 700;
+}
+.pf-avatars {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(60px, 1fr));
+  gap: 12px;
+  max-height: min(330px, 42vh);
+  overflow-y: auto;
+  /* Que el anillo de la elegida y el foco no se corten contra el borde del scroll. */
+  padding: 8px;
+  margin: -8px;
+}
+.pf-pick {
+  display: grid;
+  place-items: center;
   aspect-ratio: 1;
   max-width: 100%;
   padding: 0;
   border: 0;
   border-radius: 50%;
-  overflow: hidden;
-  background: var(--surface-2);
+  color: #17141f;
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: 1.4rem;
   cursor: pointer;
+  transition: transform 0.15s ease;
 }
-.pf-art img {
-  display: block;
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
+.pf-pick:hover,
+.pf-pick:focus-visible {
+  transform: scale(1.08);
+}
+.pf-pick img {
+  width: 80%;
+  height: 80%;
+  object-fit: contain;
+  pointer-events: none;
 }
 .pf-delete {
   margin-left: auto;
@@ -304,6 +339,7 @@ html[data-tv] .pf-tile:focus-visible {
 }
 
 @media (prefers-reduced-motion: reduce) {
+  .pf-pick,
   .pf-tile-art,
   .pf-tile-art .pf-avatar {
     transition: none;

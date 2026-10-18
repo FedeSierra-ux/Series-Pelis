@@ -4,19 +4,21 @@
 // Los demás tienen un id al azar. Cada perfil tiene su historial, seguir viendo, mi lista, estrellas,
 // "no me interesa", diario y metas; lo demás es de la casa o del aparato.
 
+import { isAvatarId } from './avatars'
+
 export const MAIN_PROFILE = 'main'
 export const MAX_PROFILES = 6
 export const MAX_NAME = 20
 
-/** Colores del avatar con inicial (sobre ellos va texto oscuro). */
+/** Colores del perfil: fondo del avatar o de la inicial (sobre ellos va texto oscuro). */
 export const PROFILE_COLORS = ['#c4b0ff', '#ffb4a2', '#ffd57e', '#9be7c4', '#8fd3ff', '#f5a3d0', '#b8e986', '#d7c4a3'] as const
 
 export interface Profile {
   id: string
   name: string
   color: string
-  /** Fondo de una peli o serie (URL https) en vez de la inicial. */
-  art?: string
+  /** Avatar fijo (`lib/avatars.ts`) sobre el color; sin él, la inicial. Desde la v0.24 (antes, `art`: el fondo de una peli). */
+  avatar?: string
   /** Cuándo se creó o cambió (para la sincronización: gana el más nuevo). */
   at: number
 }
@@ -47,9 +49,9 @@ export function cleanProfile(id: string, raw: unknown): Profile | undefined {
   const name = typeof raw.name === 'string' ? cleanName(raw.name) : ''
   if (!name) return undefined
   const color = typeof raw.color === 'string' && (PROFILE_COLORS as readonly string[]).includes(raw.color) ? raw.color : PROFILE_COLORS[0]
-  const art = typeof raw.art === 'string' && /^https:\/\//.test(raw.art) && raw.art.length <= 500 ? raw.art : undefined
+  const avatar = isAvatarId(raw.avatar) ? raw.avatar : undefined
   const at = typeof raw.at === 'number' && Number.isFinite(raw.at) && raw.at >= 0 ? raw.at : 0
-  return { id, name, color, ...(art ? { art } : {}), at }
+  return { id, name, color, ...(avatar ? { avatar } : {}), at }
 }
 
 export const DEFAULT_MAIN: Profile = { id: MAIN_PROFILE, name: 'Principal', color: PROFILE_COLORS[0], at: 0 }

@@ -2,12 +2,9 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { ContinueCard } from '../components/ContinueCard'
 import { PosterCard } from '../components/PosterCard'
-import { ProfileAvatar } from '../components/ProfileAvatar'
 import { Row } from '../components/Row'
 import { Theme2Icon, type Theme2IconName } from '../components/Theme2Icons'
 import { useTitle } from '../lib/hooks'
-import { openProfilePicker } from '../lib/profiles'
-import { useActiveProfile, useProfiles } from '../lib/profileSwitch'
 import { formatStars, isHighStars } from '../lib/stars'
 import { continueWatching, hideFromContinue, progressStore, ratingsStore, useStore } from '../lib/store'
 import { HistoryGoal } from './goals/GoalLink'
@@ -18,6 +15,7 @@ import './me.css'
 // v0.14 (U26): "Vos", estilo "Mi Netflix" pero con el historial adentro. Junta lo personal que antes estaba
 // repartido: Seguir viendo, Mi lista, lo que te gustó (4-5 ★), lo que viste (por día) y los accesos.
 // v0.23: Mi lista completa (en grilla) es lo principal, y los accesos son Historial, Calendario y Tu año.
+// v0.24: los perfiles salieron de acá (el avatar de arriba del riel abre "¿Quién está mirando?").
 
 /** Cuántas entradas del historial se ven acá; el resto, en "Ver todo el historial". */
 const HISTORY_PREVIEW = 8
@@ -26,34 +24,6 @@ const UNDO_MS = 5000
 
 const detailLink = (e: { type: string; metaId: string; season?: number; videoId: string }) =>
   `/detail/${e.type}/${encodeURIComponent(e.metaId)}${e.season !== undefined ? `?season=${e.season}&video=${encodeURIComponent(e.videoId)}` : ''}`
-
-/** Perfiles (v0.18): con más de uno, quién está mirando y "Cambiar"; con uno solo, nada más el acceso para agregar. */
-function ProfileSwitcher() {
-  const multi = useProfiles().length > 1
-  const profile = useActiveProfile()
-  if (!multi) {
-    return (
-      <button type="button" className="btn btn-ghost btn-small me-profiles" onClick={() => openProfilePicker(true)}>
-        Perfiles
-      </button>
-    )
-  }
-  return (
-    <div className="me-profile">
-      <ProfileAvatar profile={profile} size={48} />
-      <div className="me-profile-text">
-        <span className="muted">Mirando como</span>
-        <strong>{profile.name}</strong>
-      </div>
-      <button type="button" className="btn btn-small" onClick={() => openProfilePicker()}>
-        Cambiar de perfil
-      </button>
-      <button type="button" className="btn btn-ghost btn-small" onClick={() => openProfilePicker(true)}>
-        Administrar
-      </button>
-    </div>
-  )
-}
 
 export function Me() {
   useTitle('Vos')
@@ -81,7 +51,6 @@ export function Me() {
           <h1>Vos</h1>
           <p className="muted me-sub">Lo que estás viendo, lo que guardaste y todo lo que ya viste.</p>
         </div>
-        <ProfileSwitcher />
       </header>
 
       <MeShortcuts />

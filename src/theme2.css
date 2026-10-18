@@ -40,8 +40,7 @@
 [data-theme='2'] h1,
 [data-theme='2'] h2,
 [data-theme='2'] h3,
-[data-theme='2'] .t2-brand,
-[data-theme='2'] .t2-logo {
+[data-theme='2'] .t2-brand {
   font-family: var(--font-display);
   letter-spacing: -0.01em;
 }
@@ -193,31 +192,29 @@
 .t2-rail::-webkit-scrollbar {
   display: none;
 }
-.t2-logo {
+/* v0.24: el perfil activo ocupa el lugar del logo; abre "¿Quién está mirando?". */
+.t2-profile {
   flex: none;
   display: grid;
   place-items: center;
-  width: 48px;
-  height: 48px;
-  margin-bottom: 10px;
-  border-radius: 16px;
-  overflow: hidden;
-  /* El ícono de Flix (v0.22) ya trae su fondo violeta oscuro. */
-  background: #0b0819;
+  margin: 0 0 10px;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  background: none;
+  color: inherit;
+  cursor: pointer;
+  transition: transform 0.15s ease;
 }
-.t2-logo img {
-  display: block;
-  width: 100%;
-  height: 100%;
+.t2-profile:hover,
+.t2-profile:focus-visible {
+  transform: scale(1.06);
 }
-.t2-logo:focus-visible {
+.t2-profile:focus-visible {
   outline-offset: 3px;
 }
-.t2-logo-sm {
-  width: 36px;
-  height: 36px;
+.t2-profile-sm {
   margin: 0;
-  border-radius: 12px;
 }
 .t2-rail-link {
   flex: none;
@@ -965,11 +962,13 @@
     gap: 6px;
     padding-top: 22px;
   }
-  html[data-tv] .t2-logo {
-    width: 56px;
-    height: 56px;
-    border-radius: 18px;
+  html[data-tv] .t2-profile {
     margin-bottom: 14px;
+  }
+  html[data-tv] .t2-profile .pf-avatar {
+    width: 56px !important;
+    height: 56px !important;
+    font-size: 1.6rem !important;
   }
   html[data-tv] .t2-rail-link {
     width: 96px;
@@ -1051,4 +1050,10 @@ html[data-tv][data-theme='2'] .btn-small {
 }
 [data-theme='2'] .cast-skeleton .skeleton-line + .skeleton-line {
   width: 55%;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .t2-profile {
+    transition: none;
+  }
 }

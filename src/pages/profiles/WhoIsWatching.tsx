@@ -88,7 +88,7 @@ export function WhoIsWatching({ auto, startManaging = false, onClose }: { auto: 
     <div className="pf-layer" data-nav-scope data-no-screensaver onKeyDown={onKeyDown} onPointerDown={() => counting && setRound((r) => r + 1)}>
       <div className="pf-box" role="dialog" aria-modal="true" aria-labelledby="pf-title">
         {editing ? (
-          <ProfileEditor profile={editing.profile} defaultColor={nextColor(profiles)} onClose={() => setEditing(undefined)} />
+          <ProfileEditor profile={editing.profile} defaultColor={nextColor(profiles)} takenAvatars={profiles.map((p) => p.avatar)} onClose={() => setEditing(undefined)} />
         ) : (
           <>
             <h1 id="pf-title" className="pf-title">

@@ -93,6 +93,15 @@ export default defineConfig({
             },
           },
           {
+            // Avatares de los perfiles (v0.24, public/avatars): fijos, se guardan la primera vez que se ven.
+            urlPattern: ({ url, sameOrigin }) => sameOrigin && url.pathname.startsWith('/avatars/'),
+            handler: 'CacheFirst',
+            options: {
+              cacheName: 'avatars',
+              expiration: { maxEntries: 100, maxAgeSeconds: 60 * 60 * 24 * 365 },
+            },
+          },
+          {
             // Pósters, fondos, logos y miniaturas de episodios: casi nunca cambian.
             urlPattern: ({ url }) => /(^|\.)metahub\.space$/.test(url.hostname) || url.hostname === 'image.tmdb.org',
             handler: 'CacheFirst',
