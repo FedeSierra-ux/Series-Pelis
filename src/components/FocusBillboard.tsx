@@ -49,7 +49,16 @@ function Billboard() {
       setActive(true)
       timer = setTimeout(() => pick(t), DEBOUNCE_MS)
     }
+    // El foco se va a ningún lado (<body>): sin tarjeta enfocada, la portada no queda con un título viejo.
+    const onBlur = (e: FocusEvent) => {
+      if (e.relatedTarget) return
+      clearTimeout(timer)
+      timer = setTimeout(() => {
+        if (!cardTarget(document.activeElement) && !inRows(document.activeElement)) setActive(false)
+      }, DEBOUNCE_MS)
+    }
     document.addEventListener('focusin', onFocus)
+    document.addEventListener('focusout', onBlur)
     const first = cardTarget(document.activeElement)
     if (first) {
       setActive(true)
@@ -57,6 +66,7 @@ function Billboard() {
     }
     return () => {
       document.removeEventListener('focusin', onFocus)
+      document.removeEventListener('focusout', onBlur)
       clearTimeout(timer)
     }
   }, [])

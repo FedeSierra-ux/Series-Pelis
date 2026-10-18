@@ -442,13 +442,45 @@ export function setWatchedMany(
   })
 }
 
-export function removeHistory(videoIds: string[]) {
+/** Lo que borró `removeHistory`, para "Deshacer". */
+export interface RemovedHistory {
+  progress: WatchEntry[]
+  diary: DiaryEntry[]
+}
+
+/** Saca esos videos del historial (y del diario). Devuelve una copia de lo borrado para poder deshacerlo. */
+export function removeHistory(videoIds: string[]): RemovedHistory {
+  const ids = new Set(videoIds)
+  const progressAll = progressStore.get()
+  const removed: RemovedHistory = {
+    progress: videoIds.map((id) => progressAll[id]).filter((e): e is WatchEntry => !!e),
+    diary: Object.values(diaryStore.get().entries).filter((d) => ids.has(d.videoId)),
+  }
   diaryStore.set((d) => ({ ...d, entries: withoutVideos(d.entries, videoIds) }))
   progressStore.set((all) => {
     const copy = { ...all }
     videoIds.forEach((id) => delete copy[id])
     return copy
   })
+  return removed
+}
+
+/** "Deshacer" de `removeHistory`: vuelve a poner lo borrado (si mientras tanto se volvió a ver, gana lo nuevo). */
+export function restoreHistory(removed: RemovedHistory) {
+  if (removed.progress.length > 0) {
+    progressStore.set((all) => {
+      const copy = { ...all }
+      for (const e of removed.progress) if (!copy[e.videoId]) copy[e.videoId] = e
+      return copy
+    })
+  }
+  if (removed.diary.length > 0) {
+    diaryStore.set((d) => {
+      const entries = { ...d.entries }
+      for (const e of removed.diary) if (!entries[e.id]) entries[e.id] = e
+      return { ...d, entries }
+    })
+  }
 }
 
 /**

@@ -14,7 +14,7 @@ import { UpdateToast } from './components/UpdateToast'
 import { ViewTransitionRouter } from './components/ViewTransitionRouter'
 import { StorageWarning } from './components/StorageWarning'
 import { resetFocus, restoreFocus, saveFocus, trackFocus } from './lib/focusMemory'
-import { initSpatialNav, ladderBack } from './lib/spatialNav'
+import { firstVisibleCard, initSpatialNav, ladderBack, revealRestored } from './lib/spatialNav'
 import { nativeExit } from './lib/native'
 import { Detail } from './pages/Detail'
 import { Discover } from './pages/Discover'
@@ -81,7 +81,7 @@ function ScrollMemory() {
     prev.current = { key: location.key, pathname: location.pathname }
     if (before && before.key !== location.key) saveFocus(before.key)
     if (type === 'POP') {
-      if (!restoreFocus(location.key)) window.scrollTo(0, 0)
+      if (!restoreFocus(location.key, { reveal: revealRestored, fallback: firstVisibleCard })) window.scrollTo(0, 0)
       return
     }
     resetFocus()

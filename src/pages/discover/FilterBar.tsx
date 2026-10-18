@@ -229,19 +229,22 @@ export function FilterBar({ type, filters, options, selected, useTmdb, tmdbOn, k
             options={SORTS.map((s) => ({ value: s.value, label: s.label }))}
             onChange={(v) => onChange({ ...filters, sort: v as SortKey })}
           />
-          <button
-            ref={moreBtn}
-            type="button"
-            className={`fb-more${chips.length > 0 ? ' fb-on' : ''}`}
-            aria-haspopup="dialog"
-            aria-expanded={open}
-            aria-label={chips.length > 0 ? `Filtros, ${chips.length} ${chips.length === 1 ? 'activo' : 'activos'}` : 'Filtros'}
-            onClick={() => setOpen(true)}
-          >
-            <FilterIcon name="sliders" size={18} />
-            <span className="fb-more-text">Filtros</span>
-            {chips.length > 0 && <span className="fb-badge">{chips.length}</span>}
-          </button>
+          {/* El envoltorio solo existe en el celular (pegajoso, tapa los chips que pasan por detrás). */}
+          <div className="fb-more-wrap">
+            <button
+              ref={moreBtn}
+              type="button"
+              className={`fb-more${chips.length > 0 ? ' fb-on' : ''}`}
+              aria-haspopup="dialog"
+              aria-expanded={open}
+              aria-label={chips.length > 0 ? `Filtros, ${chips.length} ${chips.length === 1 ? 'activo' : 'activos'}` : 'Filtros'}
+              onClick={() => setOpen(true)}
+            >
+              <FilterIcon name="sliders" size={18} />
+              <span className="fb-more-text">Filtros</span>
+              {chips.length > 0 && <span className="fb-badge">{chips.length}</span>}
+            </button>
+          </div>
         </div>
       </div>
 

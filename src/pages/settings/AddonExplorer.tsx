@@ -1,19 +1,12 @@
 import { useCallback, useEffect, useState } from 'react'
 import { invalidate } from '../../lib/cache'
 import { useAddons } from '../../lib/hooks'
-import { typeLabel } from '../../lib/i18n'
+import { RESOURCE_LABEL, typeLabel } from '../../lib/i18n'
 import { addonName } from '../../lib/addons'
 import { officialAddons } from '../../lib/stremioApi'
 import { isImportableAddon, toInstalledAddon, type StremioAddonDescriptor } from '../../lib/stremioLibrary'
 import { addInstalledAddons, installAddon, sameAddon } from '../../lib/store'
 import { errorText } from '../../lib/errors'
-
-const RESOURCE_LABEL: Record<string, string> = {
-  catalog: 'catálogos',
-  meta: 'info',
-  stream: 'streams',
-  subtitles: 'subtítulos',
-}
 
 /** Algunos logos de la colección vienen por http o ya no existen: mostramos la inicial. */
 function AddonLogo({ src, name }: { src?: string; name: string }) {

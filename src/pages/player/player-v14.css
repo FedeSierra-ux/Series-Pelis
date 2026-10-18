@@ -29,7 +29,7 @@
 @media (max-width: 760px) {
   .player-corner,
   .show-controls .player-corner {
-    bottom: 170px;
+    bottom: 180px; /* con 170 pisaba la punta de la barra de progreso */
   }
 }
 
@@ -556,4 +556,27 @@ html[data-tv] .next-thumb {
 .player-menu .sub-menu-more {
   color: var(--accent);
   font-weight: 600;
+}
+
+/* ---------- TV: zona segura (auditoría v0.25.1) ----------
+   Muchas teles recortan los bordes (overscan) y Android TV pide dejar un 5 %: 96 px a los lados y 54 px
+   arriba y abajo en 1080p. La esquina y los menús suben lo mismo que baja la barra. */
+html[data-tv] .player {
+  --gutter: 5vw;
+}
+html[data-tv] .player-top {
+  padding-top: 5vh;
+}
+html[data-tv] .player-controls {
+  padding-bottom: 5vh;
+}
+html[data-tv] .player-corner,
+html[data-tv] .show-controls .player-corner {
+  bottom: calc(112px + 5vh);
+}
+html[data-tv] .player-menu {
+  bottom: calc(92px + 5vh);
+}
+html[data-tv] .player-chip ~ .player-rate {
+  margin-top: 60px;
 }

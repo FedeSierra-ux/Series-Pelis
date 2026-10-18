@@ -46,6 +46,15 @@ interface Props {
  * al botón de al lado. Con mouse o dedo: la mitad
  * izquierda de una estrella vale media.
  */
+/** `:focus-visible`, o true en navegadores que no lo conocen (los de TV viejos, que van con control). */
+function focusVisible(el: HTMLElement) {
+  try {
+    return el.matches(':focus-visible')
+  } catch {
+    return true
+  }
+}
+
 export function StarRatingInput({ title, tmdbId, label = 'Tu puntaje', autoFocus, onSaved, compact }: Props) {
   const rating = useRating(title.id)
   const saved = rating?.stars
@@ -131,7 +140,8 @@ export function StarRatingInput({ title, tmdbId, label = 'Tu puntaje', autoFocus
         aria-valuenow={draft ?? saved ?? 0}
         aria-valuetext={draft !== undefined ? `${starsLabel(draft)}, Enter para guardar` : saved !== undefined ? starsLabel(saved) : 'Sin puntuar'}
         onKeyDown={onKeyDown}
-        onFocus={() => setFocused(true)}
+        // La ayuda de las flechas solo con teclado o control remoto: con el dedo o el mouse no sirve.
+        onFocus={(e) => setFocused(focusVisible(e.currentTarget))}
         onBlur={() => {
           setFocused(false)
           setDraft(undefined)

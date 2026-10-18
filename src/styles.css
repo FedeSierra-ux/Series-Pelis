@@ -104,9 +104,14 @@ code {
   transition: background 0.15s, transform 0.15s;
   backdrop-filter: blur(8px);
 }
-.btn:hover,
 .btn:focus-visible {
   background: rgba(255, 255, 255, 0.18);
+}
+/* Los realces de :hover van solo con mouse: en pantallas táctiles quedan pegados después de tocar. */
+@media (hover: hover) {
+  .btn:hover {
+    background: rgba(255, 255, 255, 0.18);
+  }
 }
 .btn:disabled {
   opacity: 0.4;
@@ -117,10 +122,15 @@ code {
   background: linear-gradient(135deg, var(--accent-fill), var(--accent-2));
   border-color: transparent;
 }
-.btn-primary:hover,
 .btn-primary:focus-visible {
   background: linear-gradient(135deg, #6d3ff0, #d11a44);
   box-shadow: 0 6px 18px rgba(124, 58, 237, 0.35);
+}
+@media (hover: hover) {
+  .btn-primary:hover {
+    background: linear-gradient(135deg, #6d3ff0, #d11a44);
+    box-shadow: 0 6px 18px rgba(124, 58, 237, 0.35);
+  }
 }
 .btn-ghost {
   background: transparent;
@@ -461,10 +471,15 @@ select option {
   height: 100%;
   object-fit: cover;
 }
-.poster-card:hover .poster-img,
 .poster-card:focus-visible .poster-img {
   transform: scale(1.05);
   box-shadow: 0 10px 30px rgba(0, 0, 0, 0.6);
+}
+@media (hover: hover) {
+  .poster-card:hover .poster-img {
+    transform: scale(1.05);
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.6);
+  }
 }
 .poster-card:focus-visible {
   outline: none;
@@ -807,10 +822,15 @@ select option {
   border-radius: 10px;
   cursor: pointer;
 }
-.stream-item:hover,
 .stream-item:focus-visible {
   border-color: var(--accent);
   background: #24243a;
+}
+@media (hover: hover) {
+  .stream-item:hover {
+    border-color: var(--accent);
+    background: #24243a;
+  }
 }
 .stream-item.disabled {
   opacity: 0.5;
@@ -1093,18 +1113,26 @@ select option {
   border-top-color: #fff;
   animation: spin 0.8s linear infinite;
 }
-.player-toast {
+.player-toasts {
   position: absolute;
   top: 90px;
   left: 50%;
   transform: translateX(-50%);
+  z-index: 6;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  width: max-content;
+  max-width: calc(100% - 2 * var(--gutter));
+}
+.player-toast {
   display: flex;
   align-items: center;
   gap: 12px;
   padding: 10px 16px;
   background: rgba(20, 20, 28, 0.92);
   border-radius: 999px;
-  z-index: 2;
 }
 .player-error {
   position: absolute;
@@ -1818,8 +1846,12 @@ html[data-tv] .player-error-sources button {
   display: flex;
   gap: 8px;
 }
-.player-float .btn:focus,
 .player-float .btn:focus-visible {
+  outline: 3px solid #fff;
+  outline-offset: 2px;
+}
+/* En la TV el foco siempre se ve (por separado: un navegador sin :focus-visible descarta la regla entera). */
+html[data-tv] .player-float .btn:focus {
   outline: 3px solid #fff;
   outline-offset: 2px;
 }
@@ -1846,11 +1878,9 @@ html[data-tv] .player-error-sources button {
 }
 
 .player-toast.player-note {
-  top: 140px;
-  max-width: calc(100% - 2 * var(--gutter));
+  max-width: 100%;
   text-align: center;
   border-radius: var(--radius);
-  z-index: 6;
 }
 
 .controls-row button.active {
@@ -1928,9 +1958,13 @@ html[data-tv] .player-error-sources button {
   font-weight: 800;
   color: var(--muted);
 }
-.cast-card:hover .cast-photo,
 .cast-card:focus-visible .cast-photo {
   transform: scale(1.05);
+}
+@media (hover: hover) {
+  .cast-card:hover .cast-photo {
+    transform: scale(1.05);
+  }
 }
 .cast-card:focus-visible {
   outline: none;
@@ -1967,6 +2001,18 @@ html[data-tv] .player-error-sources button {
 .saga-header .btn {
   white-space: normal;
   max-width: 100%;
+}
+/* La peli que estás viendo: sin enlace, con «Estás acá» en vez del año. */
+.saga .poster-card.is-current {
+  cursor: default;
+}
+.saga .poster-card.is-current:hover .poster-img {
+  transform: none;
+  box-shadow: none;
+}
+.saga .poster-card.is-current .poster-sub {
+  color: var(--accent);
+  font-weight: 700;
 }
 
 /* Dónde ver */
@@ -2195,6 +2241,10 @@ html[data-tv] .player-error-sources button {
     -webkit-text-stroke-width: 2px;
     padding-bottom: 36px;
   }
+}
+/* TV: el título y el año de la tarjeta son más altos; el número termina al pie de la imagen, no encima del texto. */
+html[data-tv] .top10-rank {
+  padding-bottom: 62px;
 }
 
 /* ---------- v0.4 reproductor ---------- */
@@ -2645,6 +2695,15 @@ html[data-tv] .player-error-sources button {
     font-size: 1.6rem;
   }
 }
+/* Con el aviso de escena post-créditos (va justo antes en el DOM), la tarjeta baja abajo del aviso. */
+.player-chip ~ .player-rate {
+  margin-top: 48px;
+}
+@media (max-width: 760px) {
+  .player-chip ~ .player-rate {
+    margin-top: 16px;
+  }
+}
 
 /* Ajustes → Gustos y spoilers */
 .taste-settings .check + .check {
@@ -2869,6 +2928,10 @@ html[data-tv] .player-error-sources button {
     left: 6px;
     padding: 2px 6px;
   }
+  /* Con el puntaje de IMDb a la derecha (que no se mueve), la etiqueta se corta antes de tocarlo. */
+  .poster-card:has(.poster-corner) .poster-label {
+    max-width: calc(100% - 76px);
+  }
 }
 
 /* ---------- v0.5 diario (v0.23: historial) ---------- */
@@ -3075,16 +3138,10 @@ html[data-tv] .player-error-sources button {
   min-width: 40px;
   justify-content: center;
 }
+/* El fondo, el borde y la píldora vienen del Tema 2 (theme2.css), como los demás campos. */
 .goal-stepper input {
   width: 96px;
-  font: inherit;
-  font-weight: 700;
   text-align: center;
-  color: var(--text);
-  background: var(--bg);
-  border: 1px solid var(--line);
-  border-radius: 10px;
-  padding: 8px 6px;
   -moz-appearance: textfield;
 }
 .goal-stepper input::-webkit-inner-spin-button,
@@ -4486,6 +4543,10 @@ input[type='password']:focus-visible {
   .catalog-item-text {
     /* Entra al lado de ↑ ↓ ⋯ en 390 px; si el nombre es muy largo, las acciones bajan de línea. */
     flex: 1 1 150px;
+  }
+  /* Renombrando: el campo ocupa todo el renglón (↑ ↓ ⋯ bajan) y Guardar/Cancelar quedan juntos abajo. */
+  .catalog-item-text:has(> .inline-form) {
+    flex-basis: 100%;
   }
   .catalog-item-actions {
     flex-wrap: nowrap;

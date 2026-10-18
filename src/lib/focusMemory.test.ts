@@ -3,6 +3,7 @@ import {
   MAX_ENTRIES,
   STORAGE_KEY,
   needsReveal,
+  pickMatch,
   recallSnapshot,
   rememberSnapshot,
   selectorFor,
@@ -126,5 +127,61 @@ describe('browse.css: la portada fija no cuenta como lugar visible', () => {
     // Los cortes del media query coinciden con donde la portada deja de ser fija.
     expect(browseCss).toContain('@media (max-height: 560px)')
     expect(browseCss).toContain('@media (max-width: 760px)')
+  })
+})
+
+describe('pickMatch (el mismo póster en varias filas)', () => {
+  const rows = ['Top 10 de hoy', 'Para vos', 'Porque viste Breaking Bad']
+
+  it('vuelve al de la fila guardada, no a la primera copia', () => {
+    expect(pickMatch(rows, { row: 'Porque viste Breaking Bad', nth: 2 }, 'ready', false)).toBe(2)
+    expect(pickMatch(rows, { row: 'Para vos', nth: 1 }, 'ready', false)).toBe(1)
+  })
+
+  it('espera si la fila guardada todavía no está o está cargando', () => {
+    expect(pickMatch(['Top 10 de hoy'], { row: 'Netflix', nth: 1 }, 'missing', false)).toBe('wait')
+    expect(pickMatch(['Top 10 de hoy'], { row: 'Netflix', nth: 1 }, 'loading', false)).toBe('wait')
+    expect(pickMatch([], { row: 'Netflix' }, 'loading', false)).toBe('wait')
+  })
+
+  it('si la fila ya cargó sin él, o se acabó la espera, usa el lugar entre los iguales', () => {
+    expect(pickMatch(rows, { row: 'Seguir viendo', nth: 1 }, 'ready', false)).toBe(1)
+    expect(pickMatch(rows, { row: 'Netflix', nth: 2 }, 'missing', true)).toBe(2)
+    expect(pickMatch(['Top 10 de hoy'], { row: 'Netflix', nth: 4 }, 'missing', true)).toBe(0)
+  })
+
+  it('sin fila guardada (grilla, ficha): el mismo lugar, o el primero', () => {
+    expect(pickMatch([undefined, undefined], { nth: 1 }, 'ready', false)).toBe(1)
+    expect(pickMatch([undefined], {}, 'ready', false)).toBe(0)
+  })
+
+  it('sin ninguno: espera, y al final se rinde', () => {
+    expect(pickMatch([], {}, 'ready', false)).toBe('wait')
+    expect(pickMatch([], { row: 'Netflix' }, 'missing', true)).toBe(-1)
+  })
+})
+
+describe('instantánea con fila y scroll horizontal', () => {
+  it('guarda la fila, el lugar y el scroll de la fila', () => {
+    const store = fakeStore()
+    rememberSnapshot(store, 'k', { focus: 'a[href="/detail/series/tt1"]', scrollY: 900, row: 'Para vos', nth: 1, rowLeft: 2462.4 })
+    expect(recallSnapshot(store, 'k')).toEqual({ focus: 'a[href="/detail/series/tt1"]', scrollY: 900, row: 'Para vos', nth: 1, rowLeft: 2462 })
+  })
+
+  it('sin foco no guarda nada de la fila', () => {
+    const store = fakeStore()
+    rememberSnapshot(store, 'k', { scrollY: 10, row: 'Para vos', nth: 1, rowLeft: 40 })
+    expect(recallSnapshot(store, 'k')).toEqual({ scrollY: 10 })
+  })
+})
+
+describe('needsReveal en horizontal (póster fuera de su fila)', () => {
+  const row = { left: 0, right: 1280 }
+  it('dentro de la fila no hace falta', () => {
+    expect(needsReveal({ top: 300, bottom: 600, left: 900, right: 1100 }, 0, 800, row)).toBe(false)
+  })
+  it('afuera, a la derecha o a la izquierda, sí', () => {
+    expect(needsReveal({ top: 300, bottom: 600, left: 3203, right: 3400 }, 0, 800, row)).toBe(true)
+    expect(needsReveal({ top: 300, bottom: 600, left: -150, right: 40 }, 0, 800, row)).toBe(true)
   })
 })

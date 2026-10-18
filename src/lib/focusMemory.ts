@@ -7,6 +7,12 @@ export interface FocusSnapshot {
   /** Selector CSS del elemento enfocado (o nada si no había foco). */
   focus?: string
   scrollY: number
+  /** Fila (`data-row-key`) del elemento: el mismo póster puede estar en varias filas de la pantalla. */
+  row?: string
+  /** Lugar entre los elementos de la pantalla que coinciden con `focus` (respaldo si la fila no está). */
+  nth?: number
+  /** Scroll horizontal de la fila. */
+  rowLeft?: number
 }
 
 export interface SnapshotStore {
@@ -44,7 +50,13 @@ export function rememberSnapshot(store: SnapshotStore, key: string, snap: FocusS
   const entries = readAll(store)
   // Volver a guardar la misma clave la deja como la más nueva (el orden de las claves es el de inserción).
   delete entries[key]
-  entries[key] = { scrollY: Math.max(0, Math.round(snap.scrollY)), ...(snap.focus ? { focus: snap.focus } : {}) }
+  entries[key] = {
+    scrollY: Math.max(0, Math.round(snap.scrollY)),
+    ...(snap.focus ? { focus: snap.focus } : {}),
+    ...(snap.focus && snap.row ? { row: snap.row } : {}),
+    ...(snap.focus && snap.nth ? { nth: snap.nth } : {}),
+    ...(snap.focus && snap.rowLeft ? { rowLeft: Math.round(snap.rowLeft) } : {}),
+  }
   const keys = Object.keys(entries)
   for (const old of keys.slice(0, Math.max(0, keys.length - MAX_ENTRIES))) delete entries[old]
   writeAll(store, entries)
@@ -80,6 +92,30 @@ export function selectorFor(identity: FocusIdentity): string | undefined {
   return undefined
 }
 
+/** Estado de la fila guardada en la pantalla: no está (todavía), cargando (esqueleto) o con sus tarjetas. */
+export type RowState = 'missing' | 'loading' | 'ready'
+
+/**
+ * Cuál de los elementos que coinciden con el selector enfocar (`rows[i]` = fila de cada uno), o
+ * `'wait'` para seguir esperando. Primero el de la fila guardada: el mismo póster puede estar en
+ * "Top 10" y en "Para vos". Si esa fila todavía no está o está cargando, se espera; si ya cargó sin
+ * él (o se acabó la espera), el que estaba en el mismo lugar entre los iguales. Sin ninguno, -1. Puro.
+ */
+export function pickMatch(
+  rows: (string | undefined)[],
+  snap: Pick<FocusSnapshot, 'row' | 'nth'>,
+  rowState: RowState,
+  timedOut: boolean,
+): number | 'wait' {
+  if (snap.row !== undefined) {
+    const i = rows.indexOf(snap.row)
+    if (i >= 0) return i
+    if (rowState !== 'ready' && !timedOut) return 'wait'
+  }
+  if (rows.length === 0) return timedOut ? -1 : 'wait'
+  return Math.min(snap.nth ?? 0, rows.length - 1)
+}
+
 // ---------- Parte con DOM ----------
 
 const CONTAINER = 'main'
@@ -112,21 +148,46 @@ function isVisible(el: HTMLElement) {
   return r.width > 0 && r.height > 0
 }
 
-function find(selector: string): HTMLElement | undefined {
+function findAll(selector: string): HTMLElement[] {
   // Solo dentro de <main>: el mismo href puede estar también en el menú (ej. "/calendar").
   const scope = document.querySelector(CONTAINER) ?? document
   try {
-    return Array.from(scope.querySelectorAll<HTMLElement>(selector)).find(isVisible)
+    return Array.from(scope.querySelectorAll<HTMLElement>(selector)).filter(isVisible)
   } catch {
-    return undefined
+    return []
   }
 }
 
+const ROW = '.row[data-row-key]'
+
+function rowKeyOf(el: Element): string | undefined {
+  return el.closest(ROW)?.getAttribute('data-row-key') ?? undefined
+}
+
+function rowState(key: string | undefined): RowState {
+  if (key === undefined) return 'ready'
+  const rows = Array.from(document.querySelectorAll(`${CONTAINER} ${ROW}`)).filter((r) => r.getAttribute('data-row-key') === key)
+  if (rows.length === 0) return 'missing'
+  return rows.some((r) => r.hasAttribute('data-row-loading')) ? 'loading' : 'ready'
+}
+
+/** El elemento guardado en la pantalla actual: `'wait'` si su fila todavía no cargó. */
+function locate(selector: string, snap: Pick<FocusSnapshot, 'row' | 'nth'>, timedOut: boolean): HTMLElement | 'wait' | undefined {
+  const all = findAll(selector)
+  const pick = pickMatch(all.map(rowKeyOf), snap, rowState(snap.row), timedOut)
+  return pick === 'wait' ? 'wait' : all[pick]
+}
+
 let lastFocus: string | undefined
+let lastRow: string | undefined
+let lastNth = 0
+/** La fila del último foco y su scroll horizontal (al guardar, la pantalla vieja ya no está en el DOM). */
+let lastScroller: Element | undefined
+let lastRowLeft = 0
 let lastScrollY = 0
 let listening = false
-/** Selector del elemento restaurado en la pantalla actual (la navegación espacial lo prefiere). */
-let restored: string | undefined
+/** Elemento restaurado en la pantalla actual (la navegación espacial lo prefiere). */
+let restored: { selector: string; row?: string; nth?: number } | undefined
 let cancelPending: (() => void) | undefined
 
 function storage(): SnapshotStore | undefined {
@@ -146,15 +207,27 @@ export function trackFocus() {
     const t = e.target
     if (!(t instanceof Element) || !t.closest(CONTAINER)) return
     lastFocus = describeElement(t)
+    lastRow = rowKeyOf(t)
+    lastNth = lastFocus ? Math.max(0, findAll(lastFocus).indexOf(t as HTMLElement)) : 0
+    lastScroller = t.closest('.row-scroller') ?? undefined
+    lastRowLeft = lastScroller?.scrollLeft ?? 0
   })
   window.addEventListener('scroll', () => (lastScrollY = window.scrollY), { passive: true })
+  // El scroll de las filas no burbujea: se escucha en captura y solo cuenta el de la fila del foco.
+  document.addEventListener(
+    'scroll',
+    (e) => {
+      if (e.target === lastScroller) lastRowLeft = (e.target as Element).scrollLeft
+    },
+    { capture: true, passive: true },
+  )
 }
 
 /** Guarda dónde estaba el usuario en la pantalla que se deja. */
 export function saveFocus(key: string) {
   const store = storage()
   if (!store) return
-  rememberSnapshot(store, key, { focus: lastFocus, scrollY: lastScrollY })
+  rememberSnapshot(store, key, { focus: lastFocus, scrollY: lastScrollY, row: lastRow, nth: lastNth, rowLeft: lastRowLeft })
 }
 
 /** La pantalla nueva arranca de cero: nada restaurado, y el foco guardado ya no cuenta. */
@@ -162,21 +235,36 @@ export function resetFocus() {
   cancelPending?.()
   restored = undefined
   lastFocus = undefined
+  lastRow = undefined
+  lastNth = 0
+  lastScroller = undefined
+  lastRowLeft = 0
 }
 
 /** Elemento restaurado para la pantalla actual, si sigue en pantalla. */
 export function restoredElement(): HTMLElement | undefined {
-  return restored ? find(restored) : undefined
+  if (!restored) return undefined
+  const el = locate(restored.selector, restored, true)
+  return el === 'wait' ? undefined : el
 }
 
-const RETRY_MS = 2000
+/** Lo que se espera a que aparezca el elemento: las filas lejanas cargan cuando se acercan (a veces >5 s). */
+export const RETRY_MS = 8000
 
 /**
  * ¿Hay que volver a centrar el elemento? Sí si se sale por abajo o si su parte de arriba queda tapada por lo
  * fijo de arriba (`top` = alto de la portada fija, o 0). Puro, para poder probarlo.
  */
-export function needsReveal(rect: { top: number; bottom: number }, top: number, viewportHeight: number): boolean {
-  return rect.top < top || rect.bottom > viewportHeight
+export function needsReveal(
+  rect: { top: number; bottom: number; left?: number; right?: number },
+  top: number,
+  viewportHeight: number,
+  /** Lo visible de la fila en x: un póster fuera de ella (scroll horizontal) también hay que traerlo. */
+  row?: { left: number; right: number },
+): boolean {
+  if (rect.top < top || rect.bottom > viewportHeight) return true
+  if (!row || rect.left === undefined || rect.right === undefined) return false
+  return rect.left < row.left - 1 || rect.right > row.right + 1
 }
 
 /** Desde dónde se ve la página: 0, o el alto de lo fijo de arriba si la pantalla lo declara con `scroll-padding-top`. */
@@ -184,11 +272,39 @@ function visibleTop(): number {
   return parseFloat(getComputedStyle(document.documentElement).scrollPaddingTop) || 0
 }
 
+/** Lo que apaga la sombra de una portada fija justo debajo de ella (`bh-edge` en discover/browse.css). */
+const SHADE_PX = 80
+
+/** ¿Quedó a la vista lo restaurado? Con la fila: su título fuera de la portada fija y su sombra, y el póster dentro de la fila. */
+function revealNeeded(el: HTMLElement): boolean {
+  const rect = el.getBoundingClientRect()
+  const top = visibleTop()
+  const scroller = el.closest('.row-scroller')
+  const head = scroller?.closest('.row')?.querySelector('.row-header')
+  const box = {
+    top: Math.min(rect.top, head ? head.getBoundingClientRect().top - (top > 0 ? SHADE_PX : 0) : rect.top),
+    bottom: rect.bottom,
+    left: rect.left,
+    right: rect.right,
+  }
+  return needsReveal(box, top, window.innerHeight, scroller?.getBoundingClientRect())
+}
+
+export interface RestoreOptions {
+  /** Cómo traer a la vista lo restaurado (`needed`: no se ve entero). Sin esto, centrado si hace falta. */
+  reveal?: (el: HTMLElement, needed: boolean) => void
+  /** Qué enfocar si lo guardado no aparece (ej. la primera tarjeta visible en la TV). */
+  fallback?: () => HTMLElement | undefined
+}
+
+const STOP_EVENTS = ['keydown', 'pointerdown', 'wheel', 'touchstart'] as const
+
 /**
  * Vuelve al scroll y al foco guardados para `key`. Las filas cargan de a poco, así que espera (con
- * requestAnimationFrame, hasta ~2 s) a que el elemento aparezca. Devuelve `false` si no había nada guardado.
+ * requestAnimationFrame, hasta `RETRY_MS`) a que el elemento aparezca en su fila; si el usuario toca algo
+ * antes, se deja de esperar. Devuelve `false` si no había nada guardado.
  */
-export function restoreFocus(key: string): boolean {
+export function restoreFocus(key: string, options: RestoreOptions = {}): boolean {
   cancelPending?.()
   restored = undefined
   const store = storage()
@@ -198,26 +314,46 @@ export function restoreFocus(key: string): boolean {
   lastScrollY = snap.scrollY
   if (!snap.focus) return true
   const selector = snap.focus
-  restored = selector
+  restored = { selector, row: snap.row, nth: snap.nth }
   const started = performance.now()
   let raf = 0
+  const stop = () => {
+    cancelAnimationFrame(raf)
+    for (const type of STOP_EVENTS) window.removeEventListener(type, onUser, true)
+    cancelPending = undefined
+  }
+  const onUser = () => stop()
+  const land = (el: HTMLElement) => {
+    // El contenido pudo haber cambiado de alto al cargar: volvemos al scroll guardado y enfocamos.
+    window.scrollTo(0, snap.scrollY)
+    const scroller = el.closest('.row-scroller')
+    if (scroller && snap.rowLeft) scroller.scrollLeft = snap.rowLeft
+    el.focus({ preventScroll: true })
+    // Lo que tapa una portada fija (`scroll-padding-top`, ver discover/browse.css) no cuenta como visible.
+    const needed = revealNeeded(el)
+    if (options.reveal) options.reveal(el, needed)
+    else if (needed) el.scrollIntoView({ block: 'center', inline: 'center' })
+  }
   const tick = () => {
-    const el = find(selector)
-    if (el) {
-      cancelPending = undefined
-      // El contenido pudo haber cambiado de alto al cargar: volvemos al scroll guardado y enfocamos.
-      window.scrollTo(0, snap.scrollY)
-      el.focus({ preventScroll: true })
-      // Lo que tapa una portada fija (`scroll-padding-top`, ver discover/browse.css) no cuenta como visible:
-      // un póster a medias debajo de ella se vuelve a centrar.
-      if (needsReveal(el.getBoundingClientRect(), visibleTop(), window.innerHeight)) el.scrollIntoView({ block: 'center', inline: 'center' })
-      lastFocus = selector
+    const timedOut = performance.now() - started >= RETRY_MS
+    const el = locate(selector, snap, timedOut)
+    if (el && el !== 'wait') {
+      stop()
+      land(el)
       return
     }
-    if (performance.now() - started < RETRY_MS) raf = requestAnimationFrame(tick)
-    else cancelPending = undefined
+    if (timedOut) {
+      stop()
+      const other = document.activeElement === document.body || !document.activeElement ? options.fallback?.() : undefined
+      if (other) land(other)
+      return
+    }
+    // La página todavía no llegaba al scroll guardado: a medida que crece, se sigue bajando (así cargan las filas de ahí).
+    if (window.scrollY < snap.scrollY - 1) window.scrollTo(0, snap.scrollY)
+    raf = requestAnimationFrame(tick)
   }
+  for (const type of STOP_EVENTS) window.addEventListener(type, onUser, true)
   raf = requestAnimationFrame(tick)
-  cancelPending = () => cancelAnimationFrame(raf)
+  cancelPending = stop
   return true
 }

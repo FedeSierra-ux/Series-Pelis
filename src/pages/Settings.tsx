@@ -6,6 +6,7 @@ import { addonName, CINEMETA_URL } from '../lib/addons'
 import { fetchWithTimeout } from '../lib/abort'
 import { clearCache } from '../lib/cache'
 import { useAddons, useTitle } from '../lib/hooks'
+import { resourceLabel } from '../lib/i18n'
 import {
   exportData,
   importData,
@@ -114,7 +115,7 @@ function AddonsSection() {
                 <span className="chips">
                   {resources.map((r) => (
                     <span key={r} className="chip small">
-                      {r === 'catalog' ? 'catálogos' : r === 'meta' ? 'info' : r === 'stream' ? 'streams' : r === 'subtitles' ? 'subtítulos' : r}
+                      {resourceLabel(r)}
                     </span>
                   ))}
                 </span>

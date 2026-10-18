@@ -122,7 +122,7 @@ function ShapeToggle({ rowKey, name, onStatus }: { rowKey: string; name: string;
   const landscape = useRowShape(rowKey) === 'landscape'
   return (
     <button
-      className="btn btn-ghost btn-text"
+      className="btn btn-ghost btn-text catalog-shape-toggle"
       aria-pressed={landscape}
       title={landscape ? 'Tarjetas apaisadas con logo. Tocá para volver al póster.' : 'Tarjetas con póster. Tocá para pasar a apaisadas con logo.'}
       onClick={() => {

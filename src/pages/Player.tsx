@@ -60,7 +60,7 @@ const SLEEP_KEY = 'sp-sleep-at'
 const VOLUME_STEP = 0.1
 
 type Menu = 'subs' | 'audio' | 'sleep' | 'sources' | 'speed' | 'quick'
-type Sleep = { kind: 'off' } | { kind: 'time'; at: number } | { kind: 'episode' }
+type Sleep = { kind: 'off' } | { kind: 'time'; at: number; minutes?: number } | { kind: 'episode' }
 
 // sessionStorage puede estar bloqueado (modo privado en algunos navegadores de TV).
 function sessionGet(key: string) {
@@ -230,8 +230,9 @@ function PlayerView({ state, resume, notice }: { state: PlayState; resume?: Resu
   const [nextDismissed, setNextDismissed] = useState(false)
   const [countdown, setCountdown] = useState(NEXT_COUNTDOWN_S)
   const [sleep, setSleep] = useState<Sleep>(() => {
-    const at = Number(sessionGet(SLEEP_KEY))
-    return at > Date.now() ? { kind: 'time', at } : { kind: 'off' }
+    // "<hora de corte>:<minutos elegidos>" (los minutos marcan la opción activa del menú).
+    const [at, minutes] = (sessionGet(SLEEP_KEY) ?? '').split(':').map(Number)
+    return at > Date.now() ? { kind: 'time', at, minutes: minutes || undefined } : { kind: 'off' }
   })
   const [sleepFired, setSleepFired] = useState(false)
   // Velocidad de reproducción: se recuerda mientras dure la sesión (pasa al siguiente episodio), no más.
@@ -864,10 +865,14 @@ function PlayerView({ state, resume, notice }: { state: PlayState; resume?: Resu
 
   const chooseSleep = (choice: number | 'episode') => {
     const next: Sleep =
-      choice === 'episode' ? { kind: 'episode' } : choice > 0 ? { kind: 'time', at: Date.now() + choice * 60_000 } : { kind: 'off' }
+      choice === 'episode'
+        ? { kind: 'episode' }
+        : choice > 0
+          ? { kind: 'time', at: Date.now() + choice * 60_000, minutes: choice }
+          : { kind: 'off' }
     setSleep(next)
     // El de minutos sigue andando aunque pase al siguiente episodio; "fin del episodio" es de este.
-    sessionSet(SLEEP_KEY, next.kind === 'time' ? String(next.at) : '')
+    sessionSet(SLEEP_KEY, next.kind === 'time' ? `${next.at}:${choice}` : '')
     setMenu(null)
     flash(
       next.kind === 'off'
@@ -1176,13 +1181,22 @@ function PlayerView({ state, resume, notice }: { state: PlayState; resume?: Resu
     <button
       key={skipKind ?? 'credits'}
       className="btn skip-btn"
-      autoFocus
       onClick={() => skipTo(skipKind ? segments?.[skipKind] : plan.credits)}
     >
       {skipKind === 'intro' ? 'Saltar intro' : skipKind === 'recap' ? 'Saltar resumen' : 'Saltar créditos'}
     </button>
   )
   const showCorner = !menu && !error && !askStill && !sleepFired && !locked && (showNextCard || offerRecap || showSkip || inCredits || postPlayDue)
+  // El botón de saltar toma el foco solo si no estás en los controles o en un menú: si no, el OK
+  // que ibas a usar para pausar saltaba la intro.
+  const skipAlone = showCorner && !offerRecap && !showNextCard && !postPlayDue && (showSkip || inCredits)
+  const skipFocusKey = skipAlone ? (skipKind ?? 'credits') : null
+  useEffect(() => {
+    if (!skipFocusKey) return
+    if (controls && document.activeElement?.closest('.player-controls, .player-menu')) return
+    rootRef.current?.querySelector<HTMLElement>('.player-corner > .skip-btn')?.focus({ preventScroll: true })
+    // Solo cuando aparece el botón (o cambia de intro a resumen/créditos).
+  }, [skipFocusKey])
   // Cuenta regresiva de la tarjeta del siguiente: con escena post-créditos, hasta el final del video.
   const nextLeft = plan.afterCredits ? duration - time : countdown
   const nextTotal = plan.afterCredits && nextAt !== undefined ? duration - nextAt : NEXT_COUNTDOWN_S
@@ -1254,7 +1268,7 @@ function PlayerView({ state, resume, notice }: { state: PlayState; resume?: Resu
         season={video?.season}
         episode={video?.episode}
         videoId={video?.id}
-        visible={!playing && !buffering && time > 0 && !error && !menu && !askStill && !sleepFired && !scrub && !locked}
+        visible={!playing && !buffering && time > 0 && !error && !menu && !askStill && !sleepFired && !scrub && !locked && !postPlayDue && !(duration > 0 && time >= duration - 1)}
       />
 
       {buffering && !error && !askStill && !sleepFired && <div className="player-spinner" aria-label="Cargando" />}
@@ -1285,28 +1299,32 @@ function PlayerView({ state, resume, notice }: { state: PlayState; resume?: Resu
         <RateAtEnd meta={meta} hasNext={!!state.nextVideoId} time={time} duration={duration} creditsStart={plan.credits?.start} />
       )}
 
-      {resumedFrom !== undefined && (
-        <div className="player-toast">
-          Continuando desde {formatTime(resumedFrom)}
-          <button
-            className="btn btn-small"
-            onClick={() => {
-              if (videoRef.current) videoRef.current.currentTime = 0
-              setResumedFrom(undefined)
-            }}
-          >
-            Empezar de nuevo
-          </button>
+      {/* Los avisos van en columna: "Continuando desde…" y una nota a la vez no se pisan. */}
+      {(resumedFrom !== undefined || toast) && (
+        <div className="player-toasts">
+          {resumedFrom !== undefined && (
+            <div className="player-toast">
+              Continuando desde {formatTime(resumedFrom)}
+              <button
+                className="btn btn-small"
+                onClick={() => {
+                  if (videoRef.current) videoRef.current.currentTime = 0
+                  setResumedFrom(undefined)
+                }}
+              >
+                Empezar de nuevo
+              </button>
+            </div>
+          )}
+          {toast && (
+            <div className="player-toast player-note" role="status">
+              {toast}
+            </div>
+          )}
         </div>
       )}
 
       {subs.dragging && <div className="player-drop">Soltá el archivo para cargar los subtítulos (.srt, .vtt, .ass)</div>}
-
-      {toast && (
-        <div className="player-toast player-note" role="status">
-          {toast}
-        </div>
-      )}
 
       {error && (
         <div
@@ -1499,7 +1517,7 @@ function PlayerView({ state, resume, notice }: { state: PlayState; resume?: Resu
                 Desactivado
               </button>
               {[15, 30, 60].map((m) => (
-                <button key={m} onClick={() => chooseSleep(m)}>
+                <button key={m} className={sleep.kind === 'time' && sleep.minutes === m ? 'active' : ''} onClick={() => chooseSleep(m)}>
                   {m} minutos
                 </button>
               ))}

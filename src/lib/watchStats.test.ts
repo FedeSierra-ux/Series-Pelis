@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { formatWatchTime, plural, watchStats } from './watchStats'
+import { formatWatchTime, plural, watchStats, wholeHours } from './watchStats'
 
 describe('plural', () => {
   it('singular solo con 1', () => {
@@ -24,6 +24,12 @@ describe('formatWatchTime', () => {
   it('desde las 10 h, solo horas', () => {
     expect(formatWatchTime(42 * 3600 + 35 * 60)).toBe('42 h')
   })
+  it('desde las 10 h, las mismas horas que la meta y Tu año (para abajo)', () => {
+    const s = 63 * 3600 + 50 * 60
+    expect(wholeHours(s)).toBe(63)
+    expect(formatWatchTime(s)).toBe('63 h')
+    expect(formatWatchTime(63 * 3600 + 59 * 60 + 50)).toBe('63 h')
+  })
   it('valores raros cuentan como 0', () => {
     expect(formatWatchTime(Number.NaN)).toBe('0 min')
     expect(formatWatchTime(-5)).toBe('0 min')
@@ -40,5 +46,15 @@ describe('watchStats', () => {
       { type: 'movie', metaId: 'tt3', watched: false, position: Number.NaN, duration: 0 },
     ])
     expect(s).toEqual({ movies: 1, episodes: 1, seconds: 5400 * 2 + 1800 + 420 })
+  })
+})
+
+describe('wholeHours', () => {
+  it('redondea para abajo y los valores raros dan 0', () => {
+    expect(wholeHours(3599)).toBe(0)
+    expect(wholeHours(3600)).toBe(1)
+    expect(wholeHours(63.9 * 3600)).toBe(63)
+    expect(wholeHours(Number.NaN)).toBe(0)
+    expect(wholeHours(-10)).toBe(0)
   })
 })
