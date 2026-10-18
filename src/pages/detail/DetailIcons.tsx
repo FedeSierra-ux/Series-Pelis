@@ -32,6 +32,7 @@ const PATHS = {
       <path d="M15.5 9a4.5 4.5 0 0 1 0 6M18 6.5a8 8 0 0 1 0 11" />
     </>
   ),
+  back: <path d="M15 5l-7 7 7 7" />,
   close: <path d="M6 6l12 12M18 6L6 18" />,
   restart: <path d="M4 12a8 8 0 1 0 2.4-5.7M4 4v4.5h4.5" />,
   eye: (

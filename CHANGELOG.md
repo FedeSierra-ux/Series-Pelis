@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.22.4] - 2026-10-18
+
+### Agregado
+- **Botón de atrás en la ficha**: arriba a la izquierda de la portada de la peli o serie, en PC y celular, para volver
+  a donde estabas. Si la ficha se abrió con un link directo, lleva al Inicio. En la TV no aparece (está el Atrás del
+  control remoto).
+
 ## [0.22.3] - 2026-10-18
 
 ### Cambiado

@@ -34,6 +34,7 @@ import { useTvMode } from '../lib/tv'
 import type { Meta, Video } from '../lib/types'
 import { errorText } from '../lib/errors'
 import { DetailActions, type PrimaryAction } from './detail/DetailActions'
+import { DetailIcon } from './detail/DetailIcons'
 import { DetailsPanel, ExtrasPanel } from './detail/DetailPanels'
 import { DetailTabs, type DetailTab } from './detail/DetailTabs'
 import { EpisodesPanel } from './detail/EpisodesPanel'
@@ -64,12 +65,26 @@ export function Detail() {
   return <DetailPage key={`${id}|${attempt}`} type={type} id={id} onRetry={retry} />
 }
 
-/** Error de la ficha (no cargó o el título no existe): "Reintentar" (si puede servir) y "Volver". */
-function DetailError({ message, onRetry, children }: { message: string; onRetry?: () => void; children?: ReactNode }) {
+/** "Volver" a donde estaba. Sin historial (se abrió el link directo) lleva al inicio. */
+function useGoBack() {
   const navigate = useNavigate()
   const location = useLocation()
-  // Sin historial (se abrió el link directo) "Volver" lleva al inicio.
-  const back = () => (location.key === 'default' ? navigate('/') : navigate(-1))
+  return () => (location.key === 'default' ? navigate('/') : navigate(-1))
+}
+
+/** v0.22.4: botón de atrás arriba de todo en la ficha (en la TV no se muestra: está el Atrás del control). */
+function DetailBack() {
+  const back = useGoBack()
+  return (
+    <button type="button" className="detail-back" onClick={back} aria-label="Volver" title="Volver" data-nav-skip>
+      <DetailIcon name="back" size={22} />
+    </button>
+  )
+}
+
+/** Error de la ficha (no cargó o el título no existe): "Reintentar" (si puede servir) y "Volver". */
+function DetailError({ message, onRetry, children }: { message: string; onRetry?: () => void; children?: ReactNode }) {
+  const back = useGoBack()
   return (
     <div className="page">
       <h1 className="d-sr-only">No se pudo abrir la ficha</h1>
@@ -137,6 +152,7 @@ function TmdbOnlyDetail({ details: d, type, tmdbType }: { details: TmdbDetails; 
   return (
     <div className="page detail">
       <section className="detail-hero" style={{ backgroundImage: bg ? `url(${bg})` : undefined }}>
+        <DetailBack />
         <div className="hero-shade" />
         <div className="detail-head">
           {poster && <img className="detail-poster" src={poster} alt="" />}
@@ -532,6 +548,7 @@ function DetailPage({ type, id, onRetry }: { type: string; id: string; onRetry: 
   return (
     <div className="page detail">
       <section className="detail-hero" style={{ backgroundImage: bg ? `url(${bg})` : undefined }}>
+        <DetailBack />
         {trailerKey && backdropAllowed && <HeroTrailer ytId={trailerKey} title={name} suspended={!!trailer} />}
         <div className="hero-shade" />
         <div className="detail-head">

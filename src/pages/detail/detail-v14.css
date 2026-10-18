@@ -576,8 +576,45 @@ html[data-tv] .dt-tab {
   padding: 16px 20px 14px;
 }
 
+/* v0.22.4: botón de atrás arriba a la izquierda de la portada de la ficha (en la TV está el Atrás del control). */
+.detail-back {
+  position: absolute;
+  top: 14px;
+  left: 14px;
+  z-index: 3;
+  display: grid;
+  place-items: center;
+  width: 44px;
+  height: 44px;
+  padding: 0;
+  border-radius: 50%;
+  border: 2px solid var(--outline, var(--line));
+  background: rgba(11, 11, 16, 0.55);
+  color: var(--text);
+  cursor: pointer;
+  transition: background 0.15s, border-color 0.15s;
+}
+.detail-back:hover {
+  background: var(--surface-2, var(--bg-3));
+  border-color: var(--text);
+}
+.detail-back:focus-visible {
+  outline: var(--focus-ring, 3px solid var(--accent));
+  outline-offset: 3px;
+}
+/* Lugar para el botón: sin póster el título arranca arriba a la izquierda. */
+@media (min-width: 761px) {
+  html:not([data-tv])[data-theme='2'] .detail-hero {
+    padding-top: 68px;
+  }
+}
+html[data-tv] .detail-back {
+  display: none;
+}
+
 @media (prefers-reduced-motion: reduce) {
   .hero-trailer,
+  .detail-back,
   .d-icon-circle,
   .d-extra-thumb img {
     transition: none;
