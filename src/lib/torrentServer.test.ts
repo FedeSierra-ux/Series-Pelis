@@ -12,7 +12,7 @@ vi.mock('idb-keyval', () => ({
   clear: async () => undefined,
 }))
 
-import { cleanStream, MAX_ENGINE_TRACKERS, streamingServerUrl, streamTrackers } from './addons'
+import { cleanStream, MAX_ENGINE_TRACKERS, normalizeInfoHash, streamingServerUrl, streamTrackers } from './addons'
 import { resetNativeInfo } from './native'
 import { settingsStore } from './store'
 import {
@@ -133,5 +133,15 @@ describe('URL del motor', () => {
   it('cleanStream deja solo los textos de `sources`', () => {
     expect(cleanStream({ infoHash: 'abc', sources: ['tracker:udp://a:1', 5, null] })?.sources).toEqual(['tracker:udp://a:1'])
     expect(cleanStream({ infoHash: 'abc', sources: 'tracker:udp://a:1' })?.sources).toBeUndefined()
+  })
+})
+
+describe('normalizeInfoHash', () => {
+  it('pasa el hex a minúsculas y el base32 a hex', () => {
+    expect(normalizeInfoHash('DD8255ECDC7CA55FB0BBF81323D87062DB1F6D1C')).toBe('dd8255ecdc7ca55fb0bbf81323d87062db1f6d1c')
+    expect(normalizeInfoHash('3WBFL3G4PSSV7MF37AJSHWDQMLNR63I4')).toBe('dd8255ecdc7ca55fb0bbf81323d87062db1f6d1c')
+  })
+  it('otro formato queda como vino', () => {
+    expect(normalizeInfoHash('abc')).toBe('abc')
   })
 })

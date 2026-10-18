@@ -10,8 +10,18 @@ import { SourcesMenu, useSwitchSource } from './SourcesMenu'
 // el reproductor de la web no la puede abrir, así que en vez de pasarle el video se muestra el error y se
 // ofrece otra fuente. Las flechas y "Atrás" los maneja la navegación de siempre (`spatialNav`).
 
-/** `at`: segundos donde quedó (la otra fuente sigue desde ahí). */
-export function EngineError({ state, message, at = 0 }: { state: PlayState; message: string; at?: number }) {
+/** `at`: segundos donde quedó (la otra fuente sigue desde ahí). `onRetry`: volver a probar la misma fuente. */
+export function EngineError({
+  state,
+  message,
+  at = 0,
+  onRetry,
+}: {
+  state: PlayState
+  message: string
+  at?: number
+  onRetry?: () => void
+}) {
   const navigate = useNavigate()
   const switchSource = useSwitchSource(state)
   const tvMode = useTvMode()
@@ -41,7 +51,11 @@ export function EngineError({ state, message, at = 0 }: { state: PlayState; mess
           <p>{message}</p>
           {sources && (
             <div className="player-error-sources">
-              <SourcesMenu state={state} onPick={(pick) => switchSource(pick, { at })} />
+              <SourcesMenu
+                state={state}
+                // La misma URL no cambia la key del reproductor: se reintenta sin navegar.
+                onPick={(pick) => (pick.url === state.playUrl && onRetry ? onRetry() : switchSource(pick, { at }))}
+              />
             </div>
           )}
           <div className="hero-actions">

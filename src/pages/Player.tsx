@@ -132,6 +132,7 @@ function PlayerChoice({ state, resume }: { state: PlayState; resume?: Resume }) 
   const [native, setNative] = useState(() => (settingsStore.get().nativePlayer && isNativeApp() ? nativePlayerAvailable() : false))
   const [fallback, setFallback] = useState<Resume>()
   const [engineFail, setEngineFail] = useState<{ at: number; message?: string }>()
+  const [retry, setRetry] = useState<Resume>()
   useEffect(() => {
     if (native !== undefined) return
     let alive = true
@@ -150,7 +151,7 @@ function PlayerChoice({ state, resume }: { state: PlayState; resume?: Resume }) 
     return (
       <NativePlayerView
         state={state}
-        resume={resume}
+        resume={retry ?? resume}
         onFallback={(at, message) => (engineOnly ? setEngineFail({ at, message }) : setFallback({ at }))}
       />
     )
@@ -159,7 +160,21 @@ function PlayerChoice({ state, resume }: { state: PlayState; resume?: Resume }) 
     const message = engineFail
       ? `El reproductor de Android no pudo con este torrent${engineFail.message ? `: ${engineFail.message}` : '.'}`
       : 'Este torrent solo se reproduce con el reproductor de Android (Ajustes → Reproductor).'
-    return <EngineError state={state} message={message} at={engineFail?.at ?? resume?.at} />
+    return (
+      <EngineError
+        state={state}
+        message={message}
+        at={engineFail?.at ?? resume?.at}
+        onRetry={
+          native && engineFail
+            ? () => {
+                setRetry({ ...resume, at: engineFail.at })
+                setEngineFail(undefined)
+              }
+            : undefined
+        }
+      />
+    )
   }
   return (
     <PlayerView

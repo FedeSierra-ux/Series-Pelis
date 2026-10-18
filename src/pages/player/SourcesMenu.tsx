@@ -83,7 +83,9 @@ export function SourcesMenu({ state, onPick }: { state: PlayState; onPick: (pick
   useEffect(() => {
     const menu = ref.current?.closest('.player-menu, .player-error-sources')
     if (!count || !menu || menu.contains(document.activeElement)) return
-    ;(menu.querySelector<HTMLElement>('button.active') ?? menu.querySelector<HTMLElement>('button'))?.focus()
+    // En la pantalla de error, la actual es la que falló: el foco va a otra.
+    const first = menu.matches('.player-error-sources') ? 'button:not(.active)' : 'button.active'
+    ;(menu.querySelector<HTMLElement>(first) ?? menu.querySelector<HTMLElement>('button'))?.focus()
   }, [count])
 
   return (

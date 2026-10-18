@@ -197,7 +197,7 @@ function DetailPage({ type, id, onRetry }: { type: string; id: string; onRetry: 
   const { data: rawMeta, loading, error } = useMeta(type, id)
   // Lo que manda el addon se valida acá: una lista que no es lista no tira abajo la ficha.
   const meta = useMemo(() => (rawMeta ? safeMeta(rawMeta) : undefined), [rawMeta])
-  const { data: tmdb } = useTmdbDetails(type, id)
+  const { data: tmdb, loading: tmdbLoading } = useTmdbDetails(type, id)
   const progress = useStore(progressStore)
   const watchlist = useStore(watchlistStore)
   // v0.5 gustos: tu puntaje y el modo sin spoilers.
@@ -527,6 +527,19 @@ function DetailPage({ type, id, onRetry }: { type: string; id: string; onRetry: 
         <SectionBoundary what="los detalles">
           <SeriesDetailsPanel tmdb={seriesCastCount > 0 ? tmdb : undefined} facts={seriesInfo} peopleIndex={peopleIndex} />
         </SectionBoundary>
+      ),
+    })
+  // Un enlace con ?tab=more|details mientras TMDB carga: la pestaña queda puesta (con su aviso) en vez de caer en la
+  // primera y saltar después.
+  const waitingTab = ({ more: 'Más como esto', details: 'Detalles' } as Record<string, string>)[activeTab]
+  if (tmdbLoading && waitingTab && !tabs.some((t) => t.id === activeTab))
+    tabs.push({
+      id: activeTab,
+      label: waitingTab,
+      content: (
+        <p className="muted small" role="status">
+          <span className="spinner" aria-hidden="true" /> Cargando…
+        </p>
       ),
     })
   return (
