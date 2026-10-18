@@ -532,7 +532,7 @@ export interface TrackPref {
 }
 
 /** Por metaId (serie o peli): le gana a los idiomas generales de Ajustes. */
-/** TV en vivo: canales favoritos y el último que se vio (ids de iptv-org). */
+/** TV en vivo: canales favoritos y el último que se vio (ids de `LIVE_CHANNELS`). */
 export interface LiveTvState {
   favorites: string[]
   last?: string
