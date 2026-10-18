@@ -2002,18 +2002,6 @@ html[data-tv] .player-float .btn:focus {
   white-space: normal;
   max-width: 100%;
 }
-/* La peli que estás viendo: sin enlace, con «Estás acá» en vez del año. */
-.saga .poster-card.is-current {
-  cursor: default;
-}
-.saga .poster-card.is-current:hover .poster-img {
-  transform: none;
-  box-shadow: none;
-}
-.saga .poster-card.is-current .poster-sub {
-  color: var(--accent);
-  font-weight: 700;
-}
 
 /* Dónde ver */
 .providers {

@@ -379,8 +379,8 @@ npm run preview    # sirve dist/ en http://localhost:4173
   `revealRestored`); `lib/spatialNav.ts` con `rowRevealTop` (`SHADE_PX = 80` bajo la portada), `railTarget` (←
   entra al riel por la página actual), `navScore` por distancia entre bordes, zonas `data-nav-zone` (Ajustes:
   contenido vs índice), saltea tarjetas recortadas, `summary` enfocable. Hovers pegajosos dentro de
-  `@media (hover: hover)`. `StreamList` guarda el orden (`orderRef`). `PosterCard current` (`aria-current`, "Estás
-  acá"). Datos: `removeHistory` devuelve lo borrado y `restoreHistory` lo repone (toast "Deshacer" 6 s);
+  `@media (hover: hover)`. `StreamList` guarda el orden (`orderRef`). La saga **sin "Estás acá"** (el usuario votó no a
+  ficha-09: la peli actual sigue siendo una tarjeta con enlace). Datos: `removeHistory` devuelve lo borrado y `restoreHistory` lo repone (toast "Deshacer" 6 s);
   `wholeHours` (horas para abajo en Tu año/meta/historial); `groupHistory(entries, limit)` cuenta el mes entero;
   `lib/i18n.ts` `RESOURCE_LABEL`/`resourceLabel`. Reproductor: avisos en `.player-toasts`, zona segura 5vw/5vh en la
   TV. Motor: `getInfo.torrentLoading` + evento `torrentReady` (`retainUntilConsumed`); `TORRENT_LOADING`,

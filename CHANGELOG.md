@@ -2,7 +2,7 @@
 
 ## [0.25.1] - 2026-10-18
 
-Arreglos de la auditoría visual (51 de 53 puntos) y de la revisión del motor de torrents.
+Arreglos de la auditoría visual (50 de 53 puntos) y de la revisión del motor de torrents.
 
 ### Arreglado
 - **Inicio y navegación con el control remoto**
@@ -29,7 +29,6 @@ Arreglos de la auditoría visual (51 de 53 puntos) y de la revisión del motor d
   - En el celular, la fuente que tocaste ya no queda resaltada.
   - La lista de fuentes ya no se reordena sola a los pocos segundos.
   - En una serie, → desde un episodio ya no salta a la portada, y ← desde las fuentes vuelve al episodio.
-  - En la saga, la peli actual dice "Estás acá" en vez de ser un enlace a sí misma.
 - **Reproductor**
   - El temporizador para dormir recuerda y marca los minutos elegidos.
   - "Saltar intro/resumen" ya no le roba el foco a los controles o a un menú abierto, y no muestra un anillo de

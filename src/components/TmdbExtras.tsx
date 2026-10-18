@@ -141,19 +141,15 @@ export function SagaBlock({ details }: { details: TmdbDetails }) {
         )}
       </header>
       <div className="row-scroller">
-        {parts.map((p) => {
-          const here = p.id === details.id
-          return (
-            <PosterCard
-              key={p.id}
-              meta={tmdbToPreview(p, 'movie')}
-              to={linkFor(p)}
-              current={here}
-              watched={isWatched(p)}
-              subtitle={here ? 'Estás acá' : isReleased(p) ? undefined : 'Próximamente'}
-            />
-          )
-        })}
+        {parts.map((p) => (
+          <PosterCard
+            key={p.id}
+            meta={tmdbToPreview(p, 'movie')}
+            to={linkFor(p)}
+            watched={isWatched(p)}
+            subtitle={isReleased(p) ? undefined : 'Próximamente'}
+          />
+        ))}
       </div>
     </section>
   )
