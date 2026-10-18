@@ -43,13 +43,6 @@
 .me-sub {
   margin: 4px 0 0;
 }
-.me-empty {
-  margin: 8px 0 16px;
-}
-.me-empty a {
-  color: var(--accent);
-  text-decoration: underline;
-}
 
 /* Las filas (Seguir viendo, Mi lista…) van de borde a borde, como en Inicio (gana a `[data-theme='2'] .row`). */
 .page.me-page .row {
@@ -61,7 +54,7 @@
 
 .me-tiles {
   display: grid;
-  /* auto-fit: con pantalla ancha (TV) las 5 tarjetas se estiran en vez de dejar columnas vacías y cortar los textos. */
+  /* auto-fit: con pantalla ancha (TV) las tarjetas se estiran en vez de dejar columnas vacías y cortar los textos. */
   grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
   gap: 12px;
   margin-bottom: 20px;
@@ -116,10 +109,25 @@
   text-overflow: ellipsis;
   white-space: nowrap;
 }
-.me-tile-badge {
-  position: absolute;
-  top: 8px;
-  right: 10px;
+
+/* ---------- Mi lista (v0.23: lo principal de Vos, en grilla) ---------- */
+
+.me-list {
+  margin-top: 8px;
+}
+.me-list-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px 18px;
+  margin-bottom: 14px;
+}
+.me-list-head h2 {
+  font-size: clamp(1.05rem, 1.6vw, 1.35rem);
+}
+.me-list-head .filters {
+  margin: 0;
 }
 
 /* ---------- Lo que viste ---------- */
@@ -147,12 +155,6 @@
 }
 .me-stats b {
   font-size: 1.05rem;
-}
-.me-history .history-day h3 {
-  font-size: 1rem;
-  color: var(--muted);
-  text-transform: capitalize;
-  margin-bottom: 10px;
 }
 
 /* Historial (también la página completa). */

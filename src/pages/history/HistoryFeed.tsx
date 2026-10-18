@@ -2,12 +2,14 @@ import { useId, useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { EmptyState } from '../../components/EmptyState'
 import { UserStars } from '../../components/StarRating'
-import { dayLabel, episodeLabel, formatTime, smallPoster } from '../../lib/format'
+import { episodeLabel, formatTime, smallPoster } from '../../lib/format'
+import { groupHistory } from '../../lib/historyGroups'
 import { typeLabel } from '../../lib/i18n'
 import { progressStore, removeHistory, useStore, type WatchEntry } from '../../lib/store'
 import { formatWatchTime, plural, watchStats } from '../../lib/watchStats'
 
-// Lista del historial agrupada por día, con filtros y búsqueda. La usan la página Historial (completa) y la
+// Lista del historial con filtros y búsqueda. Desde la v0.23 tiene el formato del Diario (que se unificó acá):
+// por mes y, adentro, por día con el número grande al costado. La usan la página Historial (completa) y la
 // sección "Lo que viste" de Vos (con tope y un link al historial completo).
 
 export type HistoryFilter = 'all' | 'movie' | 'series' | 'progress' | 'watched'
@@ -65,11 +67,11 @@ interface Props {
   onChange?: (filter: HistoryFilter, query: string) => void
   /** Cuántas entradas mostrar como mucho; con tope aparece "Ver todo el historial". */
   limit?: number
-  /** Nivel de los títulos de cada día (en Vos van debajo de "Lo que viste"). */
-  dayHeading?: 'h2' | 'h3'
+  /** Nivel de los títulos de cada mes (en Vos van debajo de "Lo que viste"). */
+  monthHeading?: 'h2' | 'h3'
 }
 
-export function HistoryFeed({ initialFilter = 'all', initialQuery = '', onChange, limit, dayHeading: DayHeading = 'h2' }: Props) {
+export function HistoryFeed({ initialFilter = 'all', initialQuery = '', onChange, limit, monthHeading: MonthHeading = 'h2' }: Props) {
   const progress = useStore(progressStore)
   const [filter, setFilter] = useState<HistoryFilter>(initialFilter)
   const [query, setQuery] = useState(initialQuery)
@@ -90,16 +92,7 @@ export function HistoryFeed({ initialFilter = 'all', initialQuery = '', onChange
   }, [all, filter, query])
   const shown = limit ? entries.slice(0, limit) : entries
 
-  const byDay = useMemo(() => {
-    const groups: { day: string; items: WatchEntry[] }[] = []
-    for (const e of shown) {
-      const day = dayLabel(e.updatedAt)
-      const last = groups[groups.length - 1]
-      if (last?.day === day) last.items.push(e)
-      else groups.push({ day, items: [e] })
-    }
-    return groups
-  }, [shown])
+  const months = useMemo(() => groupHistory(shown), [shown])
 
   const pick = (f: HistoryFilter) => {
     setFilter(f)
@@ -146,16 +139,44 @@ export function HistoryFeed({ initialFilter = 'all', initialQuery = '', onChange
           <EmptyState icon="history" title="No hay nada con ese filtro" text="Probá con otro filtro o borrá lo que escribiste." />
         ))}
 
-      {byDay.map((g) => (
-        <section key={g.day} className="history-day">
-          <DayHeading>{g.day}</DayHeading>
-          <ul className="history-list">
-            {g.items.map((e) => (
-              <HistoryItem key={e.videoId} e={e} />
-            ))}
-          </ul>
-        </section>
-      ))}
+      {months.map((m) => {
+        const label = new Date(m.year, m.month, 1).toLocaleDateString('es-AR', { month: 'long', year: 'numeric' })
+        return (
+          <section key={m.key} className="diary-month" aria-label={label}>
+            <MonthHeading>
+              <span className="diary-month-name">{label}</span>
+              <span className="muted small">
+                {[m.movies && plural(m.movies, 'película', 'películas'), m.episodes && plural(m.episodes, 'episodio', 'episodios')]
+                  .filter(Boolean)
+                  .join(' · ')}
+              </span>
+            </MonthHeading>
+            <ol className="diary-days">
+              {m.days.map((d) => {
+                const date = new Date(d.date)
+                return (
+                  <li key={d.date} className="diary-day">
+                    <div className="diary-date">
+                      <span className="diary-dnum" aria-hidden>
+                        {date.getDate()}
+                      </span>
+                      <span className="diary-wday" aria-hidden>
+                        {date.toLocaleDateString('es-AR', { weekday: 'short' }).replace('.', '')}
+                      </span>
+                      <span className="sp-sr-only">{date.toLocaleDateString('es-AR', { weekday: 'long', day: 'numeric', month: 'long' })}</span>
+                    </div>
+                    <ul className="diary-items">
+                      {d.items.map((e) => (
+                        <HistoryItem key={e.videoId} e={e} />
+                      ))}
+                    </ul>
+                  </li>
+                )
+              })}
+            </ol>
+          </section>
+        )
+      })}
 
       {limit !== undefined && entries.length > shown.length && (
         <div className="history-more">
@@ -173,22 +194,20 @@ function HistoryItem({ e }: { e: WatchEntry }) {
   const link = `/detail/${e.type}/${encodeURIComponent(e.metaId)}${
     e.season !== undefined ? `?season=${e.season}&video=${encodeURIComponent(e.videoId)}` : ''
   }`
+  const isSeries = e.type !== 'movie'
   return (
-    <li className="history-item">
-      <Link to={link} className="history-link">
+    <li className="diary-item history-item">
+      <Link to={link} className="diary-link">
         <img src={smallPoster(e.metaId, e.poster)} alt="" loading="lazy" decoding="async" />
-        <div className="history-text">
-          <strong>
-            {e.name} <UserStars id={e.metaId} />
-          </strong>
+        <div className="diary-text">
+          <strong>{e.name}</strong>
           <span className="muted small">
-            {typeLabel(e.type, false)}
-            {e.season !== undefined && ` · ${episodeLabel(e.season, e.episode)}`}
+            {isSeries && e.season !== undefined ? episodeLabel(e.season, e.episode) : typeLabel(e.type, false)}
             {e.episodeTitle && ` · ${e.episodeTitle}`}
           </span>
-          <span className="small">
-            {e.watched ? '✓ Vista' : e.duration ? `${formatTime(e.position)} de ${formatTime(e.duration)}` : 'Empezada'}
-            <span className="muted"> · {new Date(e.updatedAt).toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit' })}</span>
+          <span className="small diary-meta">
+            <span>{e.watched ? '✓ Vista' : e.duration ? `${formatTime(e.position)} de ${formatTime(e.duration)}` : 'Empezada'}</span>
+            <span className="muted">{new Date(e.updatedAt).toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit' })}</span>
           </span>
           {!e.watched && pct > 0 && (
             <div className="progress-bar inline">
@@ -197,6 +216,9 @@ function HistoryItem({ e }: { e: WatchEntry }) {
           )}
         </div>
       </Link>
+      <span className="diary-rating">
+        <UserStars id={e.metaId} />
+      </span>
       <button
         className="btn btn-ghost"
         aria-label={`Quitar “${e.name}” del historial`}

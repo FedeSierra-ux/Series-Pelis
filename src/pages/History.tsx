@@ -5,7 +5,7 @@ import { GoalLink, HistoryGoal } from './goals/GoalLink'
 import { HistoryFeed, HistoryStats, parseHistoryFilter, type HistoryFilter } from './history/HistoryFeed'
 import './me.css'
 
-/** Historial completo. Desde la v0.14 se llega desde Vos ("Lo que viste" → "Ver todo el historial"). */
+/** Historial completo. Desde la v0.14 se llega desde Vos; desde la v0.23 tiene el formato del Diario (que se unificó acá). */
 export function History() {
   useTitle('Historial')
   const [params, setParams] = useSearchParams()
@@ -36,10 +36,6 @@ export function History() {
           <Link to="/calendar" className="btn">
             <Theme2Icon name="calendar" size={20} />
             Calendario
-          </Link>
-          <Link to="/history/diary" className="btn">
-            <Theme2Icon name="book" size={20} />
-            Diario
           </Link>
           <GoalLink />
         </div>

@@ -320,6 +320,14 @@ npm run preview    # sirve dist/ en http://localhost:4173
   Para vos → Porque viste → Tendencias → listas → catálogos (pedido del usuario). **Sin fila "Mi lista"** (ya está en
   el riel): `HOME_VIRTUAL_ROWS` quedó vacío (el mecanismo de filas propias sigue, con su test), se fueron
   `WatchlistRow`, `VirtualRow` y `unstartedWatchlist`.
+- v0.23.0 hecha (rama `claude/vos-historial-v0.23.0`): **Vos** = accesos Historial → Calendario → Tu año (en ese
+  orden; sin Diario ni Metas) y **Mi lista completa en grilla** (`MyListSection` en `pages/MyList.tsx`) como lo
+  principal. **Mi lista fuera del riel y de las pestañas**; `/list` → `/me`, sin atajo G+L, la escalera de Atrás vale
+  en `/me`. **Historial + Diario unificados**: `HistoryFeed` usa el formato del Diario (`groupHistory` en
+  `lib/historyGroups.ts`, clases `diary-*`; prop `monthHeading`), datos del progreso como siempre; se borró
+  `pages/Diary.tsx` y `/history/diary` → `/history` (el `diaryStore` sigue: lo usan Metas y la importación).
+  **Tu año** sin mapa de actividad, racha, día favorito, "De punta a punta", tarjeta de películas ni modo historia
+  (se borraron `year/YearStory.tsx`, `year/shareCard.ts` y `lib/yearStory.ts`). El Calendario queda como estaba.
 - **Decisiones para la v0.17 (reemplazan el reparto del plan de abajo)**: addons y TorBox **iguales para todas las
   casas**, solo los cambia el admin (opción A). Ajustes generales (subtítulos, idiomas, autoplay, saltar intro, sin
   spoilers, reglas de fuentes) **iguales en toda la casa**; lo físico (modo TV, tamaño de la interfaz, protector,

@@ -555,12 +555,6 @@
   border-radius: var(--radius);
   background: var(--surface-1);
 }
-[data-theme='2'] .history-link {
-  border-radius: var(--radius);
-}
-[data-theme='2'] .history-link img {
-  border-radius: 10px;
-}
 
 /* Ajustes: cada sección es una tarjeta tonal; adentro todo sube un tono. */
 [data-theme='2'] .settings-section {
@@ -704,7 +698,6 @@
     radial-gradient(120% 140% at 100% 100%, rgba(58, 51, 80, 0.9), transparent 60%), var(--surface-1);
 }
 [data-theme='2'] .year-big,
-[data-theme='2'] .year-num,
 [data-theme='2'] .year-kpis dd {
   font-family: var(--font-display);
   font-weight: 800;
@@ -716,21 +709,6 @@
 }
 [data-theme='2'] .year-bar {
   background: var(--surface-2);
-}
-[data-theme='2'] .hm-l0 {
-  fill: var(--surface-2);
-}
-[data-theme='2'] .hm-l1 {
-  fill: rgba(196, 176, 255, 0.28);
-}
-[data-theme='2'] .hm-l2 {
-  fill: rgba(196, 176, 255, 0.55);
-}
-[data-theme='2'] .hm-l3 {
-  fill: #c4b0ff;
-}
-[data-theme='2'] .hm-l4 {
-  fill: #ece5ff;
 }
 
 [data-theme='2'] .undo-toast {

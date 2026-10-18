@@ -5,28 +5,19 @@ import { PosterCard } from '../components/PosterCard'
 import { ProfileAvatar } from '../components/ProfileAvatar'
 import { Row } from '../components/Row'
 import { Theme2Icon, type Theme2IconName } from '../components/Theme2Icons'
-import { computeAchievements, unseenAchievements } from '../lib/goals'
 import { useTitle } from '../lib/hooks'
 import { openProfilePicker } from '../lib/profiles'
 import { useActiveProfile, useProfiles } from '../lib/profileSwitch'
 import { formatStars, isHighStars } from '../lib/stars'
-import {
-  continueWatching,
-  diaryStore,
-  goalsStore,
-  hideFromContinue,
-  progressStore,
-  ratingsStore,
-  useStore,
-  watchlistStore,
-} from '../lib/store'
+import { continueWatching, hideFromContinue, progressStore, ratingsStore, useStore } from '../lib/store'
 import { HistoryGoal } from './goals/GoalLink'
 import { HistoryFeed, HistoryStats } from './history/HistoryFeed'
+import { MyListSection } from './MyList'
 import './me.css'
 
 // v0.14 (U26): "Vos", estilo "Mi Netflix" pero con el historial adentro. Junta lo personal que antes estaba
-// repartido: Seguir viendo, Mi lista, lo que te gustó (4-5 ★), lo que viste (por día) y los accesos a
-// Historial, Calendario, Diario, Metas y Tu año.
+// repartido: Seguir viendo, Mi lista, lo que te gustó (4-5 ★), lo que viste (por día) y los accesos.
+// v0.23: Mi lista completa (en grilla) es lo principal, y los accesos son Historial, Calendario y Tu año.
 
 /** Cuántas entradas del historial se ven acá; el resto, en "Ver todo el historial". */
 const HISTORY_PREVIEW = 8
@@ -67,16 +58,8 @@ function ProfileSwitcher() {
 export function Me() {
   useTitle('Vos')
   const progress = useStore(progressStore)
-  const list = useStore(watchlistStore)
   const ratings = useStore(ratingsStore)
   const resume = useMemo(() => continueWatching(progress), [progress])
-  const myList = useMemo(
-    () =>
-      Object.values(list)
-        .sort((a, b) => b.addedAt - a.addedAt)
-        .slice(0, ROW_MAX),
-    [list],
-  )
   const liked = useMemo(
     () =>
       Object.entries(ratings)
@@ -90,7 +73,6 @@ export function Me() {
     [progress],
   )
   const { undo, hide, restore } = useUndoHide()
-  const empty = resume.length === 0 && myList.length === 0 && liked.length === 0 && Object.keys(progress).length === 0
 
   return (
     <div className="page me-page">
@@ -104,30 +86,12 @@ export function Me() {
 
       <MeShortcuts />
       <HistoryGoal />
-
-      {empty && (
-        <p className="me-empty muted">
-          Todavía no hay nada tuyo. Lo que mires, guardes en <strong>Mi lista</strong> o puntúes con estrellas aparece acá.{' '}
-          <Link to="/discover/movie">Explorar películas</Link>
-        </p>
-      )}
+      <MyListSection />
 
       {resume.length > 0 && (
         <Row title="Seguir viendo">
           {resume.map((e) => (
             <ContinueCard key={e.videoId} entry={e} to={detailLink(e)} onRemove={() => hide(e.metaId, e.name)} />
-          ))}
-        </Row>
-      )}
-
-      {myList.length > 0 && (
-        <Row title="Mi lista" moreTo="/list">
-          {myList.map((m) => (
-            <PosterCard
-              key={m.id}
-              meta={{ id: m.id, type: m.type, name: m.name, poster: m.poster, releaseInfo: m.year, imdbRating: m.imdbRating }}
-              watched={watchedMovies.has(m.id)}
-            />
           ))}
         </Row>
       )}
@@ -153,7 +117,7 @@ export function Me() {
             Historial completo
           </Link>
         </header>
-        <HistoryFeed limit={HISTORY_PREVIEW} dayHeading="h3" />
+        <HistoryFeed limit={HISTORY_PREVIEW} monthHeading="h3" />
       </section>
 
       {undo && (
@@ -175,32 +139,21 @@ interface Tile {
   icon: Theme2IconName
   label: string
   hint: string
-  badge?: number
   primary?: boolean
 }
 
-/** Accesos: Tu año, Historial, Calendario, Diario y Metas (con los logros nuevos sin ver). */
+/** Accesos (v0.23, en este orden): Historial, Calendario y Tu año. */
 function MeShortcuts() {
-  const diary = useStore(diaryStore)
-  const { seen } = useStore(goalsStore)
   const year = new Date().getFullYear()
-  const fresh = useMemo(() => unseenAchievements(computeAchievements(Object.values(diary.entries), year), year, seen).length, [diary, seen, year])
   const tiles: Tile[] = [
-    { to: '/history/year', icon: 'sparkles', label: `Tu año ${year}`, hint: 'Tu resumen y tu historia', primary: true },
     { to: '/history', icon: 'history', label: 'Historial', hint: 'Todo lo que viste, por día' },
     { to: '/calendar', icon: 'calendar', label: 'Calendario', hint: 'Episodios que salen' },
-    { to: '/history/diary', icon: 'book', label: 'Diario', hint: 'Lo que viste y cuándo' },
-    { to: '/history/goals', icon: 'trophy', label: 'Metas y logros', hint: 'Tu meta del año', badge: fresh },
+    { to: '/history/year', icon: 'sparkles', label: `Tu año ${year}`, hint: 'Tu resumen del año', primary: true },
   ]
   return (
     <nav className="me-tiles" aria-label="Accesos de Vos">
       {tiles.map((t) => (
-        <Link
-          key={t.to}
-          to={t.to}
-          className={`me-tile${t.primary ? ' is-primary' : ''}`}
-          aria-label={t.badge ? `${t.label}: ${t.badge} ${t.badge === 1 ? 'logro nuevo' : 'logros nuevos'}` : undefined}
-        >
+        <Link key={t.to} to={t.to} className={`me-tile${t.primary ? ' is-primary' : ''}`}>
           <span className="me-tile-icon" aria-hidden>
             <Theme2Icon name={t.icon} size={24} />
           </span>
@@ -208,11 +161,6 @@ function MeShortcuts() {
             <strong>{t.label}</strong>
             <span>{t.hint}</span>
           </span>
-          {t.badge ? (
-            <span className="goal-dot me-tile-badge" aria-hidden>
-              {t.badge}
-            </span>
-          ) : null}
         </Link>
       ))}
     </nav>

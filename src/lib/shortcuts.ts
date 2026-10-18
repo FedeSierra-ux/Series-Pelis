@@ -24,7 +24,6 @@ export const GOTO_TARGETS: Record<string, { to: string; label: string }> = {
   h: { to: '/', label: 'Inicio' },
   d: { to: '/discover/movie', label: 'Descubrir' },
   b: { to: '/search', label: 'Buscar' },
-  l: { to: '/list', label: 'Mi lista' },
   i: { to: '/history', label: 'Historial' },
   v: { to: '/me', label: 'Vos' },
   c: { to: '/calendar', label: 'Calendario' },

@@ -2,11 +2,11 @@ import { describe, expect, it } from 'vitest'
 import { anchoredScrollLeft, backStep, ladderApplies, rowAnchorY } from './spatialNav'
 
 describe('"Atrás" en escalera', () => {
-  it('vale en Inicio, Películas, Series y Mi lista', () => {
+  it('vale en Inicio, Películas, Series y Vos', () => {
     expect(ladderApplies('/')).toBe(true)
     expect(ladderApplies('/discover/movie')).toBe(true)
     expect(ladderApplies('/discover/series')).toBe(true)
-    expect(ladderApplies('/list')).toBe(true)
+    expect(ladderApplies('/me')).toBe(true)
     expect(ladderApplies('/detail/movie/tt1')).toBe(false)
     expect(ladderApplies('/settings')).toBe(false)
     expect(ladderApplies('/lists/x')).toBe(false)

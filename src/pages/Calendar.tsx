@@ -109,7 +109,7 @@ export function Calendar() {
           icon="calendar"
           title="Todavía no seguís ninguna serie"
           text="Mirá alguna o agregala a Mi lista y acá vas a ver sus próximos episodios."
-          action={{ label: 'Ir a Mi lista', to: '/list' }}
+          action={{ label: 'Ir a Mi lista', to: '/me' }}
         />
       )}
 

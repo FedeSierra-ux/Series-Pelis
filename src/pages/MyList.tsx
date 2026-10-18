@@ -3,8 +3,9 @@ import { EmptyState } from '../components/EmptyState'
 import { Picker } from '../components/Picker'
 import { PosterCard } from '../components/PosterCard'
 import { UserStars } from '../components/StarRating'
-import { useTitle } from '../lib/hooks'
 import { progressStore, ratingsStore, useStore, watchlistStore } from '../lib/store'
+
+// Mi lista completa, en grilla. Desde la v0.23 es lo principal de "Vos" (salió del menú; /list lleva a /me).
 
 type Sort = 'added' | 'rating' | 'name' | 'mine'
 
@@ -15,8 +16,7 @@ const SORT_OPTIONS: { value: Sort; label: string }[] = [
   { value: 'name', label: 'Nombre' },
 ]
 
-export function MyList() {
-  useTitle('Mi lista')
+export function MyListSection() {
   const list = useStore(watchlistStore)
   const progress = useStore(progressStore)
   const [sort, setSort] = useState<Sort>('added')
@@ -31,12 +31,14 @@ export function MyList() {
   const watchedMovies = new Set(Object.values(progress).filter((e) => e.type === 'movie' && e.watched).map((e) => e.metaId))
 
   return (
-    <div className="page">
-      <header className="page-header">
-        <h1>Mi lista</h1>
-        <div className="filters">
-          <Picker label="Ordenar" value={sort} options={SORT_OPTIONS} onChange={(v) => setSort(v as Sort)} />
-        </div>
+    <section className="me-list" aria-labelledby="me-list-title">
+      <header className="me-list-head">
+        <h2 id="me-list-title">Mi lista</h2>
+        {items.length > 1 && (
+          <div className="filters">
+            <Picker label="Ordenar" value={sort} options={SORT_OPTIONS} onChange={(v) => setSort(v as Sort)} />
+          </div>
+        )}
       </header>
       {items.length === 0 ? (
         <EmptyState
@@ -58,6 +60,6 @@ export function MyList() {
           ))}
         </div>
       )}
-    </div>
+    </section>
   )
 }

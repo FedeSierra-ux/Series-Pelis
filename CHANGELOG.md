@@ -1,5 +1,23 @@
 # Changelog
 
+## [0.23.0] - 2026-10-18
+
+### Cambiado
+- **Vos**: arriba van los accesos **Historial, Calendario y Tu año**, en ese orden. Enseguida está **Mi lista
+  completa** en grilla, con estrellas y "Ordenar". Abajo siguen Seguir viendo, Te gustaron y Lo que viste.
+- **Mi lista salió del menú** (riel y barra de abajo del celular): está en Vos. El link viejo `/list` lleva a Vos.
+- **Historial y Diario son una sola cosa**: el Historial se ve como el Diario, agrupado por mes y por día con el
+  número grande al costado. Mantiene los filtros Todo, Películas, Series, Sin terminar y Vistas, y la búsqueda.
+  El link viejo del Diario lleva al Historial.
+- **Tu año**, más simple: quedan las horas, la cantidad de películas, episodios y series, la meta, los géneros y
+  las series que más viste.
+
+### Quitado
+- Accesos "Diario" y "Metas y logros" de Vos (Metas sigue en el Historial y en el aviso de la meta).
+- En Tu año: el mapa "Tu actividad", "Racha más larga", "Tu día favorito", "De punta a punta", la tarjeta de
+  películas y el modo historia ("Ver como historia" y la imagen para compartir).
+- El atajo de teclado G → L (Mi lista).
+
 ## [0.22.5] - 2026-10-18
 
 ### Cambiado
