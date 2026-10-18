@@ -11,9 +11,9 @@ vi.mock('idb-keyval', () => ({
   clear: async () => undefined,
 }))
 
-import type { ListItem, WatchEntry } from './store'
+import type { WatchEntry } from './store'
 import type { Meta } from './types'
-import { computeUpNext, continueRowItems, unstartedWatchlist, type EpisodeItem } from './upNext'
+import { computeUpNext, continueRowItems, type EpisodeItem } from './upNext'
 
 const DAY = 24 * 60 * 60 * 1000
 
@@ -95,15 +95,5 @@ describe('computeUpNext', () => {
       'ttS:1:2': entry('ttS:1:2', 'ttS', { watched: true, updatedAt: 9 }),
     }
     expect(computeUpNext(followed, new Map([['ttS', meta]]), progress, now).next).toEqual([])
-  })
-})
-
-describe('unstartedWatchlist (fila "Mi lista" de Inicio)', () => {
-  const item = (id: string, addedAt: number): ListItem => ({ id, type: 'movie', name: id, addedAt })
-  it('solo lo que no se empezó, lo agregado más recientemente primero', () => {
-    const list = { a: item('a', 1), b: item('b', 3), c: item('c', 2) }
-    const progress = { c: entry('c', 'c', { type: 'movie' }) }
-    expect(unstartedWatchlist(list, progress).map((i) => i.id)).toEqual(['b', 'a'])
-    expect(unstartedWatchlist(list, {}, 2).map((i) => i.id)).toEqual(['b', 'c'])
   })
 })

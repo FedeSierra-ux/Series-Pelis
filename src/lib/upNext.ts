@@ -192,15 +192,6 @@ export function continueRowItems(resume: WatchEntry[], next: EpisodeItem[]): Con
   return items.sort((a, b) => b.at - a.at)
 }
 
-/** Lo de Mi lista que todavía no se empezó (fila "Mi lista" de Inicio), lo agregado más recientemente primero. */
-export function unstartedWatchlist(watchlist: Record<string, ListItem>, progress: Record<string, WatchEntry>, limit = 30): ListItem[] {
-  const started = new Set(Object.values(progress).map((e) => e.metaId))
-  return Object.values(watchlist)
-    .filter((item) => !started.has(item.id))
-    .sort((a, b) => b.addedAt - a.addedAt)
-    .slice(0, limit)
-}
-
 export async function loadUpNext(
   addons: InstalledAddon[],
   progress: Record<string, WatchEntry>,
