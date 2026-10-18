@@ -21,7 +21,6 @@ import { Discover } from './pages/Discover'
 import { History } from './pages/History'
 import { Me } from './pages/Me'
 import { Home } from './pages/Home'
-import { MyList } from './pages/MyList'
 import { Search } from './pages/Search'
 import { Settings } from './pages/Settings'
 import { ProfileGate } from './pages/profiles/ProfileGate'
@@ -31,7 +30,6 @@ import { JoinPage } from './pages/auth/JoinPage'
 const Player = lazy(() => import('./pages/Player').then((m) => ({ default: m.Player })))
 const Calendar = lazy(() => import('./pages/Calendar').then((m) => ({ default: m.Calendar })))
 const YearReview = lazy(() => import('./pages/YearReview').then((m) => ({ default: m.YearReview })))
-const Diary = lazy(() => import('./pages/Diary').then((m) => ({ default: m.Diary })))
 const Goals = lazy(() => import('./pages/Goals').then((m) => ({ default: m.Goals })))
 const Person = lazy(() => import('./pages/Person').then((m) => ({ default: m.Person })))
 const Together = lazy(() => import('./pages/Together').then((m) => ({ default: m.Together })))
@@ -139,11 +137,12 @@ export function App() {
               <Route path="lists" element={<Suspense fallback={pageFallback}><ListsIndex /></Suspense>} />
               <Route path="lists/:id" element={<Suspense fallback={pageFallback}><ListPage /></Suspense>} />
               <Route path="tv" element={<Suspense fallback={pageFallback}><LiveTv /></Suspense>} />
-              <Route path="list" element={<MyList />} />
+              {/* v0.23: Mi lista vive en Vos y el Diario se unificó con el Historial. */}
+              <Route path="list" element={<Navigate to="/me" replace />} />
               <Route path="me" element={<Me />} />
               <Route path="history" element={<History />} />
               <Route path="history/year" element={<Suspense fallback={pageFallback}><YearReview /></Suspense>} />
-              <Route path="history/diary" element={<Suspense fallback={pageFallback}><Diary /></Suspense>} />
+              <Route path="history/diary" element={<Navigate to="/history" replace />} />
               <Route path="history/goals" element={<Suspense fallback={pageFallback}><Goals /></Suspense>} />
               <Route path="calendar" element={<Suspense fallback={pageFallback}><Calendar /></Suspense>} />
               <Route path="settings" element={<Settings />} />

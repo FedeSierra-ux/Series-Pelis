@@ -19,14 +19,14 @@ interface Item {
 }
 
 // v0.14 (U2): menos destinos, como Netflix. Historial y Calendario viven en "Vos" (/me), con Mi lista,
-// Seguir viendo, Te gustaron, Diario, Metas y Tu año. Ajustes va abajo de todo (fuera de esta lista).
+// Seguir viendo, Te gustaron y Tu año. v0.23: Mi lista salió del menú (es lo principal de Vos).
+// Ajustes va abajo de todo (fuera de esta lista).
 const RAIL: Item[] = [
   { to: '/search', label: 'Buscar', icon: 'search' },
   { to: '/', label: 'Inicio', icon: 'home', end: true },
   { to: '/discover/movie', label: 'Películas', icon: 'movie' },
   { to: '/discover/series', label: 'Series', icon: 'series' },
   { to: '/tv', label: 'TV en vivo', icon: 'live' },
-  { to: '/list', label: 'Mi lista', icon: 'list' },
   { to: '/me', label: 'Vos', icon: 'user' },
 ]
 
@@ -35,11 +35,10 @@ const TABS: Item[] = [
   { to: '/discover/movie', label: 'Películas', icon: 'movie' },
   { to: '/discover/series', label: 'Series', icon: 'series' },
   { to: '/tv', label: 'TV', icon: 'live' },
-  { to: '/list', label: 'Mi lista', icon: 'list' },
   { to: '/me', label: 'Vos', icon: 'user' },
 ]
 
-/** "Vos" queda marcado también en lo que se abre desde ahí: historial, calendario, diario, metas y Tu año. */
+/** "Vos" queda marcado también en lo que se abre desde ahí: historial, calendario, metas y Tu año. */
 const isVosPath = (pathname: string) => /^\/(me|history|calendar)(\/|$)/.test(pathname)
 
 /** Ícono del ítem; "Vos" muestra el avatar del perfil activo cuando hay más de uno (v0.18). */

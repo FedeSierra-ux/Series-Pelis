@@ -191,9 +191,9 @@ export function focusInitialTarget(): boolean {
 
 // ---------- "Atrás" en escalera (U1) ----------
 
-/** Pantallas con "Atrás" en escalera: Inicio, Películas, Series y Mi lista. */
+/** Pantallas con "Atrás" en escalera: Inicio, Películas, Series y Vos (donde está Mi lista desde la v0.23). */
 export function ladderApplies(pathname: string): boolean {
-  return pathname === '/' || pathname === '/list' || /^\/discover\/[^/]+\/?$/.test(pathname)
+  return pathname === '/' || pathname === '/me' || /^\/discover\/[^/]+\/?$/.test(pathname)
 }
 
 export type BackStep = 'top' | 'rail' | 'leave'

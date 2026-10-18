@@ -1,7 +1,7 @@
 {
   "name": "flix-tv",
   "private": true,
-  "version": "0.22.6",
+  "version": "0.23.0",
   "description": "App de Flix para Android TV / Fire TV: abre series-pelis.pages.dev dentro de un WebView (Capacitor).",
   "scripts": {
     "sync": "cap sync android"

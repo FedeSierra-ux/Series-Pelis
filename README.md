@@ -27,7 +27,7 @@ y un **historial** de todo lo que viste. Funciona en la PC, el celular y el nave
   listas curadas (Oscar, mejor puntaje IMDb, sagas) y etiquetas clickeables en la ficha.
 - **Pósters (v0.5)**: puntaje sobre el póster, etiquetas (episodio nuevo, Top 10…) y tráiler al pasar por encima.
 - **Biblioteca (v0.5)**: tu puntaje con estrellas, "Para vos" con el porqué, "Ya no me interesa", modo sin spoilers,
-  diario, Tu año animado para compartir y metas y logros. "¿Sabías que?" con datos de Wikipedia.
+  Tu año y metas y logros. "¿Sabías que?" con datos de Wikipedia.
 - **Reproductor (v0.4)**: vista previa al adelantar, sinopsis al pausar, aviso de escena post-créditos,
   "¿Ver el resumen?" si hace días que no ves la serie y **cambiar de fuente** sin perder el minuto.
 - **Subtítulos (v0.4)**: cargar un archivo propio (o arrastrarlo), más estilo (letra, altura, contorno), ocultar SDH,
@@ -48,8 +48,8 @@ y un **historial** de todo lo que viste. Funciona en la PC, el celular y el nave
 - **Elección automática de fuente** según calidad y palabras clave, y recuerda la fuente que usaste en cada serie.
 - **Seguir viendo** (con opción de quitar) y **reanudar** donde quedaste. Fila con el siguiente episodio de tus series.
 - **Calendario** de estrenos de tus series y resumen **Tu año**.
-- **Historial** por día, con filtros y estadísticas. Marcar episodios o pelis como vistas.
-- **Mi lista** para guardar lo que querés ver.
+- **Historial** por mes y día (con el formato del diario), con filtros y estadísticas. Marcar episodios o pelis como vistas.
+- **Mi lista** para guardar lo que querés ver: es lo principal de **Vos**.
 - **Control remoto**: se navega con las flechas, Enter y Atrás (Fire TV / Android TV / navegador de la TV).
 - **Copia de seguridad**: exportar e importar tus datos en JSON.
 
