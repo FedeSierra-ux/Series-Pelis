@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { backdropTrailerAllowed, embedTrailerUrl, extrasFromTmdb, isYtId, originalTitle } from './trailers'
+import { backdropTrailerAllowed, embedTrailerUrl, isYtId, originalTitle } from './trailers'
 
 describe('tráileres de la ficha', () => {
   it('la URL va sin interfaz, con subtítulos en español y, el de fondo, sin sonido y en loop', () => {
@@ -32,25 +32,6 @@ describe('tráileres de la ficha', () => {
     expect(backdropTrailerAllowed({ ...pc, reducedMotion: true })).toBe(false)
     expect(backdropTrailerAllowed({ ...pc, wide: false })).toBe(false)
     expect(backdropTrailerAllowed({ ...pc, coarsePointer: true })).toBe(false)
-  })
-
-  it('extras: solo YouTube, sin repetidos, tráileres primero y en español antes', () => {
-    const list = extrasFromTmdb([
-      { key: 'bts11111111', site: 'YouTube', type: 'Behind the Scenes', name: 'Making of', iso_639_1: 'en' },
-      { key: 'vimeo111111', site: 'Vimeo', type: 'Trailer' },
-      { key: 'tren1111111', site: 'YouTube', type: 'Trailer', name: 'Official Trailer', iso_639_1: 'en', official: true },
-      { key: 'tres1111111', site: 'YouTube', type: 'Trailer', name: 'Tráiler oficial', iso_639_1: 'es' },
-      { key: 'tren1111111', site: 'YouTube', type: 'Trailer', name: 'Repetido' },
-      { key: 'teas1111111', site: 'YouTube', type: 'Teaser', name: '' },
-      { key: 'rare1111111', site: 'YouTube', type: 'Recap' },
-    ])
-    expect(list.map((x) => x.key)).toEqual(['tres1111111', 'tren1111111', 'teas1111111', 'bts11111111'])
-    expect(list[0]).toMatchObject({ kind: 'Tráiler', lang: 'Español' })
-    expect(list[2].name).toBe('Avance')
-    expect(list[3].kind).toBe('Detrás de escena')
-    expect(list[0].thumb).toBe('https://i.ytimg.com/vi/tres1111111/mqdefault.jpg')
-    expect(extrasFromTmdb(undefined)).toEqual([])
-    expect(extrasFromTmdb({} as never)).toEqual([])
   })
 
   it('título original si está en alfabeto latino (si no, el de TMDB)', () => {

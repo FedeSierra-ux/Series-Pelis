@@ -35,7 +35,6 @@ import type { Meta, Video } from '../lib/types'
 import { errorText } from '../lib/errors'
 import { DetailActions, type PrimaryAction } from './detail/DetailActions'
 import { DetailIcon } from './detail/DetailIcons'
-import { DetailsPanel, ExtrasPanel } from './detail/DetailPanels'
 import { DetailTabs, type DetailTab } from './detail/DetailTabs'
 import { EpisodesPanel } from './detail/EpisodesPanel'
 import { episodeNumber, episodeToContinue, firstEpisode, nextReleased, sortVideos } from './detail/episodes'
@@ -44,7 +43,7 @@ import type { MoreItem } from './detail/MoreMenu'
 import { safeMeta } from './detail/safeData'
 import { SectionBoundary } from './detail/SectionBoundary'
 import { StreamList, type DetailLocationState } from './detail/StreamList'
-import { extrasFromTmdb, isYtId, originalTitle, type ExtraVideo } from './detail/trailers'
+import { isYtId, originalTitle } from './detail/trailers'
 import { NARROW_QUERY, useMediaQuery } from './detail/useMediaQuery'
 import './detail/detail-fixes.css'
 import './detail/detail-v14.css'
@@ -145,7 +144,7 @@ function TmdbOnlyDetail({ details: d, type, tmdbType }: { details: TmdbDetails; 
   const poster = tmdbImg(d.poster_path, 'w342')
   const bg = tmdbImg(d.backdrop_path, 'w1280')
   const year = itemYear(d)
-  const trailer = pickTrailer(d.videos?.results)
+  const trailer = pickTrailer(d.videos?.results, d.original_language)
   const [trailerOpen, setTrailerOpen] = useState(false)
   useTitle(title)
 
@@ -289,7 +288,6 @@ function DetailPage({ type, id, onRetry }: { type: string; id: string; onRetry: 
     target?.focus({ preventScroll: true })
   })
 
-  const extras = useMemo(() => extrasFromTmdb(tmdb?.videos?.results), [tmdb])
 
   if (loading && !meta) return detailSkeleton
   if (error && !meta) return <DetailError message={offlineMessage('esta ficha no está guardada') ?? `No se pudo cargar: ${error}`} onRetry={onRetry} />
@@ -304,7 +302,7 @@ function DetailPage({ type, id, onRetry }: { type: string; id: string; onRetry: 
   const tmdbLogo = tmdbImg(pickLogo(tmdb), 'w500')
   const logo = logoFailed ? undefined : (tmdbLogo ?? meta.logo)
   const movieProgress = progress[id]
-  const tmdbTrailer = pickTrailer(tmdb?.videos?.results)?.key
+  const tmdbTrailer = pickTrailer(tmdb?.videos?.results, tmdb?.original_language)?.key
   const trailerKey = isYtId(tmdbTrailer) ? tmdbTrailer : trailerKeyFromMeta(meta)
   const tmdbType = toTmdbType(type)
   // Con el control remoto, la primera flecha va al botón principal; sin él, al episodio elegido o al primero sin ver.
@@ -460,12 +458,6 @@ function DetailPage({ type, id, onRetry }: { type: string; id: string; onRetry: 
     </>
   )
 
-  // Sin videos de TMDB, el tráiler de Cinemeta solo.
-  const extraList: ExtraVideo[] =
-    extras.length > 0 || !trailerKey
-      ? extras
-      : [{ key: trailerKey, name: 'Tráiler', kind: 'Tráiler', thumb: `https://i.ytimg.com/vi/${encodeURIComponent(trailerKey)}/mqdefault.jpg` }]
-
   const tabs: DetailTab[] = [
     isSeries
       ? {
@@ -521,30 +513,6 @@ function DetailPage({ type, id, onRetry }: { type: string; id: string; onRetry: 
         </SectionBoundary>
       ),
     })
-  if (extraList.length > 0)
-    tabs.push({
-      id: 'extras',
-      label: 'Extras',
-      content: <ExtrasPanel videos={extraList} onPlay={(v) => setTrailer({ ytId: v.key, kind: v.kind })} />,
-    })
-  if (tmdb || id.startsWith('tt') || meta.awards)
-    tabs.push({
-      id: 'details',
-      label: 'Detalles',
-      content: (
-        <SectionBoundary>
-          <DetailsPanel
-            type={type}
-            imdbId={id.startsWith('tt') ? id : undefined}
-            tmdb={tmdb}
-            awards={meta.awards}
-            country={meta.country}
-            writers={meta.writer}
-          />
-        </SectionBoundary>
-      ),
-    })
-
   return (
     <div className="page detail">
       <section className="detail-hero" style={{ backgroundImage: bg ? `url(${bg})` : undefined }}>
@@ -591,10 +559,12 @@ function DetailPage({ type, id, onRetry }: { type: string; id: string; onRetry: 
         </div>
       </section>
 
+      {/* El reparto va fuera de las pestañas (decisión del usuario); en las pelis, arriba de las fuentes (v0.24). */}
+      {tmdb && !isSeries && <CastRow details={tmdb} type={tmdbType} />}
+
       <DetailTabs tabs={tabs} active={activeTab} onChange={setTab} onExitUp={focusHeroActions} />
 
-      {/* El reparto queda donde estaba, fuera de las pestañas (decisión del usuario). */}
-      {tmdb && <CastRow details={tmdb} type={tmdbType} />}
+      {tmdb && isSeries && <CastRow details={tmdb} type={tmdbType} />}
 
       {trailer && <TrailerPlayer ytId={trailer.ytId} kind={trailer.kind} title={name} backdrop={bg} onClose={() => setTrailer(undefined)} />}
     </div>

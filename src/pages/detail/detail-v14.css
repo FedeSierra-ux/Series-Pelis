@@ -375,115 +375,6 @@
   color: var(--accent);
 }
 
-/* ---------- Extras ---------- */
-
-.d-extras {
-  padding: 4px var(--gutter) 8px;
-}
-.d-extras-grid {
-  list-style: none;
-  margin: 0;
-  padding: 0;
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(min(100%, 260px), 1fr));
-  gap: 16px;
-}
-.d-extra {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-  width: 100%;
-  padding: 0 0 6px;
-  border: 0;
-  background: none;
-  color: var(--text);
-  font: inherit;
-  text-align: left;
-  cursor: pointer;
-  border-radius: var(--radius);
-}
-.d-extra-thumb {
-  position: relative;
-  display: block;
-  aspect-ratio: 16 / 9;
-  border-radius: var(--radius);
-  overflow: hidden;
-  background: var(--surface-1, var(--bg-2));
-}
-.d-extra-thumb img {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-  transition: transform 0.25s;
-}
-.d-extra-play {
-  position: absolute;
-  left: 50%;
-  top: 50%;
-  display: grid;
-  place-items: center;
-  width: 48px;
-  height: 48px;
-  margin: -24px 0 0 -24px;
-  border-radius: 50%;
-  background: rgba(11, 11, 16, 0.7);
-  color: #fff;
-  font-size: 1.1rem;
-}
-.d-extra:hover .d-extra-thumb img,
-.d-extra:focus-visible .d-extra-thumb img {
-  transform: scale(1.04);
-}
-.d-extras-grid .d-extra:focus-visible {
-  outline: none;
-}
-.d-extra:focus-visible .d-extra-thumb {
-  outline: var(--focus-ring, 3px solid var(--accent));
-  outline-offset: 3px;
-}
-.d-extra-text {
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-  padding: 0 4px;
-}
-.d-extra-name {
-  font-weight: 700;
-  display: -webkit-box;
-  -webkit-line-clamp: 2;
-  -webkit-box-orient: vertical;
-  overflow: hidden;
-}
-.d-extra-meta {
-  font-size: 0.8rem;
-  color: var(--muted);
-}
-
-/* ---------- Detalles ---------- */
-
-.d-details {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-}
-.d-facts,
-.d-keywords {
-  padding: 8px var(--gutter);
-}
-.d-facts .credits {
-  display: grid;
-  grid-template-columns: auto 1fr;
-  gap: 8px 16px;
-  max-width: 80ch;
-}
-.d-fact {
-  display: contents;
-}
-.d-details .wiki-trivia,
-.d-details .providers {
-  margin-top: 8px;
-}
-
 /* ---------- Errores ---------- */
 
 .d-section-error {
@@ -615,8 +506,7 @@ html[data-tv] .detail-back {
 @media (prefers-reduced-motion: reduce) {
   .hero-trailer,
   .detail-back,
-  .d-icon-circle,
-  .d-extra-thumb img {
+  .d-icon-circle {
     transition: none;
   }
 }

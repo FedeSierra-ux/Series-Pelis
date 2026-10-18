@@ -1,7 +1,5 @@
-import type { TmdbVideo } from '../../lib/tmdb'
-
-// Tráileres de la ficha (v0.14): el reproductor a pantalla completa, el tráiler de fondo y la
-// pestaña "Extras". Todo lógica pura para poder probarla sin navegador.
+// Tráileres de la ficha (v0.14): el reproductor a pantalla completa y el tráiler de fondo. Todo lógica
+// pura para poder probarla sin navegador. (La pestaña "Extras" se sacó en la v0.24.)
 
 export const YT_EMBED = 'https://www.youtube-nocookie.com/embed/'
 
@@ -64,49 +62,6 @@ export function backdropTrailerAllowed(env: BackdropEnv): boolean {
 
 /** A los cuántos milisegundos de abrir la ficha el fondo pasa al tráiler. */
 export const BACKDROP_DELAY_MS = 3000
-
-// ---------- Extras ----------
-
-export interface ExtraVideo {
-  key: string
-  name: string
-  /** "Tráiler", "Avance", "Detrás de escena"… */
-  kind: string
-  lang?: string
-  thumb: string
-}
-
-const KINDS: Record<string, { label: string; order: number }> = {
-  Trailer: { label: 'Tráiler', order: 0 },
-  Teaser: { label: 'Avance', order: 1 },
-  Clip: { label: 'Escena', order: 2 },
-  'Behind the Scenes': { label: 'Detrás de escena', order: 3 },
-  Featurette: { label: 'Especial', order: 4 },
-  Bloopers: { label: 'Tomas falsas', order: 5 },
-  'Opening Credits': { label: 'Presentación', order: 6 },
-}
-
-const LANGS: Record<string, string> = { es: 'Español', en: 'Inglés' }
-
-/** Videos de TMDB para "Extras": solo YouTube, sin repetidos, primero los tráileres y lo que está en español. */
-export function extrasFromTmdb(videos: TmdbVideo[] | undefined): ExtraVideo[] {
-  const seen = new Set<string>()
-  return (Array.isArray(videos) ? videos : [])
-    .filter((v) => v && v.site === 'YouTube' && isYtId(v.key) && KINDS[v.type] && !seen.has(v.key) && !!seen.add(v.key))
-    .sort(
-      (a, b) =>
-        KINDS[a.type].order - KINDS[b.type].order ||
-        Number(b.iso_639_1 === 'es') - Number(a.iso_639_1 === 'es') ||
-        Number(!!b.official) - Number(!!a.official),
-    )
-    .map((v) => ({
-      key: v.key,
-      name: v.name?.trim() || KINDS[v.type].label,
-      kind: KINDS[v.type].label,
-      lang: v.iso_639_1 ? (LANGS[v.iso_639_1] ?? v.iso_639_1.toUpperCase()) : undefined,
-      thumb: `https://i.ytimg.com/vi/${encodeURIComponent(v.key)}/mqdefault.jpg`,
-    }))
-}
 
 /** Título original si está en alfabeto latino; si no (japonés, coreano…), el que manda TMDB. */
 export function originalTitle(item: { original_title?: string; original_name?: string } | undefined, fallback: string): string {

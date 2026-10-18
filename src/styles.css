@@ -614,8 +614,7 @@ select option {
   background: linear-gradient(to top, var(--bg) 2%, rgba(11, 11, 16, 0.4) 40%, rgba(11, 11, 16, 0.1)),
     linear-gradient(to right, rgba(11, 11, 16, 0.94) 0%, rgba(11, 11, 16, 0.86) 45%, rgba(11, 11, 16, 0.3) 78%, transparent);
 }
-.detail-info .credits,
-.detail-info .keyword-chips {
+.detail-info .credits {
   max-width: 62ch;
 }
 /* Reservamos lugar para lo que llega después (TMDB, streams) así la ficha no salta al cargar. */
@@ -2864,64 +2863,11 @@ html[data-tv] .player-error-sources button {
   font-size: 0.72rem;
 }
 
-/* "¿Sabías que?" en la ficha (Wikipedia en español). */
-.wiki-trivia-sentinel {
-  height: 1px;
-}
-.wiki-trivia {
-  margin: 22px 0 8px;
-  padding: 0 var(--gutter);
-  max-width: calc(900px + 2 * var(--gutter));
-}
-.wiki-trivia h2 {
-  font-size: clamp(1.05rem, 1.6vw, 1.35rem);
-  margin-bottom: 12px;
-}
-.wiki-trivia-list {
-  list-style: none;
-  margin: 0;
-  padding: 0;
-  display: grid;
-  gap: 10px;
-}
-.wiki-trivia-list li {
-  position: relative;
-  padding: 11px 14px 11px 40px;
-  border-radius: var(--radius);
-  background: var(--bg-2);
-  border: 1px solid var(--line);
-  line-height: 1.5;
-  overflow-wrap: anywhere;
-}
-.wiki-trivia-list li::before {
-  content: '✦';
-  position: absolute;
-  left: 15px;
-  top: 11px;
-  color: var(--accent);
-}
-.wiki-trivia-source {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 8px 12px;
-  margin: 12px 0 0;
-}
-.wiki-trivia-source a:not(.btn) {
-  text-decoration: underline;
-}
 @media (max-width: 760px) {
   .poster-label {
     top: 6px;
     left: 6px;
     padding: 2px 6px;
-  }
-  .wiki-trivia-list li {
-    padding: 10px 12px 10px 34px;
-  }
-  .wiki-trivia-list li::before {
-    left: 12px;
-    top: 10px;
   }
 }
 
@@ -3592,14 +3538,6 @@ button.chip-link {
 .person-link:focus-visible {
   text-decoration-color: currentColor;
 }
-.keyword-chips {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 6px;
-  margin: 10px 0 4px;
-}
-
 /* Persona: "Buscar con otra persona…" y página /together */
 .together-open {
   margin-top: 12px;
