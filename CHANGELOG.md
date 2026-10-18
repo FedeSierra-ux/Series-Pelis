@@ -1,5 +1,23 @@
 # Changelog
 
+## [0.24.0] - 2026-10-18
+
+### Cambiado
+- **El perfil está arriba del riel**, donde estaba la sigla de la app (y arriba a la izquierda en el celular).
+  Tocarlo abre "¿Quién está mirando?" para cambiar de perfil o editarlos. Perfiles ya no está en Vos.
+- **Avatares fijos**: 80 personajes y animales en 3D (Animales, Personajes y Criaturas) sobre el color del perfil.
+  Un perfil nuevo arranca con uno al azar que no use otro perfil.
+- **Top 10 de la semana**: Películas y Series muestran las tendencias de la semana de TMDB en vez de "populares
+  en plataformas de Argentina", que traía títulos viejos.
+- **Ficha de las películas**: el reparto va arriba de las fuentes.
+- **Tráiler en latino primero**: primero el subtitulado en latino; si la peli es en español, el de audio latino.
+  Después el doblado latino, el subtitulado de España, el original y por último el doblado de España.
+
+### Quitado
+- **TV en vivo**: el menú, la página y todo lo relacionado. El link viejo `/tv` lleva a Inicio.
+- Avatar con el **fondo de algo que viste**.
+- Pestañas **Extras** y **Detalles** de la ficha (dónde verla, premios, palabras clave y "¿Sabías que?").
+
 ## [0.23.0] - 2026-10-18
 
 ### Cambiado
