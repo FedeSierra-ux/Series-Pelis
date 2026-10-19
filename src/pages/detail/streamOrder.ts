@@ -1,6 +1,7 @@
 /**
  * Orden de la lista de fuentes de la ficha. La recomendada va primera: su addon arriba de todos y ella
- * primera dentro de él (decisión del usuario, aunque la lista salte una vez cuando llega la recomendación).
+ * primera dentro de él (decisión del usuario, aunque la lista salte cuando llega la recomendación, y otra vez si
+ * un addon lento trae algo mejor).
  * Lo demás queda en el orden de siempre (el de los addons instalados y el que manda cada uno), así no se
  * mueve nada más.
  */

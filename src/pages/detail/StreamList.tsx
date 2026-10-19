@@ -101,7 +101,8 @@ export function StreamList({ meta, video, nextVideoId }: { meta: Meta; video?: V
     return () => clearTimeout(t)
   }, [hasPlayable, fetchKey])
 
-  // Se recomienda recién cuando respondieron todos (o pasó la espera), así la lista salta una sola vez.
+  // Se recomienda recién cuando respondieron todos (o pasó la espera). Si después un addon lento trae algo mejor,
+  // la recomendación cambia y la lista se reacomoda otra vez (decisión del usuario, v0.27.1).
   const settled = fetched && (!loading || graceFor === fetchKey)
   const best = settled ? ranked[0] : undefined
   const bestId = best ? `${best.addon.transportUrl}|${best.streamIndex}` : ''
@@ -161,6 +162,16 @@ export function StreamList({ meta, video, nextVideoId }: { meta: Meta; video?: V
   // sigue solo si estaba en la anterior; si estabas en otra fuente, se queda ahí (React puede haber movido
   // ese botón y sacarle el foco: se lo devuelve). Si el foco estaba en otra parte de la ficha, no se toca.
   const prevBest = useRef<{ id: string; el: HTMLElement | null }>({ id: '', el: null })
+  // Un clic o toque fuera de las fuentes (sinopsis, espacio vacío) deja el foco en `body` igual que cuando React
+  // mueve un botón: se olvida la fuente enfocada, así no se roba el foco ni se mueve la página al llegar la
+  // recomendación.
+  useEffect(() => {
+    const onPointer = (e: PointerEvent) => {
+      if (!(e.target instanceof Element) || !e.target.closest('.stream-item')) focusedItem.current = null
+    }
+    document.addEventListener('pointerdown', onPointer, true)
+    return () => document.removeEventListener('pointerdown', onPointer, true)
+  }, [])
   useLayoutEffect(() => {
     const list = listRef.current
     const rec = bestId ? (list?.querySelector<HTMLElement>('.stream-item.recommended') ?? null) : null

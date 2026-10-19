@@ -61,7 +61,7 @@ export function Top10Row({ state, title = 'Top 10 de hoy' }: { state: TmdbState<
           <span className="top10-rank" aria-hidden>
             {i + 1}
           </span>
-          <PosterCard meta={tmdbToPreview(item)} eager={i < 6} />
+          <PosterCard meta={tmdbToPreview(item)} eager={i < 6} hideTop10Label />
         </div>
       ))}
     </Row>

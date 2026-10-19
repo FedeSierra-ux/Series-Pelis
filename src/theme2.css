@@ -33,9 +33,11 @@
   --nav-h: 0px;
   --cont-w: clamp(220px, 21vw, 360px);
   /* Logos de los títulos (lib/logoTone.ts): sombra negra suave para todos y halo claro solo para los oscuros
-     (data-logo-tone="dark"). Las dos con tres sombras, así el halo entra con una transición pareja. */
-  --logo-shadow: drop-shadow(0 0 1px rgb(255 255 255 / 0)) drop-shadow(0 0 16px rgb(255 255 255 / 0)) drop-shadow(0 2px 8px rgb(0 0 0 / 0.45));
-  --logo-halo: drop-shadow(0 0 1px rgb(255 255 255 / 0.6)) drop-shadow(0 0 16px rgb(255 255 255 / 0.3)) drop-shadow(0 2px 8px rgb(0 0 0 / 0.45));
+     (data-logo-tone="dark"). Las dos con tres sombras, así el halo entra con una transición pareja. Con
+     `rgba(…, …)` y no `rgb(r g b / a)`: las TVs con Chromium < 65 no la entienden y, dentro de var(), el filtro
+     entero quedaba en none. */
+  --logo-shadow: drop-shadow(0 0 1px rgba(255, 255, 255, 0)) drop-shadow(0 0 16px rgba(255, 255, 255, 0)) drop-shadow(0 2px 8px rgba(0, 0, 0, 0.45));
+  --logo-halo: drop-shadow(0 0 1px rgba(255, 255, 255, 0.6)) drop-shadow(0 0 16px rgba(255, 255, 255, 0.3)) drop-shadow(0 2px 8px rgba(0, 0, 0, 0.45));
   --logo-halo-in: filter 180ms ease-out;
 }
 

@@ -17,5 +17,5 @@
   width: 82%;
   height: 82%;
   object-fit: contain;
-  filter: drop-shadow(0 2px 3px rgb(0 0 0 / 0.25));
+  filter: drop-shadow(0 2px 3px rgba(0, 0, 0, 0.25));
 }

@@ -184,20 +184,34 @@ function pixelsOf(img: HTMLImageElement): Uint8ClampedArray | undefined {
   return ctx.getImageData(0, 0, cw, ch).data
 }
 
-/** Carga `url` con CORS y devuelve sus píxeles; `undefined` si no carga o no se puede leer. */
+/** Tiempo máximo para leer un logo: con una conexión que se cuelga, va el valor seguro (con halo). */
+export const LOAD_TIMEOUT_MS = 8000
+
+/** Carga `url` con CORS y devuelve sus píxeles; `undefined` si no carga, no se puede leer o tarda demasiado. */
 function loadPixels(url: string): Promise<Uint8ClampedArray | undefined> {
   return new Promise((resolve) => {
     const img = new Image()
+    let done = false
+    const finish = (pixels: Uint8ClampedArray | undefined) => {
+      if (done) return
+      done = true
+      clearTimeout(timer)
+      resolve(pixels)
+    }
+    const timer = setTimeout(() => {
+      finish(undefined)
+      img.src = ''
+    }, LOAD_TIMEOUT_MS)
     img.crossOrigin = 'anonymous'
     img.decoding = 'async'
     img.onload = () => {
       try {
-        resolve(pixelsOf(img))
+        finish(pixelsOf(img))
       } catch {
-        resolve(undefined)
+        finish(undefined)
       }
     }
-    img.onerror = () => resolve(undefined)
+    img.onerror = () => finish(undefined)
     img.src = url
   })
 }

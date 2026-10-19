@@ -58,7 +58,7 @@ export function BrowsePage({ kind }: { kind: BrowseKind }) {
               <span className="top10-rank" aria-hidden>
                 {i + 1}
               </span>
-              <PosterCard meta={m} eager={i < 6} />
+              <PosterCard meta={m} eager={i < 6} hideTop10Label />
             </div>
           ))}
         </Row>
