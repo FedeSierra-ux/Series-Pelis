@@ -420,6 +420,15 @@ npm run preview    # sirve dist/ en http://localhost:4173
   nada) para el año sin guion en tarjetas/Buscar/Inicio/protector/PostPlay. `Onboarding.tsx` `houseSynced()`: con login
   espera la primera sincronización también con sesión guardada (tope 10 s). Los pendientes "asistente de una
   pantalla", "año sin guion" y "series sin duración" ya estaban desde la v0.22.1/v0.22.2.
+- v0.26.2 hecha (rama `ccr-4e8d431d-4nlzi9`): **el asistente no aparece si la casa ya eligió idiomas**. Marca de
+  la casa `langsChosen` (en `HOUSE_SETTINGS`, `HOUSE_SCHEMA = 2`; el servidor no cambia porque filtra por tienda, no
+  por campo). Se pone al cerrar el asistente ("Empezar" o Atrás) y al cambiar idiomas de audio o subtítulos en
+  Ajustes del reproductor. `houseChoseLangs(auth, langsChosen)` en `Onboarding.tsx`: solo con login y recién con la
+  casa sincronizada (`useHouseReady`); si da verdadero, el aparato pone `onboardingDone` sin mostrarlo. Abierto desde
+  Ajustes (`openOnboarding`, estado `manual`) se muestra igual. Sin login, como antes. **Sin migración** para casas
+  viejas (la app todavía no se usaba). Aceptado por el usuario: con subtítulos "Muy grande" y 4–5 renglones se pueden
+  pisar con "¿Qué te pareció?" o con el reparto en pausa; en PC y TV el subtítulo puede pisarse con la esquina (la
+  v0.26.1 solo lo arregla en el celular). No volver a proponerlo.
 - **Decisiones para la v0.17 (reemplazan el reparto del plan de abajo)**: addons y TorBox **iguales para todas las
   casas**, solo los cambia el admin (opción A). Ajustes generales (subtítulos, idiomas, autoplay, saltar intro, sin
   spoilers, reglas de fuentes) **iguales en toda la casa**; lo físico (modo TV, tamaño de la interfaz, protector,

@@ -34,6 +34,14 @@ export function houseSynced(auth: AuthState, sync: SyncStatus): boolean {
   return auth.status !== 'in' || sync.lastSync !== undefined || sync.phase === 'error'
 }
 
+/**
+ * v0.26.2: con login, si la casa ya eligió idiomas (en el asistente de otro aparato o en Ajustes), el asistente
+ * no aparece. Se mira recién con la casa sincronizada. Sin login queda como antes (solo `onboardingDone`).
+ */
+export function houseChoseLangs(auth: AuthState, langsChosen: boolean): boolean {
+  return auth.status === 'in' && langsChosen
+}
+
 function useHouseReady(): boolean {
   const synced = houseSynced(useAuth(), useSyncStatus())
   const [ready, setReady] = useState(synced)
@@ -52,19 +60,33 @@ function useHouseReady(): boolean {
 /** Asistente de la primera vez: idioma del audio y subtítulos, en una sola pantalla. */
 export function Onboarding() {
   const [open, setOpen] = useState(isFirstRun)
+  /** Abierto desde Ajustes: se muestra aunque la casa ya haya elegido idiomas. */
+  const [manual, setManual] = useState(false)
   const settings = useStore(settingsStore)
-  const inHouse = useAuth().status === 'in'
+  const auth = useAuth()
+  const inHouse = auth.status === 'in'
   const ready = useHouseReady()
   const location = useLocation()
   const boxRef = useRef<HTMLDivElement>(null)
   const onWatch = location.pathname.startsWith('/watch')
-  const visible = open && ready && !onWatch
+  const skip = open && ready && !manual && houseChoseLangs(auth, settings.langsChosen)
+  const visible = open && ready && !onWatch && !skip
 
   useEffect(() => {
-    const onOpen = () => setOpen(true)
+    const onOpen = () => {
+      setManual(true)
+      setOpen(true)
+    }
     window.addEventListener(OPEN_EVENT, onOpen)
     return () => window.removeEventListener(OPEN_EVENT, onOpen)
   }, [])
+
+  // La casa ya eligió idiomas: este aparato da el asistente por visto sin mostrarlo.
+  useEffect(() => {
+    if (!skip) return
+    settingsStore.set((s) => ({ ...s, onboardingDone: true }))
+    setOpen(false)
+  }, [skip])
 
   // Con el control remoto: el foco arranca en el primer idioma. En pantallas táctiles (v0.26) va a la caja
   // del diálogo: si no, el primer chip arrancaba con el anillo de foco, como si estuviera elegido de otra forma.
@@ -79,9 +101,11 @@ export function Onboarding() {
   if (!visible) return open && !ready && !onWatch ? <span className="ob-pending" hidden /> : null
 
   const update = (patch: Partial<Settings>) => settingsStore.set((s) => ({ ...s, ...patch }))
+  // Cerrarlo (con "Empezar" o Atrás) cuenta como elegir: la casa queda con los idiomas que se ven acá.
   const finish = () => {
-    update({ onboardingDone: true })
+    update({ onboardingDone: true, langsChosen: true })
     setOpen(false)
+    setManual(false)
   }
 
   // "Atrás" del control (Escape, Backspace, GoBack) cierra el asistente.

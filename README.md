@@ -19,7 +19,7 @@ y un **historial** de todo lo que viste. Funciona en la PC, el celular y el nave
 - **Addons (v0.6)**: explorar los oficiales, activar o desactivar, gestor de catálogos (renombrar, ocultar,
   ordenar, fusionar) e **importar desde tu cuenta de Stremio**.
 - **TV (v0.6)**: protector de pantalla, teclado en pantalla, más reproductores externos, modo sin conexión,
-  asistente inicial y Ajustes esencial/avanzado.
+  asistente inicial (con login, una sola vez por casa desde la v0.26.2) y Ajustes esencial/avanzado.
 - **Descubrir (v0.5)**: búsqueda al escribir, búsquedas recientes, personas y "juntos", filtros y orden,
   listas curadas (Oscar, mejor puntaje IMDb, sagas) y etiquetas clickeables en la ficha.
 - **Pósters (v0.5)**: puntaje sobre el póster, etiquetas (episodio nuevo, Top 10…) y tráiler al pasar por encima.

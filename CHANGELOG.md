@@ -1,5 +1,11 @@
 # Changelog
 
+## [0.26.2] - 2026-10-19
+
+### Cambiado
+- **Asistente inicial**: si la casa ya eligió los idiomas (en el asistente de otro aparato o en Ajustes), un
+  aparato nuevo de la casa ya no lo muestra. Se puede abrir igual desde Ajustes. Sin login, igual que antes.
+
 ## [0.26.1] - 2026-10-18
 
 ### Cambiado
