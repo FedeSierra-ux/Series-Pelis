@@ -6,6 +6,7 @@ import { displayYear } from '../lib/yearLabel'
 import { genreLabel } from '../lib/i18n'
 import { armTrailer, disarmTrailer } from '../lib/hoverTrailer'
 import { LABEL_TEXT, usePosterLabel } from '../lib/posterLabels'
+import { useLocalTitle } from '../lib/localTitles'
 import { useLogoTone } from '../lib/logoTone'
 import { addonsStore, settingsStore, useStore } from '../lib/store'
 import { cardBackdrop, useNearOnce, useTitleLogo } from '../lib/titleArt'
@@ -54,8 +55,10 @@ export const PosterCard = memo(function PosterCard({ meta, progress, watched, su
   const src = landscape ? (backdrop ?? posterSrc) : posterSrc
   // Si la imagen no carga (404, CDN caído) mostramos el nombre en vez de un hueco vacío.
   const [brokenSrc, setBrokenSrc] = useState<string>()
-  const [imgRef, near] = useNearOnce<HTMLDivElement>(!!landscape && !eager)
+  // Cerca de la pantalla: pide el logo (apaisadas) y el nombre en español (v0.28, todas).
+  const [imgRef, near] = useNearOnce<HTMLDivElement>(!eager)
   const logo = useTitleLogo(meta, !!landscape && (eager || near))
+  const name = useLocalTitle(meta.id, meta.name, { type: meta.type, enabled: eager || near })
   const [brokenLogo, setBrokenLogo] = useState<string>()
   const showLogo = !!logo && logo !== brokenLogo
   const logoTone = useLogoTone(showLogo ? logo : undefined)
@@ -86,15 +89,15 @@ export const PosterCard = memo(function PosterCard({ meta, progress, watched, su
       data-focus-id={meta.id}
       className={landscape ? 'poster-card is-landscape' : `poster-card shape-${meta.posterShape ?? 'poster'}`}
       // Apaisada: el nombre está en el logo, así que no se repite abajo (sí para el lector de pantalla).
-      aria-label={landscape ? [meta.name, landInfo(meta)].filter(Boolean).join(', ') : undefined}
+      aria-label={landscape ? [name, landInfo(meta)].filter(Boolean).join(', ') : undefined}
       onMouseEnter={onEnter}
       onMouseLeave={(e) => disarmTrailer(e.currentTarget, 'mouse')}
       onFocus={onFocus}
       onBlur={(e) => disarmTrailer(e.currentTarget, 'focus')}
       onTouchStart={prefetch}
-      title={meta.name}
+      title={name}
     >
-      <div className="poster-img" ref={landscape ? imgRef : undefined}>
+      <div className="poster-img" ref={imgRef}>
         {src && src !== brokenSrc ? (
           <img
             src={src}
@@ -106,14 +109,14 @@ export const PosterCard = memo(function PosterCard({ meta, progress, watched, su
             onError={() => setBrokenSrc(src)}
           />
         ) : (
-          !landscape && <div className="poster-fallback">{meta.name}</div>
+          !landscape && <div className="poster-fallback">{name}</div>
         )}
         {landscape && (
           <div className="land-art" aria-hidden>
             {showLogo ? (
               <img className="land-logo" {...logoTone} src={logo} alt="" loading="lazy" decoding="async" onError={() => setBrokenLogo(logo)} />
             ) : (
-              <span className="land-name">{meta.name}</span>
+              <span className="land-name">{name}</span>
             )}
           </div>
         )}
@@ -132,7 +135,7 @@ export const PosterCard = memo(function PosterCard({ meta, progress, watched, su
         )}
       </div>
       <div className="poster-info">
-        {!landscape && <span className="poster-title">{meta.name}</span>}
+        {!landscape && <span className="poster-title">{name}</span>}
         <span className="poster-sub">
           {subtitle ?? (landscape ? landInfo(meta) : displayYear(meta))}
           {posterRating === 'below' && <ImdbRating value={meta.imdbRating} size="sm" />}

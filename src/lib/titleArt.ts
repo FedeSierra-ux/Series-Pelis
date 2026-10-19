@@ -45,6 +45,31 @@ export function useTitleLogo(meta: Pick<MetaPreview, 'id' | 'logo'>, enabled: bo
   return tt?.id === meta.id && tt.tt ? metahubLogo(tt.tt) : undefined
 }
 
+// Un solo IntersectionObserver para todas las tarjetas (v0.28: ahora lo usan todas, no solo las apaisadas, para
+// pedir el nombre en español). Con uno por tarjeta, cientos frenan la TV.
+let sharedIo: IntersectionObserver | undefined
+const nearCallbacks = new Map<Element, () => void>()
+
+function observeNear(el: Element, cb: () => void): () => void {
+  sharedIo ??= new IntersectionObserver(
+    (entries) => {
+      for (const e of entries) {
+        if (!e.isIntersecting) continue
+        const fn = nearCallbacks.get(e.target)
+        nearCallbacks.delete(e.target)
+        sharedIo?.unobserve(e.target)
+        fn?.()
+      }
+    },
+    { rootMargin: '200px 600px' },
+  )
+  nearCallbacks.set(el, cb)
+  sharedIo.observe(el)
+  return () => {
+    if (nearCallbacks.delete(el)) sharedIo?.unobserve(el)
+  }
+}
+
 /** Se vuelve `true` (y queda así) cuando el elemento se acerca a la pantalla. */
 export function useNearOnce<T extends Element>(active: boolean): [(el: T | null) => void, boolean] {
   const [el, setEl] = useState<T | null>(null)
@@ -55,11 +80,7 @@ export function useNearOnce<T extends Element>(active: boolean): [(el: T | null)
       setNear(true)
       return
     }
-    const io = new IntersectionObserver((entries) => {
-      if (entries.some((e) => e.isIntersecting)) setNear(true)
-    }, { rootMargin: '200px 600px' })
-    io.observe(el)
-    return () => io.disconnect()
+    return observeNear(el, () => setNear(true))
   }, [active, near, el])
   return [setEl, near]
 }
