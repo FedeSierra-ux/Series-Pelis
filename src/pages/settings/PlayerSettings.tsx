@@ -96,7 +96,7 @@ export function PlayerSettings() {
         <input type="checkbox" checked={settings.autoSubtitles} onChange={(e) => update({ autoSubtitles: e.target.checked })} />
         Activarlos solos en el primer idioma preferido que haya
       </label>
-      <LangChips label="Idiomas de subtítulos preferidos" value={settings.subtitleLangs} onChange={(subtitleLangs) => update({ subtitleLangs })} />
+      <LangChips label="Idiomas de subtítulos preferidos" value={settings.subtitleLangs} onChange={(subtitleLangs) => update({ subtitleLangs, langsChosen: true })} />
       <Advanced>
       <label className="check">
         <input type="checkbox" checked={settings.hideSdh} onChange={(e) => update({ hideSdh: e.target.checked })} />
@@ -178,7 +178,7 @@ export function PlayerSettings() {
       </div>
 
       <h3>Idioma de audio preferido</h3>
-      <LangChips label="Idiomas de audio preferidos" value={settings.audioLangs} onChange={(audioLangs) => update({ audioLangs })} />
+      <LangChips label="Idiomas de audio preferidos" value={settings.audioLangs} onChange={(audioLangs) => update({ audioLangs, langsChosen: true })} />
       <p className="muted small">Solo sirve en streams con varias pistas de audio.</p>
 
 

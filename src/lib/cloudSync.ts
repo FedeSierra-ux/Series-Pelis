@@ -46,6 +46,7 @@ export const HOUSE_SETTINGS = [
   'spoilerFree',
   'spoilerUnstarted',
   'spoilerDefaulted',
+  'langsChosen',
   'sourceRules',
 ] as const satisfies readonly (keyof Settings)[]
 
@@ -191,9 +192,9 @@ const idb = createStore('series-pelis-sync', 'kv')
 const STATE_KEY = 'state'
 /**
  * Subirlo al agregar un campo a `HOUSE_SETTINGS` (u otra fila de la casa): cada aparato baja todo lo de la casa
- * una vez, porque su versión vieja ignoró esas filas. 1 = v0.22.3 (`spoilerDefaulted`).
+ * una vez, porque su versión vieja ignoró esas filas. 1 = v0.22.3 (`spoilerDefaulted`), 2 = v0.26.2 (`langsChosen`).
  */
-const HOUSE_SCHEMA = 1
+const HOUSE_SCHEMA = 2
 const profileStateKey = (profile: string) => `profile:${profile}`
 const API = '/api/sync'
 const CAPTURE_DELAY = 1500

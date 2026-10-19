@@ -729,6 +729,8 @@ export interface Settings {
   spoilerUnstarted: boolean
   /** v0.22.3: la casa ya recibió el modo sin spoilers prendido (se sincroniza; ver `applyHouseDefaults`). */
   spoilerDefaulted: boolean
+  /** v0.26.2: la casa ya eligió idiomas (asistente o Ajustes). Se sincroniza: con login, un aparato nuevo no muestra el asistente. */
+  langsChosen: boolean
   /** Ofrecer puntuar con estrellas al terminar una peli o el último episodio. */
   askRatingAtEnd: boolean
   /** v0.5: puntaje de IMDb sobre el póster, debajo (como antes) o sin puntaje. */
@@ -781,6 +783,7 @@ export const settingsStore = new PersistedStore<Settings>('settings', {
   spoilerFree: true,
   spoilerUnstarted: false,
   spoilerDefaulted: false,
+  langsChosen: false,
   askRatingAtEnd: true,
   posterRating: 'on',
   posterLabels: true,
