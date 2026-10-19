@@ -454,6 +454,11 @@ npm run preview    # sirve dist/ en http://localhost:4173
   La descarga en paralelo es **automática** (decisión del usuario) aunque, con la cuenta llena, Torrentio puede borrar
   una descarga en curso de otra casa. Config de Torrentio para el admin en el README ("TorBox para todas las casas":
   tildar "Don't show debrid catalog", no tildar "Don't show download to debrid links"). Sin probar con una cuenta real.
+  Arreglos de la revisión: `debridLinkOf`/`torrentStateFor` viven en `lib/debrid.ts` (addons por parámetro);
+  `findNextStream` ya resuelve el torrent de un `[TB download]` (el reproductor de Android no se cierra entre
+  episodios) y no corta la espera por un `[TB download]`; en el nativo, `ended`/`progress` con duración de aviso o
+  `error` antes del `ready` = falla del debrid; `DebridError` reintenta el mismo link (`onRetry`); toast con
+  `resume.note` en el nativo; el botón "Preparando…" usa `aria-disabled` (con `disabled` se perdía el foco en la TV).
 
 - **Decisiones para la v0.17 (reemplazan el reparto del plan de abajo)**: addons y TorBox **iguales para todas las
   casas**, solo los cambia el admin (opción A). Ajustes generales (subtítulos, idiomas, autoplay, saltar intro, sin

@@ -1,4 +1,7 @@
-import { getAddonStreams, normalizeInfoHash } from './addons'
+import type { PlayState } from '../pages/Detail'
+import { getAddonStreams, normalizeInfoHash, streamingServerUrl } from './addons'
+import { sameAddon } from './addonKey'
+import type { TorrentServer } from './torrentServer'
 import type { InstalledAddon, Stream } from './types'
 
 // v0.27: debrid con TorBox a través de Torrentio. La key va dentro de la URL del addon (la carga el admin); la app
@@ -161,6 +164,23 @@ export function prefetchTorrentTwins(addon: InstalledAddon, type: string, videoI
   const plain = plainTorrentioUrl(addon.transportUrl)
   if (!plain || !isTorrentio(addon)) return
   getAddonStreams({ transportUrl: plain, manifest: addon.manifest }, type, videoId, TWIN_TIMEOUT_MS).catch(() => {})
+}
+
+/** El link de debrid de Torrentio que se está por reproducir (solo si es el link del propio stream). */
+export function debridLinkOf(state: Pick<PlayState, 'stream' | 'playUrl'>): DebridLink | undefined {
+  return state.stream.url && state.stream.url === state.playUrl ? parseDebridLink(state.playUrl) : undefined
+}
+
+/** El mismo título por torrent en lugar del link de debrid. Sin servidor de torrents, `undefined`. */
+export async function torrentStateFor(state: PlayState, server: TorrentServer, addons: InstalledAddon[], signal?: AbortSignal): Promise<PlayState | undefined> {
+  const link = debridLinkOf(state)
+  if (!link || !server.url) return undefined
+  const addon = state.addonUrl ? addons.find((a) => sameAddon(a.transportUrl, state.addonUrl!)) : undefined
+  const videoId = state.video?.id ?? state.meta.id
+  const twin = addon && isTorrentio(addon) ? await findTorrentTwin(addon, state.meta.type, videoId, link, signal) : undefined
+  const stream = torrentStreamFor(state.stream, link, twin)
+  const playUrl = streamingServerUrl(server.url, stream, server.engine)
+  return playUrl ? { ...state, stream, playUrl } : undefined
 }
 
 /** Links de "descarga" que ya se le pidieron a TorBox en esta sesión (una vez por link alcanza). */

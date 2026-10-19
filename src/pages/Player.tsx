@@ -36,8 +36,8 @@ import { useSubtitles } from './player/useSubtitles'
 import { launchUrl } from './player/externalLaunch'
 import { NativePlayerView } from './player/NativePlayer'
 import { EngineError } from './player/EngineError'
-import { DebridDownload, DebridError, debridLinkOf } from './player/DebridSwitch'
-import { isDebridDownload, looksLikeStatusVideo } from '../lib/debrid'
+import { DebridDownload, DebridError } from './player/DebridSwitch'
+import { debridLinkOf, isDebridDownload, looksLikeStatusVideo } from '../lib/debrid'
 import { MIN_HISTORY_EPISODE_S, MIN_HISTORY_S, NEXT_FALLBACK_S, readAutoCount, writeAutoCount } from './player/autoNext'
 import { detailPathFor } from './player/fallback'
 import { isPhoneLike, toggleFullscreen as toggleScreen, usePlayerScreen } from './player/fullscreen'
@@ -154,7 +154,15 @@ function PlayerChoice({ state, resume }: { state: PlayState; resume?: Resume }) 
     }
   }, [native])
   if (native === undefined) return <div className="player player-native" />
-  if (debrid && debridFail) return <DebridError state={state} at={debridFail.at} />
+  if (debrid && debridFail) {
+    // Reintentar el mismo link: sin volver a pasar por el torrent (para eso está el otro botón).
+    const retryDebrid = () => {
+      setPlainDebrid(true)
+      setRetry({ ...resume, at: debridFail.at })
+      setDebridFail(undefined)
+    }
+    return <DebridError state={state} at={debridFail.at} onRetry={retryDebrid} />
+  }
   if (debrid && !plainDebrid && isDebridDownload(state.stream)) return <DebridDownload state={state} resume={resume} onPlain={() => setPlainDebrid(true)} />
   const onDebridFail = debrid ? (at: number) => setDebridFail({ at }) : undefined
   // Torrent del motor de la app (http a 127.0.0.1): el reproductor de la web no lo puede abrir. Si falla el

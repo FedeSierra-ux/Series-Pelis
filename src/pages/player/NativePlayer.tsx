@@ -313,9 +313,13 @@ export function NativePlayerView({
         readyRef.current = true
         setReady(true)
         if (e.duration > 0) setDuration(e.duration)
+        // v0.27: por qué arrancó así (por ejemplo, por torrent en vez del debrid).
+        if (resume?.note) nativePlayer.update({ toast: resume.note })
         if (askStill.current) nativePlayer.update({ toast: '¿Seguís viendo? Apretá OK para seguir' })
         break
       case 'progress': {
+        // Retomando más allá del final del aviso, Android puede no mandar nunca `ready`.
+        if (!readyRef.current && onDebridFail && looksLikeStatusVideo(e.duration)) return onDebridFail(resume?.at ?? 0)
         if (!readyRef.current) return
         last.current = { position: e.position, duration: e.duration }
         if (e.duration > 0) setDuration(e.duration)
@@ -353,6 +357,7 @@ export function NativePlayerView({
         void goNext(e.auto)
         break
       case 'ended':
+        if (!readyRef.current && onDebridFail) return onDebridFail(resume?.at ?? 0)
         if (!readyRef.current) return
         persist(last.current.duration, last.current.duration)
         if (state.nextVideoId && settingsStore.get().autoplayNext) void goNext(true)
@@ -366,6 +371,8 @@ export function NativePlayerView({
         exit()
         break
       case 'error':
+        // v0.27: un link de debrid que falla antes de arrancar es casi siempre el debrid (Android sí abre MKV).
+        if (!readyRef.current && onDebridFail) return onDebridFail(resume?.at ?? 0)
         // Android no pudo con este video: sigue el reproductor de la web desde el mismo lugar.
         if (readyRef.current) persist(last.current.position, last.current.duration)
         onFallback(readyRef.current ? e.position || last.current.position : 0, e.message)

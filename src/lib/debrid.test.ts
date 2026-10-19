@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import {
   debridFailureText,
+  debridLinkOf,
   failureFromLocation,
   isDebridDownload,
   isTorrentio,
@@ -128,5 +129,13 @@ describe('video de aviso', () => {
     expect(failureFromLocation('https://api.torbox.app/v1/api/torrents/requestdl')).toBe('unknown')
     expect(failureFromLocation(undefined)).toBe('unknown')
     expect(debridFailureText('limits')).toMatch(/límite/)
+  })
+})
+
+describe('debridLinkOf', () => {
+  it('solo cuando se reproduce el link del propio stream (no el torrent armado a partir de él)', () => {
+    const url = resolve('2')
+    expect(debridLinkOf({ stream: { url }, playUrl: url })?.fileIdx).toBe(2)
+    expect(debridLinkOf({ stream: { infoHash: HASH, fileIdx: 2 }, playUrl: `http://127.0.0.1:11470/${HASH}/2` })).toBeUndefined()
   })
 })

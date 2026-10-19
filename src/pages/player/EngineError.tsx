@@ -25,7 +25,7 @@ export function EngineError({
   message: string
   at?: number
   onRetry?: () => void
-  action?: { label: string; onClick: () => void; disabled?: boolean }
+  action?: { label: string; onClick: () => void; busy?: boolean }
 }) {
   const navigate = useNavigate()
   const switchSource = useSwitchSource(state)
@@ -65,7 +65,8 @@ export function EngineError({
           )}
           <div className="hero-actions">
             {action && !sources && (
-              <button className="btn btn-primary" onClick={action.onClick} disabled={action.disabled} autoFocus data-autofocus>
+              // `aria-disabled` y no `disabled`: un botón deshabilitado pierde el foco y el control remoto queda sin destino.
+              <button className="btn btn-primary" onClick={action.busy ? undefined : action.onClick} aria-disabled={action.busy || undefined} autoFocus data-autofocus>
                 {action.label}
               </button>
             )}
