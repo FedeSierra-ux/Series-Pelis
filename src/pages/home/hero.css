@@ -122,8 +122,12 @@
   height: auto;
   object-fit: contain;
   object-position: left bottom;
-  /* Halo claro sutil para los logos oscuros (igual que .fbb-logo y .land-logo). */
-  filter: drop-shadow(0 0 1px rgba(255, 255, 255, 0.6)) drop-shadow(0 0 16px rgba(255, 255, 255, 0.3)) drop-shadow(0 2px 8px rgba(0, 0, 0, 0.45));
+  /* Sombra negra suave; el halo claro, solo en los logos oscuros (lib/logoTone.ts). */
+  filter: var(--logo-shadow);
+  transition: var(--logo-halo-in);
+}
+.portada .portada-logo[data-logo-tone='dark'] {
+  filter: var(--logo-halo);
 }
 
 /* IMDb y datos en una línea, separados por puntos (sin chips). */

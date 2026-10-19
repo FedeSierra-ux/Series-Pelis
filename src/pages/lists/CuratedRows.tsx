@@ -26,7 +26,7 @@ function CuratedRow({ id }: { id: string }) {
         empty={items.length === 0}
       >
         {items.map((m) => (
-          <PosterCard key={m.id} meta={m} to={curatedItemPath(m)} />
+          <PosterCard key={m.id} meta={m} to={curatedItemPath(m)} hideTop10Label />
         ))}
       </Row>
     </div>

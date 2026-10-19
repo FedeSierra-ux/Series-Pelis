@@ -20,7 +20,6 @@ import { audioPrefs, guessAudioLang, lang3, langRank, subtitleClasses } from '..
 import { useTvMode } from '../lib/tv'
 import type { PlayState } from './Detail'
 import './player/player-fixes.css'
-import './player/player-extras.css'
 import { CreditsNotice } from './player/CreditsNotice'
 import { RateAtEnd } from './player/RateAtEnd'
 import { daysAway, RECAP_AFTER_DAYS, RecapOffer } from './player/RecapOffer'
@@ -28,8 +27,7 @@ import { SeekPreview } from './player/SeekPreview'
 import { SourcesMenu, useSwitchSource, type Resume, type SwitchState } from './player/SourcesMenu'
 import { ReportButton } from '../components/ReportButton'
 import { PlayerIcon } from './player/PlayerIcons'
-import { NARROW_QUERY, tip, useCompactBar, useMediaQuery } from './player/controlBar'
-import { formatRate, readRate, SpeedMenu, stepRate, storeRate, type Rate } from './player/SpeedMenu'
+import { liftsSubForCorner, NARROW_QUERY, PHONE_LANDSCAPE_QUERY, TINY_BAR_QUERY, tip, useCompactBar, useMediaQuery } from './player/controlBar'
 import { SubtitleMenu } from './player/SubtitleMenu'
 import { useMediaSession, usePictureInPicture, useWakeLock } from './player/useMediaSession'
 import { useSubtitles } from './player/useSubtitles'
@@ -60,11 +58,13 @@ const NEXT_COUNTDOWN_S = 10
 const HLS_NETWORK_RETRIES = 2
 const HLS_RETRY_MS = 1000
 const SLEEP_KEY = 'sp-sleep-at'
+/** Velocidad que guardaban las versiones con botón "1×" (hasta la v0.27): ya no se lee, se borra. */
+const OLD_RATE_KEY = 'sp-rate'
 const VOLUME_STEP = 0.1
 /** Px entre el final del subtítulo y lo que haya en la esquina ("Saltar", siguiente…), en el celular con controles. */
 const SUB_CORNER_GAP = 16
 
-type Menu = 'subs' | 'audio' | 'sleep' | 'sources' | 'speed' | 'quick'
+type Menu = 'subs' | 'audio' | 'sleep' | 'sources' | 'quick'
 type Sleep = { kind: 'off' } | { kind: 'time'; at: number; minutes?: number } | { kind: 'episode' }
 
 // sessionStorage puede estar bloqueado (modo privado en algunos navegadores de TV).
@@ -80,6 +80,13 @@ function sessionSet(key: string, value: string) {
     sessionStorage.setItem(key, value)
   } catch {
     // sin persistencia, no pasa nada
+  }
+}
+function sessionRemove(key: string) {
+  try {
+    sessionStorage.removeItem(key)
+  } catch {
+    // sin persistencia, no hay nada que borrar
   }
 }
 
@@ -259,10 +266,6 @@ function PlayerView({ state, resume, notice, onDebridFail }: { state: PlayState;
     return at > Date.now() ? { kind: 'time', at, minutes: minutes || undefined } : { kind: 'off' }
   })
   const [sleepFired, setSleepFired] = useState(false)
-  // Velocidad de reproducción: se recuerda mientras dure la sesión (pasa al siguiente episodio), no más.
-  const [rate, setRate] = useState<Rate>(readRate)
-  const rateRef = useRef(rate)
-  rateRef.current = rate
   // Último subtítulo activo, para que la tecla C lo vuelva a prender.
   const lastSub = useRef<string>('')
   // Después de N episodios seguidos sin tocar nada, el siguiente arranca en pausa y pregunta.
@@ -370,22 +373,19 @@ function PlayerView({ state, resume, notice, onDebridFail }: { state: PlayState;
   const pip = usePictureInPicture(videoRef)
   // Celular vertical: "Abrir en…", ventana flotante y Ajustar van dentro del ⚙ (el CSS los saca de la barra).
   const compactBar = useCompactBar()
+  // Celular de menos de 360 px: tampoco entra el temporizador en la fila (con una serie: Audio y Siguiente).
+  const tinyBar = useMediaQuery(TINY_BAR_QUERY)
   const narrow = useMediaQuery(NARROW_QUERY)
+  const phoneLandscape = useMediaQuery(PHONE_LANDSCAPE_QUERY)
   // Pantalla prendida mientras se reproduce; se suelta en pausa y al salir.
   useWakeLock(playing)
 
   // ---------- Velocidad ----------
+  // Siempre 1× (el usuario no usa la velocidad: no hay botón ni teclas). Lo que dejó guardado una versión
+  // vieja en esta sesión se borra para que no vuelva a leerse.
   useEffect(() => {
-    const el = videoRef.current
-    if (el && el.playbackRate !== rate) el.playbackRate = rate
-  }, [rate, state.playUrl])
-
-  const changeRate = (next: Rate, announce = true) => {
-    setRate(next)
-    storeRate(next)
-    if (announce) flash(next === 1 ? 'Velocidad normal' : `Velocidad: ${formatRate(next)}`)
-    showControls()
-  }
+    sessionRemove(OLD_RATE_KEY)
+  }, [])
 
   // ---------- Carga del video ----------
   useEffect(() => {
@@ -568,8 +568,8 @@ function PlayerView({ state, resume, notice, onDebridFail }: { state: PlayState;
       return
     }
     setDuration(el.duration)
-    // Algunos navegadores vuelven a 1× al cargar otra fuente.
-    if (el.playbackRate !== rateRef.current) el.playbackRate = rateRef.current
+    // Siempre 1× (por si el navegador o un reproductor anterior dejó otra velocidad).
+    if (el.playbackRate !== 1) el.playbackRate = 1
     const saved = progressStore.get()[videoId]
     // `resume.at === 0` es "sin posición" (se cambió de fuente antes de que cargara el video): vale lo guardado.
     if (resume && resume.at > 0) el.currentTime = Math.min(resume.at, Math.max(0, el.duration - 1))
@@ -1185,14 +1185,6 @@ function PlayerView({ state, resume, notice, onDebridFail }: { state: PlayState;
         case 'p':
           if (pip.supported) togglePip()
           return
-        case '<':
-        case ',':
-          changeRate(stepRate(rate, -1))
-          return
-        case '>':
-        case '.':
-          changeRate(stepRate(rate, 1))
-          return
         case 'i':
           // Saltar intro / resumen (o los créditos) cuando hay segmento.
           if (skipKind) {
@@ -1243,13 +1235,13 @@ function PlayerView({ state, resume, notice, onDebridFail }: { state: PlayState;
     rootRef.current?.querySelector<HTMLElement>('.player-corner > .skip-btn')?.focus({ preventScroll: true })
     // Solo cuando aparece el botón (o cambia de intro a resumen/créditos).
   }, [skipFocusKey])
-  // Celular con controles: lo de la esquina ("Saltar", la tarjeta del siguiente episodio, la oferta del resumen o
+  // Celular (vertical o apaisado) con controles: lo de la esquina ("Saltar", la tarjeta del siguiente episodio, la oferta del resumen o
   // "Más como esto") le tapaba el final al subtítulo. El subtítulo termina SUB_CORNER_GAP px por arriba de lo que
   // haya, tenga los renglones que tenga (ver `cuePlacement`). La esquina no se mueve con los controles (bottom
   // fijo, sin transición) y offsetTop no cuenta la animación de entrada, así que ya es el lugar final; el
   // ResizeObserver sigue a la tarjeta cuando cambia de alto (cargando → con imagen) y al giro de pantalla.
   const cornerKind = !showCorner ? null : offerRecap && !showNextCard ? 'recap' : showNextCard ? 'next' : postPlayDue ? 'more' : 'skip'
-  const liftForCorner = narrow && controls && cornerKind !== null
+  const liftForCorner = liftsSubForCorner({ narrow, phoneLandscape, tv: tvMode }) && controls && cornerKind !== null
   useEffect(() => {
     const root = rootRef.current
     const corner = root?.querySelector<HTMLElement>('.player-corner')
@@ -1529,7 +1521,7 @@ function PlayerView({ state, resume, notice, onDebridFail }: { state: PlayState;
       )}
 
       <div className="player-top">
-        <button className="btn btn-ghost" onClick={exit} aria-label="Volver">
+        <button className="btn btn-ghost" onClick={exit} {...tip('Volver')}>
           ←
         </button>
         <div className="player-title">
@@ -1542,7 +1534,7 @@ function PlayerView({ state, resume, notice, onDebridFail }: { state: PlayState;
           <span className="muted small">{state.addonName}</span>
         </div>
         {touch && (
-          <button className="btn btn-ghost player-lock-btn" onClick={lockScreen} aria-label="Bloquear pantalla">
+          <button className="btn btn-ghost player-lock-btn" onClick={lockScreen} {...tip('Bloquear pantalla')}>
             <PlayerIcon name="lock" />
             <span>Bloquear</span>
           </button>
@@ -1580,6 +1572,21 @@ function PlayerView({ state, resume, notice, onDebridFail }: { state: PlayState;
               more={
                 compactBar
                   ? [
+                      ...(tinyBar
+                        ? [
+                            {
+                              label:
+                                sleep.kind === 'time'
+                                  ? `Temporizador: ${sleepMinutesLeft} min`
+                                  : sleep.kind === 'episode'
+                                    ? 'Temporizador: fin del episodio'
+                                    : 'Temporizador para dormir',
+                              active: sleep.kind !== 'off',
+                              // El ⚙ sigue siendo el que abrió el menú: al cerrar el temporizador el foco vuelve ahí.
+                              onClick: () => setMenu('sleep'),
+                            },
+                          ]
+                        : []),
                       ...(pip.supported
                         ? [{ label: pip.active ? 'Cerrar la ventana flotante' : 'Ventana flotante', active: pip.active, onClick: () => { setMenu(null); togglePip() } }]
                         : []),
@@ -1597,15 +1604,6 @@ function PlayerView({ state, resume, notice, onDebridFail }: { state: PlayState;
               </button>
             ))}
           {menu === 'sources' && <SourcesMenu state={state} onPick={changeSource} />}
-          {menu === 'speed' && (
-            <SpeedMenu
-              rate={rate}
-              onPick={(r) => {
-                changeRate(r, false)
-                setMenu(null)
-              }}
-            />
-          )}
           {menu === 'sleep' && (
             <>
               <span className="player-menu-title muted small">Temporizador</span>
@@ -1682,22 +1680,32 @@ function PlayerView({ state, resume, notice, onDebridFail }: { state: PlayState;
             <PlayerIcon name="sources" />
           </button>
           <button
-            onClick={(e) => toggleMenu('speed', e)}
-            data-menu="speed"
-            {...tip(`Velocidad de reproducción: ${formatRate(rate)}`)}
-            aria-expanded={menu === 'speed'}
-            className={`speed-btn ${rate !== 1 ? 'active' : ''}`}
-          >
-            {formatRate(rate)}
-          </button>
-          <button
             onClick={(e) => toggleMenu('sleep', e)}
-            {...tip('Temporizador para dormir')}
+            {...tip(
+              sleep.kind === 'time'
+                ? `Temporizador para dormir: quedan ${sleepMinutesLeft} min`
+                : sleep.kind === 'episode'
+                  ? 'Temporizador para dormir: al final del episodio'
+                  : 'Temporizador para dormir',
+            )}
             aria-expanded={menu === 'sleep'}
-            className={sleep.kind !== 'off' ? 'active' : ''}
+            className={`sleep-btn ${sleep.kind !== 'off' ? 'active' : ''}`}
           >
             <PlayerIcon name="moon" />
-            {sleep.kind === 'time' ? `${sleepMinutesLeft} min` : sleep.kind === 'episode' ? 'Fin' : ''}
+            {sleep.kind !== 'off' && (
+              // En el celular el texto pasa a ser un globito sobre la luna (el CSS saca " min"): así la fila
+              // de íconos no se parte en dos renglones.
+              <span className="sleep-left" aria-hidden="true">
+                {sleep.kind === 'time' ? (
+                  <>
+                    {sleepMinutesLeft}
+                    <span className="sleep-unit"> min</span>
+                  </>
+                ) : (
+                  'Fin'
+                )}
+              </span>
+            )}
           </button>
           {settings.externalPlayer !== 'none' && (
             <button onClick={openExternal} className="external-btn" {...tip(externalLabel)}>

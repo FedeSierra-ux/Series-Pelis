@@ -104,10 +104,20 @@ describe('mejor resultado', () => {
     expect(pickBestResult('x', [])).toBeUndefined()
   })
 
-  it('gana una persona que se parece igual o más que el mejor título (v0.26)', () => {
-    const groups = [{ items: [m('tt1', 'Ricardo Del Rey')] }]
-    expect(pickBestResult('ricardo', groups, [{ name: 'Ricardo Darín' }])).toBeUndefined()
+  it('gana una persona que se parece más que el mejor título (v0.26)', () => {
     expect(pickBestResult('taylor swift', [{ items: [m('tt2', 'Taylor Swift: The Eras Tour')] }], [{ name: 'Taylor Swift' }])).toBeUndefined()
+    // La persona primera le gana a un título que se parece igual pero va más abajo en su grupo.
+    expect(pickBestResult('ricardo', [{ items: [m('x', 'Otra'), m('tt1', 'Ricardo Del Rey')] }], [{ name: 'Ricardo Darín' }])).toBeUndefined()
+  })
+
+  it('a igual puntaje gana el título', () => {
+    const groups = [{ items: [m('tt1', 'Ricardo Del Rey')] }]
+    expect(pickBestResult('ricardo', groups, [{ name: 'Ricardo Darín' }])?.id).toBe('tt1')
+    expect(pickBestResult('oppenheimer', [{ items: [m('tt15398776', 'Oppenheimer')] }], [{ name: 'Oppenheimer' }])?.id).toBe('tt15398776')
+    // También si el título es del segundo grupo (Series): el desempate por grupo es solo entre títulos.
+    expect(pickBestResult('ricardo', [{ items: [] }, { items: [m('s1', 'Ricardo Show', 'series')] }], [{ name: 'Ricardo Darín' }])?.id).toBe('s1')
+    // La persona más abajo en su lista tampoco gana.
+    expect(pickBestResult('ricardo', groups, [{ name: 'Otro' }, { name: 'Ricardo Darín' }])?.id).toBe('tt1')
     // Sin personas, como siempre.
     expect(pickBestResult('ricardo', groups, [])?.id).toBe('tt1')
   })

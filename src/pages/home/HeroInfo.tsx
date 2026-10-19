@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { Link } from 'react-router-dom'
 import { ImdbRating } from '../../components/Rating'
+import { useLogoTone } from '../../lib/logoTone'
 import type { DetailLocationState } from '../detail/StreamList'
 
 // Íconos de línea de la portada (mismo trazo que Theme2Icons). Heredan el color del texto.
@@ -70,13 +71,14 @@ export function HeroInfo({ eyebrow, title, logo, titleReady = true, rating, fact
   const [brokenLogo, setBrokenLogo] = useState<string>()
   // Si el logo no carga, volvemos al título en texto.
   const showLogo = logo && logo !== brokenLogo ? logo : undefined
+  const logoTone = useLogoTone(showLogo)
   const listLabel = list.busy ? 'Agregando…' : list.unavailable ? 'No disponible' : list.inList ? 'En mi lista' : 'Mi lista'
   return (
     <div className="portada-content">
       {eyebrow && <span className="portada-eyebrow">{eyebrow}</span>}
       {/* h2: el h1 es el de la página (este título cambia con el carrusel). */}
       <h2 className={`portada-title${showLogo ? ' has-logo' : ''}${titleReady ? '' : ' is-pending'}`}>
-        {showLogo ? <img className="portada-logo" src={showLogo} alt={title} onError={() => setBrokenLogo(showLogo)} /> : <span>{title}</span>}
+        {showLogo ? <img className="portada-logo" {...logoTone} src={showLogo} alt={title} onError={() => setBrokenLogo(showLogo)} /> : <span>{title}</span>}
       </h2>
       {(rating || facts.length > 0) && (
         <p className="portada-facts">

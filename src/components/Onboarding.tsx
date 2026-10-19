@@ -28,10 +28,19 @@ function isFirstRun() {
  * Con login, los idiomas son de la casa: el asistente espera la primera sincronización para mostrar lo que ya
  * eligió la casa (y para que lo que se cambie acá no lo pise el servidor). Una vez listo, queda listo.
  * También con la sesión guardada (`offline` hasta que `/me` responde): si la app se cerró antes de la primera
- * sincronización, al volver a abrirla mostraba los de fábrica. Sin conexión la vuelta falla enseguida (`error`).
+ * sincronización, al volver a abrirla mostraba los de fábrica. Un error no cuenta como sincronizada (ver
+ * `houseSyncFailed`).
  */
 export function houseSynced(auth: AuthState, sync: SyncStatus): boolean {
-  return auth.status !== 'in' || sync.lastSync !== undefined || sync.phase === 'error'
+  return auth.status !== 'in' || sync.lastSync !== undefined
+}
+
+/**
+ * La primera sincronización falló (sin conexión, la vuelta falla enseguida): no se sabe qué eligió la casa y el
+ * asistente no se abre, igual que cuando no llega a tiempo (`onboardingSkip` → `unknown`). Sin login, nunca.
+ */
+export function houseSyncFailed(auth: AuthState, sync: SyncStatus): boolean {
+  return auth.status === 'in' && sync.lastSync === undefined && sync.phase === 'error'
 }
 
 /**
@@ -42,36 +51,45 @@ export function houseChoseLangs(auth: AuthState, langsChosen: boolean): boolean 
   return auth.status === 'in' && langsChosen
 }
 
-/** `wait`: esperando la primera sincronización; `synced`: lista; `timeout`: no llegó a tiempo (`SYNC_WAIT_MS`). */
-export type HouseWait = 'wait' | 'synced' | 'timeout'
+/**
+ * `wait`: esperando la primera sincronización; `synced`: lista; `timeout`: no llegó a tiempo (`SYNC_WAIT_MS`);
+ * `error`: falló antes de terminar la primera vuelta.
+ */
+export type HouseWait = 'wait' | 'synced' | 'timeout' | 'error'
+
+/** Cómo está la primera sincronización ahora (sin el reloj de `SYNC_WAIT_MS`). */
+export function houseWaitNow(auth: AuthState, sync: SyncStatus): HouseWait {
+  if (houseSynced(auth, sync)) return 'synced'
+  return houseSyncFailed(auth, sync) ? 'error' : 'wait'
+}
 
 /**
  * Por qué no se muestra el asistente de la primera vez (`undefined` = se muestra).
  * - `chosen`: la casa ya eligió idiomas (v0.26.2).
- * - `unknown` (v0.26.3): la sincronización tardó más de `SYNC_WAIT_MS` y no se sabe qué eligió la casa. No se abre
- *   y quedan los idiomas de fábrica (o los de la casa cuando llegue la sincronización). No se marca nada: si la
- *   casa todavía no eligió, el asistente aparece la próxima vez que se abra la app.
+ * - `unknown` (v0.26.3): la sincronización tardó más de `SYNC_WAIT_MS`, o falló, y no se sabe qué eligió la casa.
+ *   No se abre y quedan los idiomas de fábrica (o los de la casa cuando llegue la sincronización). No se marca
+ *   nada: si la casa todavía no eligió, el asistente aparece la próxima vez que se abra la app.
  */
 export function onboardingSkip(house: HouseWait, auth: AuthState, langsChosen: boolean): 'chosen' | 'unknown' | undefined {
-  if (house === 'timeout') return 'unknown'
+  if (house === 'timeout' || house === 'error') return 'unknown'
   if (house === 'synced' && houseChoseLangs(auth, langsChosen)) return 'chosen'
   return undefined
 }
 
-/** Una vez lista (o vencida la espera), queda así. */
+/** Una vez lista (o vencida la espera, o con error), queda así. */
 function useHouseWait(): HouseWait {
-  const synced = houseSynced(useAuth(), useSyncStatus())
-  const [state, setState] = useState<HouseWait>(synced ? 'synced' : 'wait')
+  const now = houseWaitNow(useAuth(), useSyncStatus())
+  const [state, setState] = useState<HouseWait>(now)
   useEffect(() => {
     if (state !== 'wait') return
-    if (synced) {
-      setState('synced')
+    if (now !== 'wait') {
+      setState(now)
       return
     }
     const t = setTimeout(() => setState('timeout'), SYNC_WAIT_MS)
     return () => clearTimeout(t)
-  }, [state, synced])
-  return state === 'wait' && synced ? 'synced' : state
+  }, [state, now])
+  return state === 'wait' ? now : state
 }
 
 /** Asistente de la primera vez: idioma del audio y subtítulos, en una sola pantalla. */
@@ -100,7 +118,7 @@ export function Onboarding() {
   }, [])
 
   // La casa ya eligió idiomas: este aparato da el asistente por visto sin mostrarlo. Si la sincronización no
-  // llegó a tiempo, tampoco se abre (sin marcar nada; ver `onboardingSkip`).
+  // llegó a tiempo o falló, tampoco se abre (sin marcar nada; ver `onboardingSkip`).
   useEffect(() => {
     if (!skip) return
     if (skip === 'chosen') settingsStore.set((s) => ({ ...s, onboardingDone: true }))

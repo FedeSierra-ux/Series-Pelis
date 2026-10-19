@@ -32,6 +32,13 @@
   --gutter: clamp(16px, 2.6vw, 40px);
   --nav-h: 0px;
   --cont-w: clamp(220px, 21vw, 360px);
+  /* Logos de los títulos (lib/logoTone.ts): sombra negra suave para todos y halo claro solo para los oscuros
+     (data-logo-tone="dark"). Las dos con tres sombras, así el halo entra con una transición pareja. Con
+     `rgba(…, …)` y no `rgb(r g b / a)`: las TVs con Chromium < 65 no la entienden y, dentro de var(), el filtro
+     entero quedaba en none. */
+  --logo-shadow: drop-shadow(0 0 1px rgba(255, 255, 255, 0)) drop-shadow(0 0 16px rgba(255, 255, 255, 0)) drop-shadow(0 2px 8px rgba(0, 0, 0, 0.45));
+  --logo-halo: drop-shadow(0 0 1px rgba(255, 255, 255, 0.6)) drop-shadow(0 0 16px rgba(255, 255, 255, 0.3)) drop-shadow(0 2px 8px rgba(0, 0, 0, 0.45));
+  --logo-halo-in: filter 180ms ease-out;
 }
 
 [data-theme='2'] body {
@@ -509,11 +516,9 @@ html[data-tv][data-theme='2'] .row-scroller {
   font-family: var(--font-display);
   -webkit-text-stroke-color: rgba(196, 176, 255, 0.7);
 }
-/* v0.26: celular → número más chico y un poco más metido debajo del póster (asoma el 3.º) y borde más opaco. */
+/* v0.26: celular → borde más opaco (el tamaño es el de todas las pantallas, en styles.css). */
 @media (max-width: 760px) {
   [data-theme='2'] .top10-rank {
-    font-size: calc(var(--poster-w) * 0.72);
-    margin-right: calc(var(--poster-w) * -0.1);
     -webkit-text-stroke-color: color-mix(in srgb, var(--accent) 95%, transparent);
   }
 }
@@ -525,6 +530,11 @@ html[data-tv][data-theme='2'] .row-scroller {
 /* Los esqueletos no son tarjetas: sin agrandarse al pasar el mouse. */
 [data-theme='2'] .skeleton-card {
   pointer-events: none;
+}
+/* La barrita va dentro del renglón del título (PosterSkeleton), así el esqueleto mide lo mismo que la tarjeta. */
+[data-theme='2'] .skeleton-card .poster-title .skeleton-line {
+  display: inline-block;
+  vertical-align: middle;
 }
 
 /* "Seguir viendo" apaisado (ContinueCard). */
@@ -1166,5 +1176,8 @@ html[data-tv][data-theme='2'] .btn-small {
 @media (prefers-reduced-motion: reduce) {
   .t2-profile {
     transition: none;
+  }
+  :root[data-theme='2'] {
+    --logo-halo-in: none;
   }
 }

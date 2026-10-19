@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import type { AuthState } from '../lib/auth'
 import type { SyncStatus } from '../lib/cloudSync'
-import { houseChoseLangs, houseSynced, onboardingSkip } from './Onboarding'
+import { houseChoseLangs, houseSynced, houseSyncFailed, houseWaitNow, onboardingSkip } from './Onboarding'
 
 const house = { id: 'h1', name: 'Casa', isAdmin: false } as unknown as Extract<AuthState, { status: 'in' }>['house']
 const device = { id: 'd1', name: 'TV' } as unknown as Extract<AuthState, { status: 'in' }>['device']
@@ -24,8 +24,35 @@ describe('houseSynced (el asistente espera la primera sincronización)', () => {
     expect(houseSynced(inHouse(true), sync({ phase: 'ok', lastSync: 1 }))).toBe(true)
   })
 
-  it('si la sincronización falla (sin conexión) no se queda esperando', () => {
-    expect(houseSynced(inHouse(true), sync({ phase: 'error', error: 'x' }))).toBe(true)
+  it('un error no cuenta como sincronizada', () => {
+    expect(houseSynced(inHouse(true), sync({ phase: 'error', error: 'x' }))).toBe(false)
+    expect(houseSynced(inHouse(), sync({ phase: 'error', error: 'x' }))).toBe(false)
+  })
+
+  it('un error después de una vuelta buena sigue contando como sincronizada', () => {
+    expect(houseSynced(inHouse(), sync({ phase: 'error', error: 'x', lastSync: 1 }))).toBe(true)
+  })
+})
+
+describe('houseSyncFailed / houseWaitNow (la primera sincronización falló)', () => {
+  it('con casa, un error antes de la primera vuelta es una falla', () => {
+    expect(houseSyncFailed(inHouse(true), sync({ phase: 'error', error: 'x' }))).toBe(true)
+    expect(houseWaitNow(inHouse(true), sync({ phase: 'error', error: 'x' }))).toBe('error')
+  })
+
+  it('si ya hubo una vuelta buena, no es falla', () => {
+    expect(houseSyncFailed(inHouse(), sync({ phase: 'error', error: 'x', lastSync: 1 }))).toBe(false)
+    expect(houseWaitNow(inHouse(), sync({ phase: 'error', error: 'x', lastSync: 1 }))).toBe('synced')
+  })
+
+  it('sin login nunca falla ni espera', () => {
+    expect(houseSyncFailed({ status: 'disabled' }, sync({ phase: 'error', error: 'x' }))).toBe(false)
+    expect(houseWaitNow({ status: 'disabled' }, sync({ phase: 'error', error: 'x' }))).toBe('synced')
+    expect(houseWaitNow({ status: 'out', needsSetup: false }, sync())).toBe('synced')
+  })
+
+  it('esperando, todavía no decide', () => {
+    expect(houseWaitNow(inHouse(), sync({ phase: 'syncing' }))).toBe('wait')
   })
 })
 
@@ -58,6 +85,11 @@ describe('onboardingSkip (v0.26.3: sin sincronización a tiempo no se abre)', ()
   it('si la sincronización no llegó a tiempo no se abre, sin marcar que la casa eligió', () => {
     expect(onboardingSkip('timeout', inHouse(), false)).toBe('unknown')
     expect(onboardingSkip('timeout', inHouse(true), true)).toBe('unknown')
+  })
+
+  it('si la sincronización falló tampoco se abre, sin marcar nada', () => {
+    expect(onboardingSkip('error', inHouse(), false)).toBe('unknown')
+    expect(onboardingSkip('error', inHouse(true), true)).toBe('unknown')
   })
 
   it('sin login se muestra como antes', () => {

@@ -19,7 +19,6 @@ import { isEmbedded, nativeStartAt, nativeSubList, nativeSubtitleStyle, shouldSa
 import { nextEpisodeTitle } from './NextCard'
 import { daysAway, RECAP_AFTER_DAYS } from './RecapOffer'
 import type { Resume } from './SourcesMenu'
-import { readRate } from './SpeedMenu'
 import { langName } from './useSubtitles'
 
 // Reproductor nativo de la app de Android TV (v0.20). Android reproduce (Media3) y dibuja los botones encima
@@ -97,7 +96,8 @@ export function NativePlayerView({
       paused: askStill.current || undefined,
       // Al venir de otra fuente, primero el idioma que se estaba escuchando.
       audioLangs: [...(resume?.audioLang ? [resume.audioLang] : []), ...audioPrefs(trackPrefsStore.get()[meta.id], s.audioLangs ?? [])],
-      rate: readRate(),
+      // Siempre 1× (sin botón ni teclas de velocidad).
+      rate: 1,
       subtitleStyle: nativeSubtitleStyle(s.subtitleStyle),
     })
     return () => {

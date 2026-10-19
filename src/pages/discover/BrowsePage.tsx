@@ -58,7 +58,7 @@ export function BrowsePage({ kind }: { kind: BrowseKind }) {
               <span className="top10-rank" aria-hidden>
                 {i + 1}
               </span>
-              <PosterCard meta={m} eager={i < 6} />
+              <PosterCard meta={m} eager={i < 6} hideTop10Label />
             </div>
           ))}
         </Row>
@@ -92,7 +92,7 @@ function LazyRow({ id, title, load, moreTo, eager = false }: LazyRowProps) {
     <div ref={ref}>
       <Row title={title} moreTo={moreTo} loading={state.loading || !visible} error={state.failed ? 'error' : undefined} empty={items.length === 0}>
         {items.map((m, i) => (
-          <PosterCard key={m.id} meta={m} eager={eager && i < 8} />
+          <PosterCard key={m.id} meta={m} eager={eager && i < 8} hideTop10Label />
         ))}
         <MoreCard to={moreTo} title={title} />
       </Row>

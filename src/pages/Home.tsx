@@ -48,7 +48,7 @@ function CatalogRow({ rowKey, addon, catalog, eager, title }: { rowKey: string; 
         landscape={landscape}
       >
         {items.map((m, i) => (
-          <PosterCard key={m.id} meta={{ ...m, type: m.type ?? catalog.type }} eager={eager && i < 6} landscape={landscape} />
+          <PosterCard key={m.id} meta={{ ...m, type: m.type ?? catalog.type }} eager={eager && i < 6} landscape={landscape} hideTop10Label />
         ))}
       </Row>
     </div>

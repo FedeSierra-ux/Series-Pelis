@@ -11,6 +11,7 @@ import { episodeLabel, formatTime, relativeDate, seasonCount, seriesYear } from 
 import { useMeta, useTitle, useTmdbDetails } from '../lib/hooks'
 import { trailerKeyFromMeta } from '../lib/hoverTrailer'
 import { typeLabel } from '../lib/i18n'
+import { useLogoTone } from '../lib/logoTone'
 import { useRating } from '../lib/ratings'
 import { remainingLabel } from '../lib/remaining'
 import { takeReturnVideo } from '../lib/returnVideo'
@@ -161,7 +162,7 @@ function TmdbOnlyDetail({ details: d, type, tmdbType }: { details: TmdbDetails; 
           {poster && <img className="detail-poster" src={poster} alt="" />}
           <div className="detail-info">
             <h1 className={`detail-title${!logo && isLongTitle(title) ? ' is-long' : ''}`}>
-              {logo ? <img className="detail-logo" src={logo} alt={title} /> : title}
+              {logo ? <DetailLogo src={logo} alt={title} /> : title}
             </h1>
             {d.tagline && <p className="detail-tagline">{d.tagline}</p>}
             <div className="hero-meta">
@@ -190,6 +191,12 @@ function TmdbOnlyDetail({ details: d, type, tmdbType }: { details: TmdbDetails; 
 }
 
 const NOT_FOUND = 'No encontramos este título'
+/** Logo del título; un logo oscuro (Severance) lleva halo claro para leerse sobre la portada (`lib/logoTone`). */
+function DetailLogo({ src, alt, onError }: { src: string; alt: string; onError?: () => void }) {
+  const tone = useLogoTone(src)
+  return <img className="detail-logo" {...tone} src={src} alt={alt} onError={onError} />
+}
+
 /** v0.26 (ficha-02): un título en texto (sin logo) de más de 40 letras va con la letra un poco más chica. */
 const isLongTitle = (t: string) => t.length > 40
 const reducedMotion = () => typeof matchMedia === 'function' && matchMedia('(prefers-reduced-motion: reduce)').matches
@@ -561,7 +568,7 @@ function DetailPage({ type, id, onRetry }: { type: string; id: string; onRetry: 
           <div className="detail-info">
             {/* El h1 siempre está (auditoría de uso, UX 4): con logo, el logo es su contenido y su texto alternativo, el nombre. */}
             <h1 className={`detail-title${!logo && isLongTitle(name) ? ' is-long' : ''}`}>
-              {logo ? <img className="detail-logo" src={logo} alt={name} onError={() => setLogoFailed(true)} /> : name}
+              {logo ? <DetailLogo src={logo} alt={name} onError={() => setLogoFailed(true)} /> : name}
             </h1>
             {tmdb?.tagline && <p className="detail-tagline">{tmdb.tagline}</p>}
             <div className="hero-meta">
