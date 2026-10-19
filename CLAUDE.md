@@ -429,6 +429,11 @@ npm run preview    # sirve dist/ en http://localhost:4173
   viejas (la app todavía no se usaba). Aceptado por el usuario: con subtítulos "Muy grande" y 4–5 renglones se pueden
   pisar con "¿Qué te pareció?" o con el reparto en pausa; en PC y TV el subtítulo puede pisarse con la esquina (la
   v0.26.1 solo lo arregla en el celular). No volver a proponerlo.
+- v0.26.3 hecha (rama `ccr-4e8d431d-4nlzi9`): si la primera sincronización tarda más de `SYNC_WAIT_MS` (10 s), el
+  asistente **no se abre** (pedido del usuario; antes se abría igual) y quedan los idiomas de fábrica. `useHouseWait`
+  (`wait` / `synced` / `timeout`, se queda fijo) + `onboardingSkip(house, auth, langsChosen)` puro en
+  `Onboarding.tsx` (`chosen` marca `onboardingDone`; `unknown` no marca nada, así si la casa no eligió aparece en la
+  próxima apertura). Un error de sincronización (`phase: 'error'`) sigue contando como sincronizada (se abre).
 - **Decisiones para la v0.17 (reemplazan el reparto del plan de abajo)**: addons y TorBox **iguales para todas las
   casas**, solo los cambia el admin (opción A). Ajustes generales (subtítulos, idiomas, autoplay, saltar intro, sin
   spoilers, reglas de fuentes) **iguales en toda la casa**; lo físico (modo TV, tamaño de la interfaz, protector,
