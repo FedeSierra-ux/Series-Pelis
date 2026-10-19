@@ -18,11 +18,12 @@ const BG_RGB = [0x0b, 0x0b, 0x10] as const
 export const MIN_CONTRAST = 3
 /**
  * Parte de lo opaco que tiene que leerse para que el logo cuente como claro. Medido en Chromium con 46
- * logos de metahub: los oscuros dan 0–0,10 (Severance 0, Blade Runner 2049 0,02, House of the Dragon 0,10),
- * Dune (letras grises finas) 0,29 y The Batman (rojo oscuro) 0,32 llevan halo; Spider-Man (rojo con mucho
- * borde azul oscuro) da 0,43, The Witcher 0,41, Wednesday 0,48 y el resto, más de 0,6: sin halo.
+ * logos de metahub: los oscuros dan 0–0,10 (Severance 0, Blade Runner 2049 0,02, House of the Dragon 0,10)
+ * y llevan halo. Dune (letras grises finas) 0,29 y The Batman (rojo oscuro) 0,32 van sin halo (decisión del
+ * usuario, v0.27.1), igual que Spider-Man (rojo con mucho borde azul oscuro) 0,43, The Witcher 0,41,
+ * Wednesday 0,48 y el resto, más de 0,6.
  */
-export const LIGHT_SHARE = 0.35
+export const LIGHT_SHARE = 0.25
 /** Un píxel cuenta si es al menos medio opaco (los bordes suavizados casi transparentes no). */
 export const MIN_ALPHA = 128
 /** Con menos píxeles opacos que esto (imagen vacía o casi) no se decide: va el valor seguro. */
