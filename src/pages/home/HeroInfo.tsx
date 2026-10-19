@@ -41,7 +41,7 @@ const INFO_STATE: DetailLocationState = { noAuto: true }
 export interface HeroInfoProps {
   /** Texto chico arriba del título, por ejemplo "Estrenos en cines". */
   eyebrow?: string
-  /** Título original (nunca traducido): texto si no hay logo y nombre accesible del logo. */
+  /** Nombre para mostrar (en español si se sabe; el logo sigue en idioma original): texto si no hay logo y nombre accesible del logo. */
   title: string
   /** Logo del título; sin logo va el nombre en texto. */
   logo?: string

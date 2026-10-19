@@ -1,5 +1,7 @@
 import { useEffect, useMemo, useState, type ReactNode } from 'react'
 import { getMeta } from '../../lib/addons'
+import { localTitle } from '../../lib/localTitles'
+import { spanishName } from '../../lib/localTitlesStore'
 import { measureLogoTone } from '../../lib/logoTone'
 import { addonsStore, progressStore, toggleWatchlist, useStore, watchlistStore } from '../../lib/store'
 import {
@@ -23,14 +25,14 @@ const CAST_SHOWN = 3
 
 /**
  * Logo del título con su nombre original: primero en inglés, después sin idioma y el doblado al
- * final (el usuario no quiere los títulos traducidos, solo la sinopsis y los datos).
+ * final (v0.28: el nombre va en español, pero los logos siguen en idioma original).
  */
 function originalLogo(d: TmdbDetails | undefined): string | undefined {
   const rank = (l: { iso_639_1: string | null }) => (l.iso_639_1 === 'en' ? 0 : l.iso_639_1 === null ? 1 : l.iso_639_1 === 'es' ? 3 : 2)
   return [...(d?.images?.logos ?? [])].sort((a, b) => rank(a) - rank(b))[0]?.file_path
 }
 
-/** Título original si está en alfabeto latino; si no (japonés, coreano…), el que manda TMDB. */
+/** Título original si está en alfabeto latino; si no (japonés, coreano…), el que manda TMDB. Es el que se guarda en Mi lista. */
 function originalTitle(item: TmdbListItem): string {
   const orig = item.original_title ?? item.original_name
   return orig && /^[\p{Script=Latin}\p{N}\p{P}\p{S}\s]+$/u.test(orig) ? orig : itemTitle(item)
@@ -78,7 +80,7 @@ export function TmdbHero({ items, variant = 'compact', fallbackType = 'movie', e
     () =>
       items.map((it) => ({
         key: `${typeOf(it, fallbackType)}:${it.id}`,
-        title: originalTitle(it),
+        title: spanishName(it) ?? originalTitle(it),
         backdrop: tmdbImg(it.backdrop_path, backdropSize),
       })),
     [items, fallbackType, backdropSize],
@@ -140,7 +142,10 @@ export function TmdbHero({ items, variant = 'compact', fallbackType = 'movie', e
   }, [itemKey, imdbId])
 
   const cm = cinemeta?.key === itemKey ? cinemeta : undefined
-  const title = cm?.name || originalTitle(item)
+  // Lo guardado (Mi lista) lleva el nombre original de Cinemeta; en pantalla va el de TMDB en español (v0.28):
+  // la lista ya viene en es-MX, así que no hace falta pedir nada.
+  const savedName = cm?.name || originalTitle(item)
+  const title = (imdbId && localTitle(imdbId, '')) || spanishName(item) || savedName
   const logo = tmdbImg(originalLogo(d), 'w500')
   const overview = item.overview || d?.overview
   const genres = (d?.genres ?? []).slice(0, variant === 'full' ? 3 : 2).map((g) => g.name)
@@ -190,7 +195,7 @@ export function TmdbHero({ items, variant = 'compact', fallbackType = 'movie', e
       setResolved({ key: itemKey, imdb: tt })
       if (!tt) return
     }
-    toggleWatchlist({ id: tt, type: toAppType(type), name: title, poster: tmdbImg(item.poster_path, 'w342'), releaseInfo: year })
+    toggleWatchlist({ id: tt, type: toAppType(type), name: savedName, poster: tmdbImg(item.poster_path, 'w342'), releaseInfo: year })
   }
 
   return (

@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { nativeHomeSync, nativeInfo } from '../lib/native'
+import { localTitle, useTitlesVersion } from '../lib/localTitles'
 import { buildHomeData } from '../lib/nativeHome'
 import { activeProfileId } from '../lib/profiles'
 import { continueWatching, progressStore, useStore } from '../lib/store'
@@ -27,10 +28,13 @@ export function NativeHomeSync() {
 function HomeSync() {
   const progress = useStore(progressStore)
   const { data } = useUpNext()
+  // Con los nombres en español (v0.28): cuando llega uno nuevo se vuelve a armar y, si cambió, se reenvía.
+  // Acá no se pide nada a TMDB (no se ve): los pide la fila "Seguir viendo" de Inicio.
+  const titles = useTitlesVersion()
   const payload = useMemo(
     () =>
-      buildHomeData(activeProfileId(), continueRowItems(continueWatching(progress), data?.next ?? [])),
-    [progress, data],
+      buildHomeData(activeProfileId(), continueRowItems(continueWatching(progress), data?.next ?? []), localTitle),
+    [progress, data, titles],
   )
   const sent = useRef('')
   const latest = useRef(payload)

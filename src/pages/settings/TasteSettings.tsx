@@ -1,13 +1,15 @@
 import { useState } from 'react'
 import { Link } from 'react-router-dom'
 import { smallPoster } from '../../lib/format'
+import { useLocalTitle } from '../../lib/localTitles'
 import { clearRating, notInterestedStore, ratingsStore, unmarkNotInterested } from '../../lib/ratings'
 import { formatStars } from '../../lib/stars'
 import { settingsStore, useStore, type Settings } from '../../lib/store'
+import { useNearOnce } from '../../lib/titleArt'
 
 const PREVIEW = 8
 
-function TitleRow({ id, type, name, poster, extra, action, onAction }: {
+function TitleRow({ id, type, name: savedName, poster, extra, action, onAction }: {
   id: string
   type: string
   name: string
@@ -17,8 +19,11 @@ function TitleRow({ id, type, name, poster, extra, action, onAction }: {
   onAction: () => void
 }) {
   const img = smallPoster(id, poster)
+  // Nombre en español (v0.28), pedido cuando la fila se acerca a la pantalla.
+  const [ref, near] = useNearOnce<HTMLLIElement>(true)
+  const name = useLocalTitle(id, savedName, { type, enabled: near })
   return (
-    <li className="taste-item">
+    <li ref={ref} className="taste-item">
       <Link to={`/detail/${type}/${encodeURIComponent(id)}`} className="taste-link">
         {img ? <img src={img} alt="" loading="lazy" decoding="async" /> : <span className="taste-ph" />}
         <span className="taste-name">{name}</span>

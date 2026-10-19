@@ -27,13 +27,18 @@ export function homeItemPath(type: string, metaId: string, videoId: string | und
   return `/detail/${kindOf(type)}/${encodeURIComponent(metaId)}${query ? `?${query}` : ''}`
 }
 
-function fromResume(e: WatchEntry, at: number): NativeHomeItem {
+/** Nombre para mostrar de un título (v0.28: el español si se sabe); de fábrica, el guardado. */
+export type NameOf = (metaId: string, fallback: string) => string
+
+const savedName: NameOf = (_metaId, fallback) => fallback
+
+function fromResume(e: WatchEntry, at: number, nameOf: NameOf): NativeHomeItem {
   return {
     key: e.videoId,
     kind: 'continue',
     type: kindOf(e.type),
     metaId: e.metaId,
-    title: e.name,
+    title: nameOf(e.metaId, e.name),
     episodeTitle: e.episodeTitle,
     season: e.season,
     episode: e.episode,
@@ -46,17 +51,20 @@ function fromResume(e: WatchEntry, at: number): NativeHomeItem {
   }
 }
 
-/** "Seguir viendo" (lo empezado + el siguiente episodio) del perfil activo. */
-export function buildHomeData(profile: string, items: ContinueItem[]): NativeHomeData {
+/**
+ * "Seguir viendo" (lo empezado + el siguiente episodio) del perfil activo. `nameOf` traduce el nombre guardado
+ * (el original de Cinemeta) al que se muestra; los títulos de episodio van como están.
+ */
+export function buildHomeData(profile: string, items: ContinueItem[], nameOf: NameOf = savedName): NativeHomeData {
   const cont: NativeHomeItem[] = items.slice(0, HOME_CONTINUE_MAX).map((it) => {
-    if (it.kind === 'resume') return fromResume(it.entry, it.at)
+    if (it.kind === 'resume') return fromResume(it.entry, it.at, nameOf)
     const ep = it.episode
     return {
       key: ep.videoId,
       kind: it.label === 'Episodio nuevo' ? 'new' : 'next',
       type: 'series',
       metaId: ep.metaId,
-      title: ep.seriesName,
+      title: nameOf(ep.metaId, ep.seriesName),
       episodeTitle: ep.title,
       season: ep.season,
       episode: ep.episode,

@@ -5,7 +5,9 @@ import { UserStars } from '../../components/StarRating'
 import { episodeLabel, formatTime, smallPoster } from '../../lib/format'
 import { groupHistory } from '../../lib/historyGroups'
 import { typeLabel } from '../../lib/i18n'
+import { localTitle, useLocalTitle, useTitlesVersion } from '../../lib/localTitles'
 import { progressStore, removeHistory, restoreHistory, useStore, type RemovedHistory, type WatchEntry } from '../../lib/store'
+import { useNearOnce } from '../../lib/titleArt'
 import { formatWatchTime, plural, watchStats } from '../../lib/watchStats'
 
 // Lista del historial con filtros y búsqueda. Desde la v0.23 tiene el formato del Diario (que se unificó acá):
@@ -78,8 +80,12 @@ export function HistoryFeed({ initialFilter = 'all', initialQuery = '', onChange
   const inputId = useId()
 
   const all = useMemo(() => Object.values(progress), [progress])
+  // La búsqueda mira los dos nombres: el guardado (original) y el que se ve (v0.28, el español si se sabe).
+  // Con algo escrito, se vuelve a filtrar cuando llega un nombre nuevo.
+  const titles = useTitlesVersion()
+  const q = query.trim().toLowerCase()
+  const titlesKey = q ? titles : 0
   const entries = useMemo(() => {
-    const q = query.trim().toLowerCase()
     return all
       .filter((e) => {
         if (filter === 'movie' || filter === 'series') return e.type === filter
@@ -87,9 +93,15 @@ export function HistoryFeed({ initialFilter = 'all', initialQuery = '', onChange
         if (filter === 'watched') return e.watched
         return true
       })
-      .filter((e) => !q || e.name.toLowerCase().includes(q) || e.episodeTitle?.toLowerCase().includes(q))
+      .filter(
+        (e) =>
+          !q ||
+          e.name.toLowerCase().includes(q) ||
+          localTitle(e.metaId, '').toLowerCase().includes(q) ||
+          e.episodeTitle?.toLowerCase().includes(q),
+      )
       .sort((a, b) => b.updatedAt - a.updatedAt)
-  }, [all, filter, query])
+  }, [all, filter, q, titlesKey])
   const shownCount = limit ? Math.min(limit, entries.length) : entries.length
 
   // Los totales de cada mes van sobre toda la lista (aunque Vos muestre solo las primeras): así Vos e Historial
@@ -228,7 +240,8 @@ function useUndoRemove() {
     const keepFocus = !!button && document.activeElement === button
     const index = keepFocus ? removeButtons().indexOf(button) : -1
     const removed = removeHistory([e.videoId])
-    const name = e.season !== undefined ? `${e.name} ${episodeLabel(e.season, e.episode)}` : e.name
+    const shown = localTitle(e.metaId, e.name)
+    const name = e.season !== undefined ? `${shown} ${episodeLabel(e.season, e.episode)}` : shown
     setUndo({ name, removed })
     clearTimeout(timer.current)
     timer.current = setTimeout(() => setUndo(undefined), UNDO_MS)
@@ -261,12 +274,15 @@ function HistoryItem({ e, onRemove }: { e: WatchEntry; onRemove: (e: WatchEntry,
     e.season !== undefined ? `?season=${e.season}&video=${encodeURIComponent(e.videoId)}` : ''
   }`
   const isSeries = e.type !== 'movie'
+  // El nombre en español se pide recién cuando la fila se acerca a la pantalla (el historial puede ser largo).
+  const [ref, near] = useNearOnce<HTMLLIElement>(true)
+  const name = useLocalTitle(e.metaId, e.name, { type: e.type, enabled: near })
   return (
-    <li className="diary-item history-item">
+    <li ref={ref} className="diary-item history-item">
       <Link to={link} className="diary-link">
         <img src={smallPoster(e.metaId, e.poster)} alt="" loading="lazy" decoding="async" />
         <div className="diary-text">
-          <strong>{e.name}</strong>
+          <strong>{name}</strong>
           <span className="muted small">
             {isSeries && e.season !== undefined ? episodeLabel(e.season, e.episode) : typeLabel(e.type, false)}
             {e.episodeTitle && ` · ${e.episodeTitle}`}
@@ -287,7 +303,7 @@ function HistoryItem({ e, onRemove }: { e: WatchEntry; onRemove: (e: WatchEntry,
       </span>
       <button
         className="btn btn-ghost"
-        aria-label={`Quitar “${e.name}” del historial`}
+        aria-label={`Quitar “${name}” del historial`}
         title="Quitar del historial"
         data-history-remove={e.videoId}
         onClick={(ev) => onRemove(e, ev.currentTarget)}

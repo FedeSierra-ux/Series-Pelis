@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom'
 import { EmptyState } from '../components/EmptyState'
 import { smallPoster } from '../lib/format'
 import { useAddons, useTitle } from '../lib/hooks'
+import { useLocalTitle } from '../lib/localTitles'
 import { availableYears, computeYearStats, entriesOfYear, formatDuration, loadYearMetas, type TitleStat } from '../lib/stats'
 import { progressStore, useStore } from '../lib/store'
 import type { Meta } from '../lib/types'
@@ -10,11 +11,12 @@ import { wholeHours } from '../lib/watchStats'
 import { GoalBars, useYearGoal } from './goals/GoalBars'
 
 function TitleRow({ t, extra }: { t: TitleStat; extra?: string }) {
+  const name = useLocalTitle(t.metaId, t.name, { type: t.type })
   return (
     <Link to={`/detail/${t.type}/${encodeURIComponent(t.metaId)}`} className="year-title">
       <img src={smallPoster(t.metaId, t.poster)} alt="" loading="lazy" decoding="async" />
       <span className="year-title-text">
-        <strong>{t.name}</strong>
+        <strong>{name}</strong>
         <span className="muted small">
           {formatDuration(t.seconds)}
           {t.type === 'series' && t.episodes > 0 && ` · ${t.episodes} episodio${t.episodes === 1 ? '' : 's'}`}

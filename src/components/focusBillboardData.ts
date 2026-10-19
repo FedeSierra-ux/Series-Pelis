@@ -1,5 +1,6 @@
 import { getMeta } from '../lib/addons'
 import { seasonCount, seriesYear } from '../lib/format'
+import { localTitle, spanishName } from '../lib/localTitlesStore'
 import { addonsStore } from '../lib/store'
 import { formatRuntime, getDetails, getDetailsByImdb, hasTmdb, imdbFromTmdb, parseTmdbId, pickLogo, tmdbImg, type TmdbDetails } from '../lib/tmdb'
 import type { Meta } from '../lib/types'
@@ -53,7 +54,10 @@ export function shortText(text: string | undefined, max = 220): string | undefin
   return `${cut.slice(0, Math.max(cut.lastIndexOf(' '), max * 0.6)).replace(/[,;:.\s]+$/, '')}…`
 }
 
-/** Junta lo de Cinemeta (nombre original, IMDb, logo) y lo de TMDB (sinopsis en español) si hay key. */
+/**
+ * Junta lo de Cinemeta (IMDb, logo) y lo de TMDB (sinopsis en español) si hay key. El nombre va en español
+ * (v0.28: el del mapa o el de la ficha de TMDB), si no el de Cinemeta y si no el original; el logo, en original.
+ */
 export function buildInfo(key: string, meta: Meta | undefined, tmdb: TmdbDetails | undefined, fallbackName?: string): BillboardInfo {
   const imdb = meta?.id?.startsWith('tt') ? meta.id : tmdb?.external_ids?.imdb_id || tmdb?.imdb_id || undefined
   const series = meta?.type === 'series' || !!tmdb?.first_air_date
@@ -65,7 +69,16 @@ export function buildInfo(key: string, meta: Meta | undefined, tmdb: TmdbDetails
   const tmdbLogo = tmdbImg(pickLogo(tmdb), 'w500')
   return {
     key,
-    name: meta?.name || tmdb?.original_title || tmdb?.original_name || tmdb?.title || tmdb?.name || fallbackName || '',
+    name:
+      (imdb && localTitle(imdb, '')) ||
+      spanishName(tmdb) ||
+      meta?.name ||
+      tmdb?.original_title ||
+      tmdb?.original_name ||
+      tmdb?.title ||
+      tmdb?.name ||
+      fallbackName ||
+      '',
     logo: meta?.logo ?? tmdbLogo ?? (imdb ? `https://images.metahub.space/logo/medium/${imdb}/img` : undefined),
     background: meta?.background ?? tmdbImg(tmdb?.backdrop_path, 'w1280') ?? (imdb ? `https://images.metahub.space/background/medium/${imdb}/img` : undefined),
     rating: meta?.imdbRating,

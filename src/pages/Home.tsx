@@ -9,6 +9,7 @@ import { useCatalogRows, useRowShape } from '../lib/catalogRows'
 import { displayYear } from '../lib/yearLabel'
 import { useCatalog, useTitle } from '../lib/hooks'
 import { catalogLabel, genreLabel } from '../lib/i18n'
+import { localTitle, useLocalTitle, useTitlesVersion } from '../lib/localTitles'
 import { useHiddenIds } from '../lib/ratings'
 import { withoutHidden } from '../lib/recommend'
 import { continueWatching, hideFromContinue, progressStore, toggleWatchlist, useStore, watchlistStore, type WatchEntry } from '../lib/store'
@@ -67,9 +68,16 @@ function Hero({ addon, catalog }: { addon: InstalledAddon; catalog: CatalogDef }
     () => withoutHidden(data ?? [], hidden).filter((m) => m.background || m.id.startsWith('tt')).slice(0, 8),
     [data, hidden],
   )
+  // Los indicadores con el nombre en español si ya se sabe (v0.28); se recalculan cuando llega alguno.
+  const titles = useTitlesVersion()
   const slides = useMemo(
-    () => pool.map((m) => ({ key: m.id, title: m.name, backdrop: m.id.startsWith('tt') ? `https://images.metahub.space/background/medium/${m.id}/img` : m.background })),
-    [pool],
+    () =>
+      pool.map((m) => ({
+        key: m.id,
+        title: localTitle(m.id, m.name),
+        backdrop: m.id.startsWith('tt') ? `https://images.metahub.space/background/medium/${m.id}/img` : m.background,
+      })),
+    [pool, titles],
   )
 
   const meta: MetaPreview | undefined = pool[index % (pool.length || 1)]
@@ -78,6 +86,7 @@ function Hero({ addon, catalog }: { addon: InstalledAddon; catalog: CatalogDef }
   useEffect(() => {
     cancel()
   }, [metaId, cancel])
+  const title = useLocalTitle(meta?.id, meta?.name ?? '', { type: meta?.type ?? catalog.type })
   // Catálogo vacío, sin fondos o sin conexión y sin nada guardado: sin portada (no un esqueleto para siempre).
   if (!meta) return loading ? <div className="portada portada--compact portada-skeleton skeleton" /> : null
   const genres = (meta.genre ?? meta.genres ?? []).slice(0, 2).map(genreLabel)
@@ -87,7 +96,7 @@ function Hero({ addon, catalog }: { addon: InstalledAddon; catalog: CatalogDef }
     <HeroCarousel slides={slides} index={index % pool.length} onIndex={setIndex} variant="compact" label="Destacados">
       <HeroInfo
         key={meta.id}
-        title={meta.name}
+        title={title}
         logo={logo}
         rating={meta.imdbRating}
         facts={[displayYear({ id: meta.id, type, releaseInfo: meta.releaseInfo }) ?? '', type === 'movie' ? 'Película' : type === 'series' ? 'Serie' : ''].filter(Boolean)}
@@ -171,7 +180,7 @@ function ContinueRow({ onHide }: { onHide: (metaId: string, name: string) => voi
               infoTo={to}
               busy={pending === it.key}
               onPlay={() => play(it.key, { type: e.type, metaId: e.metaId, videoId: e.videoId }, to)}
-              onRemove={() => onHide(e.metaId, e.name)}
+              onRemove={() => onHide(e.metaId, localTitle(e.metaId, e.name))}
             />
           )
         }
@@ -193,7 +202,7 @@ function ContinueRow({ onHide }: { onHide: (metaId: string, name: string) => voi
             infoTo={to}
             busy={pending === it.key}
             onPlay={() => play(it.key, { type: 'series', metaId: ep.metaId, videoId: ep.videoId }, to)}
-            onRemove={() => onHide(ep.metaId, ep.seriesName)}
+            onRemove={() => onHide(ep.metaId, localTitle(ep.metaId, ep.seriesName))}
             removeLabel="Quitar de Seguir viendo"
           />
         )
