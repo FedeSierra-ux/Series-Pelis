@@ -1,5 +1,6 @@
 import type { PlayState } from '../pages/Detail'
 import { getMeta, getStreams, prefetchMeta } from './addons'
+import { isDebridDownload, requestDebridDownload, torrentStateFor } from './debrid'
 import { addonsStore, lastSourceStore, progressStore, settingsStore, type LastSource, type SourceRules, type WatchEntry } from './store'
 import { lastSourceOf, rankStreams, type RankedStream, type TorrentServerArg } from './streamPicker'
 import { torrentServerReady } from './torrentServer'
@@ -113,7 +114,8 @@ function pickStream(
       const top = rankStreams(groups, rules, ref, server)[0]
       // Mismo bingeGroup con enlace directo: no hay nada mejor que esperar (su addon ya respondió). Si es un
       // torrent, un addon con debrid que todavía no respondió le ganaría: se espera como con el resto.
-      if ((top?.match === 'binge' && !!top.stream.url) || groups.every((g) => !g.loading)) finish()
+      // v0.27: lo que TorBox todavía no tiene ("[TB download]") va por torrent: también se espera.
+      if ((top?.match === 'binge' && !!top.stream.url && !isDebridDownload(top.stream)) || groups.every((g) => !g.loading)) finish()
       else if (top && !grace) grace = setTimeout(finish, GRACE_MS)
     })
     if (done) cancel()
@@ -148,7 +150,7 @@ export async function findNextStream(state: PlayState): Promise<PlayState | unde
   const best = await pickStream(addons, state.meta.type, next.video.id, rules, referenceSource(state, addons), server)
   if (!acceptsPick(best, rules)) return undefined
   rememberSource(state.meta.id, best, rules)
-  return {
+  const found: PlayState = {
     ...state,
     stream: best.stream,
     playUrl: best.url,
@@ -157,6 +159,13 @@ export async function findNextStream(state: PlayState): Promise<PlayState | unde
     video: next.video,
     nextVideoId: next.afterNextId,
   }
+  // v0.27: si TorBox todavía no lo tiene, el torrent se resuelve acá (y se le pide a TorBox que lo baje), así el
+  // reproductor de Android pasa al episodio siguiente sin cerrarse.
+  if (isDebridDownload(best.stream) && server.url) {
+    requestDebridDownload(best.url)
+    return (await torrentStateFor(found, server, addons)) ?? found
+  }
+  return found
 }
 
 export interface ResumeTarget {

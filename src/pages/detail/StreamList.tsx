@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { Link, useLocation, useNavigate } from 'react-router-dom'
 import { getStreams } from '../../lib/addons'
+import { isDebridDownload, prefetchTorrentTwins } from '../../lib/debrid'
 import { useAddons } from '../../lib/hooks'
 import { isOnline } from '../../lib/online'
 import { lastSourceStore, settingsStore, useStore } from '../../lib/store'
@@ -84,6 +85,16 @@ export function StreamList({ meta, video, nextVideoId }: { meta: Meta; video?: V
   const { ranked, hidden } = useMemo(() => analyzeStreams(groups, rules, last, server), [groups, rules, last, server])
   const loading = !fetched || groups.some((g) => g.loading)
   const hasPlayable = ranked.length > 0
+
+  // v0.27: si hay algo que TorBox todavía no tiene y hay con qué abrir torrents, se precarga el Torrentio sin
+  // debrid (trackers e índice del archivo) para arrancar por torrent sin esperar.
+  const twinAddons = useMemo(
+    () => (server.url ? groups.filter((g) => !g.loading && g.streams.some(isDebridDownload)).map((g) => g.addon) : []),
+    [groups, server.url],
+  )
+  useEffect(() => {
+    for (const addon of twinAddons) prefetchTorrentTwins(addon, meta.type, videoId)
+  }, [twinAddons, meta.type, videoId])
 
   useEffect(() => {
     if (!hasPlayable) return

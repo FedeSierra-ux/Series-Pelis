@@ -25,6 +25,17 @@ export interface NativeInfo {
    * motor": `nativeInfo` no guarda esta respuesta y el APK avisa con el evento `torrentReady`.
    */
   torrentLoading?: boolean
+  /** v0.27: sabe consultar un link de debrid sin seguir la redirección (`debridProbe`). */
+  debridProbe?: boolean
+}
+
+/**
+ * v0.27: respuesta de `debridProbe`. `location` va sin query ni fragmento (el link final de TorBox lleva la key
+ * en la query). `status` 0 = no se pudo consultar.
+ */
+export interface NativeDebridProbe {
+  status: number
+  location?: string
 }
 
 /** Evento `torrentReady`: terminó de armarse el motor (`torrent` falta si no arrancó). */
@@ -86,6 +97,7 @@ interface SpNativePlugin {
   updateInstall(): Promise<void>
   homeSync(data: NativeHomeData): Promise<void>
   takeLaunch(): Promise<NativeLaunch>
+  debridProbe(opts: { url: string }): Promise<NativeDebridProbe>
   addListener(event: 'update', fn: (e: NativeUpdateEvent) => void): Promise<PluginListenerHandle> | PluginListenerHandle
   addListener(event: 'open', fn: () => void): Promise<PluginListenerHandle> | PluginListenerHandle
   addListener(event: 'torrentReady', fn: (e: NativeTorrentReady) => void): Promise<PluginListenerHandle> | PluginListenerHandle
@@ -183,6 +195,20 @@ export async function nativeTakeLaunch(): Promise<NativeLaunch> {
     return (await p.takeLaunch()) ?? {}
   } catch {
     return {}
+  }
+}
+
+/**
+ * v0.27: consulta un link de debrid de Torrentio sin seguir la redirección, para saber por qué falló (el
+ * navegador no puede leer el `Location` de un 302). En el navegador o con un APK viejo, `undefined`.
+ */
+export async function nativeDebridProbe(url: string): Promise<NativeDebridProbe | undefined> {
+  const p = plugin()
+  if (!p || !(await nativeInfo()).debridProbe) return undefined
+  try {
+    return await p.debridProbe({ url })
+  } catch {
+    return undefined
   }
 }
 

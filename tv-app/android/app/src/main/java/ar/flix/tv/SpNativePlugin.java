@@ -116,6 +116,8 @@ public class SpNativePlugin extends Plugin {
         res.put("update", true);
         res.put("home", HomeRows.isAvailable(getContext()));
         res.put("fireTv", HomeRows.isFireTv(getContext()));
+        // v0.27: consulta de links de debrid sin seguir la redirección.
+        res.put("debridProbe", true);
         // v0.25: base del motor de torrents (http://127.0.0.1:<puerto>/<token>); sin motor, no va.
         if (torrentReady.getCount() == 0) {
             resolveInfo(call, res);
@@ -322,6 +324,50 @@ public class SpNativePlugin extends Plugin {
             res.put("progress", (double) st.progress);
         }
         call.resolve(res);
+    }
+
+    /** Tiempo máximo de la consulta de un link de debrid (Torrentio le pregunta a TorBox antes de contestar). */
+    private static final int PROBE_TIMEOUT_MS = 15_000;
+
+    /**
+     * v0.27: pide un link de debrid de Torrentio sin seguir la redirección y devuelve el código y el `Location`
+     * (sin query ni fragmento: el link final de TorBox lleva la key en la query). Solo https; no lee el cuerpo
+     * ni manda cabeceras propias. Si algo falla, `status` 0.
+     */
+    @PluginMethod
+    public void debridProbe(PluginCall call) {
+        String url = call.getString("url", "");
+        Thread probe = new Thread(() -> {
+            JSObject res = new JSObject();
+            res.put("status", 0);
+            java.net.HttpURLConnection conn = null;
+            try {
+                java.net.URL u = new java.net.URL(url);
+                if (!"https".equals(u.getProtocol())) throw new java.io.IOException("solo https");
+                conn = (java.net.HttpURLConnection) u.openConnection();
+                conn.setInstanceFollowRedirects(false);
+                conn.setConnectTimeout(PROBE_TIMEOUT_MS);
+                conn.setReadTimeout(PROBE_TIMEOUT_MS);
+                conn.setRequestMethod("GET");
+                res.put("status", conn.getResponseCode());
+                String loc = conn.getHeaderField("Location");
+                if (loc != null) {
+                    int cut = loc.length();
+                    int q = loc.indexOf('?');
+                    int h = loc.indexOf('#');
+                    if (q >= 0) cut = Math.min(cut, q);
+                    if (h >= 0) cut = Math.min(cut, h);
+                    res.put("location", loc.substring(0, cut));
+                }
+            } catch (Exception e) {
+                Log.i(TAG, "No se pudo consultar el link de debrid: " + e.getClass().getSimpleName());
+            } finally {
+                if (conn != null) conn.disconnect();
+            }
+            call.resolve(res);
+        }, "sp-debrid-probe");
+        probe.setDaemon(true);
+        probe.start();
     }
 
     @Override
