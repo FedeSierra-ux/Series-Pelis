@@ -514,11 +514,9 @@ html[data-tv][data-theme='2'] .row-scroller {
   font-family: var(--font-display);
   -webkit-text-stroke-color: rgba(196, 176, 255, 0.7);
 }
-/* v0.26: celular → número más chico y un poco más metido debajo del póster (asoma el 3.º) y borde más opaco. */
+/* v0.26: celular → borde más opaco (el tamaño es el de todas las pantallas, en styles.css). */
 @media (max-width: 760px) {
   [data-theme='2'] .top10-rank {
-    font-size: calc(var(--poster-w) * 0.72);
-    margin-right: calc(var(--poster-w) * -0.1);
     -webkit-text-stroke-color: color-mix(in srgb, var(--accent) 95%, transparent);
   }
 }
@@ -530,6 +528,11 @@ html[data-tv][data-theme='2'] .row-scroller {
 /* Los esqueletos no son tarjetas: sin agrandarse al pasar el mouse. */
 [data-theme='2'] .skeleton-card {
   pointer-events: none;
+}
+/* La barrita va dentro del renglón del título (PosterSkeleton), así el esqueleto mide lo mismo que la tarjeta. */
+[data-theme='2'] .skeleton-card .poster-title .skeleton-line {
+  display: inline-block;
+  vertical-align: middle;
 }
 
 /* "Seguir viendo" apaisado (ContinueCard). */

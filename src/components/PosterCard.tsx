@@ -29,7 +29,11 @@ interface Props {
    * Sin logo va el nombre. La forma de cada fila se elige en el gestor de catálogos.
    */
   landscape?: boolean
-  /** Sin la etiqueta "Top 10" (v0.26: filas de recomendaciones de Inicio, que ya tiene la fila del Top 10). */
+  /**
+   * Sin la etiqueta "Top 10" (pasa a la siguiente, ej. "Estreno"). Va en todas las filas de Inicio y de
+   * Películas/Series (las dos pantallas ya tienen la fila del Top 10) y en la grilla de catálogos; la etiqueta
+   * queda donde no hay Top 10 a la vista: Buscar, la ficha, personas, Mi lista y listas.
+   */
   hideTop10Label?: boolean
 }
 
@@ -178,8 +182,14 @@ export function PosterSkeleton({ landscape }: { landscape?: boolean }) {
   return (
     <div className={`poster-card skeleton-card${landscape ? ' is-landscape' : ''}`} aria-hidden>
       <div className="poster-img skeleton" />
+      {/* Los mismos dos renglones que la tarjeta (título y año): si no, al llegar los datos la fila crecía (1 px en
+          PC, ~22 px en la TV, donde el texto es más alto). */}
       <div className="poster-info">
-        <span className="skeleton skeleton-line" />
+        <span className="poster-title">
+          <span className="skeleton skeleton-line" />
+          {' '}
+        </span>
+        <span className="poster-sub">{' '}</span>
       </div>
     </div>
   )
