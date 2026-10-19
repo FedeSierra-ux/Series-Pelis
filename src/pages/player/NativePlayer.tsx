@@ -19,7 +19,7 @@ import { isEmbedded, nativeStartAt, nativeSubList, nativeSubtitleStyle, shouldSa
 import { nextEpisodeTitle } from './NextCard'
 import { daysAway, RECAP_AFTER_DAYS } from './RecapOffer'
 import type { Resume } from './SourcesMenu'
-import { readRate } from './SpeedMenu'
+import { readRate } from './playbackRate'
 import { langName } from './useSubtitles'
 
 // Reproductor nativo de la app de Android TV (v0.20). Android reproduce (Media3) y dibuja los botones encima

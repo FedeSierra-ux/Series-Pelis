@@ -20,7 +20,6 @@ import { audioPrefs, guessAudioLang, lang3, langRank, subtitleClasses } from '..
 import { useTvMode } from '../lib/tv'
 import type { PlayState } from './Detail'
 import './player/player-fixes.css'
-import './player/player-extras.css'
 import { CreditsNotice } from './player/CreditsNotice'
 import { RateAtEnd } from './player/RateAtEnd'
 import { daysAway, RECAP_AFTER_DAYS, RecapOffer } from './player/RecapOffer'
@@ -28,8 +27,8 @@ import { SeekPreview } from './player/SeekPreview'
 import { SourcesMenu, useSwitchSource, type Resume, type SwitchState } from './player/SourcesMenu'
 import { ReportButton } from '../components/ReportButton'
 import { PlayerIcon } from './player/PlayerIcons'
-import { NARROW_QUERY, tip, useCompactBar, useMediaQuery } from './player/controlBar'
-import { formatRate, readRate, SpeedMenu, stepRate, storeRate, type Rate } from './player/SpeedMenu'
+import { liftsSubForCorner, NARROW_QUERY, PHONE_LANDSCAPE_QUERY, tip, useCompactBar, useMediaQuery } from './player/controlBar'
+import { formatRate, readRate, stepRate, storeRate, type Rate } from './player/playbackRate'
 import { SubtitleMenu } from './player/SubtitleMenu'
 import { useMediaSession, usePictureInPicture, useWakeLock } from './player/useMediaSession'
 import { useSubtitles } from './player/useSubtitles'
@@ -64,7 +63,7 @@ const VOLUME_STEP = 0.1
 /** Px entre el final del subtítulo y lo que haya en la esquina ("Saltar", siguiente…), en el celular con controles. */
 const SUB_CORNER_GAP = 16
 
-type Menu = 'subs' | 'audio' | 'sleep' | 'sources' | 'speed' | 'quick'
+type Menu = 'subs' | 'audio' | 'sleep' | 'sources' | 'quick'
 type Sleep = { kind: 'off' } | { kind: 'time'; at: number; minutes?: number } | { kind: 'episode' }
 
 // sessionStorage puede estar bloqueado (modo privado en algunos navegadores de TV).
@@ -371,6 +370,7 @@ function PlayerView({ state, resume, notice, onDebridFail }: { state: PlayState;
   // Celular vertical: "Abrir en…", ventana flotante y Ajustar van dentro del ⚙ (el CSS los saca de la barra).
   const compactBar = useCompactBar()
   const narrow = useMediaQuery(NARROW_QUERY)
+  const phoneLandscape = useMediaQuery(PHONE_LANDSCAPE_QUERY)
   // Pantalla prendida mientras se reproduce; se suelta en pausa y al salir.
   useWakeLock(playing)
 
@@ -380,10 +380,10 @@ function PlayerView({ state, resume, notice, onDebridFail }: { state: PlayState;
     if (el && el.playbackRate !== rate) el.playbackRate = rate
   }, [rate, state.playUrl])
 
-  const changeRate = (next: Rate, announce = true) => {
+  const changeRate = (next: Rate) => {
     setRate(next)
     storeRate(next)
-    if (announce) flash(next === 1 ? 'Velocidad normal' : `Velocidad: ${formatRate(next)}`)
+    flash(next === 1 ? 'Velocidad normal' : `Velocidad: ${formatRate(next)}`)
     showControls()
   }
 
@@ -1243,13 +1243,13 @@ function PlayerView({ state, resume, notice, onDebridFail }: { state: PlayState;
     rootRef.current?.querySelector<HTMLElement>('.player-corner > .skip-btn')?.focus({ preventScroll: true })
     // Solo cuando aparece el botón (o cambia de intro a resumen/créditos).
   }, [skipFocusKey])
-  // Celular con controles: lo de la esquina ("Saltar", la tarjeta del siguiente episodio, la oferta del resumen o
+  // Celular (vertical o apaisado) con controles: lo de la esquina ("Saltar", la tarjeta del siguiente episodio, la oferta del resumen o
   // "Más como esto") le tapaba el final al subtítulo. El subtítulo termina SUB_CORNER_GAP px por arriba de lo que
   // haya, tenga los renglones que tenga (ver `cuePlacement`). La esquina no se mueve con los controles (bottom
   // fijo, sin transición) y offsetTop no cuenta la animación de entrada, así que ya es el lugar final; el
   // ResizeObserver sigue a la tarjeta cuando cambia de alto (cargando → con imagen) y al giro de pantalla.
   const cornerKind = !showCorner ? null : offerRecap && !showNextCard ? 'recap' : showNextCard ? 'next' : postPlayDue ? 'more' : 'skip'
-  const liftForCorner = narrow && controls && cornerKind !== null
+  const liftForCorner = liftsSubForCorner({ narrow, phoneLandscape, tv: tvMode }) && controls && cornerKind !== null
   useEffect(() => {
     const root = rootRef.current
     const corner = root?.querySelector<HTMLElement>('.player-corner')
@@ -1529,7 +1529,7 @@ function PlayerView({ state, resume, notice, onDebridFail }: { state: PlayState;
       )}
 
       <div className="player-top">
-        <button className="btn btn-ghost" onClick={exit} aria-label="Volver">
+        <button className="btn btn-ghost" onClick={exit} {...tip('Volver')}>
           ←
         </button>
         <div className="player-title">
@@ -1542,7 +1542,7 @@ function PlayerView({ state, resume, notice, onDebridFail }: { state: PlayState;
           <span className="muted small">{state.addonName}</span>
         </div>
         {touch && (
-          <button className="btn btn-ghost player-lock-btn" onClick={lockScreen} aria-label="Bloquear pantalla">
+          <button className="btn btn-ghost player-lock-btn" onClick={lockScreen} {...tip('Bloquear pantalla')}>
             <PlayerIcon name="lock" />
             <span>Bloquear</span>
           </button>
@@ -1597,15 +1597,6 @@ function PlayerView({ state, resume, notice, onDebridFail }: { state: PlayState;
               </button>
             ))}
           {menu === 'sources' && <SourcesMenu state={state} onPick={changeSource} />}
-          {menu === 'speed' && (
-            <SpeedMenu
-              rate={rate}
-              onPick={(r) => {
-                changeRate(r, false)
-                setMenu(null)
-              }}
-            />
-          )}
           {menu === 'sleep' && (
             <>
               <span className="player-menu-title muted small">Temporizador</span>
@@ -1682,22 +1673,32 @@ function PlayerView({ state, resume, notice, onDebridFail }: { state: PlayState;
             <PlayerIcon name="sources" />
           </button>
           <button
-            onClick={(e) => toggleMenu('speed', e)}
-            data-menu="speed"
-            {...tip(`Velocidad de reproducción: ${formatRate(rate)}`)}
-            aria-expanded={menu === 'speed'}
-            className={`speed-btn ${rate !== 1 ? 'active' : ''}`}
-          >
-            {formatRate(rate)}
-          </button>
-          <button
             onClick={(e) => toggleMenu('sleep', e)}
-            {...tip('Temporizador para dormir')}
+            {...tip(
+              sleep.kind === 'time'
+                ? `Temporizador para dormir: quedan ${sleepMinutesLeft} min`
+                : sleep.kind === 'episode'
+                  ? 'Temporizador para dormir: al final del episodio'
+                  : 'Temporizador para dormir',
+            )}
             aria-expanded={menu === 'sleep'}
             className={sleep.kind !== 'off' ? 'active' : ''}
           >
             <PlayerIcon name="moon" />
-            {sleep.kind === 'time' ? `${sleepMinutesLeft} min` : sleep.kind === 'episode' ? 'Fin' : ''}
+            {sleep.kind !== 'off' && (
+              // En el celular el texto pasa a ser un globito sobre la luna (el CSS saca " min"): así la fila
+              // de íconos no se parte en dos renglones.
+              <span className="sleep-left" aria-hidden="true">
+                {sleep.kind === 'time' ? (
+                  <>
+                    {sleepMinutesLeft}
+                    <span className="sleep-unit"> min</span>
+                  </>
+                ) : (
+                  'Fin'
+                )}
+              </span>
+            )}
           </button>
           {settings.externalPlayer !== 'none' && (
             <button onClick={openExternal} className="external-btn" {...tip(externalLabel)}>

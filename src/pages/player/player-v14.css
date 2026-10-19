@@ -646,11 +646,14 @@ html[data-tv] .player-chip ~ .player-rate {
 
 /* Etiqueta de cada botón (pedido del usuario en reproductor-04): aparece arriba al pasar el mouse o con el
    foco (teclado y control remoto). Los de las puntas se alinean al borde del botón para no cortarse. Con su
-   menú abierto no se muestra (el menú ya dice qué es). */
-.controls-row [data-tip] {
+   menú abierto no se muestra (el menú ya dice qué es). En la barra de arriba ("←" y "Bloquear") va debajo
+   del botón. Listas de selectores comunes, sin :is(): los navegadores de TV viejos descartarían la regla. */
+.controls-row [data-tip],
+.player-top [data-tip] {
   position: relative;
 }
-.controls-row [data-tip]::after {
+.controls-row [data-tip]::after,
+.player-top [data-tip]::after {
   --tip-x: -50%;
   content: attr(data-tip);
   position: absolute;
@@ -676,38 +679,55 @@ html[data-tv] .player-chip ~ .player-rate {
     opacity 0.15s ease-out,
     transform 0.15s ease-out;
 }
-.controls-row > [data-tip]:first-child::after {
+.player-top [data-tip]::after {
+  top: calc(100% + 10px);
+  bottom: auto;
+  transform: translate(var(--tip-x), -4px);
+}
+.controls-row > [data-tip]:first-child::after,
+.player-top > [data-tip]:first-child::after {
   --tip-x: 0;
   left: 0;
 }
-.controls-row > [data-tip]:last-child::after {
+.controls-row > [data-tip]:last-child::after,
+.player-top > [data-tip]:last-child::after {
   --tip-x: 0;
   left: auto;
   right: 0;
 }
 @media (hover: hover) {
-  .controls-row [data-tip]:not([aria-expanded='true']):hover::after {
+  .controls-row [data-tip]:not([aria-expanded='true']):hover::after,
+  .player-top [data-tip]:hover::after {
     opacity: 1;
     transform: translate(var(--tip-x), 0);
   }
 }
-.controls-row [data-tip]:not([aria-expanded='true']):focus-visible::after {
+.controls-row [data-tip]:not([aria-expanded='true']):focus-visible::after,
+.player-top [data-tip]:focus-visible::after {
   opacity: 1;
   transform: translate(var(--tip-x), 0);
 }
 /* En la TV el foco siempre se ve (regla aparte: un navegador sin :focus-visible descarta la regla entera). */
-html[data-tv] .controls-row [data-tip]:not([aria-expanded='true']):focus::after {
+html[data-tv] .controls-row [data-tip]:not([aria-expanded='true']):focus::after,
+html[data-tv] .player-top [data-tip]:focus::after {
   opacity: 1;
   transform: translate(var(--tip-x), 0);
 }
 html[data-tv] .controls-row [data-tip]::after {
   bottom: calc(100% + 14px);
+}
+html[data-tv] .player-top [data-tip]::after {
+  top: calc(100% + 14px);
+}
+html[data-tv] .controls-row [data-tip]::after,
+html[data-tv] .player-top [data-tip]::after {
   padding: 8px 16px;
   border-radius: 14px;
   font-size: 22px;
 }
 @media (prefers-reduced-motion: reduce) {
-  .controls-row [data-tip]::after {
+  .controls-row [data-tip]::after,
+  .player-top [data-tip]::after {
     transition: none;
   }
 }
@@ -730,6 +750,31 @@ html[data-tv] .controls-row [data-tip]::after {
   .controls-row .external-btn,
   .controls-row .pip-btn,
   .controls-row .fit-btn {
+    display: none;
+  }
+}
+
+/* Temporizador prendido: en la PC "☾ 15 min" al lado de la luna. En el celular vertical ese texto ensanchaba el
+   botón (44 → 91 px) y la fila de íconos se partía en dos renglones: ahí va como un globito chico sobre la
+   luna ("15" o "Fin"; los minutos completos están en la etiqueta del botón) y el botón queda de 44 px. */
+@media (max-width: 760px) {
+  .controls-row .sleep-left {
+    position: absolute;
+    top: 2px;
+    right: 0;
+    min-width: 18px;
+    padding: 1px 4px;
+    border-radius: 999px;
+    color: var(--on-accent, #1f0f4d);
+    background: var(--accent);
+    font-size: 0.66rem;
+    font-weight: 800;
+    line-height: 1.3;
+    text-align: center;
+    font-variant-numeric: tabular-nums;
+    pointer-events: none;
+  }
+  .controls-row .sleep-unit {
     display: none;
   }
 }
