@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { backdropTrailerAllowed, embedTrailerUrl, isYtId, originalTitle } from './trailers'
+import { backdropTrailerAllowed, embedTrailerUrl, isYtId } from './trailers'
 
 describe('tráileres de la ficha', () => {
   it('la URL va sin interfaz, con subtítulos en español y, el de fondo, sin sonido y en loop', () => {
@@ -32,11 +32,5 @@ describe('tráileres de la ficha', () => {
     expect(backdropTrailerAllowed({ ...pc, reducedMotion: true })).toBe(false)
     expect(backdropTrailerAllowed({ ...pc, wide: false })).toBe(false)
     expect(backdropTrailerAllowed({ ...pc, coarsePointer: true })).toBe(false)
-  })
-
-  it('título original si está en alfabeto latino (si no, el de TMDB)', () => {
-    expect(originalTitle({ original_title: 'The Matrix' }, 'Matrix')).toBe('The Matrix')
-    expect(originalTitle({ original_name: '진격의 거인' }, 'Attack on Titan')).toBe('Attack on Titan')
-    expect(originalTitle(undefined, 'X')).toBe('X')
   })
 })

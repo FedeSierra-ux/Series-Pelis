@@ -8,6 +8,7 @@ import { androidIntent, externalLaunch } from '../lib/externalPlayers'
 import { episodeLabel, formatTime, isHls } from '../lib/format'
 import { useTitle } from '../lib/hooks'
 import { langLabel } from '../lib/i18n'
+import { useLocalTitle } from '../lib/localTitles'
 import { isNativeApp } from '../lib/native'
 import { needsNativePlayer } from '../lib/torrentServer'
 import { nativePlayerAvailable, probeNativePlayer } from '../lib/nativePlayer'
@@ -326,7 +327,9 @@ function PlayerView({ state, resume, notice, onDebridFail }: { state: PlayState;
 
   const { meta, video } = state
   const videoId = video?.id ?? meta.id
-  useTitle(video ? `${meta.name} ${episodeLabel(video.season, video.episode)}` : meta.name)
+  // v0.28: lo que se ve va en español; en el progreso se sigue guardando el de Cinemeta (`meta.name`).
+  const shownName = useLocalTitle(meta.id, meta.name, { type: meta.type })
+  useTitle(video ? `${shownName} ${episodeLabel(video.season, video.episode)}` : shownName)
 
   const flash = useCallback((msg: string) => {
     setToast(msg)
@@ -945,7 +948,7 @@ function PlayerView({ state, resume, notice, onDebridFail }: { state: PlayState;
     videoRef.current?.pause()
     persist()
     // Cada reproductor arma su enlace o intent según el sistema (lib/externalPlayers.ts).
-    const launch = externalLaunch(settings.externalPlayer, url, currentPlatform().os, state.meta.name)
+    const launch = externalLaunch(settings.externalPlayer, url, currentPlatform().os, shownName)
     if (!launch.href) {
       copyText(url).then((ok) => flash(ok ? 'Enlace copiado: pegalo en tu reproductor' : 'No se pudo copiar el enlace'))
       return
@@ -1409,7 +1412,7 @@ function PlayerView({ state, resume, notice, onDebridFail }: { state: PlayState;
               <PlayerIcon name="alert" size={tvMode ? 48 : 40} />
             </span>
             <div className="player-error-heading">
-              <strong>{meta.name}</strong>
+              <strong>{shownName}</strong>
               {video && (
                 <span>
                   {[episodeLabel(video.season, video.episode), video.title ?? video.name].filter(Boolean).join(' · ')}
@@ -1461,7 +1464,7 @@ function PlayerView({ state, resume, notice, onDebridFail }: { state: PlayState;
         <div className="player-dim player-float player-modal" role="dialog" aria-labelledby="still-title">
           <h2 id="still-title">¿Seguís viendo?</h2>
           <p className="muted">
-            {meta.name}
+            {shownName}
             {video ? ` · ${episodeLabel(video.season, video.episode)}` : ''}
           </p>
           <div className="hero-actions">
@@ -1525,7 +1528,7 @@ function PlayerView({ state, resume, notice, onDebridFail }: { state: PlayState;
           ←
         </button>
         <div className="player-title">
-          <strong>{meta.name}</strong>
+          <strong>{shownName}</strong>
           {video && (
             <span>
               {episodeLabel(video.season, video.episode)} · {video.title ?? video.name}
