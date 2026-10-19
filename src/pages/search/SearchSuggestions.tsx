@@ -5,6 +5,7 @@ import { smallPoster } from '../../lib/format'
 import { displayYear } from '../../lib/yearLabel'
 import { useAddons, useCatalog } from '../../lib/hooks'
 import { genreLabel, typeLabel } from '../../lib/i18n'
+import { localTitle, useTitlesVersion } from '../../lib/localTitles'
 import { useHiddenIds } from '../../lib/ratings'
 import { genreLink, SUGGESTED_GENRES } from '../../lib/searchResults'
 import { itemTitle, itemYear, tmdbDetailPath, tmdbImg, useTmdbKey } from '../../lib/tmdb'
@@ -12,6 +13,7 @@ import { onlyTitles, useTrending } from '../home/TmdbRows'
 
 // v0.14 (U13): Buscar con el campo vacío. "Lo más buscado" (tendencias de hoy en TMDB; sin TMDB, lo popular
 // de Cinemeta) como lista con mini póster, y chips de géneros que llevan a Películas o Series ya filtradas.
+// v0.28: las tendencias de TMDB ya vienen en español; las de Cinemeta usan el nombre del mapa si se sabe.
 
 const TOP = 10
 
@@ -32,6 +34,7 @@ function useTrendingSuggestions(): { items: Suggestion[]; loading: boolean; titl
   const cinemeta = tmdbKey ? undefined : addons.find((a) => a.transportUrl === CINEMETA_URL && !a.disabled)
   const topMovies = useCatalog(cinemeta, cinemeta?.manifest.catalogs.find((c) => c.type === 'movie' && c.id === 'top'))
   const topSeries = useCatalog(cinemeta, cinemeta?.manifest.catalogs.find((c) => c.type === 'series' && c.id === 'top'))
+  const titlesVersion = useTitlesVersion()
 
   return useMemo(() => {
     if (tmdbKey) {
@@ -55,12 +58,12 @@ function useTrendingSuggestions(): { items: Suggestion[]; loading: boolean; titl
       .map((m) => ({
         key: m.id,
         to: `/detail/${m.type}/${encodeURIComponent(m.id)}`,
-        title: m.name,
+        title: localTitle(m.id, m.name),
         poster: smallPoster(m.id, m.poster),
         sub: [displayYear(m), typeLabel(m.type, false)].filter(Boolean).join(' · '),
       }))
     return { items, loading: topMovies.loading || topSeries.loading, title: 'Populares ahora' }
-  }, [tmdbKey, trending.data, trending.loading, hidden, topMovies.data, topMovies.loading, topSeries.data, topSeries.loading])
+  }, [tmdbKey, trending.data, trending.loading, hidden, topMovies.data, topMovies.loading, topSeries.data, topSeries.loading, titlesVersion])
 }
 
 export function SearchSuggestions() {

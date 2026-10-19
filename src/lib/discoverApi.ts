@@ -10,6 +10,8 @@ import {
   type TogetherItem,
 } from './curated'
 import { tmdbDiscoverParams, tmdbKind, type DiscoverFilters } from './discoverFilters'
+import { originalName } from './localTitlesStore'
+import type { SearchMeta } from './searchResults'
 import {
   getCollection,
   getPerson,
@@ -61,6 +63,22 @@ export async function searchCatalog(
     clearTimeout(timeout)
     signal.removeEventListener('abort', onAbort)
   }
+}
+
+/**
+ * v0.28: pelis y series de TMDB por nombre, en español (encuentra por el nombre traducido y por el original:
+ * "Ella y yo" → "His & Hers"). Sin personas (tienen su propia búsqueda, `searchPeople`) y sin los que no tienen
+ * póster (cortos y cosas sueltas que ensucian la grilla). Ids `tmdb:movie:603`, ya con el nombre en español.
+ */
+export async function searchTitlesTmdb(query: string): Promise<SearchMeta[]> {
+  const res = await tmdbCached<TmdbPage>(
+    '/search/multi',
+    { query: query.trim().toLowerCase(), language: LANG, region: REGION, include_adult: 'false' },
+    6 * HOUR,
+  )
+  return (res.results ?? [])
+    .filter((i) => (i.media_type === 'movie' || i.media_type === 'tv') && i.poster_path)
+    .map((i) => ({ ...tmdbToPreview(i), originalName: originalName(i) }))
 }
 
 export interface TmdbPersonResult {
