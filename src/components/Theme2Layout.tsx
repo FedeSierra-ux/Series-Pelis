@@ -99,12 +99,6 @@ export function Theme2Layout() {
 
       <main className="main t2-main">
         <OfflineBanner />
-        {pathname === '/' && (
-          <Link to="/search" className="t2-searchbar">
-            <Theme2Icon name="search" size={20} />
-            <span>Buscar pelis, series y personas</span>
-          </Link>
-        )}
         <ErrorBoundary>
           <Outlet />
         </ErrorBoundary>
