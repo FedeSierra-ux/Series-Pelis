@@ -32,6 +32,11 @@
   --gutter: clamp(16px, 2.6vw, 40px);
   --nav-h: 0px;
   --cont-w: clamp(220px, 21vw, 360px);
+  /* Logos de los títulos (lib/logoTone.ts): sombra negra suave para todos y halo claro solo para los oscuros
+     (data-logo-tone="dark"). Las dos con tres sombras, así el halo entra con una transición pareja. */
+  --logo-shadow: drop-shadow(0 0 1px rgb(255 255 255 / 0)) drop-shadow(0 0 16px rgb(255 255 255 / 0)) drop-shadow(0 2px 8px rgb(0 0 0 / 0.45));
+  --logo-halo: drop-shadow(0 0 1px rgb(255 255 255 / 0.6)) drop-shadow(0 0 16px rgb(255 255 255 / 0.3)) drop-shadow(0 2px 8px rgb(0 0 0 / 0.45));
+  --logo-halo-in: filter 180ms ease-out;
 }
 
 [data-theme='2'] body {
@@ -1166,5 +1171,8 @@ html[data-tv][data-theme='2'] .btn-small {
 @media (prefers-reduced-motion: reduce) {
   .t2-profile {
     transition: none;
+  }
+  :root[data-theme='2'] {
+    --logo-halo-in: none;
   }
 }

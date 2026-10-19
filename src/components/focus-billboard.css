@@ -101,8 +101,12 @@ html[data-tv] .page.discover {
   height: auto;
   object-fit: contain;
   object-position: left bottom;
-  /* Halo claro sutil: un logo negro (Severance) se lee sobre el fondo oscuro; en uno claro casi no se nota. */
-  filter: drop-shadow(0 0 1px rgba(255, 255, 255, 0.6)) drop-shadow(0 0 16px rgba(255, 255, 255, 0.3)) drop-shadow(0 2px 8px rgba(0, 0, 0, 0.45));
+  /* Sombra negra suave; el halo claro, solo en los logos oscuros como el de Severance (lib/logoTone.ts). */
+  filter: var(--logo-shadow);
+  transition: var(--logo-halo-in);
+}
+.fbb-logo[data-logo-tone='dark'] {
+  filter: var(--logo-halo);
 }
 .fbb-title {
   margin: 0;

@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState, type ReactNode } from 'react'
 import { getMeta } from '../../lib/addons'
+import { measureLogoTone } from '../../lib/logoTone'
 import { addonsStore, progressStore, toggleWatchlist, useStore, watchlistStore } from '../../lib/store'
 import {
   formatRuntime,
@@ -108,7 +109,13 @@ export function TmdbHero({ items, variant = 'compact', fallbackType = 'movie', e
     getDetails(typeOf(nextItem, fallbackType), nextItem.id)
       .then((data) => {
         const logo = tmdbImg(originalLogo(data), 'w500')
-        if (alive && logo) new Image().src = logo
+        if (!alive || !logo) return
+        // Ya cargado, el tono (halo o no) se mide desde la caché: así el slide aparece con el estilo final.
+        const img = new Image()
+        img.onload = () => {
+          measureLogoTone(logo).catch(() => {})
+        }
+        img.src = logo
       })
       .catch(() => {})
     return () => {

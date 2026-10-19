@@ -1,4 +1,5 @@
 import { useEffect, useLayoutEffect, useRef, useState, type ReactNode } from 'react'
+import { useLogoTone } from '../lib/logoTone'
 import { useTvMode } from '../lib/tv'
 import { loadBillboard, parseDetailHref, type BillboardInfo, type BillboardTarget } from './focusBillboardData'
 import { ImdbRating } from './Rating'
@@ -134,6 +135,7 @@ export function Layer({ info, media }: { info: BillboardInfo; media?: ReactNode 
   }, [])
   const logo = info.logo && !brokenLogo ? info.logo : undefined
   const bg = info.background && !brokenBg ? info.background : undefined
+  const logoTone = useLogoTone(logo)
   return (
     <div className="fbb-layer">
       {info.poster && bgState !== 'cached' && <img className="fbb-bg-ph" src={info.poster} alt="" decoding="async" />}
@@ -153,11 +155,18 @@ export function Layer({ info, media }: { info: BillboardInfo; media?: ReactNode 
       <div className="fbb-info">
         {logo && (
           <img
-            ref={logoRef}
+            ref={(el) => {
+              logoRef.current = el
+              logoTone.ref(el)
+            }}
             className={`fbb-logo${logoReady ? '' : ' is-loading'}`}
+            data-logo-tone={logoTone['data-logo-tone']}
             src={logo}
             alt=""
-            onLoad={() => setLogoReady(true)}
+            onLoad={(e) => {
+              logoTone.onLoad(e)
+              setLogoReady(true)
+            }}
             onError={() => setBrokenLogo(true)}
           />
         )}

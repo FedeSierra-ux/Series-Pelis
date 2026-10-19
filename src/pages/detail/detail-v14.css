@@ -23,6 +23,12 @@
 }
 .detail-title .detail-logo {
   display: block;
+  transition: var(--logo-halo-in);
+}
+/* Un logo oscuro (Severance) casi no se leía sobre la portada: halo claro, como en Inicio (lib/logoTone.ts).
+   Los claros siguen sin sombra. */
+.detail-title .detail-logo[data-logo-tone='dark'] {
+  filter: var(--logo-halo);
 }
 
 /* ---------- Botón principal + fila de íconos ---------- */

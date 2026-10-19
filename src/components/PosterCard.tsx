@@ -6,6 +6,7 @@ import { displayYear } from '../lib/yearLabel'
 import { genreLabel } from '../lib/i18n'
 import { armTrailer, disarmTrailer } from '../lib/hoverTrailer'
 import { LABEL_TEXT, usePosterLabel } from '../lib/posterLabels'
+import { useLogoTone } from '../lib/logoTone'
 import { addonsStore, settingsStore, useStore } from '../lib/store'
 import { cardBackdrop, useNearOnce, useTitleLogo } from '../lib/titleArt'
 import { imdbFromTmdb, parseTmdbId } from '../lib/tmdb'
@@ -53,6 +54,7 @@ export const PosterCard = memo(function PosterCard({ meta, progress, watched, su
   const logo = useTitleLogo(meta, !!landscape && (eager || near))
   const [brokenLogo, setBrokenLogo] = useState<string>()
   const showLogo = !!logo && logo !== brokenLogo
+  const logoTone = useLogoTone(showLogo ? logo : undefined)
   // v0.5: puntaje sobre el póster, etiqueta y tráiler al quedarse encima.
   const { posterRating, posterLabels } = useStore(settingsStore)
   const posterLabel = usePosterLabel(meta, posterLabels, hideTop10Label)
@@ -105,7 +107,7 @@ export const PosterCard = memo(function PosterCard({ meta, progress, watched, su
         {landscape && (
           <div className="land-art" aria-hidden>
             {showLogo ? (
-              <img className="land-logo" src={logo} alt="" loading="lazy" decoding="async" onError={() => setBrokenLogo(logo)} />
+              <img className="land-logo" {...logoTone} src={logo} alt="" loading="lazy" decoding="async" onError={() => setBrokenLogo(logo)} />
             ) : (
               <span className="land-name">{meta.name}</span>
             )}
