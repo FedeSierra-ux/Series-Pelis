@@ -488,13 +488,20 @@ npm run preview    # sirve dist/ en http://localhost:4173
   - Asistente: `houseSynced` ya no cuenta el error; estado `'error'` = `unknown` (no se abre ni marca nada).
   - Decisiones que quedan: póster borroso en la TV, fundido de pestañas, fila pegada a la portada en PC y fuentes en
     dos columnas solo en pelis **se quedan como están**; "Porque viste" en la TV sí; perfiles como mucho 4.
-- **Plan v0.28.0 (títulos en español, decidido por el usuario; reemplaza la nota de la v0.8)**: nombre de pelis y
-  series en español latino (traducción de TMDB, como Netflix/Disney+ AR) en todos lados, con "Título original: …" en
-  la ficha; **logos y títulos de episodios en idioma original**; Buscar encuentra por los dos nombres. Relevamiento en
-  el chat de la sesión: `findByImdb` con `language`, caché propia `lib/localTitles.ts` (IndexedDB aparte), pedir solo
-  lo visible con un IntersectionObserver compartido, guardar el nombre original y traducir al mostrar, `/search/multi`
-  en Buscar, `PauseCast` con el título del episodio original. En la ficha con logo: logo original + nombre en español
-  debajo (mostrar vista previa antes de mergear).
+- v0.28.0 hecha (rama `ccr-4e8d431d-4nlzi9`): **títulos en español latino** (TMDB es-MX; reemplaza la nota de la
+  v0.8) en todos lados; **logos y títulos de episodios en idioma original**. Lo guardado (historial, Mi lista, D1)
+  sigue con el nombre de Cinemeta: **se traduce al mostrar**. `lib/localTitlesStore.ts` (puro + mapa: `tt → {n, o, t,
+  k, at}`, IndexedDB aparte `flix-names`, 30 días con nombre / 7 sin traducción, tope 5000; `spanishName` acepta solo
+  alfabeto latino, si no queda Cinemeta; `localTitle(id, fallback)`; avisa por id) y `lib/localTitles.ts` (cola de 4
+  pedidos a `/find` con `language`, pausa de 30 s con un 429, `useLocalTitle`, `useOriginalTitle`,
+  `useTitlesVersion` para listas que ordenan/filtran). `findByImdb` usa el `t` del mapa; `getDetails` anota el
+  nombre. `loadLocalTitles()` va en `main.tsx` con `hydrateStores`. `useNearOnce` con **un solo
+  IntersectionObserver** compartido (lo usan todas las tarjetas). Buscar: `searchTitlesTmdb` (`/search/multi`),
+  los de TMDB van al final del grupo, sin repetidos (por id del mapa o nombre + año ±1), `pickBestResult` mira
+  los dos nombres. Ficha: `pages/detail/detailNames.ts` (`detailNames`, `logoCaption`, `titleKey`): con logo, el
+  nombre en español debajo (`.detail-local-name`) si difiere; sin logo, h1 en español + "Título original" con
+  `lang`. `buildHomeData(profile, items, nameOf?)` para la TV. **Portada de Inicio** más grande y **sin el
+  buscador de arriba** (`.t2-searchbar` se fue; Buscar solo desde el riel).
 
 - **Decisiones para la v0.17 (reemplazan el reparto del plan de abajo)**: addons y TorBox **iguales para todas las
   casas**, solo los cambia el admin (opción A). Ajustes generales (subtítulos, idiomas, autoplay, saltar intro, sin
