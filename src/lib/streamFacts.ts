@@ -12,7 +12,7 @@ export interface StreamFacts {
   hdr?: string
   /** "Atmos", "7.1" o "5.1". */
   audio?: string
-  /** "Latino", "Castellano", "Español", "Varios idiomas", "Inglés"… */
+  /** "Latino", "España", "Español", "Varios idiomas", "Inglés"… */
   lang?: string
   /** El idioma es latino (se marca con el acento). */
   latino: boolean
@@ -34,7 +34,8 @@ const ATMOS_RE = /(^|[^a-z0-9])atmos([^a-z0-9]|$)/i
 const CHANNELS_RE = /(?<!\d)([57])[ .]1(?!\d)/
 
 const LANG_LABEL: Partial<Record<AudioLang, string>> = {
-  cas: 'Castellano',
+  // El audio de España se rotula por el país (decisión del usuario), igual que "Latino".
+  cas: 'España',
   spa: 'Español',
   eng: 'Inglés',
   por: 'Portugués',
@@ -67,9 +68,10 @@ export function formatSize(bytes: number): string {
   return `${Math.max(1, Math.round(bytes / 1e6)).toLocaleString('es-AR')} MB`
 }
 
+/** Con varios idiomas, si uno es latino se dice "Latino": es lo que le importa al usuario. */
 function langOf(langs: Set<AudioLang>): { lang?: string; latino: boolean } {
-  if (langs.has('multi')) return { lang: 'Varios idiomas', latino: false }
   if (langs.has('lat')) return { lang: 'Latino', latino: true }
+  if (langs.has('multi')) return { lang: 'Varios idiomas', latino: false }
   const first = LANG_ORDER.find((l) => langs.has(l))
   return { lang: first && LANG_LABEL[first], latino: false }
 }

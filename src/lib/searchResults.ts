@@ -125,30 +125,32 @@ export const MIN_BEST_SCORE = 30
  * ninguno se parece (por ejemplo, buscaste a una persona) no hay mejor resultado.
  *
  * v0.26 (explorar-07): `people` son las personas encontradas (TMDB), en el orden en que llegan. Si una se
- * parece a lo buscado igual o más que el mejor título ("ricardo" → Ricardo Darín antes que "Ricardo Del Rey"),
- * gana la persona: no hay mejor resultado y la fila de Personas queda primera.
+ * parece a lo buscado más que el mejor título ("taylor swift" → Taylor Swift antes que "Taylor Swift: The
+ * Eras Tour"), gana la persona: no hay mejor resultado y la fila de Personas queda primera. A igual parecido
+ * y posición gana el título ("ricardo": "Ricardo Del Rey" antes que Ricardo Darín).
  */
 export function pickBestResult(
   query: string,
   groups: readonly Pick<SearchGroup, 'items'>[],
   people: readonly { name: string }[] = [],
 ): MetaPreview | undefined {
-  let best: { meta: MetaPreview; score: number } | undefined
+  let best: { meta: MetaPreview; score: number; vsPeople: number } | undefined
   groups.forEach((g, gi) => {
     g.items.slice(0, CANDIDATES).forEach((meta, i) => {
       const base = titleScore(query, meta.name)
       if (base < MIN_BEST_SCORE) return
       // Posición dentro del grupo pesa más que el grupo: "Dune" (peli, 1.º) le gana a "Dune" (serie, 1.º) por poco.
       const score = base - i * 3 - gi * 0.5
-      if (!best || score > best.score) best = { meta, score }
+      if (!best || score > best.score) best = { meta, score, vsPeople: base - i * 3 }
     })
   })
   if (!best) return undefined
   const top = best
-  // Misma vara que los títulos (parecido menos la posición); a igual puntaje gana la persona.
+  // Misma vara que los títulos (parecido menos la posición, sin el desempate por grupo, que es solo entre
+  // títulos); a igual puntaje gana el título.
   const personWins = people.slice(0, CANDIDATES).some((p, i) => {
     const base = titleScore(query, p.name)
-    return base >= MIN_BEST_SCORE && base - i * 3 >= top.score
+    return base >= MIN_BEST_SCORE && base - i * 3 > top.vsPeople
   })
   return personWins ? undefined : top.meta
 }

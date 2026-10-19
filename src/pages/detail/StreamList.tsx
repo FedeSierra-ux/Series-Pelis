@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import { Link, useLocation, useNavigate } from 'react-router-dom'
 import { getStreams } from '../../lib/addons'
 import { isDebridDownload, prefetchTorrentTwins } from '../../lib/debrid'
@@ -12,6 +12,7 @@ import type { AddonStreams, InstalledAddon, Meta, Stream, Video } from '../../li
 import { createRecentSet } from './autoPlayed'
 import { episodeNumber } from './episodes'
 import { pendingNames, safeGroups } from './safeData'
+import { streamOrder } from './streamOrder'
 
 export interface PlayState {
   stream: Stream
@@ -66,11 +67,9 @@ export function StreamList({ meta, video, nextVideoId }: { meta: Meta; video?: V
   const [openTorrents, setOpenTorrents] = useState<Set<string>>(() => new Set())
   const listRef = useRef<HTMLDivElement>(null)
   const cancelRef = useRef<HTMLButtonElement>(null)
-  // Orden de las fuentes de cada addon, fijado la primera vez que se muestran. La recomendación llega
-  // tarde (a los GRACE_MS o cuando responde el último addon): si ese addon ya estaba en pantalla, el
-  // recomendado se marca donde está y nada se corre bajo el dedo o el mouse.
-  const orderRef = useRef<{ key: string; byAddon: Map<string, number[]> }>({ key: '', byAddon: new Map() })
-  if (orderRef.current.key !== fetchKey) orderRef.current = { key: fetchKey, byAddon: new Map() }
+  // La fuente de la lista que tenía el foco (control remoto o teclado), para pasarlo a la recomendada
+  // cuando la lista se reordena (ver abajo).
+  const focusedItem = useRef<HTMLElement | null>(null)
 
   useEffect(
     () => getStreams(addons, meta.type, videoId, (groups) => setResult({ key: fetchKey, groups })),
@@ -102,9 +101,10 @@ export function StreamList({ meta, video, nextVideoId }: { meta: Meta; video?: V
     return () => clearTimeout(t)
   }, [hasPlayable, fetchKey])
 
-  // Se recomienda recién cuando respondieron todos (o pasó la espera), así la lista no salta.
+  // Se recomienda recién cuando respondieron todos (o pasó la espera), así la lista salta una sola vez.
   const settled = fetched && (!loading || graceFor === fetchKey)
   const best = settled ? ranked[0] : undefined
+  const bestId = best ? `${best.addon.transportUrl}|${best.streamIndex}` : ''
   const autoKey = `${location.key}|${fetchKey}`
   const pending = countdown?.key === autoKey ? countdown : undefined
 
@@ -155,6 +155,29 @@ export function StreamList({ meta, video, nextVideoId }: { meta: Meta; video?: V
     if (hasPending) cancelRef.current?.focus()
   }, [hasPending])
 
+  // Al llegar la recomendación la lista salta una vez (la recomendada pasa arriba de todo). Si el foco estaba
+  // en una fuente va a la recomendada: queda arriba, donde estaba el foco, y OK reproduce lo que se ve marcado.
+  // Si la recomendación cambia después (un addon que tardó más que la espera trajo algo mejor), el foco la
+  // sigue solo si estaba en la anterior; si estabas en otra fuente, se queda ahí (React puede haber movido
+  // ese botón y sacarle el foco: se lo devuelve). Si el foco estaba en otra parte de la ficha, no se toca.
+  const prevBest = useRef<{ id: string; el: HTMLElement | null }>({ id: '', el: null })
+  useLayoutEffect(() => {
+    const list = listRef.current
+    const rec = bestId ? (list?.querySelector<HTMLElement>('.stream-item.recommended') ?? null) : null
+    const prev = prevBest.current
+    prevBest.current = { id: bestId, el: rec }
+    const item = focusedItem.current
+    if (!rec || !item) return
+    const active = document.activeElement
+    const lost = !active || active === document.body
+    const onStream = active instanceof HTMLElement && active.classList.contains('stream-item') && !!list?.contains(active)
+    if (!lost && !onStream) return
+    const target = !prev.id || item === prev.el || !item.isConnected ? rec : item
+    if (target === active) return
+    target.focus({ preventScroll: true })
+    target.scrollIntoView({ block: 'nearest' })
+  }, [bestId])
+
   const cancelAuto = () => {
     setCountdown(undefined)
     requestAnimationFrame(() => {
@@ -177,22 +200,19 @@ export function StreamList({ meta, video, nextVideoId }: { meta: Meta; video?: V
     )
   }
 
-  // Las fuentes de cada addon, en el orden fijado: las que se pueden abrir y los torrents sin debrid aparte.
+  // Las fuentes de cada addon: las que se pueden abrir y los torrents sin debrid aparte.
   const isDeadTorrent = (s: Stream) => {
     const p = playable(s, server)
     return !p.url && !p.external && !!s.infoHash
   }
-  const parts = groups.map((g, addonIndex) => {
-    const bestIndex = best?.addon.transportUrl === g.addon.transportUrl ? best.streamIndex : -1
-    // El recomendado va primero dentro de su addon solo si ya se sabía al mostrarlo por primera vez
-    // (ver `orderRef`); los que esconden los filtros van aparte.
-    const frozen = orderRef.current.byAddon
-    let order = frozen.get(g.addon.transportUrl)
-    if (!order || order.length !== g.streams.length) {
-      order = g.streams.map((_, i) => i)
-      if (bestIndex >= 0) order.sort((a, b) => Number(b === bestIndex) - Number(a === bestIndex))
-      if (order.length > 0) frozen.set(g.addon.transportUrl, order)
-    }
+  // La recomendada va primera (su addon arriba y ella primera dentro de él; ver `streamOrder`). Los que
+  // esconden los filtros van aparte.
+  const sorted = streamOrder(
+    groups.map((g) => ({ addonUrl: g.addon.transportUrl, count: g.streams.length })),
+    best && { addonUrl: best.addon.transportUrl, streamIndex: best.streamIndex },
+  )
+  const parts = sorted.map(({ addonIndex, bestIndex, order }) => {
+    const g = groups[addonIndex]
     const items = order.map((i) => ({ s: g.streams[i], i })).filter(({ i }) => !hidden.has(streamKey(addonIndex, i)))
     // Los torrents que no se pueden abrir (sin debrid ni servidor de Stremio) van plegados, así no tapan los que sí andan.
     const usable = items.filter(({ s }) => !isDeadTorrent(s))
@@ -285,7 +305,17 @@ export function StreamList({ meta, video, nextVideoId }: { meta: Meta; video?: V
   }
 
   return (
-    <div className="streams" ref={listRef}>
+    <div
+      className="streams"
+      ref={listRef}
+      onFocus={(e) => {
+        focusedItem.current = e.target.classList.contains('stream-item') ? e.target : null
+      }}
+      onBlur={(e) => {
+        // Sin destino (relatedTarget null) puede ser que React movió el botón: se recuerda igual.
+        if (e.relatedTarget) focusedItem.current = null
+      }}
+    >
       {pending && (
         <div className="auto-play-banner" role="status" aria-live="polite">
           <span>
