@@ -8,7 +8,7 @@ import { LangChips } from '../pages/settings/PlayerSettings'
 
 const OPEN_EVENT = 'sp-open-onboarding'
 const BACK_KEYS = new Set(['Escape', 'GoBack', 'BrowserBack', 'Backspace'])
-/** Si la primera sincronización no termina en este tiempo, el asistente se abre igual. */
+/** Si la primera sincronización no termina en este tiempo, el asistente no se abre (v0.26.3; ver `onboardingSkip`). */
 const SYNC_WAIT_MS = 10_000
 
 /** Vuelve a abrir el asistente (desde Ajustes). */
@@ -42,19 +42,36 @@ export function houseChoseLangs(auth: AuthState, langsChosen: boolean): boolean 
   return auth.status === 'in' && langsChosen
 }
 
-function useHouseReady(): boolean {
+/** `wait`: esperando la primera sincronización; `synced`: lista; `timeout`: no llegó a tiempo (`SYNC_WAIT_MS`). */
+export type HouseWait = 'wait' | 'synced' | 'timeout'
+
+/**
+ * Por qué no se muestra el asistente de la primera vez (`undefined` = se muestra).
+ * - `chosen`: la casa ya eligió idiomas (v0.26.2).
+ * - `unknown` (v0.26.3): la sincronización tardó más de `SYNC_WAIT_MS` y no se sabe qué eligió la casa. No se abre
+ *   y quedan los idiomas de fábrica (o los de la casa cuando llegue la sincronización). No se marca nada: si la
+ *   casa todavía no eligió, el asistente aparece la próxima vez que se abra la app.
+ */
+export function onboardingSkip(house: HouseWait, auth: AuthState, langsChosen: boolean): 'chosen' | 'unknown' | undefined {
+  if (house === 'timeout') return 'unknown'
+  if (house === 'synced' && houseChoseLangs(auth, langsChosen)) return 'chosen'
+  return undefined
+}
+
+/** Una vez lista (o vencida la espera), queda así. */
+function useHouseWait(): HouseWait {
   const synced = houseSynced(useAuth(), useSyncStatus())
-  const [ready, setReady] = useState(synced)
+  const [state, setState] = useState<HouseWait>(synced ? 'synced' : 'wait')
   useEffect(() => {
-    if (ready) return
+    if (state !== 'wait') return
     if (synced) {
-      setReady(true)
+      setState('synced')
       return
     }
-    const t = setTimeout(() => setReady(true), SYNC_WAIT_MS)
+    const t = setTimeout(() => setState('timeout'), SYNC_WAIT_MS)
     return () => clearTimeout(t)
-  }, [ready, synced])
-  return ready || synced
+  }, [state, synced])
+  return state === 'wait' && synced ? 'synced' : state
 }
 
 /** Asistente de la primera vez: idioma del audio y subtítulos, en una sola pantalla. */
@@ -65,11 +82,12 @@ export function Onboarding() {
   const settings = useStore(settingsStore)
   const auth = useAuth()
   const inHouse = auth.status === 'in'
-  const ready = useHouseReady()
+  const house = useHouseWait()
+  const ready = house !== 'wait'
   const location = useLocation()
   const boxRef = useRef<HTMLDivElement>(null)
   const onWatch = location.pathname.startsWith('/watch')
-  const skip = open && ready && !manual && houseChoseLangs(auth, settings.langsChosen)
+  const skip = open && !manual ? onboardingSkip(house, auth, settings.langsChosen) : undefined
   const visible = open && ready && !onWatch && !skip
 
   useEffect(() => {
@@ -81,10 +99,11 @@ export function Onboarding() {
     return () => window.removeEventListener(OPEN_EVENT, onOpen)
   }, [])
 
-  // La casa ya eligió idiomas: este aparato da el asistente por visto sin mostrarlo.
+  // La casa ya eligió idiomas: este aparato da el asistente por visto sin mostrarlo. Si la sincronización no
+  // llegó a tiempo, tampoco se abre (sin marcar nada; ver `onboardingSkip`).
   useEffect(() => {
     if (!skip) return
-    settingsStore.set((s) => ({ ...s, onboardingDone: true }))
+    if (skip === 'chosen') settingsStore.set((s) => ({ ...s, onboardingDone: true }))
     setOpen(false)
   }, [skip])
 

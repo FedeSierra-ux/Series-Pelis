@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.26.3] - 2026-10-19
+
+### Cambiado
+- **Asistente inicial**: si la casa tarda más de 10 segundos en sincronizar, ya no se abre igual. El aparato usa los
+  idiomas de fábrica (o los de la casa cuando termina de sincronizar); si la casa todavía no eligió, aparece la
+  próxima vez que se abra la app.
+
 ## [0.26.2] - 2026-10-19
 
 ### Cambiado
