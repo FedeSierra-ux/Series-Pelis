@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.26.2] - 2026-10-19
+
+### Agregado
+- `docs/investigacion/`: las notas de investigación de versiones anteriores (mejoras de UX de la v0.14, subtítulos
+  online de la v0.16, login de la v0.17 y perfiles de la v0.18), con un índice. Antes vivían solo en la sesión de
+  trabajo y se perdían al cerrarla. Sin cambios en la app.
+
 ## [0.26.1] - 2026-10-18
 
 ### Cambiado

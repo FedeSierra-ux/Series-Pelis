@@ -48,6 +48,7 @@ npm run preview    # sirve dist/ en http://localhost:4173
 - `src/pages/` — Inicio, Películas/Series (`discover/BrowsePage`, filas) y Descubrir (grilla), Buscar, Detalle, Reproductor, Historial, Tu año, Calendario, Vos (con Mi lista), Ajustes
   (`settings/PlayerSettings.tsx`, `settings/SourceSettings.tsx`).
 - `vite.config.ts` — PWA (Workbox): pósters CacheFirst, Cinemeta StaleWhileRevalidate.
+- `docs/investigacion/` — notas de investigación de versiones anteriores (UX, subtítulos online, login, perfiles).
 - `.claude/agents/` — agentes de agency-agents útiles para este proyecto. `.claude/skills/` + `.mcp.json` — rea.
 
 ## Pendiente / ideas
@@ -137,7 +138,7 @@ npm run preview    # sirve dist/ en http://localhost:4173
   géneros en chips, chips activos), `FilterPanel.tsx` (panel lateral / hoja en celular, `role="dialog"`, `#root`
   inert), `filters.css`; helpers `panelFilters`/`withoutFilter`/`clearAll` en `lib/discoverFilters.ts` (misma URL).
   Se sacaron las listas curadas "Mejor puntaje IMDb" (`isRemovedList` limpia filas viejas de Inicio).
-- v0.14.0 hecha: mejoras de UX de `research/ux-funciones.md` (en el scratchpad de la sesión) y arreglos de las
+- v0.14.0 hecha: mejoras de UX de `docs/investigacion/ux-funciones-v0.14.md` y arreglos de las
   auditorías. **Paleta: se queda la actual** (el usuario no quiso ninguna de las 5). Hechas U1–U8, U10, U12–U17,
   U20, U23–U26, U29–U31, U34, U35, F5, F13 y F17.
   - U11 (Películas/Series como página de filas) queda para más adelante.
@@ -420,6 +421,12 @@ npm run preview    # sirve dist/ en http://localhost:4173
   nada) para el año sin guion en tarjetas/Buscar/Inicio/protector/PostPlay. `Onboarding.tsx` `houseSynced()`: con login
   espera la primera sincronización también con sesión guardada (tope 10 s). Los pendientes "asistente de una
   pantalla", "año sin guion" y "series sin duración" ya estaban desde la v0.22.1/v0.22.2.
+- v0.26.2 hecha: las notas de investigación pasaron del scratchpad (se borra con la sesión) a `docs/investigacion/`
+  (UX v0.14, subtítulos online v0.16, login v0.17, perfiles v0.18; índice en su `README.md`). Investigaciones nuevas
+  que valga la pena guardar van ahí, **sin keys** (solo nombres de variables). Decisiones de la v0.26.1: con subtítulos
+  "Muy grande" y 4–5 renglones se acepta que se pisen con "¿Qué te pareció?" o el reparto en pausa. Próximo: v0.26.3 =
+  **no mostrar el asistente si la casa ya eligió idiomas** (decidido: sí; hace falta una marca de la casa, p. ej.
+  `langsChosen` en `HOUSE_SETTINGS` con `HOUSE_SCHEMA` 2, porque todo aparato que sincroniza sube todos los campos).
 - **Decisiones para la v0.17 (reemplazan el reparto del plan de abajo)**: addons y TorBox **iguales para todas las
   casas**, solo los cambia el admin (opción A). Ajustes generales (subtítulos, idiomas, autoplay, saltar intro, sin
   spoilers, reglas de fuentes) **iguales en toda la casa**; lo físico (modo TV, tamaño de la interfaz, protector,
@@ -428,8 +435,8 @@ npm run preview    # sirve dist/ en http://localhost:4173
   se mezclan solos (gana el más nuevo). Login obligatorio con D1, también para `/api/tmdb` y `/api/subs`. Casas e
   invitaciones se manejan desde la app (Ajustes → Casas).
 - **Plan acordado (pedido "1, 2 y 3")**: v0.17.0 login "Código de casa" (opción A) + sincronización en D1
-  (investigación en `scratchpad/v15/login.md`); v0.18.0 perfiles variante D (investigación en
-  `scratchpad/v15/perfiles.md`): en la TV "¿Quién está mirando?" al abrir y tras el protector (entra solo a los 10 s),
+  (investigación en `docs/investigacion/login-v0.17.md`); v0.18.0 perfiles variante D (investigación en
+  `docs/investigacion/perfiles-v0.18.md`): en la TV "¿Quién está mirando?" al abrir y tras el protector (entra solo a los 10 s),
   en PC/celular recuerda el último; con un solo perfil, igual que hoy; avatar = inicial + color o fondo de una peli.
   Compartido por casa: addons, debrid y demás. Por perfil: historial, seguir viendo, lista, estrellas, no me interesa.
   Por aparato: idiomas, subtítulos, autoplay, sin spoilers, búsquedas, favoritos de TV en vivo, reglas de fuentes,
