@@ -779,6 +779,14 @@ html[data-tv] .player-top [data-tip]::after {
   }
 }
 
+/* Celular de menos de 360 px: el temporizador va al ⚙ (Player.tsx: `TINY_BAR_QUERY`, misma consulta). Con
+   una serie quedan 5 íconos de 44 px y "Audio" (277 px): entran en 288 (320 menos los márgenes). */
+@media (max-width: 359px) and (pointer: coarse) {
+  .controls-row .sleep-btn {
+    display: none;
+  }
+}
+
 /* reproductor-08: TV a escala de 3 m (botones de 64 px, íconos de 32 px, tiempo y títulos más grandes). */
 html[data-tv] .controls-row {
   gap: 10px;

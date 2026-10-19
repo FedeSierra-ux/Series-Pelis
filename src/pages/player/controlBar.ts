@@ -13,6 +13,13 @@ export function tip(label: string) {
  */
 export const COMPACT_BAR_QUERY = '(max-width: 760px) and (pointer: coarse)'
 
+/**
+ * Celular muy angosto (menos de 360 px, ej. 320): con una serie ("Audio" y "Siguiente episodio") la fila de
+ * íconos no entraba ni sin temporizador. Ahí el temporizador también pasa al ⚙ (lo esconde el CSS con la
+ * misma consulta). De 360 px para arriba, la barra queda igual.
+ */
+export const TINY_BAR_QUERY = '(max-width: 359px) and (pointer: coarse)'
+
 /** Pantalla angosta (celular vertical): el subtítulo sube por arriba de "Saltar intro" con los controles. */
 export const NARROW_QUERY = '(max-width: 760px)'
 

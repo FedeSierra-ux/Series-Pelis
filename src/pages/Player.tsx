@@ -27,8 +27,7 @@ import { SeekPreview } from './player/SeekPreview'
 import { SourcesMenu, useSwitchSource, type Resume, type SwitchState } from './player/SourcesMenu'
 import { ReportButton } from '../components/ReportButton'
 import { PlayerIcon } from './player/PlayerIcons'
-import { liftsSubForCorner, NARROW_QUERY, PHONE_LANDSCAPE_QUERY, tip, useCompactBar, useMediaQuery } from './player/controlBar'
-import { formatRate, readRate, stepRate, storeRate, type Rate } from './player/playbackRate'
+import { liftsSubForCorner, NARROW_QUERY, PHONE_LANDSCAPE_QUERY, TINY_BAR_QUERY, tip, useCompactBar, useMediaQuery } from './player/controlBar'
 import { SubtitleMenu } from './player/SubtitleMenu'
 import { useMediaSession, usePictureInPicture, useWakeLock } from './player/useMediaSession'
 import { useSubtitles } from './player/useSubtitles'
@@ -59,6 +58,8 @@ const NEXT_COUNTDOWN_S = 10
 const HLS_NETWORK_RETRIES = 2
 const HLS_RETRY_MS = 1000
 const SLEEP_KEY = 'sp-sleep-at'
+/** Velocidad que guardaban las versiones con botón "1×" (hasta la v0.27): ya no se lee, se borra. */
+const OLD_RATE_KEY = 'sp-rate'
 const VOLUME_STEP = 0.1
 /** Px entre el final del subtítulo y lo que haya en la esquina ("Saltar", siguiente…), en el celular con controles. */
 const SUB_CORNER_GAP = 16
@@ -79,6 +80,13 @@ function sessionSet(key: string, value: string) {
     sessionStorage.setItem(key, value)
   } catch {
     // sin persistencia, no pasa nada
+  }
+}
+function sessionRemove(key: string) {
+  try {
+    sessionStorage.removeItem(key)
+  } catch {
+    // sin persistencia, no hay nada que borrar
   }
 }
 
@@ -258,10 +266,6 @@ function PlayerView({ state, resume, notice, onDebridFail }: { state: PlayState;
     return at > Date.now() ? { kind: 'time', at, minutes: minutes || undefined } : { kind: 'off' }
   })
   const [sleepFired, setSleepFired] = useState(false)
-  // Velocidad de reproducción: se recuerda mientras dure la sesión (pasa al siguiente episodio), no más.
-  const [rate, setRate] = useState<Rate>(readRate)
-  const rateRef = useRef(rate)
-  rateRef.current = rate
   // Último subtítulo activo, para que la tecla C lo vuelva a prender.
   const lastSub = useRef<string>('')
   // Después de N episodios seguidos sin tocar nada, el siguiente arranca en pausa y pregunta.
@@ -369,23 +373,19 @@ function PlayerView({ state, resume, notice, onDebridFail }: { state: PlayState;
   const pip = usePictureInPicture(videoRef)
   // Celular vertical: "Abrir en…", ventana flotante y Ajustar van dentro del ⚙ (el CSS los saca de la barra).
   const compactBar = useCompactBar()
+  // Celular de menos de 360 px: tampoco entra el temporizador en la fila (con una serie: Audio y Siguiente).
+  const tinyBar = useMediaQuery(TINY_BAR_QUERY)
   const narrow = useMediaQuery(NARROW_QUERY)
   const phoneLandscape = useMediaQuery(PHONE_LANDSCAPE_QUERY)
   // Pantalla prendida mientras se reproduce; se suelta en pausa y al salir.
   useWakeLock(playing)
 
   // ---------- Velocidad ----------
+  // Siempre 1× (el usuario no usa la velocidad: no hay botón ni teclas). Lo que dejó guardado una versión
+  // vieja en esta sesión se borra para que no vuelva a leerse.
   useEffect(() => {
-    const el = videoRef.current
-    if (el && el.playbackRate !== rate) el.playbackRate = rate
-  }, [rate, state.playUrl])
-
-  const changeRate = (next: Rate) => {
-    setRate(next)
-    storeRate(next)
-    flash(next === 1 ? 'Velocidad normal' : `Velocidad: ${formatRate(next)}`)
-    showControls()
-  }
+    sessionRemove(OLD_RATE_KEY)
+  }, [])
 
   // ---------- Carga del video ----------
   useEffect(() => {
@@ -568,8 +568,8 @@ function PlayerView({ state, resume, notice, onDebridFail }: { state: PlayState;
       return
     }
     setDuration(el.duration)
-    // Algunos navegadores vuelven a 1× al cargar otra fuente.
-    if (el.playbackRate !== rateRef.current) el.playbackRate = rateRef.current
+    // Siempre 1× (por si el navegador o un reproductor anterior dejó otra velocidad).
+    if (el.playbackRate !== 1) el.playbackRate = 1
     const saved = progressStore.get()[videoId]
     // `resume.at === 0` es "sin posición" (se cambió de fuente antes de que cargara el video): vale lo guardado.
     if (resume && resume.at > 0) el.currentTime = Math.min(resume.at, Math.max(0, el.duration - 1))
@@ -1185,14 +1185,6 @@ function PlayerView({ state, resume, notice, onDebridFail }: { state: PlayState;
         case 'p':
           if (pip.supported) togglePip()
           return
-        case '<':
-        case ',':
-          changeRate(stepRate(rate, -1))
-          return
-        case '>':
-        case '.':
-          changeRate(stepRate(rate, 1))
-          return
         case 'i':
           // Saltar intro / resumen (o los créditos) cuando hay segmento.
           if (skipKind) {
@@ -1580,6 +1572,21 @@ function PlayerView({ state, resume, notice, onDebridFail }: { state: PlayState;
               more={
                 compactBar
                   ? [
+                      ...(tinyBar
+                        ? [
+                            {
+                              label:
+                                sleep.kind === 'time'
+                                  ? `Temporizador: ${sleepMinutesLeft} min`
+                                  : sleep.kind === 'episode'
+                                    ? 'Temporizador: fin del episodio'
+                                    : 'Temporizador para dormir',
+                              active: sleep.kind !== 'off',
+                              // El ⚙ sigue siendo el que abrió el menú: al cerrar el temporizador el foco vuelve ahí.
+                              onClick: () => setMenu('sleep'),
+                            },
+                          ]
+                        : []),
                       ...(pip.supported
                         ? [{ label: pip.active ? 'Cerrar la ventana flotante' : 'Ventana flotante', active: pip.active, onClick: () => { setMenu(null); togglePip() } }]
                         : []),
@@ -1682,7 +1689,7 @@ function PlayerView({ state, resume, notice, onDebridFail }: { state: PlayState;
                   : 'Temporizador para dormir',
             )}
             aria-expanded={menu === 'sleep'}
-            className={sleep.kind !== 'off' ? 'active' : ''}
+            className={`sleep-btn ${sleep.kind !== 'off' ? 'active' : ''}`}
           >
             <PlayerIcon name="moon" />
             {sleep.kind !== 'off' && (
