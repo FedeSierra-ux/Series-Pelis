@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { getMeta, getSubtitles } from '../../lib/addons'
 import { creditsPlan } from '../../lib/credits'
+import { looksLikeStatusVideo } from '../../lib/debrid'
 import { episodeLabel } from '../../lib/format'
 import { useAddons, useTitle } from '../../lib/hooks'
 import { nativePlayer, type NativePlayerEvent } from '../../lib/nativePlayer'
@@ -34,15 +35,20 @@ const SAVE_EVERY_MS = 5000
  */
 let closeTimer: ReturnType<typeof setTimeout> | undefined
 
-/** `onFallback`: Android no pudo con el video; `at` es dónde iba y `message`, lo que dijo Android. */
+/**
+ * `onFallback`: Android no pudo con el video; `at` es dónde iba y `message`, lo que dijo Android.
+ * `onDebridFail` (v0.27): el link de debrid dio el video de aviso de Torrentio (30 s), no el video.
+ */
 export function NativePlayerView({
   state,
   resume,
   onFallback,
+  onDebridFail,
 }: {
   state: PlayState
   resume?: Resume
   onFallback: (at: number, message?: string) => void
+  onDebridFail?: (at: number) => void
 }) {
   const navigate = useNavigate()
   const settings = useStore(settingsStore)
@@ -299,6 +305,11 @@ export function NativePlayerView({
   const onEvent = (e: NativePlayerEvent) => {
     switch (e.type) {
       case 'ready':
+        // Sin marcarlo como listo: así no se guarda el progreso del aviso.
+        if (onDebridFail && looksLikeStatusVideo(e.duration)) {
+          onDebridFail(resume?.at ?? 0)
+          return
+        }
         readyRef.current = true
         setReady(true)
         if (e.duration > 0) setDuration(e.duration)

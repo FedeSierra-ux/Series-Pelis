@@ -1,5 +1,19 @@
 # Changelog
 
+## [0.27.0] - 2026-10-19
+
+### Agregado
+- **TorBox a través de Torrentio** para todas las casas. La key va dentro del addon (la carga el administrador); la
+  app nunca la guarda aparte. Guía de configuración en el README.
+- **Lo que TorBox todavía no tiene** ("tiene que descargarse"): arranca por torrent (app de Android o Stremio en la
+  PC) y al mismo tiempo le pide a TorBox que lo baje, así la próxima vez ya está listo.
+- **Si TorBox falla** con una fuente (límite de descargas, cuenta, video que no pudo preparar): cartel con el motivo y
+  el botón **"Reproducir por torrent"**. Nunca pasa solo. En la app de Android dice el motivo exacto.
+
+### Cambiado
+- Elección de fuente: lo que TorBox ya tiene listo gana siempre a lo que tiene que descargarse, aunque sea de menor
+  calidad (lo segundo va por torrent).
+
 ## [0.26.3] - 2026-10-19
 
 ### Cambiado

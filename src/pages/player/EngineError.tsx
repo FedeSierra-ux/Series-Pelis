@@ -10,17 +10,22 @@ import { SourcesMenu, useSwitchSource } from './SourcesMenu'
 // el reproductor de la web no la puede abrir, así que en vez de pasarle el video se muestra el error y se
 // ofrece otra fuente. Las flechas y "Atrás" los maneja la navegación de siempre (`spatialNav`).
 
-/** `at`: segundos donde quedó (la otra fuente sigue desde ahí). `onRetry`: volver a probar la misma fuente. */
+/**
+ * `at`: segundos donde quedó (la otra fuente sigue desde ahí). `onRetry`: volver a probar la misma fuente.
+ * `action` (v0.27): botón principal propio, por ejemplo "Reproducir por torrent" cuando falla el debrid.
+ */
 export function EngineError({
   state,
   message,
   at = 0,
   onRetry,
+  action,
 }: {
   state: PlayState
   message: string
   at?: number
   onRetry?: () => void
+  action?: { label: string; onClick: () => void; disabled?: boolean }
 }) {
   const navigate = useNavigate()
   const switchSource = useSwitchSource(state)
@@ -59,8 +64,13 @@ export function EngineError({
             </div>
           )}
           <div className="hero-actions">
+            {action && !sources && (
+              <button className="btn btn-primary" onClick={action.onClick} disabled={action.disabled} autoFocus data-autofocus>
+                {action.label}
+              </button>
+            )}
             {!sources && (
-              <button className="btn btn-primary" onClick={() => setSources(true)} autoFocus data-autofocus>
+              <button className={action ? 'btn' : 'btn btn-primary'} onClick={() => setSources(true)} autoFocus={!action} data-autofocus={action ? undefined : true}>
                 Elegir otra fuente
               </button>
             )}

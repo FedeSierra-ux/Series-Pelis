@@ -376,6 +376,18 @@ describe('debrid primero (v0.25)', () => {
     expect(rankStreams(groups, rules(), last, SERVER).map((r) => r.stream.infoHash)).toEqual(['a1080', 'a720', 'a4k'])
   })
 
+  it('v0.27: lo que TorBox ya tiene le gana a lo que tiene que bajar, aunque sea de menor calidad', () => {
+    const hash = 'a1b2c3d4e5f60718293a4b5c6d7e8f9012345678'
+    const link = (idx: number) => `https://torrentio.strem.fun/resolve/torbox/K/${hash}/x/${idx}/x.mkv`
+    const groups = [
+      group(TIO, [
+        { name: '[TB download] Torrentio\n1080p', title: 'Serie.S01E02.1080p', url: link(0) },
+        { name: '[TB+] Torrentio\n720p', title: 'Serie.S01E02.720p', url: link(1) },
+      ]),
+    ]
+    expect(rankStreams(groups, rules(), undefined, SERVER).map((r) => r.stream.name)).toEqual(['[TB+] Torrentio\n720p', '[TB download] Torrentio\n1080p'])
+  })
+
   it('sin servidor el torrent no se reproduce y dice por qué', () => {
     const p = playable(torrent('abc'), { url: '', missing: 'Torrent: abrí Stremio en la PC (servidor local) o usá un addon con debrid' })
     expect(p.url).toBeUndefined()

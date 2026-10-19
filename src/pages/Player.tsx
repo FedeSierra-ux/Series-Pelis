@@ -36,6 +36,8 @@ import { useSubtitles } from './player/useSubtitles'
 import { launchUrl } from './player/externalLaunch'
 import { NativePlayerView } from './player/NativePlayer'
 import { EngineError } from './player/EngineError'
+import { DebridDownload, DebridError, debridLinkOf } from './player/DebridSwitch'
+import { isDebridDownload, looksLikeStatusVideo } from '../lib/debrid'
 import { MIN_HISTORY_EPISODE_S, MIN_HISTORY_S, NEXT_FALLBACK_S, readAutoCount, writeAutoCount } from './player/autoNext'
 import { detailPathFor } from './player/fallback'
 import { isPhoneLike, toggleFullscreen as toggleScreen, usePlayerScreen } from './player/fullscreen'
@@ -136,6 +138,11 @@ function PlayerChoice({ state, resume }: { state: PlayState; resume?: Resume }) 
   const [fallback, setFallback] = useState<Resume>()
   const [engineFail, setEngineFail] = useState<{ at: number; message?: string }>()
   const [retry, setRetry] = useState<Resume>()
+  // v0.27: link de debrid de Torrentio. Lo que TorBox no tiene va por torrent (si se puede); si el debrid falla,
+  // cartel con "Reproducir por torrent".
+  const debrid = !!debridLinkOf(state)
+  const [plainDebrid, setPlainDebrid] = useState(false)
+  const [debridFail, setDebridFail] = useState<{ at: number }>()
   useEffect(() => {
     if (native !== undefined) return
     let alive = true
@@ -147,6 +154,9 @@ function PlayerChoice({ state, resume }: { state: PlayState; resume?: Resume }) 
     }
   }, [native])
   if (native === undefined) return <div className="player player-native" />
+  if (debrid && debridFail) return <DebridError state={state} at={debridFail.at} />
+  if (debrid && !plainDebrid && isDebridDownload(state.stream)) return <DebridDownload state={state} resume={resume} onPlain={() => setPlainDebrid(true)} />
+  const onDebridFail = debrid ? (at: number) => setDebridFail({ at }) : undefined
   // Torrent del motor de la app (http a 127.0.0.1): el reproductor de la web no lo puede abrir. Si falla el
   // nativo no se le pasa; se muestra el error de Android y se ofrece otra fuente.
   const engineOnly = needsNativePlayer(state.playUrl)
@@ -156,6 +166,7 @@ function PlayerChoice({ state, resume }: { state: PlayState; resume?: Resume }) 
         state={state}
         resume={retry ?? resume}
         onFallback={(at, message) => (engineOnly ? setEngineFail({ at, message }) : setFallback({ at }))}
+        onDebridFail={onDebridFail}
       />
     )
   }
@@ -184,11 +195,13 @@ function PlayerChoice({ state, resume }: { state: PlayState; resume?: Resume }) 
       state={state}
       resume={fallback ?? resume}
       notice={fallback ? 'El reproductor de Android no pudo con este video: sigue el de la web' : undefined}
+      onDebridFail={onDebridFail}
     />
   )
 }
 
-function PlayerView({ state, resume, notice }: { state: PlayState; resume?: Resume; notice?: string }) {
+/** `onDebridFail` (v0.27): el link de debrid dio un video de aviso de Torrentio (no el video). */
+function PlayerView({ state, resume, notice, onDebridFail }: { state: PlayState; resume?: Resume; notice?: string; onDebridFail?: (at: number) => void }) {
   const navigate = useNavigate()
   const settings = useStore(settingsStore)
   const videoRef = useRef<HTMLVideoElement>(null)
@@ -540,6 +553,12 @@ function PlayerView({ state, resume, notice }: { state: PlayState; resume?: Resu
   const onLoadedMetadata = () => {
     const el = videoRef.current
     if (!el) return
+    // v0.27: 35 s o menos con un link de debrid = el aviso de Torrentio ("descargando", "límite"…), no el video.
+    if (onDebridFail && looksLikeStatusVideo(el.duration)) {
+      el.pause()
+      onDebridFail(resume?.at ?? 0)
+      return
+    }
     setDuration(el.duration)
     // Algunos navegadores vuelven a 1× al cargar otra fuente.
     if (el.playbackRate !== rateRef.current) el.playbackRate = rateRef.current
@@ -795,7 +814,7 @@ function PlayerView({ state, resume, notice }: { state: PlayState; resume?: Resu
   // Al cambiar de fuente se vuelve a poner el subtítulo (y el retraso) que estaba activo.
   useEffect(() => {
     if (!resume) return
-    flash(notice ?? `Fuente: ${state.addonName}`)
+    flash(notice ?? resume.note ?? `Fuente: ${state.addonName}`)
     if (resume.sub !== undefined) subs.restore(resume.sub, resume.subDelay ?? 0, resume.subLabel)
   }, [])
 

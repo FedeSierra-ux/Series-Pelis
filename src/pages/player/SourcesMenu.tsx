@@ -19,6 +19,8 @@ export interface Resume {
   subDelay?: number
   /** idioma de la pista de audio activa */
   audioLang?: string
+  /** v0.27: aviso al arrancar en lugar de "Fuente: …" (por ejemplo, que va por torrent en vez del debrid). */
+  note?: string
 }
 
 export type SwitchState = PlayState & { resume?: Resume }

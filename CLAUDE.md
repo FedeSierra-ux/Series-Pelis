@@ -92,8 +92,9 @@ npm run preview    # sirve dist/ en http://localhost:4173
   APIs del navegador que dan promesas. El `ErrorBoundary` de afuera (App) va con `keepMounted`: al navegar solo saca
   el error, no remonta Layout/menú. Los de adentro (alrededor del `Outlet` y del Player) remontan por `pathname`.
   El usuario NO quiere sumar otro puntaje cuando falta el de IMDb (se deja como está).
-- Debrid: el usuario va a pagar **un TorBox (Standard)** para 3-4 casas cercanas; el resto de las ~10 casas usa su
-  propio debrid. Real-Debrid no sirve para compartir (una IP a la vez). Todavía no quiere login/perfiles ni asistente.
+- Debrid: desde la v0.27 **todas las casas usan una sola cuenta de TorBox** a través de **Torrentio** (decisión del
+  usuario; antes eran 3-4 casas con TorBox y el resto con su propio debrid). TorBox permite compartir la cuenta (uso
+  justo). Recomendado el plan con más descargas activas (Pro). Real-Debrid no sirve para compartir (una IP a la vez).
 - v0.9.0 hecha: auditoría de la v0.8 (43 bugs, 16 ítems visuales), modo TV con `html[data-tv]` (`syncTvAttr()` en
   `lib/tv.ts`), `UpdateToast` (SW con `registerType: 'prompt'`), `lib/focusMemory.ts` + `ScrollMemory`, `EmptyState`,
   `setWatchedMany`, identidad de addons por URL (`addonKey`), `refreshManifests` con TTL de 24 h, CI en GitHub Actions.
@@ -434,6 +435,26 @@ npm run preview    # sirve dist/ en http://localhost:4173
   (`wait` / `synced` / `timeout`, se queda fijo) + `onboardingSkip(house, auth, langsChosen)` puro en
   `Onboarding.tsx` (`chosen` marca `onboardingDone`; `unknown` no marca nada, así si la casa no eligió aparece en la
   próxima apertura). Un error de sincronización (`phase: 'error'`) sigue contando como sincronizada (se abre).
+- v0.27.0 hecha (rama `ccr-4e8d431d-4nlzi9`): **TorBox a través de Torrentio** (solo Torrentio; Comet quedó para
+  más adelante: la key pasa por la instancia y por StremThru, y en packs no dice el archivo). Investigación en
+  `scratchpad/v027-infohash.md` (sesión). `lib/debrid.ts` (puro + tests): `parseDebridLink` (hash de 40 hex e índice
+  de `…/resolve/<servicio>/<key>/<hash>/<entrada>/<índice>/…`), `isDebridDownload` (`[TB download]`),
+  `plainTorrentioUrl` (mismo manifest sin `torbox=`/`debridoptions`/otros debrid; aprobado por el usuario),
+  `torrentTwin` (cruce **solo por hash exacto** y archivo), `torrentStreamFor`, `looksLikeStatusVideo`
+  (`STATUS_VIDEO_MAX_S = 35`: los avisos de Torrentio duran 30 s), `failureFromLocation`/`debridFailureText`,
+  `requestDebridDownload` (fetch no-cors una vez por link y sesión, se corta al responder), `prefetchTorrentTwins`.
+  `getAddonStreams` en `addons.ts`. `streamPicker`: `[TB download]` no cuenta como directo (lo cacheado gana siempre).
+  Reproductor: `pages/player/DebridSwitch.tsx` — `DebridDownload` (en `PlayerChoice`: pide la descarga a TorBox y
+  navega con `replace` al torrent; sin servidor de torrents sigue con el link) y `DebridError` (cartel con
+  **"Reproducir por torrent"**, nunca automático; `EngineError` tiene prop `action`). Detección: duración ≤35 s en
+  `onLoadedMetadata` (web) o en `ready` (nativo, sin marcar listo para no guardar progreso). **Los errores del video no
+  cuentan como falla del debrid** (en el navegador suelen ser de formato MKV). Aviso al arrancar por torrent con
+  `Resume.note`. Android: `debridProbe` en `SpNativePlugin` (sin seguir redirecciones, solo https, devuelve status y
+  `Location` **sin query**: el link final de TorBox lleva la key) + `getInfo.debridProbe`; web `nativeDebridProbe`.
+  La descarga en paralelo es **automática** (decisión del usuario) aunque, con la cuenta llena, Torrentio puede borrar
+  una descarga en curso de otra casa. Config de Torrentio para el admin en el README ("TorBox para todas las casas":
+  tildar "Don't show debrid catalog", no tildar "Don't show download to debrid links"). Sin probar con una cuenta real.
+
 - **Decisiones para la v0.17 (reemplazan el reparto del plan de abajo)**: addons y TorBox **iguales para todas las
   casas**, solo los cambia el admin (opción A). Ajustes generales (subtítulos, idiomas, autoplay, saltar intro, sin
   spoilers, reglas de fuentes) **iguales en toda la casa**; lo físico (modo TV, tamaño de la interfaz, protector,
