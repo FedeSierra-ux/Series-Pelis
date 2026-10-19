@@ -85,7 +85,7 @@ npm run preview    # sirve dist/ en http://localhost:4173
   Nuevos: `lib/errors.ts` (`errorText`: errores en español), `lib/returnVideo.ts` ("Volver" tras el autoplay deja la
   ficha en el último episodio visto), `components/AddonUrlForm.tsx`, `pages/player/PlayerIcons.tsx`, `LandscapeCard` (en `ContinueCard`),
   prop `errorNotice` de `Row`, parámetro `clear` de `placeCue`, `data-autofocus` para la primera flecha de la TV.
-  El usuario NO quiere títulos en español: solo sinopsis y datos; el badge de IMDb va arriba a la derecha.
+  El usuario NO quería títulos en español (desde la v0.28 sí: ver el plan de la v0.28.0); el badge de IMDb va arriba a la derecha.
 - v0.9.1 hecha: pantalla en negro al navegar en Chrome 150+ (`scrollTo` devuelve una promesa; la v0.8 la devolvía
   como limpieza del efecto). **Un efecto nunca devuelve el resultado de una llamada** (`useEffect(() => algo())`):
   siempre con llaves, salvo que devuelva la función de limpieza a propósito. `lib/effects.test.ts` lo vigila para las
@@ -459,6 +459,42 @@ npm run preview    # sirve dist/ en http://localhost:4173
   episodios) y no corta la espera por un `[TB download]`; en el nativo, `ended`/`progress` con duración de aviso o
   `error` antes del `ready` = falla del debrid; `DebridError` reintenta el mismo link (`onRetry`); toast con
   `resume.note` en el nativo; el botón "Preparando…" usa `aria-disabled` (con `disabled` se perdía el foco en la TV).
+
+- v0.27.1 hecha (rama `ccr-4e8d431d-4nlzi9`): dudas abiertas de la v0.26 (páginas de capturas en artifacts
+  "Dudas visuales de Flix" y "Últimas dudas v0.27.1"). Hecho en paralelo con 4 agentes en worktrees
+  (`.claude/worktrees` está en `.gitignore`; **correr `npx vitest run --dir src`**, si no vitest toma las copias).
+  - Fuentes: `pages/detail/streamOrder.ts` (puro + test): la recomendada primera y su addon arriba; sin `orderRef`;
+    la recomendación **puede cambiar** si un addon lento trae algo mejor (decisión del usuario: opción A, la lista
+    puede saltar dos veces); el foco de la TV la sigue (`useLayoutEffect` en `StreamList`).
+  - `streamFacts`: `cas` = **"España"**; con varios idiomas y latino gana **"Latino"**. `searchResults`: con empate gana
+    el **título** (la persona necesita más puntaje que el mejor título sin el desempate por grupo).
+  - Reproductor: **sin velocidad** (ni botón, ni teclas `<`/`>`/`,`/`.`, ni menú; siempre 1×, se borra `sp-rate`; el
+    nativo manda `rate: 1`; se borró `SpeedMenu`). Celular: temporizador como globito sobre la luna; por debajo de
+    360 px (`TINY_BAR_QUERY`) pasa a "Más opciones". `tip()` en ← y Bloquear (etiqueta debajo). Subtítulo sobre la
+    esquina también en el **celular apaisado** (`PHONE_LANDSCAPE_QUERY` = `(pointer: coarse) and (max-height: 500px)`,
+    `liftsSubForCorner`, nunca en la TV).
+  - **Halo solo en logos oscuros**: `lib/logoTone.ts` (`classifyLogoPixels` puro: claro si ≥ `LIGHT_SHARE = 0.25` de
+    lo opaco tiene contraste 3:1 con el fondo; Dune y The Batman quedan claros por decisión del usuario), medido con
+    canvas en un pedido CORS aparte después del `onLoad` del `<img>` (el `<img>` va sin `crossOrigin`: metahub a veces
+    no manda CORS o redirige a `live.metahub.space`), caché en memoria + localStorage `sp-logo-tone`; si no se puede
+    medir, **con halo**. `data-logo-tone` + variables `--logo-shadow`/`--logo-halo` en `theme2.css`. En la ficha
+    (`DetailLogo`) los claros siguen sin sombra (decisión del usuario).
+  - **Top 10 al 70 % del póster en todas las pantallas** (Inicio, Películas y Series; en PC/TV ya eran iguales, la
+    vista previa estaba mal y el usuario eligió igual el más chico). Esqueleto de pósters con dos renglones (sin salto).
+    `hideTop10Label` en las filas de Inicio, Películas/Series y la grilla; la etiqueta sigue en Buscar, la ficha,
+    Persona, Mi lista, Listas y Juntos.
+  - `initTabReveal()` en `lib/spatialNav.ts`: con Tab, misma posición que con las flechas (solo con portada fija,
+    fuera de la TV). Chips de Vos/Historial con lugar para el anillo. "Sí, sacar" de Ajustes → Casa como botón.
+  - Asistente: `houseSynced` ya no cuenta el error; estado `'error'` = `unknown` (no se abre ni marca nada).
+  - Decisiones que quedan: póster borroso en la TV, fundido de pestañas, fila pegada a la portada en PC y fuentes en
+    dos columnas solo en pelis **se quedan como están**; "Porque viste" en la TV sí; perfiles como mucho 4.
+- **Plan v0.28.0 (títulos en español, decidido por el usuario; reemplaza la nota de la v0.8)**: nombre de pelis y
+  series en español latino (traducción de TMDB, como Netflix/Disney+ AR) en todos lados, con "Título original: …" en
+  la ficha; **logos y títulos de episodios en idioma original**; Buscar encuentra por los dos nombres. Relevamiento en
+  el chat de la sesión: `findByImdb` con `language`, caché propia `lib/localTitles.ts` (IndexedDB aparte), pedir solo
+  lo visible con un IntersectionObserver compartido, guardar el nombre original y traducir al mostrar, `/search/multi`
+  en Buscar, `PauseCast` con el título del episodio original. En la ficha con logo: logo original + nombre en español
+  debajo (mostrar vista previa antes de mergear).
 
 - **Decisiones para la v0.17 (reemplazan el reparto del plan de abajo)**: addons y TorBox **iguales para todas las
   casas**, solo los cambia el admin (opción A). Ajustes generales (subtítulos, idiomas, autoplay, saltar intro, sin

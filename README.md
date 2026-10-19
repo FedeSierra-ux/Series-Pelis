@@ -7,8 +7,8 @@ y un **historial** de todo lo que viste. Funciona en la PC, el celular y el nave
 
 ## Qué hace (v0.10.0)
 
-- **Más cómoda y más fácil de operar (v0.10)**: controles del sistema, velocidad y ventana flotante en el
-  reproductor, calidad según la conexión, atajos de teclado con ayuda (`?`) y guía del control remoto en la TV,
+- **Más cómoda y más fácil de operar (v0.10)**: controles del sistema y ventana flotante en el
+  reproductor (desde la v0.27.1 sin cambio de velocidad: siempre 1×), atajos de teclado con ayuda (`?`) y guía del control remoto en la TV,
   informes de errores opt-in (sin URLs ni keys) para que el dueño pueda ayudar a distancia, Ajustes con índice
   lateral y cabeceras de seguridad.
 - **Más sólida en la TV (v0.9)**: texto más grande a tres metros, el foco se centra y se recuerda al volver,

@@ -1,5 +1,28 @@
 # Changelog
 
+## [0.27.1] - 2026-10-19
+
+### Cambiado
+- **Fuentes**: la recomendada va siempre primera (su addon arriba de todo). Si un addon lento trae algo mejor, la
+  recomendación cambia y la lista se reacomoda.
+- Idiomas de las fuentes: el audio de España dice **"España"** (antes "Castellano") y una fuente con varios
+  idiomas que trae latino dice **"Latino"**.
+- Buscar: en "Mejor resultado", con empate gana el título y no la persona.
+- **Top 10** con el número más chico (70 % del póster), igual en Inicio, Películas y Series, en todas las pantallas.
+- Sin la etiqueta "Top 10" sobre los pósters de las filas de Inicio, Películas/Series y la grilla.
+- **Halo solo en los logos oscuros** (también en la ficha, donde antes no había): los claros van sin halo.
+- Reproductor: sin botón ni teclas de velocidad (siempre 1×). En el celular la barra va siempre en una fila: el
+  temporizador se ve como un globito sobre la luna y, por debajo de 360 px, pasa a "Más opciones" (⚙).
+- Cartelito al pasar el mouse en ← (volver) y en Bloquear.
+- Celular apaisado: el subtítulo sube por encima de "Saltar" y de las tarjetas de la esquina, como en vertical.
+- Asistente inicial: si la primera sincronización da error, no se abre (como cuando tarda más de 10 s).
+
+### Arreglado
+- Películas y Series: moviéndose con Tab, el título de la fila enfocada ya no queda tapado por la portada.
+- Los esqueletos de los pósters ya no hacen saltar la fila cuando cargan.
+- Vos e Historial en el celular: el anillo de foco de los chips ya no se corta.
+- Ajustes → Casa: "Sí, sacar" mantiene el aspecto de botón y en el celular "No" no baja a otro renglón.
+
 ## [0.27.0] - 2026-10-19
 
 ### Agregado
