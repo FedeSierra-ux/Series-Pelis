@@ -103,7 +103,7 @@ describe('pickTorrentServer', () => {
     expect(pickTorrentServer({ ...base, engine: undefined, pending: true })).toEqual({ url: '', missing: TORRENT_LOADING })
     expect(pickTorrentServer({ ...base, pending: true })).toEqual({ url: ENGINE, engine: true })
     expect(TORRENT_NEEDS_PLAYER).toBe('Torrent: activá el reproductor de Android (Ajustes → Reproductor) o usá un addon con debrid')
-    expect(TORRENT_NEEDS_PC).toBe('Torrent: abrí Stremio en la PC (servidor local) o usá un addon con debrid')
+    expect(TORRENT_NEEDS_PC).toBe('Torrent sin debrid: el navegador no lo puede abrir. Elegí una fuente de TorBox (debrid)')
   })
 
   it('v0.29: en la PC, Stremio Service si se encontró; si no, el aviso', () => {

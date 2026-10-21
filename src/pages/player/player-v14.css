@@ -857,3 +857,9 @@ html[data-tv] .player-title span {
 .player-prepare-box .btn {
   margin-top: 12px;
 }
+
+/* v0.30: "TorBox lo está bajando…" (navegador sin servidor de torrents), misma caja que la de arriba. */
+.player-prepare-box .player-prepare-note {
+  max-width: 36ch;
+  line-height: 1.45;
+}

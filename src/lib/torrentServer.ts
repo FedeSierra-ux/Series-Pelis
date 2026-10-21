@@ -21,9 +21,13 @@ export interface TorrentServer {
 }
 
 export const TORRENT_NEEDS_PLAYER = 'Torrent: activá el reproductor de Android (Ajustes → Reproductor) o usá un addon con debrid'
-export const TORRENT_NEEDS_PC = 'Torrent: abrí Stremio en la PC (servidor local) o usá un addon con debrid'
-/** En la PC sin Stremio Service (v0.29): arriba de la lista va el aviso con la descarga. */
-export const TORRENT_NEEDS_SERVICE = 'Torrent: necesita Stremio Service abierto en esta compu (ver el aviso de arriba) o un addon con debrid'
+/**
+ * En el navegador (v0.30): un torrent suelto no se puede abrir. Si el mismo está en el Torrentio con TorBox, la
+ * lista lo reproduce por ahí (ver `debridTwinOf`); este texto queda para los que no.
+ */
+export const TORRENT_NEEDS_PC = 'Torrent sin debrid: el navegador no lo puede abrir. Elegí una fuente de TorBox (debrid)'
+/** En la PC sin servidor de torrents (v0.29; arriba de la lista puede ir un aviso). */
+export const TORRENT_NEEDS_SERVICE = 'Torrent sin debrid: el navegador no lo puede abrir. Elegí una fuente de TorBox (debrid)'
 export const TORRENT_NEEDS_UPDATE = 'Torrent: actualizá la app de Android para reproducirlo sin debrid, o usá un addon con debrid'
 export const TORRENT_LOADING = 'Torrent: el motor de la app todavía está arrancando; esperá unos segundos o usá un addon con debrid'
 

@@ -11,7 +11,7 @@ import { langLabel } from '../lib/i18n'
 import { useLocalTitle } from '../lib/localTitles'
 import { desktopTorrentBase } from '../lib/desktop'
 import { isNativeApp } from '../lib/native'
-import { needsNativePlayer } from '../lib/torrentServer'
+import { needsNativePlayer, torrentServer } from '../lib/torrentServer'
 import { serverPlan, STREMIO_SERVER, useLocalStremio } from '../lib/stremioServer'
 import { nativePlayerAvailable, probeNativePlayer } from '../lib/nativePlayer'
 import { findNextStream, nextEpisodeSeason, prefetchNextStreams } from '../lib/nextEpisode'
@@ -37,7 +37,7 @@ import { useSubtitles } from './player/useSubtitles'
 import { launchUrl } from './player/externalLaunch'
 import { NativePlayerView } from './player/NativePlayer'
 import { EngineError } from './player/EngineError'
-import { DebridDownload, DebridError } from './player/DebridSwitch'
+import { DEBRID_READY_NOTE, DebridDownload, DebridError } from './player/DebridSwitch'
 import { StremioPrepare } from './player/StremioPrepare'
 import { debridLinkOf, isDebridDownload, looksLikeStatusVideo } from '../lib/debrid'
 import { MIN_HISTORY_EPISODE_S, MIN_HISTORY_S, NEXT_FALLBACK_S, readAutoCount, writeAutoCount } from './player/autoNext'
@@ -177,13 +177,21 @@ function PlayerChoice({ state, resume }: { state: PlayState; resume?: Resume }) 
   if (debrid && debridFail) {
     // Reintentar el mismo link: sin volver a pasar por el torrent (para eso está el otro botón).
     const retryDebrid = () => {
-      setPlainDebrid(true)
+      // v0.30: sin servidor de torrents, lo que TorBox todavía no tiene vuelve a la espera ("TorBox lo está bajando…").
+      setPlainDebrid(!(isDebridDownload(state.stream) && !torrentServer().url))
       setRetry({ ...resume, at: debridFail.at })
       setDebridFail(undefined)
     }
     return <DebridError state={state} at={debridFail.at} onRetry={retryDebrid} />
   }
-  if (debrid && !plainDebrid && isDebridDownload(state.stream)) return <DebridDownload state={state} resume={resume} onPlain={() => setPlainDebrid(true)} />
+  if (debrid && !plainDebrid && isDebridDownload(state.stream)) {
+    // v0.30: la espera terminó (TorBox ya lo tiene): el mismo link, desde donde iba, con el aviso.
+    const debridReady = () => {
+      setRetry({ ...resume, at: resume?.at ?? 0, note: DEBRID_READY_NOTE })
+      setPlainDebrid(true)
+    }
+    return <DebridDownload state={state} resume={resume} onPlain={() => setPlainDebrid(true)} onReady={debridReady} />
+  }
   const onDebridFail = debrid ? (at: number) => setDebridFail({ at }) : undefined
   // Torrent del motor de la app (http a 127.0.0.1): el reproductor de la web no lo puede abrir. Si falla el
   // nativo no se le pasa; se muestra el error de Android y se ofrece otra fuente.
@@ -238,7 +246,7 @@ function PlayerChoice({ state, resume }: { state: PlayState; resume?: Resume }) 
   return (
     <PlayerView
       state={state}
-      resume={fallback ?? resume}
+      resume={fallback ?? retry ?? resume}
       notice={fallback ? 'El reproductor de Android no pudo con este video: sigue el de la web' : undefined}
       onDebridFail={onDebridFail}
       media={media}
