@@ -61,13 +61,8 @@ jobs:
           fi
 
       - name: Pruebas
-        run: |
-          node --test shell.test.js
-          if find engine -name '*.test.*' 2>/dev/null | grep -q .; then
-            npm test
-          else
-            echo "Sin pruebas del motor todavía."
-          fi
+        # La ventana (shell.test.js) y el motor de torrents (engine/*.test.js).
+        run: npm test
 
       - name: Instalador
         env:

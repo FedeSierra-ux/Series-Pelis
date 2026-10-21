@@ -1,0 +1,7 @@
+{
+  "name": "utp-native",
+  "version": "2.999.0",
+  "private": true,
+  "description": "Reemplazo vacío (Flix): sin uTP, webtorrent usa solo TCP (UTP_SUPPORT = false).",
+  "main": "index.js"
+}

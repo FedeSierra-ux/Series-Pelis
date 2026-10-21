@@ -1,0 +1,7 @@
+{
+  "name": "fs-native-extensions",
+  "version": "1.999.0",
+  "private": true,
+  "description": "Reemplazo (Flix) del módulo nativo: falla al cargarse y random-access-file sigue sin él.",
+  "main": "index.js"
+}
