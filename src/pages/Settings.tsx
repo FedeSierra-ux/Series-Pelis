@@ -35,6 +35,7 @@ import { SettingsBlock, SettingsIndex, WIDE_QUERY, goToSection, useActiveSection
 import { importErrorText } from '../lib/errors'
 import { isNativeApp } from '../lib/native'
 import { useTorrentEngine } from '../lib/torrentServer'
+import { ensureLocalStremio, STREMIO_SERVICE_URL, useLocalStremio } from '../lib/stremioServer'
 import './settings/settings-layout.css'
 
 const DEFAULT_SERVER = 'http://127.0.0.1:11470'
@@ -177,6 +178,8 @@ function PlaybackSection() {
   const [test, setTest] = useState<string>()
   // App de Android con motor de torrents propio (v0.25): el servidor de Stremio pasa a ser opcional.
   const engine = useTorrentEngine()
+  // PC (v0.29): Stremio Service se busca solo al abrir torrents (acá solo se muestra; "Probar" lo busca).
+  const local = useLocalStremio()
 
   const testServer = async () => {
     const server = settings.streamingServerUrl || DEFAULT_SERVER
@@ -185,8 +188,10 @@ function PlaybackSection() {
       // Sin `AbortSignal.timeout`: en las TVs viejas no existe y siempre decía "No responde" (auditoría #9).
       const res = await fetchWithTimeout(`${server.replace(/\/+$/, '')}/settings`, { timeoutMs: 4000 })
       setTest(res.ok ? '✓ Conectado al servidor de Stremio' : `Respondió ${res.status}`)
-      // Con el motor de la app no se guarda solo: una dirección puesta le ganaría al motor.
-      if (res.ok && !settings.streamingServerUrl && !engine) settingsStore.set((s) => ({ ...s, streamingServerUrl: server }))
+      // Con el motor de la app no se guarda solo: una dirección puesta le ganaría al motor. En la PC tampoco: Stremio
+      // Service se encuentra solo (v0.29).
+      if (res.ok && !settings.streamingServerUrl && !engine && local === 'off') settingsStore.set((s) => ({ ...s, streamingServerUrl: server }))
+      if (res.ok && local !== 'off') void ensureLocalStremio(true)
     } catch {
       setTest('No responde. ¿Está Stremio abierto en esta PC?')
     }
@@ -213,6 +218,13 @@ function PlaybackSection() {
           En la app de Android los torrents se reproducen solos con el motor integrado; este campo es opcional. Si ponés una
           dirección, se usa esa en vez del motor.
           {!settings.nativePlayer && ' El motor necesita el reproductor de Android (Ajustes → Reproductor).'}
+        </p>
+      ) : local !== 'off' ? (
+        <p className="muted">
+          Con <a href={STREMIO_SERVICE_URL} target="_blank" rel="noreferrer">Stremio Service</a> (o Stremio) abierto en
+          esta compu, los torrents sin debrid se reproducen solos en el navegador, y lo que el navegador no puede (MKV,
+          x265, AC3) se convierte. {local === 'found' ? '✓ Encontrado en esta compu.' : local === 'checking' ? 'Buscando…' : local === 'missing' ? 'Ahora no está abierto.' : ''}{' '}
+          Este campo es solo para usar otro servidor.
         </p>
       ) : (
         <p className="muted">

@@ -373,3 +373,28 @@ html[data-tv] .detail-local-name {
 html[data-tv] .detail-original {
   font-size: 1.05rem;
 }
+
+/* v0.29: aviso de Stremio Service (PC sin servidor de torrents), arriba de las fuentes. */
+.stremio-notice {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px 20px;
+  margin-bottom: 14px;
+  padding: 14px 16px;
+  border-radius: var(--radius);
+  background: rgba(196, 176, 255, 0.12);
+  border: 1px solid rgba(196, 176, 255, 0.5);
+}
+.stremio-notice-text {
+  display: grid;
+  gap: 4px;
+  flex: 1 1 320px;
+  min-width: 0;
+}
+.stremio-notice-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}

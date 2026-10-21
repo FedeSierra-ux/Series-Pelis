@@ -1,5 +1,19 @@
 # Changelog
 
+## [0.29.0] - 2026-10-21
+
+### Agregado
+- **Torrents sin debrid en la PC**, como Stremio Web: con **Stremio Service** abierto en la compu, Flix lo encuentra
+  solo (`127.0.0.1:11470`) y los torrents de Torrentio se reproducen en el navegador.
+- Pantalla **"Conectando con el torrent…"** con cuánta gente lo comparte y a qué velocidad baja.
+- **Conversión automática** (HLS a través del servicio) de lo que el navegador no puede abrir: MKV con x265, audio
+  AC3/E-AC3 o 5.1, varios audios. También para los links directos marcados como "no aptos para la web".
+- Aviso en las fuentes cuando no se encuentra el servicio, con **Descargar Stremio Service** y **Probar de nuevo**
+  (se vuelve a buscar solo al volver a la pestaña). El estado se ve en Ajustes → Reproductor.
+
+### Cambiado
+- Si Stremio Service no está abierto al darle a reproducir un torrent, el cartel ofrece descargarlo o probar de nuevo.
+
 ## [0.28.0] - 2026-10-19
 
 ### Agregado

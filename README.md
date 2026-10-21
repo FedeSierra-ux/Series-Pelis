@@ -43,7 +43,8 @@ y un **historial** de todo lo que viste. Funciona en la PC, el celular y el nave
 - **TorBox para todas las casas (v0.27)**: con Torrentio configurado con TorBox, lo que TorBox no tiene arranca por
   torrent mientras TorBox lo baja, y si falla aparece "Reproducir por torrent" (ver "TorBox para todas las casas").
 - **Torrents sin debrid (v0.25)**: la app de Android (Android 9+) trae su propio motor de torrents, como Stremio. En la
-  PC, con Stremio abierto (servidor local).
+  PC (desde la v0.29), con **Stremio Service** abierto: Flix lo encuentra solo y convierte lo que el navegador no puede
+  abrir (MKV con x265, audio AC3/5.1), como Stremio Web (ver "Torrents en la PC").
 - **Rediseño (v0.26)**: Inicio, Películas/Series, Buscar, ficha, reproductor y Vos con los ajustes de la auditoría visual
   (filas alineadas bajo la portada, fuentes con idioma y tamaño, episodios vistos atenuados, subtítulo que no tapa "Saltar" ni la tarjeta del siguiente episodio en el celular, desde la v0.26.1).
 - **Ficha de las series** con pestaña **Detalles**: reparto, creación, países y dónde verla en Argentina.
@@ -83,6 +84,22 @@ npm run preview   # probar el build en http://localhost:4173
 
 En **Ajustes → Addons de Stremio** pegá la URL de cada addon que uses (termina en `/manifest.json`; también sirve el
 enlace `stremio://`).
+
+### Torrents en la PC (Stremio Service)
+
+El navegador no puede bajar torrents por su cuenta: hace falta un programa en la compu que lo haga, igual que con
+Stremio Web.
+
+1. Instalá [Stremio Service](https://www.stremio.com/download-service) (gratis, de Stremio; Windows, Mac o Linux) y
+   dejalo abierto. No hace falta configurar nada.
+2. Entrá a Flix desde Chrome, Edge o Firefox. Al abrir una ficha con torrents, Flix busca el servicio en
+   `http://127.0.0.1:11470`. Chrome puede preguntar una vez si dejás que el sitio se conecte con los aparatos de tu
+   red: tocá **Permitir**.
+3. Si no lo encuentra, las fuentes muestran un aviso con **Descargar Stremio Service** y **Probar de nuevo**.
+
+Al reproducir, Flix crea el torrent con sus trackers, muestra cuánta gente lo comparte y, si el navegador no puede con
+el formato, pide al servicio la versión convertida (HLS). El servicio convierte un video a la vez. En Ajustes →
+Reproductor → "Servidor de streaming" se puede poner otro servidor a mano.
 
 ### TorBox para todas las casas (Torrentio)
 
