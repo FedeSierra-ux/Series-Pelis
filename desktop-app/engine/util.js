@@ -28,7 +28,8 @@ export function sameToken(given, token) {
  *   | { kind: 'input', id: string }
  *   | { kind: 'master', id: string }
  *   | { kind: 'playlist', id: string, track: string }
- *   | { kind: 'segment', id: string, track: string, n: number }} Route
+ *   | { kind: 'segment', id: string, track: string, n: number }
+ *   | { kind: 'subtitle', index: number, n: number }} Route
  */
 
 const HASH_RE = /^[0-9a-fA-F]{40}$/
@@ -65,6 +66,10 @@ export function parseRoute(pathname, token) {
       if (m) return { kind: 'segment', id, track: rest[2], n: Number(m[1]) }
     }
     return null
+  }
+  if (rest[0] === 'subtitles' && rest.length === 3 && /^(0|[1-9]\d{0,2})$/.test(rest[1])) {
+    const m = /^(0|[1-9]\d{0,4})\.vtt$/.exec(rest[2])
+    return m ? { kind: 'subtitle', index: Number(rest[1]), n: Number(m[1]) } : null
   }
   if (rest[0] === '_in' && rest.length === 2 && ID_RE.test(rest[1])) return { kind: 'input', id: rest[1] }
   if (rest.length === 2 && HASH_RE.test(rest[0])) {

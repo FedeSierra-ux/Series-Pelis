@@ -26,6 +26,8 @@ export interface SubOption extends Subtitle {
   file?: boolean
   /** Español latino: le gana a otro español del mismo puesto. */
   latino?: boolean
+  /** v0.30.1: pista de texto del propio video (índice de ffprobe), en la app de Windows. */
+  embedded?: number
 }
 
 /** Códigos de español latino que usan los addons (OpenSubtitles `spl`/`ea`, BCP 47 `es-419`). */
@@ -37,6 +39,12 @@ export function isLatino(o: { lang?: string; latino?: boolean; label?: string })
 
 /** Medio puesto menos para el latino: entre dos subtítulos en español del mismo puesto, gana el latino. */
 const latinoBonus = (o: SubOption) => (isLatino(o) ? 0.5 : 0)
+/**
+ * v0.30.1: un cuarto de puesto menos para la pista del propio video (viene sincronizada). Nunca le gana al latino:
+ * un español del video pierde contra un latino online.
+ */
+const videoBonus = (o: SubOption) => (o.embedded !== undefined ? 0.25 : 0)
+const bonus = (o: SubOption) => latinoBonus(o) + videoBonus(o)
 
 const SDH_RE = /(^|[^a-z0-9])(sdh|cc|hearing[ ._-]?impaired|sordos)([^a-z0-9]|$)/i
 /** "HI" solo en nombres: en una URL puede ser el código del hindi. */
@@ -83,9 +91,9 @@ export function autoSubtitle(options: SubOption[], ctx: AutoSubContext): { optio
   const { pref } = ctx
 
   if (pref?.subLang && !pref.subOff) {
-    const same = usable.filter((o) => lang3(o.lang) === pref.subLang).sort((a, b) => latinoBonus(b) - latinoBonus(a))
+    const same = usable.filter((o) => lang3(o.lang) === pref.subLang).sort((a, b) => bonus(b) - bonus(a))
     const pick = same.find((o) => !!o.forced === !!pref.subForced) ?? same[0]
-    if (pick) return { option: pick, rank: -latinoBonus(pick) }
+    if (pick) return { option: pick, rank: -bonus(pick) }
   }
 
   if (ctx.autoSubtitles && !pref?.subOff) {
@@ -94,7 +102,7 @@ export function autoSubtitle(options: SubOption[], ctx: AutoSubContext): { optio
       const i = langRank(o.lang, ctx.subtitleLangs)
       if (i === 99) continue
       // Entre dos del mismo idioma, el completo antes que el forzado.
-      const rank = 1 + i * 2 + (o.forced ? 1 : 0) - latinoBonus(o)
+      const rank = 1 + i * 2 + (o.forced ? 1 : 0) - bonus(o)
       if (!best || rank < best.rank) best = { option: o, rank }
     }
     if (best) return best
@@ -102,8 +110,9 @@ export function autoSubtitle(options: SubOption[], ctx: AutoSubContext): { optio
 
   const audio = ctx.audioLang && lang3(ctx.audioLang)
   if (audio && langRank(audio, audioPrefs(pref, ctx.audioLangs)) < 99) {
-    // Los del propio stream (HLS) primero: vienen sincronizados con el video.
-    const forced = usable.filter((o) => o.forced && lang3(o.lang) === audio).sort((x, y) => Number(y.hls !== undefined) - Number(x.hls !== undefined))[0]
+    // Los del propio stream (HLS o del video) primero: vienen sincronizados con el video.
+    const synced = (o: SubOption) => Number(o.hls !== undefined || o.embedded !== undefined)
+    const forced = usable.filter((o) => o.forced && lang3(o.lang) === audio).sort((x, y) => synced(y) - synced(x))[0]
     if (forced) return { option: forced, rank: FORCED_RANK }
   }
   return undefined

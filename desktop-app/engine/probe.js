@@ -8,7 +8,7 @@ const PROBE_TIMEOUT_MS = 40_000
 /**
  * @typedef {{
  *   index: number, track: 'video' | 'audio' | 'subtitle', codec: string | null, channels?: number,
- *   language: string | null, title: string | null, default: boolean,
+ *   language: string | null, title: string | null, default: boolean, forced?: boolean, sdh?: boolean,
  *   width?: number, height?: number, pixFmt?: string, bitRate?: number, startTime?: number, colorTransfer?: string,
  * }} ProbeStream
  * @typedef {{
@@ -42,6 +42,10 @@ export function normalizeProbe(raw) {
       default: !!s.disposition?.default,
     }
     if (type === 'audio') out.channels = Number(s.channels) || undefined
+    if (type === 'subtitle') {
+      if (s.disposition?.forced) out.forced = true
+      if (s.disposition?.hearing_impaired) out.sdh = true
+    }
     if (type === 'video') {
       out.width = Number(s.width) || undefined
       out.height = Number(s.height) || undefined
@@ -65,17 +69,23 @@ export function normalizeProbe(raw) {
   }
 }
 
-/** Lo que devuelve la ruta: lo de Stremio (`format.name/duration`, `streams[].track/codec/channels/language`) y más. */
+/**
+ * Lo que devuelve la ruta: lo de Stremio (`format.name/duration`, `streams[].track/codec/channels/language`) y más.
+ * `index` es el de ffprobe: con él la web pide los subtítulos del video (`/subtitles/<index>/<n>.vtt`).
+ */
 export function probeResponse(/** @type {ProbeResult} */ p) {
   return {
     format: { name: p.format.name, duration: p.format.duration },
     streams: p.streams.map((s) => ({
+      index: s.index,
       track: s.track,
       codec: s.codec,
       channels: s.channels,
       language: s.language,
       title: s.title,
       default: s.default,
+      forced: s.forced,
+      sdh: s.sdh,
       width: s.width,
       height: s.height,
     })),

@@ -27,7 +27,13 @@ test('rutas', () => {
   assert.deepEqual(parseRoute(`/${T}/hlsv2/abc/audio1.m3u8`, T), { kind: 'playlist', id: 'abc', track: 'audio1' })
   assert.deepEqual(parseRoute(`/${T}/hlsv2/abc/v/7.ts`, T), { kind: 'segment', id: 'abc', track: 'v', n: 7 })
   assert.deepEqual(parseRoute(`/${T}/hlsv2/abc/a0/0.ts`, T), { kind: 'segment', id: 'abc', track: 'a0', n: 0 })
+  assert.deepEqual(parseRoute(`/${T}/subtitles/3/0.vtt`, T), { kind: 'subtitle', index: 3, n: 0 })
+  assert.deepEqual(parseRoute(`/${T}/subtitles/12/41.vtt`, T), { kind: 'subtitle', index: 12, n: 41 })
   // Token mal, rutas raras, índices inválidos.
+  assert.equal(parseRoute(`/${T}/subtitles/03/0.vtt`, T), null)
+  assert.equal(parseRoute(`/${T}/subtitles/3/0.srt`, T), null)
+  assert.equal(parseRoute(`/${T}/subtitles/-1/0.vtt`, T), null)
+  assert.equal(parseRoute(`/${T}/subtitles/3`, T), null)
   assert.equal(parseRoute(`/${'b'.repeat(32)}/${H}/create`, T), null)
   assert.equal(parseRoute(`/${T.slice(1)}/${H}/create`, T), null)
   assert.equal(parseRoute(`/${H}/create`, T), null)

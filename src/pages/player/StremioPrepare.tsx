@@ -15,6 +15,7 @@ import {
   type ServerPlan,
 } from '../../lib/stremioServer'
 import { desktopTorrentBase } from '../../lib/desktop'
+import { videoSubOptions, type VideoSubsSource } from '../../lib/embeddedSubs'
 import type { PlayState } from '../Detail'
 import { EngineError } from './EngineError'
 
@@ -53,6 +54,16 @@ function playableUrl(base: string, mediaUrl: string, info: MediaProbe): string {
 }
 
 /**
+ * v0.30.1: con el motor de la app de Windows, las pistas de texto del video van al menú de subtítulos (el motor
+ * las saca por tramos). Stremio Service no tiene esa ruta.
+ */
+function videoSubsFor(base: string, mediaUrl: string, info: MediaProbe): VideoSubsSource | undefined {
+  if (base !== desktopTorrentBase()) return undefined
+  const source = { base, mediaUrl, probe: info }
+  return videoSubOptions(info, (c) => c).length ? source : undefined
+}
+
+/**
  * `onReady`: la URL que abre el reproductor de la web (directa o HLS). `onPlain`: abrir la de siempre (un link
  * directo cuando el servidor no contestó). `onRetry`: volver a empezar (lo remonta el que lo usa).
  */
@@ -67,7 +78,7 @@ export function StremioPrepare({
   state: PlayState
   plan: ServerPlan
   at?: number
-  onReady: (url: string) => void
+  onReady: (url: string, videoSubs?: VideoSubsSource) => void
   onPlain: () => void
   onRetry: () => void
 }) {
@@ -88,7 +99,7 @@ export function StremioPrepare({
     if (plan.kind === 'direct') {
       probe(plan.base, plan.mediaUrl, DIRECT_PROBE_TIMEOUT_MS)
         .then((info) => {
-          if (!ctrl.signal.aborted) onReady(playableUrl(plan.base, plan.mediaUrl, info))
+          if (!ctrl.signal.aborted) onReady(playableUrl(plan.base, plan.mediaUrl, info), videoSubsFor(plan.base, plan.mediaUrl, info))
         })
         .catch((err) => {
           if (ctrl.signal.aborted) return
@@ -140,12 +151,15 @@ export function StremioPrepare({
       setPhase('probing')
       const mediaUrl = `${plan.base}/${plan.hash}/${fileIdx ?? -1}`
       let url = mediaUrl
+      let videoSubs: VideoSubsSource | undefined
       try {
-        url = playableUrl(plan.base, mediaUrl, await probe(plan.base, mediaUrl, PROBE_TIMEOUT_MS))
+        const info = await probe(plan.base, mediaUrl, PROBE_TIMEOUT_MS)
+        url = playableUrl(plan.base, mediaUrl, info)
+        videoSubs = videoSubsFor(plan.base, mediaUrl, info)
       } catch {
         // Como Stremio Web: sin respuesta del formato se intenta directo (el reproductor avisa si no puede).
       }
-      if (!ctrl.signal.aborted) onReady(url)
+      if (!ctrl.signal.aborted) onReady(url, videoSubs)
     }
     void run()
     return () => {

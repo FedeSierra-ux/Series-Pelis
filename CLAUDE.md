@@ -555,7 +555,18 @@ npm run preview    # sirve dist/ en http://localhost:4173
     apunta `latest.yml` al Release con etiqueta (para el `.blockmap`). **Subir juntas** las versiones de la raíz,
     `tv-app` y `desktop-app`.
   - Sin probar en un Windows real ni con una cuenta de TorBox. El firewall de Windows pregunta en el primer torrent.
-    Pendiente: subtítulos embebidos, búsqueda por voz en la app (no anda), ffprobe-static trae la 4.0.2.
+    Pendiente: búsqueda por voz en la app (no anda), ffprobe-static trae la 4.0.2.
+- v0.30.1 hecha (rama `ccr-4e8d431d-4nlzi9`): **subtítulos de texto del video en la app de Windows** (opción 1 del
+  usuario; PGS/VobSub no). Motor: `desktop-app/engine/subtitles.js` (`GET /subtitles/<index>/<n>.vtt?mediaURL=`,
+  tramos de `SUB_WINDOW_S = 120` s con `-ss n·W -copyts -i … -to (n+1)·W` y `dropBefore` para el cue repetido al
+  saltar; 2 ffmpeg a la vez, caché `Lru(400)`, 404 si no es de texto) y el probe suma `index`/`title`/`forced`/`sdh`.
+  Web: `lib/embeddedSubs.ts` (`videoSubOptions` → `SubOption.embedded`, etiqueta "… (del video)", `videoSubLang`:
+  título latino → `spl`, España → `spn`; `feedVideoSubs` pide el tramo actual y a `EMBEDDED_AHEAD_S = 30` s el
+  siguiente, y suma `VTTCue` a una pista vacía recién después de su `load`). Solo con el motor de Windows
+  (`videoSubsFor` en `StremioPrepare`: `base === desktopTorrentBase()`), pasa por `onReady(url, videoSubs)` →
+  `PlayerView` → `useSubtitles`. Elección: `videoBonus` 0,25 (nunca le gana al latino, 0,5); los forzados prefieren
+  los sincronizados (HLS o del video). En los tests de ffmpeg las entradas extra van antes de `-t` (si no, lavfi
+  no termina nunca). Sin probar en un Windows real.
 - **Decisiones para la v0.17 (reemplazan el reparto del plan de abajo)**: addons y TorBox **iguales para todas las
   casas**, solo los cambia el admin (opción A). Ajustes generales (subtítulos, idiomas, autoplay, saltar intro, sin
   spoilers, reglas de fuentes) **iguales en toda la casa**; lo físico (modo TV, tamaño de la interfaz, protector,

@@ -34,6 +34,7 @@ import { liftsSubForCorner, NARROW_QUERY, PHONE_LANDSCAPE_QUERY, TINY_BAR_QUERY,
 import { SubtitleMenu } from './player/SubtitleMenu'
 import { useMediaSession, usePictureInPicture, useWakeLock } from './player/useMediaSession'
 import { useSubtitles } from './player/useSubtitles'
+import type { VideoSubsSource } from '../lib/embeddedSubs'
 import { launchUrl } from './player/externalLaunch'
 import { NativePlayerView } from './player/NativePlayer'
 import { EngineError } from './player/EngineError'
@@ -160,6 +161,8 @@ function PlayerChoice({ state, resume }: { state: PlayState; resume?: Resume }) 
   // Un link directo que el navegador quizás no pueda abrir: si se llegó sin pasar por las fuentes (Seguir viendo),
   // todavía no se buscó el servidor; se espera esa búsqueda (3 s como mucho) antes de abrirlo.
   const [media, setMedia] = useState<string>()
+  // v0.30.1: subtítulos de texto del video (solo con el motor de la app de Windows).
+  const [videoSubs, setVideoSubs] = useState<VideoSubsSource>()
   const wantsLocal = media === undefined && !!state.stream.url && !!state.stream.behaviorHints?.notWebReady
   const local = useLocalStremio(wantsLocal)
   const [prepareTry, setPrepareTry] = useState(0)
@@ -237,7 +240,10 @@ function PlayerChoice({ state, resume }: { state: PlayState; resume?: Resume }) 
         state={state}
         plan={plan}
         at={fallback?.at ?? resume?.at}
-        onReady={setMedia}
+        onReady={(url, subs) => {
+          setVideoSubs(subs)
+          setMedia(url)
+        }}
         onPlain={() => setMedia(state.playUrl)}
         onRetry={() => setPrepareTry((n) => n + 1)}
       />
@@ -250,6 +256,7 @@ function PlayerChoice({ state, resume }: { state: PlayState; resume?: Resume }) 
       notice={fallback ? 'El reproductor de Android no pudo con este video: sigue el de la web' : undefined}
       onDebridFail={onDebridFail}
       media={media}
+      videoSubs={videoSubs}
     />
   )
 }
@@ -266,12 +273,14 @@ function PlayerView({
   notice,
   onDebridFail,
   media,
+  videoSubs,
 }: {
   state: PlayState
   resume?: Resume
   notice?: string
   onDebridFail?: (at: number) => void
   media?: string
+  videoSubs?: VideoSubsSource
 }) {
   const navigate = useNavigate()
   const settings = useStore(settingsStore)
@@ -427,6 +436,7 @@ function PlayerView({
     closeMenu: () => setMenu(null),
     controlsClear,
     cueBottom,
+    videoSubs,
   })
   const pip = usePictureInPicture(videoRef)
   // Celular vertical: "Abrir en…", ventana flotante y Ajustar van dentro del ⚙ (el CSS los saca de la barra).

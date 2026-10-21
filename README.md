@@ -226,6 +226,11 @@ sin instalar nada más.
 conocida" → **Más información** → **Ejecutar de todos modos**. Se instala para tu usuario, con acceso en el escritorio
 y en el menú Inicio, y **se actualiza sola** (Ajustes → App de Windows).
 
+**Subtítulos del video** (v0.30.1): los de texto que vienen adentro del archivo (SRT/ASS de un MKV, mov_text de un
+MP4) aparecen en **Subtítulos** como "… (del video)", junto a los online. El motor los saca de a 2 minutos a medida
+que baja el torrent. Si la pista dice "Latino" (o "LatAm", "es-419", "México"), la elección automática la prefiere; la
+de "Castellano"/"España" nunca se elige sola. Los de imagen (PGS, VobSub) no se ofrecen.
+
 **Abrir en VLC / mpv / PotPlayer** (Ajustes → Reproductor → Reproductor externo): la app abre directo el programa
 instalado, también con los torrents. Si no lo encuentra, avisa y deja el enlace copiado.
 

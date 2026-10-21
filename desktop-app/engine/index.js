@@ -11,6 +11,7 @@ import { Readable } from 'node:stream'
 import { Hls } from './hls.js'
 import { checkPublicUrl, openPublic } from './net.js'
 import { Prober, probeResponse } from './probe.js'
+import { Subtitles } from './subtitles.js'
 import { Torrents } from './torrents.js'
 import { Lru, newToken, originAllowed, parseRange, parseRoute, RM_DIR } from './util.js'
 
@@ -89,6 +90,7 @@ export async function startEngine(opts) {
   }
 
   const hls = new Hls({ dir: path.join(cacheDir, '_hls'), ffmpegPath: opts.ffmpegPath, prober, log, inputFor })
+  const subtitles = new Subtitles({ ffmpegPath: opts.ffmpegPath, prober, log })
 
   server.on('request', (req, res) => {
     handle(req, res).catch((err) => {
@@ -157,6 +159,15 @@ export async function startEngine(opts) {
           throw Object.assign(err, { status: 502 })
         })
         return sendJson(res, 200, probeResponse(p))
+      }
+      case 'subtitle': {
+        // v0.30.1: subtítulos de texto del video, por tramos (ver `subtitles.js`).
+        const mediaURL = u.searchParams.get('mediaURL')
+        if (!mediaURL) return sendJson(res, 400, { error: 'Falta mediaURL' })
+        const vtt = await subtitles.window(inputFor(mediaURL), route.index, route.n)
+        res.writeHead(200, { 'Content-Type': MIME.vtt, 'Content-Length': String(Buffer.byteLength(vtt)) })
+        res.end(vtt)
+        return
       }
       case 'master': {
         if (!u.searchParams.get('mediaURL')) return sendJson(res, 400, { error: 'Falta mediaURL' })
@@ -324,6 +335,7 @@ export async function startEngine(opts) {
   const close = () => {
     closing ??= (async () => {
       hls.close()
+      subtitles.close()
       prober.close()
       server.close()
       for (const s of sockets) s.destroy()
