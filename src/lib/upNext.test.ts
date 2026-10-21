@@ -11,6 +11,7 @@ vi.mock('idb-keyval', () => ({
   clear: async () => undefined,
 }))
 
+import { rememberTitle, resetLocalTitles } from './localTitlesStore'
 import type { WatchEntry } from './store'
 import type { Meta } from './types'
 import { computeUpNext, continueRowItems, type EpisodeItem } from './upNext'
@@ -95,5 +96,15 @@ describe('computeUpNext', () => {
       'ttS:1:2': entry('ttS:1:2', 'ttS', { watched: true, updatedAt: 9 }),
     }
     expect(computeUpNext(followed, new Map([['ttS', meta]]), progress, now).next).toEqual([])
+  })
+
+  it('el nombre de la serie va en español si ya se sabe (v0.28)', () => {
+    rememberTitle('tt77', { id: 77, name: 'La serie', original_name: 'The Show' }, 'tv')
+    const show: Meta = { ...meta, id: 'tt77', name: 'The Show', videos: meta.videos!.map((v) => ({ ...v, id: v.id.replace('ttS', 'tt77') })) }
+    const progress = { 'tt77:1:1': entry('tt77:1:1', 'tt77', { watched: true }) }
+    const { next, calendar } = computeUpNext([{ id: 'tt77', name: 'The Show', lastActivity: 5 }], new Map([['tt77', show]]), progress, now)
+    expect(next[0].seriesName).toBe('La serie')
+    expect(calendar.every((c) => c.seriesName === 'La serie')).toBe(true)
+    resetLocalTitles()
   })
 })

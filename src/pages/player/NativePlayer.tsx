@@ -5,6 +5,7 @@ import { creditsPlan } from '../../lib/credits'
 import { looksLikeStatusVideo } from '../../lib/debrid'
 import { episodeLabel } from '../../lib/format'
 import { useAddons, useTitle } from '../../lib/hooks'
+import { useLocalTitle } from '../../lib/localTitles'
 import { nativePlayer, type NativePlayerEvent } from '../../lib/nativePlayer'
 import { findNextStream, nextEpisodeSeason, prefetchNextStreams } from '../../lib/nextEpisode'
 import { fetchOnlineSubs, streamText } from '../../lib/onlineSubs'
@@ -55,7 +56,9 @@ export function NativePlayerView({
   const { meta, video } = state
   const videoId = video?.id ?? meta.id
   const pref = useStore(trackPrefsStore)[meta.id]
-  useTitle(video ? `${meta.name} ${episodeLabel(video.season, video.episode)}` : meta.name)
+  // v0.28: a Android va el nombre en español (el que se ve); en el progreso se sigue guardando el de Cinemeta.
+  const shownName = useLocalTitle(meta.id, meta.name, { type: meta.type })
+  useTitle(video ? `${shownName} ${episodeLabel(video.season, video.episode)}` : shownName)
 
   /** Android ya cargó este video (hasta entonces los eventos pueden ser del episodio anterior). */
   const [ready, setReady] = useState(false)
@@ -90,7 +93,8 @@ export function NativePlayerView({
     const s = settingsStore.get()
     nativePlayer.open({
       url: state.playUrl,
-      title: meta.name,
+      // `playerUpdate` no cambia el título: va el que se sabe al abrir (casi siempre ya está, de la ficha).
+      title: shownName,
       subtitle: video ? [episodeLabel(video.season, video.episode), video.title ?? video.name].filter(Boolean).join(' · ') : undefined,
       startAt: nativeStartAt(resume?.at, progressStore.get()[videoId]),
       paused: askStill.current || undefined,
@@ -387,5 +391,5 @@ export function NativePlayerView({
   }, [])
 
   // Android dibuja todo encima; atrás queda negro (por si se ve un instante al abrir o cerrar).
-  return <div className="player player-native" aria-label={`Reproduciendo ${meta.name}`} />
+  return <div className="player player-native" aria-label={`Reproduciendo ${shownName}`} />
 }

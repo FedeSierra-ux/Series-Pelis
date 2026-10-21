@@ -5,6 +5,7 @@ import { PosterCard } from '../components/PosterCard'
 import { Row } from '../components/Row'
 import { Theme2Icon, type Theme2IconName } from '../components/Theme2Icons'
 import { useTitle } from '../lib/hooks'
+import { localTitle } from '../lib/localTitles'
 import { formatStars, isHighStars } from '../lib/stars'
 import { continueWatching, hideFromContinue, progressStore, ratingsStore, useStore } from '../lib/store'
 import { HistoryGoal } from './goals/GoalLink'
@@ -61,7 +62,7 @@ export function Me() {
       {resume.length > 0 && (
         <Row title="Seguir viendo">
           {resume.map((e) => (
-            <ContinueCard key={e.videoId} entry={e} to={detailLink(e)} onRemove={() => hide(e.metaId, e.name)} />
+            <ContinueCard key={e.videoId} entry={e} to={detailLink(e)} onRemove={() => hide(e.metaId, localTitle(e.metaId, e.name))} />
           ))}
         </Row>
       )}

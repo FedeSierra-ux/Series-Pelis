@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { browsableCatalogs, getCatalog } from '../lib/addons'
+import { useLocalTitle } from '../lib/localTitles'
 import { displayYear } from '../lib/yearLabel'
 import { IdleTimer, SCREENSAVER_CLOSED } from '../lib/idle'
 import { isOnline } from '../lib/online'
@@ -72,6 +73,17 @@ function Clock() {
   )
 }
 
+/** Nombre del fondo que se ve: en español si se sabe (v0.28; se pide de a uno, cada 12 s como mucho). */
+function SlideTitle({ slide }: { slide: Slide }) {
+  const name = useLocalTitle(slide.id, slide.name)
+  return (
+    <div className="ss-title">
+      <strong>{name}</strong>
+      {slide.year && <span>{displayYear(slide)}</span>}
+    </div>
+  )
+}
+
 function Slideshow() {
   const [slides, setSlides] = useState<Slide[]>([])
   const [shown, setShown] = useState<{ cur?: Slide; prev?: Slide }>({})
@@ -117,12 +129,7 @@ function Slideshow() {
       {shown.prev && <img key={`p-${shown.prev.id}`} className="ss-bg ss-prev" src={shown.prev.image} alt="" />}
       {shown.cur && <img key={`c-${shown.cur.id}`} className="ss-bg ss-cur" src={shown.cur.image} alt="" />}
       <div className="ss-shade" />
-      {shown.cur && (
-        <div key={`t-${shown.cur.id}`} className="ss-title">
-          <strong>{shown.cur.name}</strong>
-          {shown.cur.year && <span>{displayYear(shown.cur)}</span>}
-        </div>
-      )}
+      {shown.cur && <SlideTitle key={`t-${shown.cur.id}`} slide={shown.cur} />}
     </>
   )
 }

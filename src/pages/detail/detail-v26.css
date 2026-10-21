@@ -323,3 +323,53 @@ html[data-tv] .sx-empty .sx-empty-thumb {
   line-height: 1.2;
   text-align: center;
 }
+
+/* ---------- v0.28: nombre en español debajo del logo y "Título original" ---------- */
+
+/* El nombre va pegado al logo (con el `gap` de 12 px de .detail-info quedaba suelto). */
+.detail-titles {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-width: 0;
+}
+.detail-local-name {
+  margin: 0;
+  max-width: 40ch;
+  font-family: var(--font-display);
+  font-size: clamp(1.05rem, 1.5vw, 1.35rem);
+  font-weight: 700;
+  line-height: 1.25;
+  color: var(--text);
+  text-shadow: 0 1px 8px rgba(0, 0, 0, 0.55);
+}
+.detail-original {
+  margin: 0;
+  max-width: 62ch;
+  font-size: 0.9rem;
+  line-height: 1.35;
+  color: var(--text-soft, var(--muted));
+  text-shadow: 0 1px 6px rgba(0, 0, 0, 0.5);
+}
+.detail-original span {
+  font-weight: 600;
+  color: var(--text);
+}
+@media (max-width: 760px) {
+  .detail-titles {
+    gap: 4px;
+  }
+  .detail-local-name {
+    font-size: 1.05rem;
+  }
+  .detail-original {
+    font-size: 0.85rem;
+  }
+}
+/* En la TV se lee de lejos. */
+html[data-tv] .detail-local-name {
+  font-size: 1.5rem;
+}
+html[data-tv] .detail-original {
+  font-size: 1.05rem;
+}

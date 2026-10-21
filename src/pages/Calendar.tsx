@@ -4,6 +4,8 @@ import { useEpisodeSpoilers } from '../components/Spoiler'
 import { EmptyState } from '../components/EmptyState'
 import { episodeLabel, smallPoster } from '../lib/format'
 import { useTitle } from '../lib/hooks'
+import { useLocalTitle } from '../lib/localTitles'
+import { useNearOnce } from '../lib/titleArt'
 import { episodeLink, useUpNext, type EpisodeItem } from '../lib/upNext'
 
 const DAY = 24 * 60 * 60 * 1000
@@ -36,14 +38,18 @@ function CalendarItem({ it, spoil }: { it: EpisodeItem; spoil?: boolean }) {
   const aired = it.released <= now
   const time = it.hasTime ? new Date(it.released).toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit' }) : undefined
   const img = it.thumbnail ?? smallPoster(it.metaId, it.poster)
+  // Nombre de la serie en español (v0.28), pedido cuando la fila se acerca a la pantalla; los títulos de
+  // episodio siguen en idioma original.
+  const [ref, near] = useNearOnce<HTMLLIElement>(true)
+  const name = useLocalTitle(it.metaId, it.seriesName, { type: 'series', enabled: near })
   return (
-    <li>
+    <li ref={ref}>
       <Link to={episodeLink(it.metaId, it.season, it.videoId)} className="cal-item">
         <div className={`cal-thumb${it.thumbnail ? (spoil ? ' spoiler-blur' : '') : ' is-poster'}`}>
           {img && <img src={img} alt="" loading="lazy" decoding="async" />}
         </div>
         <div className="cal-text">
-          <strong>{it.seriesName}</strong>
+          <strong>{name}</strong>
           <span className="small">
             {episodeLabel(it.season, it.episode)}
             {it.title && <span className="muted"> · {it.title}</span>}

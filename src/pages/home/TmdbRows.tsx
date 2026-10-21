@@ -3,6 +3,7 @@ import { Row } from '../../components/Row'
 import { BECAUSE_ROW_KEY, TRENDING_WEEK_ROW_KEY } from '../../lib/catalogPrefs'
 import { useRowShape } from '../../lib/catalogRows'
 import { useHiddenIds } from '../../lib/ratings'
+import { useLocalTitle } from '../../lib/localTitles'
 import {
   findByImdb,
   getNowPlaying,
@@ -101,6 +102,8 @@ export interface Seed {
 export function BecauseRow({ seed, tmdbKey }: { seed: Seed; tmdbKey: string }) {
   const [ref, visible] = useNearViewport<HTMLDivElement>(false)
   const tmdbType = toTmdbType(seed.type)
+  // "Porque viste" con el nombre en español (v0.28): el `/find` de abajo ya lo trae, así que no suma pedidos.
+  const seedName = useLocalTitle(seed.metaId, seed.name, { type: seed.type, enabled: visible })
   const state = useTmdbQuery(
     tmdbKey && visible ? `${seed.metaId}|${seed.type}|${tmdbKey}` : undefined,
     async () => {
@@ -116,7 +119,7 @@ export function BecauseRow({ seed, tmdbKey }: { seed: Seed; tmdbKey: string }) {
   return (
     <div ref={ref}>
       <Row
-        title={`Porque viste ${seed.name}`}
+        title={`Porque viste ${seedName}`}
         loading={state.loading || !visible}
         error={state.failed ? 'error' : undefined}
         empty={items.length === 0}

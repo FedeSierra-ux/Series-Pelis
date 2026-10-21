@@ -3,6 +3,7 @@ import { PosterCard } from '../../components/PosterCard'
 import { Row } from '../../components/Row'
 import { FORYOU_ROW_KEY } from '../../lib/catalogPrefs'
 import { useRowShape } from '../../lib/catalogRows'
+import { localTitle } from '../../lib/localTitles'
 import { notInterestedStore, ratingsStore, resolveNotInterestedTmdbIds, useHiddenIds } from '../../lib/ratings'
 import {
   applyActors,
@@ -100,7 +101,8 @@ async function loadForYou(): Promise<ForYouItem[]> {
       if (!items.has(key)) items.set(key, { ...item, media_type: type })
       return [{ key, vote: item.vote_average }]
     })
-    lists.push({ seed: x.seed, recs })
+    // El porqué ("Porque viste …") con el nombre en español (v0.28): el `/find` y la ficha de arriba ya lo anotaron.
+    lists.push({ seed: { ...x.seed, name: localTitle(x.seed.metaId, x.seed.name) }, recs })
   }
 
   let candidates = scoreCandidates(lists, exclude).slice(0, SHOW + 10)

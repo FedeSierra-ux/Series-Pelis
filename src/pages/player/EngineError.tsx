@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { episodeLabel } from '../../lib/format'
+import { useLocalTitle } from '../../lib/localTitles'
 import { useTvMode } from '../../lib/tv'
 import type { PlayState } from '../Detail'
 import { PlayerIcon } from './PlayerIcons'
@@ -32,6 +33,8 @@ export function EngineError({
   const tvMode = useTvMode()
   const [sources, setSources] = useState(false)
   const { meta, video } = state
+  // v0.28: el nombre en español (si ya se sabe).
+  const shownName = useLocalTitle(meta.id, meta.name, { type: meta.type })
 
   const exit = () => {
     if (window.history.length > 1) navigate(-1)
@@ -50,7 +53,7 @@ export function EngineError({
             <PlayerIcon name="alert" size={tvMode ? 48 : 40} />
           </span>
           <div className="player-error-heading">
-            <strong>{meta.name}</strong>
+            <strong>{shownName}</strong>
             {video && <span>{[episodeLabel(video.season, video.episode), video.title ?? video.name].filter(Boolean).join(' · ')}</span>}
           </div>
           <p>{message}</p>

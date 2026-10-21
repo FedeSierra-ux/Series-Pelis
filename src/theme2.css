@@ -325,26 +325,6 @@
   min-height: 100vh;
 }
 
-/* Buscador de la portada (PC/TV): lleva a Buscar. */
-.t2-searchbar {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  height: 48px;
-  margin: 22px var(--gutter) 0;
-  padding: 0 20px;
-  border-radius: 24px;
-  background: var(--surface-1);
-  color: var(--muted);
-  font-size: 0.95rem;
-}
-.t2-searchbar:hover {
-  background: var(--surface-2);
-}
-.t2-searchbar:focus-visible {
-  outline-offset: 3px;
-}
-
 .t2-top,
 .t2-tabs {
   display: none;
@@ -923,8 +903,7 @@ html[data-tv][data-theme='2'] .player-float .btn:focus {
     --poster-w: 116px;
     --cont-w: 220px;
   }
-  .t2-rail,
-  .t2-searchbar {
+  .t2-rail {
     display: none;
   }
   .t2-top {
@@ -1088,11 +1067,6 @@ html[data-tv][data-theme='2'] .player-float .btn:focus {
   html[data-tv] .t2-pill svg {
     width: 26px;
     height: 26px;
-  }
-  html[data-tv] .t2-searchbar {
-    height: 58px;
-    border-radius: 29px;
-    font-size: 1rem;
   }
 }
 html[data-tv][data-theme='2'] .hero-meta {

@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { StarRatingInput } from '../../components/StarRating'
 import { endCardAt } from '../../lib/credits'
+import { useLocalTitle } from '../../lib/localTitles'
 import { ratingsStore } from '../../lib/ratings'
 import { settingsStore, useStore } from '../../lib/store'
 
@@ -29,6 +30,8 @@ export function RateAtEnd({ meta, hasNext, time, duration, creditsStart }: Props
   const [ratedBefore] = useState(() => !!ratingsStore.get()[meta.id])
   const [closed, setClosed] = useState(false)
   const [thanks, setThanks] = useState(false)
+  // v0.28: se ve el nombre en español; el puntaje se guarda con el de Cinemeta (`meta`).
+  const shownName = useLocalTitle(meta.id, meta.name, { enabled: false })
 
   useEffect(() => {
     if (!thanks) return
@@ -44,7 +47,7 @@ export function RateAtEnd({ meta, hasNext, time, duration, creditsStart }: Props
   return (
     <div className="player-rate player-float" role="group" aria-label="Puntuar">
       <strong className="player-rate-title">{thanks ? '¡Gracias!' : '¿Qué te pareció?'}</strong>
-      <span className="player-rate-name">{meta.name}</span>
+      <span className="player-rate-name">{shownName}</span>
       <StarRatingInput title={meta} label="" compact autoFocus={ended} onSaved={() => setThanks(true)} />
       {!thanks && (
         <button type="button" className="btn btn-ghost btn-small player-rate-close" onClick={() => setClosed(true)}>

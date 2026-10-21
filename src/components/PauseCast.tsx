@@ -1,5 +1,7 @@
 import { useEffect, useState } from 'react'
 import { getMeta } from '../lib/addons'
+import { localTitle } from '../lib/localTitles'
+import { spanishName } from '../lib/localTitlesStore'
 import { addonsStore } from '../lib/store'
 import { useEpisodeSpoilers } from './Spoiler'
 import { findByImdb, getDetails, getEpisodeCast, getEpisodeInfo, hasTmdb, tmdbImg, type TmdbCast } from '../lib/tmdb'
@@ -27,32 +29,38 @@ interface Info {
   overview?: string
 }
 
-/** Título y sinopsis: TMDB en español si hay key; si no (o viene vacía), Cinemeta en inglés. */
+/**
+ * Título y sinopsis. La sinopsis, de TMDB en español si hay key (si no, o viene vacía, la de Cinemeta en inglés).
+ * v0.28: el título de un episodio va en el idioma original (el de Cinemeta, decisión del usuario; el de TMDB solo
+ * si Cinemeta no tiene) y el de una peli, en español.
+ */
 async function loadInfo(imdbId: string, type: string, season?: number, episode?: number, videoId?: string): Promise<Info> {
   const isEpisode = type !== 'movie' && season !== undefined && episode !== undefined
-  let info: Info = {}
+  let tmdb: Info = {}
   if (hasTmdb() && imdbId.startsWith('tt')) {
     try {
       const id = await findByImdb(imdbId, type)
       if (id && isEpisode) {
         const ep = await getEpisodeInfo(id, season, episode)
-        info = { title: ep.name, overview: ep.overview }
+        tmdb = { title: ep.name, overview: ep.overview }
       } else if (id && type === 'movie') {
         const d = await getDetails('movie', id)
-        info = { title: d.title, overview: d.overview }
+        tmdb = { title: spanishName(d), overview: d.overview }
       }
     } catch {
       // seguimos con Cinemeta
     }
   }
-  if (info.overview?.trim()) return info
+  const tmdbOverview = tmdb.overview?.trim() ? tmdb.overview : undefined
+  // Una peli con sinopsis y nombre de TMDB no necesita Cinemeta; un episodio sí (el título sale de ahí).
+  if (!isEpisode && tmdbOverview && tmdb.title) return { title: localTitle(imdbId, tmdb.title), overview: tmdbOverview }
   try {
     const meta = await getMeta(addonsStore.get(), type, imdbId)
-    if (!isEpisode) return { title: info.title || meta.name, overview: meta.description }
+    if (!isEpisode) return { title: localTitle(imdbId, tmdb.title || meta.name), overview: tmdbOverview ?? meta.description }
     const v = meta.videos?.find((x) => x.id === videoId) ?? meta.videos?.find((x) => x.season === season && (x.episode ?? x.number) === episode)
-    return { title: info.title || v?.title || v?.name, overview: v?.overview ?? v?.description }
+    return { title: v?.title || v?.name || tmdb.title, overview: tmdbOverview ?? v?.overview ?? v?.description }
   } catch {
-    return info
+    return { title: isEpisode ? tmdb.title : tmdb.title && localTitle(imdbId, tmdb.title), overview: tmdbOverview }
   }
 }
 

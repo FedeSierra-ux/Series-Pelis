@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
+import { localTitle } from '../lib/localTitles'
 import { markNotInterested, notInterestedStore, restoreNotInterested, unmarkNotInterested, type NotInterestedEntry, type RatedTitle } from '../lib/ratings'
 import { useStore } from '../lib/store'
 
@@ -34,7 +35,7 @@ export function useNotInterested(title: RatedTitle, tmdbId?: number) {
     <div className="undo-toast" role="status">
       <span>
         {toast.text}
-        <span className="muted"> · {title.name}</span>
+        <span className="muted"> · {localTitle(title.id, title.name)}</span>
       </span>
       <button
         type="button"

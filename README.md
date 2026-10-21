@@ -34,6 +34,8 @@ y un **historial** de todo lo que viste. Funciona en la PC, el celular y el nave
   tráiler con subtítulos en latino primero. En Inicio y en Películas/Series: portada, Top 10 de la semana,
   "Porque viste…" y tendencias.
   Al pausar muestra quién actúa en el episodio.
+- **Títulos en español latino (v0.28)**: con TMDB, los nombres de pelis y series van como en Netflix Argentina (los
+  logos y los episodios, en el idioma original). Buscar encuentra por los dos nombres.
 - **Catálogo** de Cinemeta (populares, nuevas y mejor puntuadas) y de cualquier addon que agregues.
 - **Puntaje de IMDb** en pósters, portada y ficha.
 - **Addons de Stremio**: pegás la URL del manifest y listo. Si tu addon (por ejemplo Torrentio) está configurado

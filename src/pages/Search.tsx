@@ -6,9 +6,10 @@ import { PosterCard, PosterSkeleton } from '../components/PosterCard'
 import { PeopleGrid, PeopleRow, PersonAvatar } from '../components/PeopleRow'
 import { useVoiceSearch, VoiceButton, VoiceStatus } from '../components/VoiceSearch'
 import { searchableCatalogs } from '../lib/addons'
-import { findPerson, getTogether, searchCatalog, searchPeople, type TmdbPersonResult } from '../lib/discoverApi'
+import { findPerson, getTogether, searchCatalog, searchPeople, searchTitlesTmdb, type TmdbPersonResult } from '../lib/discoverApi'
 import { errorText } from '../lib/errors'
 import { useAddons, useTitle } from '../lib/hooks'
+import { requestTitles, useTitlesVersion } from '../lib/localTitles'
 import { typeLabel } from '../lib/i18n'
 import { useOnline } from '../lib/online'
 import { debounce, MIN_QUERY, normalizeQuery, parseTogether, pushRecent, removeRecent } from '../lib/searchHistory'
@@ -109,8 +110,20 @@ function useTogether(query: string, enabled: boolean) {
   return hit && hit.q === query ? hit : undefined
 }
 
-/** Busca en todos los catálogos con búsqueda. Un error o un timeout queda marcado (no es "cero resultados"). */
-function useCatalogSearch(query: string, retry: number): SearchSource[] {
+/** Ítems del principio de cada catálogo cuyo nombre en español se pide ya (el resto, al acercarse a la pantalla). */
+const NAMES_AHEAD = 10
+
+/** Las dos fuentes de TMDB (v0.28): un solo pedido, repartido en Películas y Series. */
+const TMDB_SOURCES = [
+  { key: 'tmdb|movie', type: 'movie' },
+  { key: 'tmdb|series', type: 'series' },
+] as const
+
+/**
+ * Busca en todos los catálogos con búsqueda. Un error o un timeout queda marcado (no es "cero resultados").
+ * v0.28: con TMDB, también ahí (en español), para encontrar por los dos nombres.
+ */
+function useCatalogSearch(query: string, retry: number, tmdbOn: boolean): SearchSource[] {
   const addons = useAddons()
   const [sources, setSources] = useState<SearchSource[]>([])
   useEffect(() => {
@@ -125,17 +138,22 @@ function useCatalogSearch(query: string, retry: number): SearchSource[] {
       catalog,
       key: `${addon.transportUrl}|${catalog.type}|${catalog.id}`,
     }))
+    // TMDB solo junto a algún addon con búsqueda: sin addons no hay de dónde sacar las fuentes.
+    const withTmdb = tmdbOn && targets.length > 0
     // Cada catálogo conserva sus resultados anteriores (atenuados) hasta que llegan los nuevos: así la grilla
     // no vuelve a los esqueletos ni salta con cada letra.
-    setSources((prev) =>
-      targets.map(({ addon, catalog, key }) => ({
+    setSources((prev) => {
+      const before = (key: string) => prev.find((s) => s.key === key)?.items ?? []
+      const next: SearchSource[] = targets.map(({ addon, catalog, key }) => ({
         key,
         type: catalog.type,
         addonName: addon.manifest.name,
         status: 'loading',
-        items: prev.find((s) => s.key === key)?.items ?? [],
-      })),
-    )
+        items: before(key),
+      }))
+      if (withTmdb) for (const { key, type } of TMDB_SOURCES) next.push({ key, type, addonName: 'TMDB', status: 'loading', tmdb: true, items: before(key) })
+      return next
+    })
     const settle = (key: string, patch: Partial<SearchSource>) => {
       if (!ctrl.signal.aborted) setSources((prev) => prev.map((s) => (s.key === key ? { ...s, ...patch } : s)))
     }
@@ -145,8 +163,17 @@ function useCatalogSearch(query: string, retry: number): SearchSource[] {
         // Antes era `.catch(() => [])` y un addon caído decía "No encontramos nada" (auditoría, bug #2).
         .catch((err) => settle(key, { status: 'error', error: errorText(err), items: [] }))
     })
+    if (withTmdb) {
+      searchTitlesTmdb(query)
+        .then((found) => {
+          for (const { key, type } of TMDB_SOURCES) settle(key, { status: 'done', error: undefined, items: found.filter((m) => m.type === type) })
+        })
+        .catch((err) => {
+          for (const { key } of TMDB_SOURCES) settle(key, { status: 'error', error: errorText(err), items: [] })
+        })
+    }
     return () => ctrl.abort()
-  }, [query, addons, retry])
+  }, [query, addons, retry, tmdbOn])
   return sources
 }
 
@@ -207,8 +234,15 @@ export function Search() {
   const active = online && query.length >= MIN_QUERY
   const people = usePeople(query, tmdbOn, retry)
   const together = useTogether(query, tmdbOn)
-  const sources = useCatalogSearch(query, retry)
-  const groups = useMemo(() => groupSources(sources), [sources])
+  const sources = useCatalogSearch(query, retry, tmdbOn)
+  // Cuando llega un nombre en español (o el id de TMDB de un título) se vuelve a agrupar: así se juntan los
+  // repetidos de los addons y de TMDB, y el mejor resultado mira también el nombre nuevo.
+  const titlesVersion = useTitlesVersion()
+  const groups = useMemo(() => groupSources(sources), [sources, titlesVersion])
+  // Nombres en español de lo primero de cada addon: con el mismo pedido sale el id de TMDB, que junta repetidos.
+  useEffect(() => {
+    for (const s of sources) if (s.status === 'done' && !s.tmdb) requestTitles(s.items.slice(0, NAMES_AHEAD))
+  }, [sources])
   // Sin ningún catálogo con búsqueda (ej. Cinemeta apagado) no hay dónde buscar: se avisa en vez de "no encontramos nada".
   const canSearch = useMemo(() => searchableCatalogs(addons).length > 0, [addons])
   const outcome = searchOutcome({
@@ -220,7 +254,7 @@ export function Search() {
   // Se espera también a las personas: si una se parece más que el mejor título, gana ella (v0.26, explorar-07).
   const best = useMemo(
     () => (active && groups.every((g) => !g.loading) && !people.loading ? pickBestResult(query, groups, people.people) : undefined),
-    [active, groups, query, people.loading, people.people],
+    [active, groups, query, people.loading, people.people, titlesVersion],
   )
   const narrow = useNarrow()
   const tabs = SEARCH_TABS.filter((t) => t.id !== 'people' || tmdbOn)

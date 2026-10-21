@@ -1,5 +1,19 @@
 # Changelog
 
+## [0.28.0] - 2026-10-19
+
+### Agregado
+- **Títulos en español latino** (los de TMDB, como en Netflix o Disney+ Argentina) en pósters, filas, portadas,
+  Seguir viendo, Mi lista, historial, calendario, Tu año, la ficha, el reproductor y las filas del inicio de la TV.
+  Los logos y los títulos de los episodios siguen en el idioma original. Sin TMDB queda el nombre de Cinemeta.
+- Ficha: con logo, el nombre en español debajo cuando el logo dice otro; sin logo, el título en español y
+  "Título original: …".
+- **Buscar** encuentra por el nombre en español y por el original (también trae títulos de TMDB que no están en
+  los catálogos de los addons).
+
+### Cambiado
+- **Portada de Inicio más grande** y sin el buscador de arriba: Buscar queda en el menú de la izquierda.
+
 ## [0.27.1] - 2026-10-19
 
 ### Cambiado

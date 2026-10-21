@@ -67,6 +67,21 @@ describe('buildHomeData', () => {
     expect(data).toEqual({ profile: 'p2', continue: [expect.objectContaining({ path: '/detail/movie/tt0133093?play=1' })] })
   })
 
+  it('manda el nombre que se muestra (v0.28) y deja los títulos de episodio como están', () => {
+    const items: ContinueItem[] = [
+      { kind: 'resume', key: 'tt0903747:1:2', at: 1000, entry: entry() },
+      { kind: 'next', key: 'tt1:2:1', at: 5000, episode: episode(), label: 'Siguiente' },
+      { kind: 'resume', key: 'tt9', at: 10, entry: entry({ videoId: 'tt9', metaId: 'tt9', type: 'movie', name: 'Sin traducción' }) },
+    ]
+    const names: Record<string, string> = { tt0903747: 'Breaking Bad (es)', tt1: 'La serie' }
+    const data = buildHomeData('main', items, (id, fallback) => names[id] ?? fallback)
+    expect(data.continue.map((i) => i.title)).toEqual(['Breaking Bad (es)', 'La serie', 'Sin traducción'])
+    expect(data.continue[0].episodeTitle).toBe('Cat in the Bag')
+    expect(data.continue[1].episodeTitle).toBe('Vuelta')
+    // Sin `nameOf`, el guardado.
+    expect(buildHomeData('main', items).continue[0].title).toBe('Breaking Bad')
+  })
+
   it('no pasa del tope', () => {
     const items: ContinueItem[] = Array.from({ length: 40 }, (_, i) => {
       const e = entry({ videoId: `tt${i}`, metaId: `tt${i}`, type: 'movie' })
