@@ -1,0 +1,139 @@
+# Arma el instalador de la app de Windows (carpeta desktop-app/).
+# - En cada push o PR que toque desktop-app/: pruebas + instalador, que queda como "artifact" de la corrida.
+# - Con una etiqueta flix-v* (la misma que publica el APK de la TV, android-tv.yml): además sube
+#   flix-pc-setup.exe, su .blockmap y latest.yml al mismo Release. La app se actualiza leyendo
+#   https://github.com/FedeSierra-ux/Series-Pelis/releases/latest/download/latest.yml
+#
+# Sin firma de código: Windows SmartScreen avisa al instalar ("Más información" → "Ejecutar de todos modos").
+#
+# Los dos workflows publican en el mismo Release a la vez. Los dos usan softprops/action-gh-release@v2 con el mismo
+# nombre, el mismo texto y make_latest: true, así da igual cuál llega primero (el segundo solo suma sus archivos).
+# Si los dos lo crean al mismo tiempo, GitHub le contesta "already_exists" a uno y la acción lo busca de nuevo y sube
+# ahí (lo maneja desde la 2.3.4). Por las dudas, acá se reintenta una vez más después de 30 s.
+name: App de Windows
+
+on:
+  push:
+    paths:
+      - 'desktop-app/**'
+      - '.github/workflows/desktop.yml'
+    tags:
+      - 'flix-v*'
+  pull_request:
+    paths:
+      - 'desktop-app/**'
+      - '.github/workflows/desktop.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: desktop-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  exe:
+    name: Armar el instalador
+    runs-on: windows-latest
+    timeout-minutes: 30
+    defaults:
+      run:
+        shell: bash
+        working-directory: desktop-app
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: desktop-app/package-lock.json
+      - run: npm ci
+
+      # La app compara su versión con la de latest.yml: la etiqueta tiene que ser la de desktop-app/package.json.
+      - name: Etiqueta = versión de desktop-app
+        if: startsWith(github.ref, 'refs/tags/flix-v')
+        run: |
+          want="flix-v$(node -p "require('./package.json').version")"
+          if [ "$GITHUB_REF_NAME" != "$want" ]; then
+            echo "::error::La etiqueta $GITHUB_REF_NAME no coincide con la versión de desktop-app/package.json ($want)."
+            exit 1
+          fi
+
+      - name: Pruebas
+        run: |
+          node --test shell.test.js
+          if find engine -name '*.test.*' 2>/dev/null | grep -q .; then
+            npm test
+          else
+            echo "Sin pruebas del motor todavía."
+          fi
+
+      - name: Instalador
+        env:
+          # Sin certificado: que no busque uno en la máquina.
+          CSC_IDENTITY_AUTO_DISCOVERY: 'false'
+        run: npx electron-builder --win nsis --x64 --publish never
+
+      # latest.yml apunta al instalador del Release con etiqueta (ver scripts/latest-yml.mjs): así la actualización
+      # encuentra el .blockmap de la versión instalada y baja solo lo que cambió.
+      - name: latest.yml con la url del Release
+        if: startsWith(github.ref, 'refs/tags/flix-v')
+        run: node scripts/latest-yml.mjs dist/latest.yml "https://github.com/$GITHUB_REPOSITORY/releases/download/$GITHUB_REF_NAME/flix-pc-setup.exe"
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: flix-pc
+          path: |
+            desktop-app/dist/flix-pc-setup.exe
+            desktop-app/dist/flix-pc-setup.exe.blockmap
+            desktop-app/dist/latest.yml
+          if-no-files-found: error
+
+  release:
+    name: Publicar en Releases
+    needs: exe
+    if: startsWith(github.ref, 'refs/tags/flix-v')
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: flix-pc
+      # flix-v0.30.0 → v0.30.0, para el título del Release (el mismo que pone android-tv.yml).
+      - id: version
+        run: echo "v=${GITHUB_REF_NAME#flix-}" >> "$GITHUB_OUTPUT"
+      - id: first
+        continue-on-error: true
+        uses: softprops/action-gh-release@v2
+        with:
+          name: Flix ${{ steps.version.outputs.v }}
+          files: |
+            flix-pc-setup.exe
+            flix-pc-setup.exe.blockmap
+            latest.yml
+          make_latest: true
+          # Igual que en android-tv.yml: el que llega último pisa el texto.
+          body: |
+            Flix para Android TV / Fire TV y para Windows.
+            - TV, con Downloader: https://github.com/${{ github.repository }}/releases/latest/download/flix-tv.apk
+            - PC (Windows 10/11, 64 bits): https://github.com/${{ github.repository }}/releases/latest/download/flix-pc-setup.exe
+              Windows puede avisar que el instalador no es conocido: "Más información" → "Ejecutar de todos modos".
+      - name: Esperar antes de reintentar
+        if: steps.first.outcome == 'failure'
+        run: sleep 30
+      - if: steps.first.outcome == 'failure'
+        uses: softprops/action-gh-release@v2
+        with:
+          name: Flix ${{ steps.version.outputs.v }}
+          files: |
+            flix-pc-setup.exe
+            flix-pc-setup.exe.blockmap
+            latest.yml
+          make_latest: true
+          body: |
+            Flix para Android TV / Fire TV y para Windows.
+            - TV, con Downloader: https://github.com/${{ github.repository }}/releases/latest/download/flix-tv.apk
+            - PC (Windows 10/11, 64 bits): https://github.com/${{ github.repository }}/releases/latest/download/flix-pc-setup.exe
+              Windows puede avisar que el instalador no es conocido: "Más información" → "Ejecutar de todos modos".
