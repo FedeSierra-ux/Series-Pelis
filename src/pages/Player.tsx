@@ -11,6 +11,7 @@ import { langLabel } from '../lib/i18n'
 import { useLocalTitle } from '../lib/localTitles'
 import { isNativeApp } from '../lib/native'
 import { needsNativePlayer } from '../lib/torrentServer'
+import { serverPlan, STREMIO_SERVER, useLocalStremio } from '../lib/stremioServer'
 import { nativePlayerAvailable, probeNativePlayer } from '../lib/nativePlayer'
 import { findNextStream, nextEpisodeSeason, prefetchNextStreams } from '../lib/nextEpisode'
 import { setReturnVideo } from '../lib/returnVideo'
@@ -36,6 +37,7 @@ import { launchUrl } from './player/externalLaunch'
 import { NativePlayerView } from './player/NativePlayer'
 import { EngineError } from './player/EngineError'
 import { DebridDownload, DebridError } from './player/DebridSwitch'
+import { StremioPrepare } from './player/StremioPrepare'
 import { debridLinkOf, isDebridDownload, looksLikeStatusVideo } from '../lib/debrid'
 import { MIN_HISTORY_EPISODE_S, MIN_HISTORY_S, NEXT_FALLBACK_S, readAutoCount, writeAutoCount } from './player/autoNext'
 import { detailPathFor } from './player/fallback'
@@ -151,6 +153,14 @@ function PlayerChoice({ state, resume }: { state: PlayState; resume?: Resume }) 
   const debrid = !!debridLinkOf(state)
   const [plainDebrid, setPlainDebrid] = useState(false)
   const [debridFail, setDebridFail] = useState<{ at: number }>()
+  // v0.29: con el servidor de Stremio (Stremio Service en la PC) se prepara antes: torrent creado y, si el
+  // navegador no puede con el formato, la versión convertida. `media` es lo que abre el reproductor de la web.
+  // Un link directo que el navegador quizás no pueda abrir: si se llegó sin pasar por las fuentes (Seguir viendo),
+  // todavía no se buscó el servidor; se espera esa búsqueda (3 s como mucho) antes de abrirlo.
+  const [media, setMedia] = useState<string>()
+  const wantsLocal = media === undefined && !!state.stream.url && !!state.stream.behaviorHints?.notWebReady
+  const local = useLocalStremio(wantsLocal)
+  const [prepareTry, setPrepareTry] = useState(0)
   useEffect(() => {
     if (native !== undefined) return
     let alive = true
@@ -206,18 +216,51 @@ function PlayerChoice({ state, resume }: { state: PlayState; resume?: Resume }) 
       />
     )
   }
+  if (wantsLocal && (local === 'unknown' || local === 'checking')) return <div className="player player-native" />
+  const plan = media === undefined ? serverPlan(state.stream, state.playUrl, local === 'found' ? STREMIO_SERVER : undefined) : undefined
+  if (plan) {
+    return (
+      <StremioPrepare
+        key={prepareTry}
+        state={state}
+        plan={plan}
+        at={fallback?.at ?? resume?.at}
+        onReady={setMedia}
+        onPlain={() => setMedia(state.playUrl)}
+        onRetry={() => setPrepareTry((n) => n + 1)}
+      />
+    )
+  }
   return (
     <PlayerView
       state={state}
       resume={fallback ?? resume}
       notice={fallback ? 'El reproductor de Android no pudo con este video: sigue el de la web' : undefined}
       onDebridFail={onDebridFail}
+      media={media}
     />
   )
 }
 
-/** `onDebridFail` (v0.27): el link de debrid dio un video de aviso de Torrentio (no el video). */
-function PlayerView({ state, resume, notice, onDebridFail }: { state: PlayState; resume?: Resume; notice?: string; onDebridFail?: (at: number) => void }) {
+/**
+ * `onDebridFail` (v0.27): el link de debrid dio un video de aviso de Torrentio (no el video).
+ * `media` (v0.29): lo que se abre en lugar de `state.playUrl` (preparado con el servidor de Stremio: el torrent o
+ * su versión convertida). Con la convertida no hay vista previa al buscar: pediría otra conversión, y el servidor
+ * hace una sola a la vez (cortaría la del video).
+ */
+function PlayerView({
+  state,
+  resume,
+  notice,
+  onDebridFail,
+  media,
+}: {
+  state: PlayState
+  resume?: Resume
+  notice?: string
+  onDebridFail?: (at: number) => void
+  media?: string
+}) {
   const navigate = useNavigate()
   const settings = useStore(settingsStore)
   const videoRef = useRef<HTMLVideoElement>(null)
@@ -394,7 +437,7 @@ function PlayerView({ state, resume, notice, onDebridFail }: { state: PlayState;
   useEffect(() => {
     const el = videoRef.current
     if (!el) return
-    const url = state.playUrl
+    const url = media ?? state.playUrl
     let disposed = false
     let retryTimer: ReturnType<typeof setTimeout> | undefined
     const token = {}
@@ -486,7 +529,7 @@ function PlayerView({ state, resume, notice, onDebridFail }: { state: PlayState;
         el.load()
       })
     }
-  }, [state.playUrl])
+  }, [state.playUrl, media])
 
   // Intro, resumen y créditos.
   useEffect(() => {
@@ -1653,7 +1696,7 @@ function PlayerView({ state, resume, notice, onDebridFail }: { state: PlayState;
           bar={seekbarRef}
           url={state.playUrl}
           duration={duration}
-          enabled={settings.seekPreview && !saveDataOn()}
+          enabled={settings.seekPreview && !saveDataOn() && (media === undefined || media === state.playUrl)}
           scrubAt={scrub?.target}
         />
         <div className="controls-row">

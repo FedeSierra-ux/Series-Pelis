@@ -503,6 +503,21 @@ npm run preview    # sirve dist/ en http://localhost:4173
   `lang`. `buildHomeData(profile, items, nameOf?)` para la TV. **Portada de Inicio** más grande y **sin el
   buscador de arriba** (`.t2-searchbar` se fue; Buscar solo desde el riel).
 
+- v0.29.0 hecha (rama `ccr-4e8d431d-4nlzi9`): **torrents sin debrid en la PC con Stremio Service**, como Stremio Web
+  (pedido del usuario: entrar desde la compu y que ande). `lib/stremioServer.ts` (puro + tests): `isPcBrowser`
+  (windows/mac/linux, sin modo TV ni app), estado `off|unknown|checking|found|missing` con `ensureLocalStremio`
+  (lazy: solo cuando hay torrents en las fuentes o se abre un link `notWebReady`, por el permiso de **Local Network
+  Access** de Chrome, que pregunta una vez), `GET /settings` con tope de 3 s, localStorage `sp-stremio-local` (lo da
+  por encontrado al cargar), re-búsqueda al volver a la pestaña si faltaba. `serverPlan`: torrent → `POST
+  /<hash>/create` (trackers + `dht:`, `guessFileIdx` con temporada/episodio si no hay índice; bloquea hasta tener la
+  metadata) y `notWebReady` → `/hlsv2/probe`; `canPlayDirect` (mp4, o matroska en Chrome; códecs soportados, ≤2
+  canales en Chrome / 6 en Firefox, un solo audio; los subtítulos embebidos no cuentan) o `hlsUrl`
+  (`/hlsv2/<id>/master.m3u8`, h264 forzado en Chrome; el servicio convierte **uno a la vez**). En `torrentServer.ts`
+  el local va después del motor nativo (`TORRENT_NEEDS_SERVICE`). UI: `pages/player/StremioPrepare.tsx` (antes de
+  `PlayerView`; prop `media` = URL final; error de red = servicio cerrado, timeout de 90 s = nadie comparte),
+  `EngineError` con prop `link`, `detail/StremioServiceNotice.tsx` (aviso en `StreamList`), estado en Ajustes →
+  Reproductor ("Probar" no guarda el servidor a mano si el local aplica). Sin subtítulos embebidos por HLS todavía.
+  Probado con Stremio Service 4.20.8 (probe, HLS, create); en Chromium headless no hay H.264: probar en Chrome real.
 - **Decisiones para la v0.17 (reemplazan el reparto del plan de abajo)**: addons y TorBox **iguales para todas las
   casas**, solo los cambia el admin (opción A). Ajustes generales (subtítulos, idiomas, autoplay, saltar intro, sin
   spoilers, reglas de fuentes) **iguales en toda la casa**; lo físico (modo TV, tamaño de la interfaz, protector,

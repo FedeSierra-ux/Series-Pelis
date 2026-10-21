@@ -1,9 +1,11 @@
 import { useEffect, useMemo, useState } from 'react'
 import { isNativeApp, listenNative, nativeInfo, type NativeInfo } from './native'
 import { settingsStore, useStore } from './store'
+import { canUseLocalStremio, ensureLocalStremio, localStremioBase, useLocalStremio, STREMIO_SERVER } from './stremioServer'
 
 // Con qué se reproducen los torrents (infoHash sin url): el servidor de Stremio que puso el usuario en
-// Ajustes o, en la app de Android con su reproductor prendido, el motor de torrents de la app (v0.25).
+// Ajustes, en la PC el de Stremio Service que se encuentra solo (v0.29) o, en la app de Android con su
+// reproductor prendido, el motor de torrents de la app (v0.25).
 // La URL del motor es http a 127.0.0.1: la página (https) no la puede abrir, solo el reproductor nativo.
 
 /** El servidor de torrents que vale ahora. */
@@ -18,6 +20,8 @@ export interface TorrentServer {
 
 export const TORRENT_NEEDS_PLAYER = 'Torrent: activá el reproductor de Android (Ajustes → Reproductor) o usá un addon con debrid'
 export const TORRENT_NEEDS_PC = 'Torrent: abrí Stremio en la PC (servidor local) o usá un addon con debrid'
+/** En la PC sin Stremio Service (v0.29): arriba de la lista va el aviso con la descarga. */
+export const TORRENT_NEEDS_SERVICE = 'Torrent: necesita Stremio Service abierto en esta compu (ver el aviso de arriba) o un addon con debrid'
 export const TORRENT_NEEDS_UPDATE = 'Torrent: actualizá la app de Android para reproducirlo sin debrid, o usá un addon con debrid'
 export const TORRENT_LOADING = 'Torrent: el motor de la app todavía está arrancando; esperá unos segundos o usá un addon con debrid'
 
@@ -41,14 +45,22 @@ export interface TorrentContext {
   engine?: string
   /** El APK todavía no dijo si tiene motor (está arrancando): no es un APK viejo. */
   pending?: boolean
+  /** v0.29: navegador de una compu (ahí se busca Stremio Service). */
+  pc?: boolean
+  /** v0.29: base de Stremio Service si se encontró en esta compu. */
+  local?: string
 }
 
-/** Elige el servidor: el que puso el usuario, si no el motor de la app (con su reproductor), si no ninguno. */
+/**
+ * Elige el servidor: el que puso el usuario, si no el motor de la app (con su reproductor), si no Stremio Service
+ * en la compu, si no ninguno.
+ */
 export function pickTorrentServer(c: TorrentContext): TorrentServer {
   const explicit = c.explicit.trim()
   if (explicit) return { url: explicit }
   if (c.native && c.nativePlayer && c.engine) return { url: c.engine, engine: true }
-  if (!c.native) return { url: '', missing: TORRENT_NEEDS_PC }
+  if (!c.native && c.local) return { url: c.local }
+  if (!c.native) return { url: '', missing: c.pc ? TORRENT_NEEDS_SERVICE : TORRENT_NEEDS_PC }
   // APK con motor pero el reproductor de Android apagado; un APK viejo (sin motor) pide actualizar. Mientras
   // el motor arranca no se sabe todavía: nunca "actualizá la app" por eso.
   return { url: '', missing: c.engine ? TORRENT_NEEDS_PLAYER : c.pending ? TORRENT_LOADING : TORRENT_NEEDS_UPDATE }
@@ -126,12 +138,24 @@ export function torrentServer(): TorrentServer {
   void probeEngine()
   const s = settingsStore.get()
   const native = isNativeApp()
-  return pickTorrentServer({ explicit: s.streamingServerUrl, native, nativePlayer: s.nativePlayer, engine, pending: native && !known })
+  return pickTorrentServer({
+    explicit: s.streamingServerUrl,
+    native,
+    nativePlayer: s.nativePlayer,
+    engine,
+    pending: native && !known,
+    pc: canUseLocalStremio(),
+    local: localStremioBase(),
+  })
 }
 
-/** Igual que `torrentServer`, pero espera la respuesta del APK (para elegir el siguiente episodio). */
+/**
+ * Igual que `torrentServer`, pero espera la respuesta del APK (para elegir el siguiente episodio). En la PC, sin
+ * servidor puesto a mano, también espera la búsqueda de Stremio Service.
+ */
 export async function torrentServerReady(): Promise<TorrentServer> {
   await probeEngine()
+  if (!settingsStore.get().streamingServerUrl.trim()) await ensureLocalStremio()
   return torrentServer()
 }
 
@@ -159,16 +183,19 @@ export function useTorrentEngine(): string | undefined {
   return useEngineState().base
 }
 
-/** Hook: el servidor que vale ahora; se vuelve a dibujar cuando responde el APK o cambian los ajustes. */
+/** Hook: el servidor que vale ahora; se vuelve a dibujar cuando responde el APK, Stremio Service o cambian los ajustes. */
 export function useTorrentServer(): TorrentServer {
   const { streamingServerUrl: explicit, nativePlayer } = useStore(settingsStore)
   const { base, known: answered } = useEngineState()
   const native = isNativeApp()
   const pending = native && !answered
+  const local = useLocalStremio()
+  const pc = local !== 'off'
+  const localBase = local === 'found' ? STREMIO_SERVER : undefined
   // Mismo objeto mientras no cambie nada: lo usan dependencias de `useMemo`.
   return useMemo(
-    () => pickTorrentServer({ explicit, native, nativePlayer, engine: base, pending }),
-    [explicit, native, nativePlayer, base, pending],
+    () => pickTorrentServer({ explicit, native, nativePlayer, engine: base, pending, pc, local: localBase }),
+    [explicit, native, nativePlayer, base, pending, pc, localBase],
   )
 }
 

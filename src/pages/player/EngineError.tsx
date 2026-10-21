@@ -14,6 +14,7 @@ import { SourcesMenu, useSwitchSource } from './SourcesMenu'
 /**
  * `at`: segundos donde quedó (la otra fuente sigue desde ahí). `onRetry`: volver a probar la misma fuente.
  * `action` (v0.27): botón principal propio, por ejemplo "Reproducir por torrent" cuando falla el debrid.
+ * `link` (v0.29): enlace afuera, por ejemplo la descarga de Stremio Service.
  */
 export function EngineError({
   state,
@@ -21,12 +22,14 @@ export function EngineError({
   at = 0,
   onRetry,
   action,
+  link,
 }: {
   state: PlayState
   message: string
   at?: number
   onRetry?: () => void
   action?: { label: string; onClick: () => void; busy?: boolean }
+  link?: { label: string; href: string }
 }) {
   const navigate = useNavigate()
   const switchSource = useSwitchSource(state)
@@ -72,6 +75,11 @@ export function EngineError({
               <button className="btn btn-primary" onClick={action.busy ? undefined : action.onClick} aria-disabled={action.busy || undefined} autoFocus data-autofocus>
                 {action.label}
               </button>
+            )}
+            {link && !sources && (
+              <a className="btn" href={link.href} target="_blank" rel="noreferrer">
+                {link.label}
+              </a>
             )}
             {!sources && (
               <button className={action ? 'btn' : 'btn btn-primary'} onClick={() => setSources(true)} autoFocus={!action} data-autofocus={action ? undefined : true}>

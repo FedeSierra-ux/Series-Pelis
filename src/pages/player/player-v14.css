@@ -829,3 +829,31 @@ html[data-tv] .player-title span {
 .player-video[data-sub-shift]::-webkit-media-text-track-display {
   transform: none !important;
 }
+
+/* v0.29: "Conectando con el torrent…" (Stremio Service en la PC), antes de abrir el video. */
+.player-prepare {
+  display: grid;
+  place-items: center;
+}
+.player-prepare-box {
+  display: grid;
+  justify-items: center;
+  gap: 10px;
+  padding: 24px;
+  text-align: center;
+  color: #fff;
+}
+[data-theme='2'] .player-prepare-box .player-spinner {
+  position: static;
+  margin: 0 0 14px;
+}
+.player-prepare-box strong {
+  font-size: 1.15rem;
+}
+.player-prepare-box span {
+  color: rgba(255, 255, 255, 0.78);
+  font-variant-numeric: tabular-nums;
+}
+.player-prepare-box .btn {
+  margin-top: 12px;
+}

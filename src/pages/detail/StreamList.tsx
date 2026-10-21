@@ -7,12 +7,14 @@ import { isOnline } from '../../lib/online'
 import { lastSourceStore, settingsStore, useStore } from '../../lib/store'
 import { sourceCounts, streamFacts } from '../../lib/streamFacts'
 import { analyzeStreams, lastSourceOf, playable, streamKey, type RankedStream } from '../../lib/streamPicker'
+import { ensureLocalStremio, useLocalStremio } from '../../lib/stremioServer'
 import { useTorrentServer } from '../../lib/torrentServer'
 import type { AddonStreams, InstalledAddon, Meta, Stream, Video } from '../../lib/types'
 import { createRecentSet } from './autoPlayed'
 import { episodeNumber } from './episodes'
 import { pendingNames, safeGroups } from './safeData'
 import { streamOrder } from './streamOrder'
+import { StremioServiceNotice } from './StremioServiceNotice'
 
 export interface PlayState {
   stream: Stream
@@ -32,6 +34,11 @@ export interface DetailLocationState {
   noAuto?: boolean
   /** "Ver desde el principio": el reproductor arranca en 0 aunque haya progreso guardado. */
   fromStart?: boolean
+}
+
+/** v0.29: ¿a este stream le sirve Stremio Service en la PC? */
+function benefitsFromServer(s: Stream): boolean {
+  return (!!s.infoHash && !s.url) || isDebridDownload(s) || !!s.behaviorHints?.notWebReady
 }
 
 export function streamLabel(s: Stream) {
@@ -94,6 +101,16 @@ export function StreamList({ meta, video, nextVideoId }: { meta: Meta; video?: V
   useEffect(() => {
     for (const addon of twinAddons) prefetchTorrentTwins(addon, meta.type, videoId)
   }, [twinAddons, meta.type, videoId])
+
+  // v0.29: en la PC se busca Stremio Service recién cuando la lista trae algo que lo aprovecha (torrents, lo que
+  // TorBox todavía no tiene o links que el navegador quizás no abre), así el permiso de Chrome no sale de la nada.
+  const local = useLocalStremio()
+  const wantsLocal = local !== 'off' && !settings.streamingServerUrl.trim() && groups.some((g) => g.streams.some(benefitsFromServer))
+  useEffect(() => {
+    if (wantsLocal) void ensureLocalStremio()
+  }, [wantsLocal])
+  // El aviso sigue a la vista mientras "Probar de nuevo" busca (no desaparece y vuelve).
+  const noticeShown = useRef(false)
 
   useEffect(() => {
     if (!hasPlayable) return
@@ -233,10 +250,13 @@ export function StreamList({ meta, video, nextVideoId }: { meta: Meta; video?: V
 
   const total = groups.reduce((n, g) => n + g.streams.length, 0)
   const totalLabel = total === 1 ? '1 fuente' : `${total} fuentes`
+  const deadTorrents = parts.reduce((n, pt) => n + pt.torrents.length, 0)
+  const showNotice = deadTorrents > 0 && wantsLocal && (local === 'missing' || (local === 'checking' && noticeShown.current))
+  noticeShown.current = showNotice
   // v0.26 (ficha-10): se cuentan las que se pueden abrir, no todas ("6 listas para ver · 2 torrents sin debrid · 1 oculta…").
   const counts = sourceCounts({
     ready: parts.reduce((n, pt) => n + pt.usable.filter(({ s }) => { const p = playable(s, server); return !!(p.url || p.external) }).length, 0),
-    torrents: parts.reduce((n, pt) => n + pt.torrents.length, 0),
+    torrents: deadTorrents,
     hidden: hidden.size,
   })
   const countsText = (
@@ -291,7 +311,8 @@ export function StreamList({ meta, video, nextVideoId }: { meta: Meta; video?: V
         {file && <span className="sx-file">{file}</span>}
         {hiddenReason && <span className="stream-hidden-reason">{hiddenReason}</span>}
         {p.reason && <span className="stream-warn">{p.reason}</span>}
-        {s.behaviorHints?.notWebReady && p.url && <span className="stream-warn">Puede no reproducirse en el navegador (formato MKV/HEVC)</span>}
+        {/* Con Stremio Service en la compu se convierte si hace falta (v0.29). */}
+        {s.behaviorHints?.notWebReady && p.url && local !== 'found' && <span className="stream-warn">Puede no reproducirse en el navegador (formato MKV/HEVC)</span>}
       </>
     )
     const cls = `stream-item sx${recommended ? ' recommended' : ''}`
@@ -344,6 +365,7 @@ export function StreamList({ meta, video, nextVideoId }: { meta: Meta; video?: V
         </div>
       )}
       <div className="streams-status muted" aria-live="polite">{statusText}</div>
+      {showNotice && <StremioServiceNotice checking={local === 'checking'} />}
       {parts.map(({ g, bestIndex, items, usable, torrents }) => {
         const torrentsOpen = openTorrents.has(g.addon.transportUrl)
         const toggleTorrents = () =>
@@ -366,8 +388,8 @@ export function StreamList({ meta, video, nextVideoId }: { meta: Meta; video?: V
             {torrents.length > 0 && (
               <>
                 <button className="stream-hidden-toggle stream-torrents-toggle" aria-expanded={torrentsOpen} onClick={toggleTorrents}>
-                  {torrentsOpen ? '▾' : '▸'} {torrents.length === 1 ? '1 torrent sin debrid' : `${torrents.length} torrents sin debrid`} (necesitan
-                  el servidor de Stremio)
+                  {torrentsOpen ? '▾' : '▸'} {torrents.length === 1 ? '1 torrent sin debrid' : `${torrents.length} torrents sin debrid`} (necesitan{' '}
+                  {local === 'off' ? 'el servidor de Stremio' : 'Stremio Service'})
                 </button>
                 {torrentsOpen && <div className="stream-items">{torrents.map(({ s, i }) => renderItem(s, i, g.addon, false))}</div>}
               </>
