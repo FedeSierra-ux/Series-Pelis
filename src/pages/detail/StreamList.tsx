@@ -4,6 +4,8 @@ import { getStreams } from '../../lib/addons'
 import { isDebridDownload, prefetchTorrentTwins } from '../../lib/debrid'
 import { debridTwinOf } from '../../lib/debridWait'
 import { useAddons } from '../../lib/hooks'
+import { desktopTorrentBase } from '../../lib/desktop'
+import { isNativeApp } from '../../lib/native'
 import { isOnline } from '../../lib/online'
 import { lastSourceStore, settingsStore, useStore } from '../../lib/store'
 import { sourceCounts, streamFacts } from '../../lib/streamFacts'
@@ -15,7 +17,6 @@ import { createRecentSet } from './autoPlayed'
 import { episodeNumber } from './episodes'
 import { pendingNames, safeGroups } from './safeData'
 import { streamOrder } from './streamOrder'
-import { StremioServiceNotice } from './StremioServiceNotice'
 
 export interface PlayState {
   stream: Stream
@@ -110,8 +111,8 @@ export function StreamList({ meta, video, nextVideoId }: { meta: Meta; video?: V
   useEffect(() => {
     if (wantsLocal) void ensureLocalStremio()
   }, [wantsLocal])
-  // El aviso sigue a la vista mientras "Probar de nuevo" busca (no desaparece y vuelve).
-  const noticeShown = useRef(false)
+  // v0.30: lo que el navegador no puede (MKV/HEVC/AC3) lo convierte el motor de la app de Windows o Stremio Service.
+  const converts = !!desktopTorrentBase() || local === 'found'
 
   useEffect(() => {
     if (!hasPlayable) return
@@ -256,8 +257,6 @@ export function StreamList({ meta, video, nextVideoId }: { meta: Meta; video?: V
   const total = groups.reduce((n, g) => n + g.streams.length, 0)
   const totalLabel = total === 1 ? '1 fuente' : `${total} fuentes`
   const deadTorrents = parts.reduce((n, pt) => n + pt.torrents.length, 0)
-  const showNotice = deadTorrents > 0 && wantsLocal && (local === 'missing' || (local === 'checking' && noticeShown.current))
-  noticeShown.current = showNotice
   // v0.26 (ficha-10): se cuentan las que se pueden abrir, no todas ("6 listas para ver · 2 torrents sin debrid · 1 oculta…").
   const counts = sourceCounts({
     ready: parts.reduce((n, pt) => n + pt.usable.filter(({ s }) => { const p = playable(s, server); return !!(p.url || p.external || twinOf(s)) }).length, 0),
@@ -318,8 +317,8 @@ export function StreamList({ meta, video, nextVideoId }: { meta: Meta; video?: V
         {hiddenReason && <span className="stream-hidden-reason">{hiddenReason}</span>}
         {p.reason && !twin && <span className="stream-warn">{p.reason}</span>}
         {twin && <span className="stream-hidden-reason">{isDebridDownload(twin.stream) ? 'Por TorBox: lo baja y arranca solo' : 'Por TorBox'}</span>}
-        {/* Con Stremio Service en la compu se convierte si hace falta (v0.29). */}
-        {s.behaviorHints?.notWebReady && p.url && local !== 'found' && <span className="stream-warn">Puede no reproducirse en el navegador (formato MKV/HEVC)</span>}
+        {/* Con la app de Windows o Stremio Service se convierte si hace falta (v0.29). */}
+        {s.behaviorHints?.notWebReady && p.url && !converts && <span className="stream-warn">Puede no reproducirse en el navegador (formato MKV/HEVC)</span>}
       </>
     )
     const cls = `stream-item sx${recommended ? ' recommended' : ''}`
@@ -378,7 +377,6 @@ export function StreamList({ meta, video, nextVideoId }: { meta: Meta; video?: V
         </div>
       )}
       <div className="streams-status muted" aria-live="polite">{statusText}</div>
-      {showNotice && <StremioServiceNotice checking={local === 'checking'} />}
       {parts.map(({ g, bestIndex, items, usable, torrents }) => {
         const torrentsOpen = openTorrents.has(g.addon.transportUrl)
         const toggleTorrents = () =>
@@ -401,8 +399,8 @@ export function StreamList({ meta, video, nextVideoId }: { meta: Meta; video?: V
             {torrents.length > 0 && (
               <>
                 <button className="stream-hidden-toggle stream-torrents-toggle" aria-expanded={torrentsOpen} onClick={toggleTorrents}>
-                  {torrentsOpen ? '▾' : '▸'} {torrents.length === 1 ? '1 torrent sin debrid' : `${torrents.length} torrents sin debrid`} (necesitan{' '}
-                  {local === 'off' ? 'el servidor de Stremio' : 'Stremio Service'})
+                  {torrentsOpen ? '▾' : '▸'} {torrents.length === 1 ? '1 torrent sin debrid' : `${torrents.length} torrents sin debrid`}{' '}
+                  {isNativeApp() ? '(necesitan el motor de la app)' : '(el navegador no los puede abrir)'}
                 </button>
                 {torrentsOpen && <div className="stream-items">{torrents.map(({ s, i }) => renderItem(s, i, g.addon, false))}</div>}
               </>
