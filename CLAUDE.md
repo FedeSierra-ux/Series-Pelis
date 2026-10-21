@@ -566,7 +566,9 @@ npm run preview    # sirve dist/ en http://localhost:4173
   (`videoSubsFor` en `StremioPrepare`: `base === desktopTorrentBase()`), pasa por `onReady(url, videoSubs)` →
   `PlayerView` → `useSubtitles`. Elección: `videoBonus` 0,25 (nunca le gana al latino, 0,5); los forzados prefieren
   los sincronizados (HLS o del video). En los tests de ffmpeg las entradas extra van antes de `-t` (si no, lavfi
-  no termina nunca). Sin probar en un Windows real.
+  no termina nunca). El MKV de prueba con subtítulos se arma **en dos pasos** (codificar, después copiar sumando
+  los subtítulos): de un paso, el ffmpeg 6.1.1 de Windows deja el video ~250 ms detrás del audio en el archivo y el
+  test del HLS falla. Sin probar en un Windows real.
 - **Decisiones para la v0.17 (reemplazan el reparto del plan de abajo)**: addons y TorBox **iguales para todas las
   casas**, solo los cambia el admin (opción A). Ajustes generales (subtítulos, idiomas, autoplay, saltar intro, sin
   spoilers, reglas de fuentes) **iguales en toda la casa**; lo físico (modo TV, tamaño de la interfaz, protector,

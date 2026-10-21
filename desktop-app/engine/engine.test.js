@@ -134,12 +134,10 @@ describe('motor de punta a punta', { timeout: 300_000 }, () => {
     media = path.join(tmp, 'Serie S01')
     cacheDir = path.join(tmp, 'cache')
     await fs.promises.mkdir(media)
-    // `extra`: más entradas (van antes de `-t`, así el tope es de la salida y no de la última entrada).
-    const lavfi = (/** @type {string} */ size, /** @type {number} */ rate, /** @type {number} */ secs, /** @type {string[]} */ extra = []) => [
+    const lavfi = (/** @type {string} */ size, /** @type {number} */ rate, /** @type {number} */ secs) => [
       '-f', 'lavfi', '-i', `testsrc2=size=${size}:rate=${rate}`,
       '-f', 'lavfi', '-i', 'sine=frequency=440:sample_rate=48000',
       '-f', 'lavfi', '-i', 'sine=frequency=880:sample_rate=48000',
-      ...extra,
       '-t', String(secs),
     ]
     // Subtítulos de texto para meter en el MKV (fuera de la carpeta del torrent).
@@ -157,14 +155,21 @@ describe('motor de punta a punta', { timeout: 300_000 }, () => {
       // MP4 directo: h264 + aac estéreo (B-frames, moov al final).
       ffmpeg([...lavfi('640x360', 30, 12), '-map', '0:v', '-map', '1:a', '-c:v', 'libx264', '-preset', 'ultrafast', '-g', '60', '-bf', '2',
         '-pix_fmt', 'yuv420p', '-c:a', 'aac', '-ac', '2', path.join(media, 'Serie.S01E01.mp4')]),
-      // MKV: h264 GOP de 2 s + AC3 5.1 latino + AC3 estéreo en inglés + SRT latino + ASS forzado en inglés.
-      ffmpeg([...lavfi('640x360', 24, 40, ['-i', srt, '-i', ass]), '-map', '0:v', '-map', '1:a', '-map', '2:a', '-map', '3', '-map', '4',
-        '-c:v', 'libx264', '-preset', 'ultrafast', '-g', '48',
-        '-pix_fmt', 'yuv420p', '-c:a:0', 'ac3', '-ac:a:0', '6', '-c:a:1', 'ac3', '-ac:a:1', '2',
-        '-metadata:s:a:0', 'language=spa', '-metadata:s:a:0', 'title=Latino', '-metadata:s:a:1', 'language=eng',
-        '-c:s:0', 'srt', '-c:s:1', 'ass', '-metadata:s:s:0', 'language=spa', '-metadata:s:s:0', 'title=Español Latino',
-        '-metadata:s:s:1', 'language=eng', '-disposition:s:1', 'forced',
-        path.join(media, 'Serie.S01E02.mkv')]),
+      // MKV: h264 GOP de 2 s + AC3 5.1 latino + AC3 estéreo en inglés + SRT latino + ASS forzado en inglés. En dos pasos:
+      // codificado junto con los subtítulos, el ffmpeg 6 (el de Windows) escribe el video ~250 ms detrás del audio y
+      // al saltar se pierde ese audio (el keyframe queda después en el archivo). Copiado en un segundo paso, va en orden.
+      (async () => {
+        const base = path.join(tmp, 'e02-base.mkv')
+        await ffmpeg([...lavfi('640x360', 24, 40), '-map', '0:v', '-map', '1:a', '-map', '2:a',
+          '-c:v', 'libx264', '-preset', 'ultrafast', '-g', '48',
+          '-pix_fmt', 'yuv420p', '-c:a:0', 'ac3', '-ac:a:0', '6', '-c:a:1', 'ac3', '-ac:a:1', '2', base])
+        await ffmpeg(['-i', base, '-i', srt, '-i', ass, '-map', '0', '-map', '1', '-map', '2', '-c', 'copy',
+          '-c:s:0', 'srt', '-c:s:1', 'ass',
+          '-metadata:s:a:0', 'language=spa', '-metadata:s:a:0', 'title=Latino', '-metadata:s:a:1', 'language=eng',
+          '-metadata:s:s:0', 'language=spa', '-metadata:s:s:0', 'title=Español Latino',
+          '-metadata:s:s:1', 'language=eng', '-disposition:s:1', 'forced',
+          path.join(media, 'Serie.S01E02.mkv')])
+      })(),
       // x265 10 bits + E-AC3 5.1.
       ffmpeg([...lavfi('640x360', 24, 16), '-map', '0:v', '-map', '1:a', '-c:v', 'libx265', '-preset', 'ultrafast',
         '-x265-params', 'log-level=error:keyint=48', '-pix_fmt', 'yuv420p10le', '-c:a', 'eac3', '-ac', '6',
@@ -369,7 +374,8 @@ describe('motor de punta a punta', { timeout: 300_000 }, () => {
     assert.ok(Math.abs(a2.pts - a0.pts - sum(ad, 2)) < 0.1, `a2 ${a2.pts} vs a0 ${a0.pts} + ${sum(ad, 2)}`)
     const b1 = await inspectSegment(segUri(audio2List, 1), 'a')
     assert.equal(b1.codec, 'aac')
-    assert.ok(Math.abs(b1.pts - a0.pts - sum(extinfs(audio2List), 1)) < 0.1)
+    const bd = extinfs(audio2List)
+    assert.ok(Math.abs(b1.pts - a0.pts - sum(bd, 1)) < 0.1, `b1 ${b1.pts} vs a0 ${a0.pts} + ${sum(bd, 1)} (${bd.slice(0, 3).join(', ')})`)
 
     // Misma id = misma sesión: la maestra se repite igual.
     assert.equal(await getText(`${root}/master.m3u8?${q}`), master)
