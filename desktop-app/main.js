@@ -2,11 +2,13 @@
 // App de Flix para Windows (v0.30): una ventana de Electron que abre el sitio (series-pelis.pages.dev) con el motor
 // de torrents adentro (engine/, ver CONTRACT.md). La web decide todo; acá solo va lo que el navegador no da:
 // `window.flixDesktop` (preload.cjs), el motor en 127.0.0.1 y las actualizaciones (updater.js).
+import { spawn } from 'node:child_process'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { createRequire } from 'node:module'
 import { app, BrowserWindow, ipcMain, session, shell } from 'electron'
 import { createLogger } from './log.js'
+import { findPlayer, parsePlayerLink, playerArgs } from './players.js'
 import { desktopUserAgent, engineOrigins, externalAction, originCheck, startUrl } from './origins.js'
 import { createUpdater } from './updater.js'
 import { DEFAULT_HEIGHT, DEFAULT_WIDTH, loadWindowState, trackWindowState } from './window-state.js'
@@ -104,6 +106,10 @@ function run() {
   ipcMain.handle('flix:update-install', (e) => {
     if (!fromSite(e)) throw new Error('forbidden')
     return updater.install()
+  })
+  ipcMain.handle('flix:open-player', (e, href) => {
+    if (!fromSite(e)) throw new Error('forbidden')
+    return openPlayer(href)
   })
 
   app.whenReady().then(async () => {
@@ -223,7 +229,7 @@ function createWindow() {
   win.on('page-title-updated', (e) => e.preventDefault())
 
   // Navegación: la ventana se queda en el sitio. Lo de afuera (IMDb, JustWatch…) va al navegador; otros esquemas
-  // (intent:, vlc:, file:…) no se abren.
+  // (intent:, vlc:, file:…) no se abren. VLC/mpv/PotPlayer van por `flixDesktop.openPlayer` (openPlayer, más abajo).
   wc.on('will-navigate', (e) => {
     if (isAllowed(e.url)) return
     e.preventDefault()
@@ -292,6 +298,36 @@ function openOutside(url) {
   } else {
     log.info(`link negado: ${url.split(':')[0]}:`)
   }
+}
+
+/**
+ * "Abrir en VLC/mpv/PotPlayer" (ver players.js): el programa instalado con la URL como único argumento, sin shell.
+ * Si no está, la web avisa (el enlace ya lo copió). El esquema no se prueba: sin nadie que lo registre, Windows
+ * ofrece buscar una app en la Microsoft Store.
+ * @param {unknown} href
+ * @returns {Promise<'opened' | 'missing'>}
+ */
+async function openPlayer(href) {
+  const link = parsePlayerLink(href)
+  if (!link) return 'missing'
+  const exe = process.platform === 'win32' ? findPlayer(link.player, process.env) : undefined
+  if (exe) {
+    const ok = await new Promise((resolve) => {
+      const child = spawn(exe, playerArgs(link.player, link.url), { detached: true, stdio: 'ignore', shell: false })
+      child.once('spawn', () => resolve(true))
+      child.once('error', (err) => {
+        log.warn(`no se pudo abrir ${link.player}`, err)
+        resolve(false)
+      })
+      child.unref()
+    })
+    if (ok) {
+      log.info(`abierto en ${link.player}`)
+      return 'opened'
+    }
+  }
+  log.info(`${link.player}: no está instalado`)
+  return 'missing'
 }
 
 /** @param {number} ms */

@@ -11,6 +11,7 @@ files:
   - main.js
   - preload.cjs
   - origins.js
+  - players.js
   - log.js
   - updater.js
   - update-errors.js

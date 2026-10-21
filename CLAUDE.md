@@ -528,7 +528,11 @@ npm run preview    # sirve dist/ en http://localhost:4173
     (`FLIX_URL` para probar otro), así login/perfiles/historial son los de siempre. appId `ar.flix.desktop`, NSIS de un
     clic por usuario, `flix-pc-setup.exe`, datos en `%APPDATA%\Flix`, User-Agent `FlixPC/<v>` (**nunca** `FlixApp/`, que
     es la de Android). `preload.cjs` deja `window.flixDesktop = {version, torrent, update:{check, install, onEvent}}`.
-    Solo http(s): **VLC/mpv/PotPlayer no abren** desde la app. F5 recarga. Sin firma: SmartScreen avisa.
+    La ventana solo navega http(s); **"Abrir en VLC/mpv/PotPlayer"** va por `flixDesktop.openPlayer(href)` →
+    `desktop-app/players.js` (`parsePlayerLink` acepta solo `vlc|mpv|potplayer://` + URL http/https; busca el .exe en
+    Program Files / `%LOCALAPPDATA%\Programs` / scoop / PATH y lo abre con `spawn` sin shell, la URL como único
+    argumento, `--` antes en mpv). Sin el programa → `'missing'` (no se prueba el esquema: Windows ofrecería la
+    Store). Pedido del usuario. F5 recarga. Sin firma: SmartScreen avisa.
   - **Motor** `desktop-app/engine/` (webtorrent 3.0.21, ffmpeg-static 5.3.0, ffprobe-static 3.1.0): misma API que
     Stremio Service (`POST /<hash>/create`, `stats.json`, `/<hash>/<idx>` con Range, `/hlsv2/probe`,
     `/hlsv2/<id>/master.m3u8`), en 127.0.0.1 con puerto al azar y token de 128 bits; `originAllowed` con comodín

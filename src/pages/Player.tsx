@@ -9,7 +9,7 @@ import { episodeLabel, formatTime, isHls } from '../lib/format'
 import { useTitle } from '../lib/hooks'
 import { langLabel } from '../lib/i18n'
 import { useLocalTitle } from '../lib/localTitles'
-import { desktopTorrentBase } from '../lib/desktop'
+import { desktopApp, desktopTorrentBase } from '../lib/desktop'
 import { isNativeApp } from '../lib/native'
 import { needsNativePlayer, torrentServer } from '../lib/torrentServer'
 import { serverPlan, STREMIO_SERVER, useLocalStremio } from '../lib/stremioServer'
@@ -1010,6 +1010,18 @@ function PlayerView({
     }
     // Se copia igual por si la app no está instalada o el navegador bloquea el esquema.
     const copying = launch.copy ? copyText(url) : Promise.resolve(false)
+    // v0.30: la app de Windows abre el programa instalado (VLC y mpv no registran su esquema en Windows).
+    const openPlayer = desktopApp()?.openPlayer
+    if (openPlayer) {
+      Promise.all([openPlayer(launch.href).catch(() => 'missing' as const), copying]).then(([result, copied]) =>
+        flash(
+          result === 'opened'
+            ? `Abriendo ${launch.label}…`
+            : `No encontré ${launch.label} en esta compu.${copied ? ' El enlace ya está copiado: pegalo en tu reproductor' : ''}`,
+        ),
+      )
+      return
+    }
     launchUrl(launch.href, currentPlatform().os)
     copying.then((ok) =>
       flash(ok ? `Abriendo ${launch.label}… Si no abre, el enlace ya está copiado: pegalo en tu reproductor` : `Abriendo ${launch.label}…`),

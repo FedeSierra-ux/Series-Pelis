@@ -34,6 +34,7 @@ API bajo `engine.base` (la misma que usa `src/pages/player/StremioPrepare.tsx` c
 interface FlixDesktop {
   version: string                 // '0.30.0'
   torrent: string                 // engine.base
+  openPlayer(href: string): Promise<'opened' | 'missing'>  // 'vlc://<url>' | 'mpv://<url>' | 'potplayer://<url>' (url http/https)
   update: {
     check(force?: boolean): Promise<{ available: boolean; current: string; latest?: string; notes?: string; size?: number; error?: string }>
     install(): Promise<void>      // baja y, al terminar, cierra e instala (avance por onEvent)

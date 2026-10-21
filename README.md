@@ -226,6 +226,9 @@ sin instalar nada más.
 conocida" → **Más información** → **Ejecutar de todos modos**. Se instala para tu usuario, con acceso en el escritorio
 y en el menú Inicio, y **se actualiza sola** (Ajustes → App de Windows).
 
+**Abrir en VLC / mpv / PotPlayer** (Ajustes → Reproductor → Reproductor externo): la app abre directo el programa
+instalado, también con los torrents. Si no lo encuentra, avisa y deja el enlace copiado.
+
 **Armar una versión nueva**: el workflow `.github/workflows/desktop.yml` arma el instalador en Windows en cada cambio
 de `desktop-app/` (queda como *artifact*) y, con la etiqueta `flix-vX.Y.Z`, sube `flix-pc-setup.exe`, su
 `.blockmap` y `latest.yml` al mismo Release que el APK de la TV. La etiqueta tiene que coincidir con la versión de

@@ -9,6 +9,8 @@ export interface FlixDesktop {
   version: string
   /** Motor de torrents: `http://127.0.0.1:<puerto>/<token>`, con la API del servidor de Stremio. '' = no arrancó. */
   torrent: string
+  /** "Abrir en VLC/mpv/PotPlayer": abre el programa instalado con el enlace de `externalLaunch` (`vlc://<url>`). */
+  openPlayer?(href: string): Promise<'opened' | 'missing'>
   update?: {
     check(force?: boolean): Promise<NativeUpdateInfo>
     install(): Promise<void>

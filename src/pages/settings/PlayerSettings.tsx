@@ -1,6 +1,7 @@
 import { useId } from 'react'
 import { Advanced } from '../../components/Advanced'
 import { saveDataOn } from '../../lib/dataSaver'
+import { isDesktopApp } from '../../lib/desktop'
 import { effectivePlayer, playersFor } from '../../lib/externalPlayers'
 import { langLabel } from '../../lib/i18n'
 import { isNativeApp } from '../../lib/native'
@@ -234,7 +235,8 @@ export function PlayerSettings() {
         {os === 'android'
           ? '“Del sistema” muestra la lista de reproductores instalados; los demás abren directo esa app (si no está, Android ofrece instalarla).'
           : '“Del sistema” copia el enlace para pegarlo en tu reproductor. Los demás lo abren directo si están instalados (y el enlace queda copiado por si no abre).'}{' '}
-        {effectivePlayer(settings.externalPlayer, os).note}
+        {/* En la app de Windows mpv no necesita el manejador de enlaces: se abre el programa. */}
+        {isDesktopApp() ? 'En la app de Windows se abre el programa instalado (VLC, mpv o PotPlayer).' : effectivePlayer(settings.externalPlayer, os).note}
       </p>
     </section>
   )

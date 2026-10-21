@@ -10,6 +10,8 @@
 - **Torrents por TorBox en el navegador**: un torrent sin debrid usa su par de TorBox (mismo torrent y archivo).
   Lo que TorBox ya tiene arranca enseguida; lo que no, muestra **"TorBox lo está bajando…"** con el tiempo de espera
   y el video **arranca solo** cuando está listo.
+- En la app de Windows, **Abrir en VLC / mpv / PotPlayer** abre directo el programa instalado (también con los
+  torrents). Si no está, avisa y deja el enlace copiado.
 - Ajustes → **App de Windows**: en la app, versión y actualizaciones; en el navegador de Windows, el botón
   **Bajar Flix para Windows**.
 

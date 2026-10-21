@@ -12,6 +12,8 @@ if (info) {
     version: info.version,
     // Sin motor (no arrancó) no va la clave: la web lo toma como "sin torrents".
     ...(info.torrent ? { torrent: info.torrent } : {}),
+    /** "Abrir en VLC/mpv/PotPlayer": `vlc://<url>` → 'opened' | 'missing'. @param {string} href */
+    openPlayer: (href) => ipcRenderer.invoke('flix:open-player', String(href)),
     update: {
       /** @param {boolean} [force] */
       check: (force) => ipcRenderer.invoke('flix:update-check', force === true),
