@@ -85,21 +85,19 @@ npm run preview   # probar el build en http://localhost:4173
 En **Ajustes → Addons de Stremio** pegá la URL de cada addon que uses (termina en `/manifest.json`; también sirve el
 enlace `stremio://`).
 
-### Torrents en la PC (Stremio Service)
+### Torrents sin debrid
 
-El navegador no puede bajar torrents por su cuenta: hace falta un programa en la compu que lo haga, igual que con
-Stremio Web.
+El navegador no puede bajar torrents por su cuenta. Según dónde mires:
 
-1. Instalá [Stremio Service](https://www.stremio.com/download-service) (gratis, de Stremio; Windows, Mac o Linux) y
-   dejalo abierto. No hace falta configurar nada.
-2. Entrá a Flix desde Chrome, Edge o Firefox. Al abrir una ficha con torrents, Flix busca el servicio en
-   `http://127.0.0.1:11470`. Chrome puede preguntar una vez si dejás que el sitio se conecte con los aparatos de tu
-   red: tocá **Permitir**.
-3. Si no lo encuentra, las fuentes muestran un aviso con **Descargar Stremio Service** y **Probar de nuevo**.
+- **Navegador (PC o celular)**: los torrents van por **TorBox** (ver abajo). Lo que TorBox ya tiene arranca enseguida;
+  lo que no, TorBox lo baja y el video arranca solo cuando está listo ("TorBox lo está bajando…").
+- **App de Windows** ([Flix para Windows](https://github.com/FedeSierra-ux/Series-Pelis/releases/latest/download/flix-pc-setup.exe)):
+  como Stremio de escritorio. Elegís el torrent y reproduce, sin debrid y sin instalar nada más: trae su propio motor
+  de torrents y convierte lo que Chromium no puede (AC3, DTS, 5.1). Ver [App para Windows](#app-para-windows-v030).
+- **App de Android TV** (9+): motor de torrents propio (v0.25).
+- Si en la compu está abierto **Stremio Service** (o Stremio), Flix lo usa solo, como en la v0.29.
 
-Al reproducir, Flix crea el torrent con sus trackers, muestra cuánta gente lo comparte y, si el navegador no puede con
-el formato, pide al servicio la versión convertida (HLS). El servicio convierte un video a la vez. En Ajustes →
-Reproductor → "Servidor de streaming" se puede poner otro servidor a mano.
+En Ajustes → Reproductor → "Servidor de streaming" se puede poner otro servidor a mano.
 
 ### TorBox para todas las casas (Torrentio)
 
@@ -123,9 +121,10 @@ casas. La app nunca la guarda aparte.
 
 Cómo se comporta:
 - **Listo para ver** (`[TB+]`): reproduce directo desde TorBox.
-- **Tiene que descargarse** (`[TB download]`): arranca por torrent (app de Android 9+ o Stremio abierto en la PC) y le
-  pide a TorBox que lo baje para la próxima.
-- **Si TorBox falla**: cartel con el motivo y el botón "Reproducir por torrent".
+- **Tiene que descargarse** (`[TB download]`): con motor de torrents (app de Windows, app de Android 9+ o Stremio
+  abierto en la PC) arranca por torrent y le pide a TorBox que lo baje para la próxima. En el navegador, TorBox lo baja
+  y el video arranca solo cuando está listo (puede tardar unos minutos; Torrentio tarda hasta ~1 min en avisar).
+- **Si TorBox falla**: cartel con el motivo y, si hay motor de torrents, el botón "Reproducir por torrent".
 
 Para tener todo en español y las filas de tendencias, sacá una key gratis en
 [themoviedb.org → Ajustes → API](https://www.themoviedb.org/settings/api) y pegala en **Ajustes → TMDB**
@@ -213,6 +212,27 @@ siempre con la misma llave: secretos `ANDROID_KEYSTORE_BASE64`, `ANDROID_KEYSTOR
 
 Compilar en la PC (con el SDK de Android y Java 21): `cd tv-app && npm install && npx cap sync android &&
 cd android && ./gradlew assembleDebug`.
+
+## App para Windows (v0.30)
+
+La carpeta `desktop-app/` es una app de [Electron](https://www.electronjs.org) que abre
+`https://series-pelis.pages.dev` (mismo login, perfiles e historial) y trae adentro un **motor de torrents**
+(webtorrent) y la **conversión de video** (ffmpeg), como Stremio de escritorio: los torrents sin debrid se reproducen
+sin instalar nada más.
+
+**Instalarla**: bajá
+[`flix-pc-setup.exe`](https://github.com/FedeSierra-ux/Series-Pelis/releases/latest/download/flix-pc-setup.exe)
+(Windows 10/11, 64 bits) y abrilo. El instalador no está firmado: Windows SmartScreen avisa que la app "no es
+conocida" → **Más información** → **Ejecutar de todos modos**. Se instala para tu usuario, con acceso en el escritorio
+y en el menú Inicio, y **se actualiza sola** (Ajustes → App de Windows).
+
+**Armar una versión nueva**: el workflow `.github/workflows/desktop.yml` arma el instalador en Windows en cada cambio
+de `desktop-app/` (queda como *artifact*) y, con la etiqueta `flix-vX.Y.Z`, sube `flix-pc-setup.exe`, su
+`.blockmap` y `latest.yml` al mismo Release que el APK de la TV. La etiqueta tiene que coincidir con la versión de
+`desktop-app/package.json` (y con la de `tv-app/`): se suben juntas.
+
+Probar en la PC: `cd desktop-app && npm install && npm start` (con `FLIX_URL=http://localhost:5173` usa el
+`npm run dev` local). Pruebas: `npm test`. El ffmpeg que viene adentro es GPL (de `ffmpeg-static`).
 
 Para probar localmente igual que en Cloudflare (con la función y los headers): `npm run build && npx wrangler pages dev`.
 
