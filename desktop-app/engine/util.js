@@ -2,6 +2,12 @@
 // Ayudantes puros del motor: token, rutas, Range y CORS. Sin estado, así se prueban solos.
 import { randomBytes, timingSafeEqual } from 'node:crypto'
 
+/**
+ * Para borrar carpetas de la caché. En Windows un archivo abierto (ffmpeg que todavía no terminó de cerrarse, un
+ * pedido que sigue leyendo) no se puede borrar y da EBUSY/EPERM: Node lo reintenta unas veces.
+ */
+export const RM_DIR = Object.freeze({ recursive: true, force: true, maxRetries: 10, retryDelay: 100 })
+
 /** Token de 128 bits (32 hex) que va en todas las rutas. */
 export function newToken() {
   return randomBytes(16).toString('hex')

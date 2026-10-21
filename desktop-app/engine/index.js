@@ -12,7 +12,7 @@ import { Hls } from './hls.js'
 import { checkPublicUrl, openPublic } from './net.js'
 import { Prober, probeResponse } from './probe.js'
 import { Torrents } from './torrents.js'
-import { Lru, newToken, originAllowed, parseRange, parseRoute } from './util.js'
+import { Lru, newToken, originAllowed, parseRange, parseRoute, RM_DIR } from './util.js'
 
 const MAX_BODY = 64 * 1024
 const MIME = /** @type {Record<string, string>} */ ({
@@ -37,7 +37,8 @@ const M3U8 = 'application/vnd.apple.mpegurl'
 export async function startEngine(opts) {
   const log = opts.log ?? (() => {})
   const cacheDir = path.resolve(opts.cacheDir)
-  await fs.promises.rm(cacheDir, { recursive: true, force: true })
+  // Lo que quedó de la vez anterior. Si algo no se deja borrar, se arranca igual.
+  await fs.promises.rm(cacheDir, RM_DIR).catch(() => {})
   await fs.promises.mkdir(cacheDir, { recursive: true })
 
   const token = newToken()
@@ -327,7 +328,7 @@ export async function startEngine(opts) {
       server.close()
       for (const s of sockets) s.destroy()
       await torrents.close().catch(() => {})
-      await fs.promises.rm(cacheDir, { recursive: true, force: true }).catch(() => {})
+      await fs.promises.rm(cacheDir, RM_DIR).catch(() => {})
     })()
     return closing
   }

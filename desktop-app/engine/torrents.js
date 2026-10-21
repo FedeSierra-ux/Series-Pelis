@@ -6,6 +6,7 @@ import fs from 'node:fs'
 import path from 'node:path'
 import { guessFileIdx } from './files.js'
 import { isPrivateIp } from './net.js'
+import { RM_DIR } from './util.js'
 
 const MAX_TORRENTS = 2
 const METADATA_TIMEOUT_MS = 120_000
@@ -209,7 +210,7 @@ export class Torrents {
     e.responses.clear()
     try {
       e.torrent.destroy({ destroyStore: true }, () => {
-        fs.rm(path.join(this.opts.cacheDir, hash), { recursive: true, force: true }, () => {})
+        fs.rm(path.join(this.opts.cacheDir, hash), RM_DIR, () => {})
       })
     } catch (err) {
       this.opts.log(`torrent ${hash}: ${/** @type {Error} */ (err).message}`)

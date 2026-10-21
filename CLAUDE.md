@@ -534,7 +534,8 @@ npm run preview    # sirve dist/ en http://localhost:4173
     `/hlsv2/<id>/master.m3u8`), en 127.0.0.1 con puerto al azar y token de 128 bits; `originAllowed` con comodín
     (`*.series-pelis.pages.dev` para previews). 2 torrents como mucho, metadata 120 s, 3 conversiones. Los módulos
     nativos opcionales de webtorrent se reemplazan con `engine/stubs/` (dependencias `file:`): **sin módulos nativos**.
-    ffmpeg/ffprobe van en `asarUnpack`. `npm test` en `desktop-app` = `engine/*.test.js` + `shell.test.js`.
+    ffmpeg/ffprobe van en `asarUnpack`. En Windows un archivo abierto no se borra (EBUSY): borrar carpetas con `RM_DIR`
+    (`engine/util.js`, con reintentos). `desktop-app/.gitattributes` fuerza LF (la CSP de `offline.html` lleva el sha256). `npm test` en `desktop-app` = `engine/*.test.js` + `shell.test.js`.
   - **Web**: `lib/desktop.ts` (`desktopTorrentBase`, `ENGINE_RE`, `DESKTOP_DOWNLOAD_URL`); `pickTorrentServer` =
     explícito → **app de Windows** → motor de Android → Stremio local. El motor de Windows lo reproduce la web vía
     `StremioPrepare` (no es `engine: true`) y también convierte links `notWebReady`. `appUpdate.ts`/`AppUpdateToast`

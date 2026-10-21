@@ -20,7 +20,7 @@ import {
   scaledSize,
   segmentTimes,
 } from './playlist.js'
-import { Lru } from './util.js'
+import { Lru, RM_DIR } from './util.js'
 
 /** Segmentos por ffmpeg (después sigue otro, si se sigue mirando). */
 const JOB_SEGMENTS = { copy: 40, x264: 20, aac: 60 }
@@ -484,7 +484,7 @@ class Session {
       for (const set of t.waiters.values()) for (const fn of [...set]) fn()
     }
     this.tracks.clear()
-    fs.rm(this.dir, { recursive: true, force: true }, () => {})
+    fs.rm(this.dir, RM_DIR, () => {})
   }
 }
 
