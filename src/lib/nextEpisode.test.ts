@@ -251,6 +251,16 @@ describe('siguiente episodio: debrid primero (v0.25)', () => {
     expect(next?.video?.id).toBe('tt1:1:2')
   })
 
+  it('v0.30: sin servidor de torrents, el "[TB download]" queda tal cual (el reproductor espera a TorBox)', async () => {
+    const hash = 'a1b2c3d4e5f60718293a4b5c6d7e8f9012345678'
+    const download = { name: '[TB download] Torrentio\n1080p', title: 'Serie.S01E02.1080p 🇲🇽 Latino', url: `https://torrentio.strem.fun/resolve/torbox/K/${hash}/x/1/x.mkv` }
+    settingsStore.set((s) => ({ ...s, streamingServerUrl: '' }))
+    fake.streams['tt1:1:2'] = [{ addon: torrentio, streams: [torrent, download], loading: false }]
+    const next = await findNextStream(state as never)
+    expect(next?.playUrl).toBe(download.url)
+    expect(next?.stream).toEqual(download)
+  })
+
   it('sin nada directo, sigue con el torrent de la misma fuente', async () => {
     fake.streams['tt1:1:2'] = [{ addon: torrentio, streams: [torrent], loading: false }]
     const next = await findNextStream(state as never)

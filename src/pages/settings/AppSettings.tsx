@@ -1,12 +1,85 @@
 import { useEffect, useState } from 'react'
 import { checkAppUpdate, formatSize, installAppUpdate, useAppUpdate } from '../../lib/appUpdate'
-import { nativeInfo, type NativeInfo } from '../../lib/native'
+import { desktopApp, DESKTOP_DOWNLOAD_URL } from '../../lib/desktop'
+import { isNativeApp, nativeInfo, type NativeInfo } from '../../lib/native'
+import { currentPlatform } from '../../lib/platform'
+
+/** ¿Va la sección? En las apps (Android y Windows) y en el navegador de una compu con Windows (para bajarla). */
+export function showAppSettings(): boolean {
+  return isNativeApp() || !!desktopApp() || currentPlatform().os === 'windows'
+}
 
 /**
- * Ajustes → App de TV (v0.21, solo dentro de la app de Android): versión instalada, buscar una nueva en
- * GitHub Releases e instalarla, y si el inicio de la TV muestra las filas de la app.
+ * Ajustes → App de TV / App de Windows. En la app de Android (v0.21): versión, actualizaciones y filas del inicio de
+ * la TV. En la de Windows (v0.30): versión y actualizaciones. En el navegador de Windows: dónde bajarla.
  */
 export function AppSettings() {
+  if (desktopApp()) return <DesktopAppSettings />
+  if (isNativeApp()) return <TvAppSettings />
+  return <DesktopDownload />
+}
+
+function DesktopDownload() {
+  return (
+    <section className="settings-section">
+      <h2>App de Windows</h2>
+      <p className="muted">
+        Con Flix para Windows los torrents se reproducen directo, sin debrid y sin instalar nada más (trae su propio
+        motor y convierte lo que el navegador no puede). Usa tu misma casa, perfiles e historial.
+      </p>
+      <div className="hero-actions">
+        <a className="btn btn-primary" href={DESKTOP_DOWNLOAD_URL}>
+          Bajar Flix para Windows
+        </a>
+      </div>
+      <p className="muted small">
+        Windows puede avisar que la app no es conocida (no está firmada): tocá “Más información” → “Ejecutar de todas
+        formas”. Se actualiza sola.
+      </p>
+    </section>
+  )
+}
+
+function DesktopAppSettings() {
+  const app = desktopApp()
+  const state = useAppUpdate()
+  const latest = 'info' in state ? state.info?.latest : undefined
+  const working = state.step === 'checking' || state.step === 'downloading' || state.step === 'installer'
+  return (
+    <section className="settings-section">
+      <h2>App de Windows</h2>
+      <p className="muted small">
+        Versión instalada: {app?.version ?? '—'}
+        {app && !app.torrent && ' · El motor de torrents no arrancó: cerrá Flix y abrilo de nuevo.'}
+      </p>
+      {app?.update && (
+        <>
+          <p className="small" role="status" aria-live="polite">
+            {state.step === 'installer' ? 'Flix se cierra para instalar la versión nueva…' : statusText(state)}
+          </p>
+          {state.step === 'downloading' && <progress className="update-toast-progress" max={1} value={state.progress} aria-label="Descarga" />}
+          <div className="hero-actions">
+            {state.step === 'available' || (state.step === 'error' && 'info' in state && state.info?.available) ? (
+              <button type="button" className="btn btn-primary" onClick={() => void installAppUpdate()}>
+                {`Instalar la ${latest ?? 'nueva versión'}`}
+              </button>
+            ) : (
+              <button type="button" className="btn" disabled={working} onClick={() => void checkAppUpdate(true)}>
+                Buscar actualizaciones
+              </button>
+            )}
+          </div>
+          <p className="muted small">
+            La app se fija sola al abrir. La versión nueva se baja de GitHub y se instala al cerrar Flix; no se pierde el
+            login.
+          </p>
+        </>
+      )}
+    </section>
+  )
+}
+
+function TvAppSettings() {
   const [info, setInfo] = useState<NativeInfo>()
   const state = useAppUpdate()
 

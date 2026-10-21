@@ -16,7 +16,7 @@ historial, "Seguir viendo" y "Mi lista". Interfaz en **español latino (es-AR)**
 | Plataforma | PWA (PC, celular, navegador de la TV). Pensada para llevarla después a Fire TV / Android TV (TWA o Capacitor). |
 | Metadatos | **Cinemeta** (`v3-cinemeta.strem.io`): sin API key, incluye `imdbRating`. Desde v0.3, **TMDB opcional** para español, reparto, sagas y tendencias. |
 | Streams | Protocolo de addons de Stremio. El usuario pega las URLs de manifest de sus addons; el debrid (Real-Debrid / TorBox) va configurado dentro del addon, la app no lo maneja. |
-| Torrents sin debrid | Desde la v0.25: **motor propio en la app de Android** (libtorrent4j, como Stremio/Nuvio; pedido del usuario). En PC, servidor local de Stremio (`http://127.0.0.1:11470`). Debrid/directo siempre primero. |
+| Torrents sin debrid | Desde la v0.25: **motor propio en la app de Android** (libtorrent4j, como Stremio/Nuvio; pedido del usuario). Desde la v0.30, en Windows la **app Flix para Windows** (`desktop-app/`, motor adentro, sin instalar nada más); en el navegador, por **TorBox** (Torrentio con debrid). Stremio Service queda como extra silencioso. Debrid/directo siempre primero. |
 | Datos del usuario | v0.1: IndexedDB en el navegador + exportar/importar JSON. |
 | Backend (v0.2) | **Cloudflare**: Pages (web) + Workers (API/caché) + D1 (base). No usar Supabase. |
 | Login (v0.2) | **Código de vinculación** estilo Netflix: usuario/contraseña en PC o celular y código de 6 dígitos en la TV. |
@@ -48,6 +48,9 @@ npm run preview    # sirve dist/ en http://localhost:4173
 - `src/pages/` — Inicio, Películas/Series (`discover/BrowsePage`, filas) y Descubrir (grilla), Buscar, Detalle, Reproductor, Historial, Tu año, Calendario, Vos (con Mi lista), Ajustes
   (`settings/PlayerSettings.tsx`, `settings/SourceSettings.tsx`).
 - `vite.config.ts` — PWA (Workbox): pósters CacheFirst, Cinemeta StaleWhileRevalidate.
+- `desktop-app/` — app de Windows (Electron, v0.30): `main.js`, `preload.cjs` (`window.flixDesktop`), `updater.js`,
+  `engine/` (motor de torrents + HLS con ffmpeg). Contrato en `desktop-app/CONTRACT.md`. Web: `src/lib/desktop.ts`.
+- `src/lib/debridWait.ts` — esperar a que TorBox baje un torrent no cacheado (navegador, v0.30).
 - `.claude/agents/` — agentes de agency-agents útiles para este proyecto. `.claude/skills/` + `.mcp.json` — rea.
 
 ## Pendiente / ideas
@@ -518,6 +521,41 @@ npm run preview    # sirve dist/ en http://localhost:4173
   `EngineError` con prop `link`, `detail/StremioServiceNotice.tsx` (aviso en `StreamList`), estado en Ajustes →
   Reproductor ("Probar" no guarda el servidor a mano si el local aplica). Sin subtítulos embebidos por HLS todavía.
   Probado con Stremio Service 4.20.8 (probe, HLS, create); en Chromium headless no hay H.264: probar en Chrome real.
+- v0.30.0 hecha (rama `ccr-4e8d431d-4nlzi9`): **Flix para Windows** + **torrents por TorBox en el navegador** (pedido
+  del usuario: "selecciono la peli, elijo el torrent y reproduce… No quiero instalar nada"; eligió Windows, instalador
+  básico y sacar el aviso de Stremio Service). Hecho en paralelo con 3 agentes en worktrees.
+  - **App** `desktop-app/` (Electron 44.6.0, electron-builder 26.17.0, electron-updater 6.8.10): carga el mismo sitio
+    (`FLIX_URL` para probar otro), así login/perfiles/historial son los de siempre. appId `ar.flix.desktop`, NSIS de un
+    clic por usuario, `flix-pc-setup.exe`, datos en `%APPDATA%\Flix`, User-Agent `FlixPC/<v>` (**nunca** `FlixApp/`, que
+    es la de Android). `preload.cjs` deja `window.flixDesktop = {version, torrent, update:{check, install, onEvent}}`.
+    La ventana solo navega http(s); **"Abrir en VLC/mpv/PotPlayer"** va por `flixDesktop.openPlayer(href)` →
+    `desktop-app/players.js` (`parsePlayerLink` acepta solo `vlc|mpv|potplayer://` + URL http/https; busca el .exe en
+    Program Files / `%LOCALAPPDATA%\Programs` / scoop / PATH y lo abre con `spawn` sin shell, la URL como único
+    argumento, `--` antes en mpv). Sin el programa → `'missing'` (no se prueba el esquema: Windows ofrecería la
+    Store). Pedido del usuario. F5 recarga. Sin firma: SmartScreen avisa.
+  - **Motor** `desktop-app/engine/` (webtorrent 3.0.21, ffmpeg-static 5.3.0, ffprobe-static 3.1.0): misma API que
+    Stremio Service (`POST /<hash>/create`, `stats.json`, `/<hash>/<idx>` con Range, `/hlsv2/probe`,
+    `/hlsv2/<id>/master.m3u8`), en 127.0.0.1 con puerto al azar y token de 128 bits; `originAllowed` con comodín
+    (`*.series-pelis.pages.dev` para previews). 2 torrents como mucho, metadata 120 s, 3 conversiones. Los módulos
+    nativos opcionales de webtorrent se reemplazan con `engine/stubs/` (dependencias `file:`): **sin módulos nativos**.
+    ffmpeg/ffprobe van en `asarUnpack`. En Windows un archivo abierto no se borra (EBUSY): borrar carpetas con `RM_DIR`
+    (`engine/util.js`, con reintentos). `desktop-app/.gitattributes` fuerza LF (la CSP de `offline.html` lleva el sha256). `npm test` en `desktop-app` = `engine/*.test.js` + `shell.test.js`.
+  - **Web**: `lib/desktop.ts` (`desktopTorrentBase`, `ENGINE_RE`, `DESKTOP_DOWNLOAD_URL`); `pickTorrentServer` =
+    explícito → **app de Windows** → motor de Android → Stremio local. El motor de Windows lo reproduce la web vía
+    `StremioPrepare` (no es `engine: true`) y también convierte links `notWebReady`. `appUpdate.ts`/`AppUpdateToast`
+    usan el actualizador de la app. Ajustes → **App de Windows** (versión, motor, actualizaciones) o, en un Windows
+    sin la app, botón "Bajar Flix para Windows". Se borró `StremioServiceNotice`.
+  - **Navegador por TorBox** (`lib/debridWait.ts` + `DebridWait` en `DebridSwitch.tsx`): un torrent sin debrid con
+    gemelo de TorBox (mismo hash) se puede elegir ("Por TorBox" / "Por TorBox: lo baja y arranca solo"); si no está
+    cacheado pide la descarga y consulta a los 5 s y cada 25 s (tope 30 min); al estar, toast "Listo: TorBox ya lo
+    bajó". Sin servidor de torrents no hay "Reproducir por torrent". Torrentio guarda la respuesta de estado: el
+    aviso llega ~60–85 s tarde.
+  - **Release**: `desktop.yml` (windows-latest) publica en el **mismo Release** `flix-vX.Y.Z` que el APK (nombre y texto
+    iguales en los dos workflows); exige etiqueta = versión de `desktop-app/package.json`. `scripts/latest-yml.mjs`
+    apunta `latest.yml` al Release con etiqueta (para el `.blockmap`). **Subir juntas** las versiones de la raíz,
+    `tv-app` y `desktop-app`.
+  - Sin probar en un Windows real ni con una cuenta de TorBox. El firewall de Windows pregunta en el primer torrent.
+    Pendiente: subtítulos embebidos, búsqueda por voz en la app (no anda), ffprobe-static trae la 4.0.2.
 - **Decisiones para la v0.17 (reemplazan el reparto del plan de abajo)**: addons y TorBox **iguales para todas las
   casas**, solo los cambia el admin (opción A). Ajustes generales (subtítulos, idiomas, autoplay, saltar intro, sin
   spoilers, reglas de fuentes) **iguales en toda la casa**; lo físico (modo TV, tamaño de la interfaz, protector,

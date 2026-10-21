@@ -1,0 +1,4 @@
+# Todo con LF también en Windows: la CSP de offline.html lleva el sha256 del script tal cual está en el repo
+# (con CRLF el hash no coincide y Chromium bloquea el script).
+* text=auto eol=lf
+*.ico binary

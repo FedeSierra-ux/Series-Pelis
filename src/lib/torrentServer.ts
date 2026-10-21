@@ -1,12 +1,14 @@
 import { useEffect, useMemo, useState } from 'react'
+import { desktopTorrentBase } from './desktop'
 import { isNativeApp, listenNative, nativeInfo, type NativeInfo } from './native'
 import { settingsStore, useStore } from './store'
 import { canUseLocalStremio, ensureLocalStremio, localStremioBase, useLocalStremio, STREMIO_SERVER } from './stremioServer'
 
 // Con qué se reproducen los torrents (infoHash sin url): el servidor de Stremio que puso el usuario en
-// Ajustes, en la PC el de Stremio Service que se encuentra solo (v0.29) o, en la app de Android con su
-// reproductor prendido, el motor de torrents de la app (v0.25).
-// La URL del motor es http a 127.0.0.1: la página (https) no la puede abrir, solo el reproductor nativo.
+// Ajustes, el motor de la app de Windows (v0.30), en la PC el de Stremio Service que se encuentra solo (v0.29)
+// o, en la app de Android con su reproductor prendido, el motor de torrents de la app (v0.25).
+// La URL del motor de Android es http a 127.0.0.1: la página (https) no la puede abrir, solo el reproductor
+// nativo. La de Windows sí (la app deja que la página llegue a 127.0.0.1): la abre el reproductor de la web.
 
 /** El servidor de torrents que vale ahora. */
 export interface TorrentServer {
@@ -19,9 +21,13 @@ export interface TorrentServer {
 }
 
 export const TORRENT_NEEDS_PLAYER = 'Torrent: activá el reproductor de Android (Ajustes → Reproductor) o usá un addon con debrid'
-export const TORRENT_NEEDS_PC = 'Torrent: abrí Stremio en la PC (servidor local) o usá un addon con debrid'
-/** En la PC sin Stremio Service (v0.29): arriba de la lista va el aviso con la descarga. */
-export const TORRENT_NEEDS_SERVICE = 'Torrent: necesita Stremio Service abierto en esta compu (ver el aviso de arriba) o un addon con debrid'
+/**
+ * En el navegador (v0.30): un torrent suelto no se puede abrir. Si el mismo está en el Torrentio con TorBox, la
+ * lista lo reproduce por ahí (ver `debridTwinOf`); este texto queda para los que no.
+ */
+export const TORRENT_NEEDS_PC = 'Torrent sin debrid: el navegador no lo puede abrir. Elegí una fuente de TorBox (debrid)'
+/** En la PC sin servidor de torrents (v0.29; arriba de la lista puede ir un aviso). */
+export const TORRENT_NEEDS_SERVICE = 'Torrent sin debrid: el navegador no lo puede abrir. Elegí una fuente de TorBox (debrid)'
 export const TORRENT_NEEDS_UPDATE = 'Torrent: actualizá la app de Android para reproducirlo sin debrid, o usá un addon con debrid'
 export const TORRENT_LOADING = 'Torrent: el motor de la app todavía está arrancando; esperá unos segundos o usá un addon con debrid'
 
@@ -49,15 +55,18 @@ export interface TorrentContext {
   pc?: boolean
   /** v0.29: base de Stremio Service si se encontró en esta compu. */
   local?: string
+  /** v0.30: base del motor de la app de Windows. */
+  desktop?: string
 }
 
 /**
- * Elige el servidor: el que puso el usuario, si no el motor de la app (con su reproductor), si no Stremio Service
- * en la compu, si no ninguno.
+ * Elige el servidor: el que puso el usuario, si no el motor de la app de Windows, el de la de Android (con su
+ * reproductor), Stremio Service en la compu, si no ninguno.
  */
 export function pickTorrentServer(c: TorrentContext): TorrentServer {
   const explicit = c.explicit.trim()
   if (explicit) return { url: explicit }
+  if (c.desktop) return { url: c.desktop }
   if (c.native && c.nativePlayer && c.engine) return { url: c.engine, engine: true }
   if (!c.native && c.local) return { url: c.local }
   if (!c.native) return { url: '', missing: c.pc ? TORRENT_NEEDS_SERVICE : TORRENT_NEEDS_PC }
@@ -146,6 +155,7 @@ export function torrentServer(): TorrentServer {
     pending: native && !known,
     pc: canUseLocalStremio(),
     local: localStremioBase(),
+    desktop: desktopTorrentBase(),
   })
 }
 
@@ -192,10 +202,12 @@ export function useTorrentServer(): TorrentServer {
   const local = useLocalStremio()
   const pc = local !== 'off'
   const localBase = local === 'found' ? STREMIO_SERVER : undefined
+  // La app de Windows lo cuenta al cargar la página: no cambia.
+  const desktop = desktopTorrentBase()
   // Mismo objeto mientras no cambie nada: lo usan dependencias de `useMemo`.
   return useMemo(
-    () => pickTorrentServer({ explicit, native, nativePlayer, engine: base, pending, pc, local: localBase }),
-    [explicit, native, nativePlayer, base, pending, pc, localBase],
+    () => pickTorrentServer({ explicit, native, nativePlayer, engine: base, pending, pc, local: localBase, desktop }),
+    [explicit, native, nativePlayer, base, pending, pc, localBase, desktop],
   )
 }
 

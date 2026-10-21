@@ -1,5 +1,26 @@
 # Changelog
 
+## [0.30.0] - 2026-10-21
+
+### Agregado
+- **Flix para Windows** (`desktop-app/`, Electron): la misma app (login, perfiles e historial) con un **motor de
+  torrents** y la **conversión de video** adentro, como Stremio de escritorio. Elegís el torrent y reproduce, sin
+  debrid y sin instalar nada más; lo que Chromium no puede (AC3, DTS, 5.1, varios audios) se convierte solo.
+  Instalador básico `flix-pc-setup.exe` que **se actualiza solo** desde GitHub Releases (Ajustes → App de Windows).
+- **Torrents por TorBox en el navegador**: un torrent sin debrid usa su par de TorBox (mismo torrent y archivo).
+  Lo que TorBox ya tiene arranca enseguida; lo que no, muestra **"TorBox lo está bajando…"** con el tiempo de espera
+  y el video **arranca solo** cuando está listo.
+- En la app de Windows, **Abrir en VLC / mpv / PotPlayer** abre directo el programa instalado (también con los
+  torrents). Si no está, avisa y deja el enlace copiado.
+- Ajustes → **App de Windows**: en la app, versión y actualizaciones; en el navegador de Windows, el botón
+  **Bajar Flix para Windows**.
+
+### Cambiado
+- Se fue el aviso **"Descargar Stremio Service"** de las fuentes y del reproductor. Si Stremio Service está abierto
+  en la compu, Flix lo sigue usando solo.
+- En el navegador, si TorBox falla, el cartel ya no ofrece "Reproducir por torrent" (no hay con qué): queda
+  "Probar de nuevo".
+
 ## [0.29.0] - 2026-10-21
 
 ### Agregado

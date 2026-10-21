@@ -118,11 +118,15 @@ jobs:
       # flix-v0.22.0 → v0.22.0, para el título del Release.
       - id: version
         run: echo "v=${GITHUB_REF_NAME#flix-}" >> "$GITHUB_OUTPUT"
+      # Desde la v0.30 el mismo Release lleva también el instalador de Windows (desktop.yml). Nombre y texto
+      # iguales en los dos workflows: el que llega último pisa el texto y queda igual.
       - uses: softprops/action-gh-release@v2
         with:
-          name: Flix para TV ${{ steps.version.outputs.v }}
+          name: Flix ${{ steps.version.outputs.v }}
           files: flix-tv.apk
           make_latest: true
           body: |
-            APK de Flix para Android TV / Fire TV.
-            Para instalarlo en la TV con Downloader: https://github.com/${{ github.repository }}/releases/latest/download/flix-tv.apk
+            Flix para Android TV / Fire TV y para Windows.
+            - TV, con Downloader: https://github.com/${{ github.repository }}/releases/latest/download/flix-tv.apk
+            - PC (Windows 10/11, 64 bits): https://github.com/${{ github.repository }}/releases/latest/download/flix-pc-setup.exe
+              Windows puede avisar que el instalador no es conocido: "Más información" → "Ejecutar de todos modos".

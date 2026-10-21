@@ -9,8 +9,9 @@ import { episodeLabel, formatTime, isHls } from '../lib/format'
 import { useTitle } from '../lib/hooks'
 import { langLabel } from '../lib/i18n'
 import { useLocalTitle } from '../lib/localTitles'
+import { desktopApp, desktopTorrentBase } from '../lib/desktop'
 import { isNativeApp } from '../lib/native'
-import { needsNativePlayer } from '../lib/torrentServer'
+import { needsNativePlayer, torrentServer } from '../lib/torrentServer'
 import { serverPlan, STREMIO_SERVER, useLocalStremio } from '../lib/stremioServer'
 import { nativePlayerAvailable, probeNativePlayer } from '../lib/nativePlayer'
 import { findNextStream, nextEpisodeSeason, prefetchNextStreams } from '../lib/nextEpisode'
@@ -36,7 +37,7 @@ import { useSubtitles } from './player/useSubtitles'
 import { launchUrl } from './player/externalLaunch'
 import { NativePlayerView } from './player/NativePlayer'
 import { EngineError } from './player/EngineError'
-import { DebridDownload, DebridError } from './player/DebridSwitch'
+import { DEBRID_READY_NOTE, DebridDownload, DebridError } from './player/DebridSwitch'
 import { StremioPrepare } from './player/StremioPrepare'
 import { debridLinkOf, isDebridDownload, looksLikeStatusVideo } from '../lib/debrid'
 import { MIN_HISTORY_EPISODE_S, MIN_HISTORY_S, NEXT_FALLBACK_S, readAutoCount, writeAutoCount } from './player/autoNext'
@@ -153,8 +154,9 @@ function PlayerChoice({ state, resume }: { state: PlayState; resume?: Resume }) 
   const debrid = !!debridLinkOf(state)
   const [plainDebrid, setPlainDebrid] = useState(false)
   const [debridFail, setDebridFail] = useState<{ at: number }>()
-  // v0.29: con el servidor de Stremio (Stremio Service en la PC) se prepara antes: torrent creado y, si el
-  // navegador no puede con el formato, la versión convertida. `media` es lo que abre el reproductor de la web.
+  // v0.29: con el servidor de Stremio (Stremio Service en la PC; desde la v0.30, también el motor de la app de
+  // Windows) se prepara antes: torrent creado y, si el navegador no puede con el formato, la versión convertida.
+  // `media` es lo que abre el reproductor de la web.
   // Un link directo que el navegador quizás no pueda abrir: si se llegó sin pasar por las fuentes (Seguir viendo),
   // todavía no se buscó el servidor; se espera esa búsqueda (3 s como mucho) antes de abrirlo.
   const [media, setMedia] = useState<string>()
@@ -175,13 +177,21 @@ function PlayerChoice({ state, resume }: { state: PlayState; resume?: Resume }) 
   if (debrid && debridFail) {
     // Reintentar el mismo link: sin volver a pasar por el torrent (para eso está el otro botón).
     const retryDebrid = () => {
-      setPlainDebrid(true)
+      // v0.30: sin servidor de torrents, lo que TorBox todavía no tiene vuelve a la espera ("TorBox lo está bajando…").
+      setPlainDebrid(!(isDebridDownload(state.stream) && !torrentServer().url))
       setRetry({ ...resume, at: debridFail.at })
       setDebridFail(undefined)
     }
     return <DebridError state={state} at={debridFail.at} onRetry={retryDebrid} />
   }
-  if (debrid && !plainDebrid && isDebridDownload(state.stream)) return <DebridDownload state={state} resume={resume} onPlain={() => setPlainDebrid(true)} />
+  if (debrid && !plainDebrid && isDebridDownload(state.stream)) {
+    // v0.30: la espera terminó (TorBox ya lo tiene): el mismo link, desde donde iba, con el aviso.
+    const debridReady = () => {
+      setRetry({ ...resume, at: resume?.at ?? 0, note: DEBRID_READY_NOTE })
+      setPlainDebrid(true)
+    }
+    return <DebridDownload state={state} resume={resume} onPlain={() => setPlainDebrid(true)} onReady={debridReady} />
+  }
   const onDebridFail = debrid ? (at: number) => setDebridFail({ at }) : undefined
   // Torrent del motor de la app (http a 127.0.0.1): el reproductor de la web no lo puede abrir. Si falla el
   // nativo no se le pasa; se muestra el error de Android y se ofrece otra fuente.
@@ -217,7 +227,9 @@ function PlayerChoice({ state, resume }: { state: PlayState; resume?: Resume }) 
     )
   }
   if (wantsLocal && (local === 'unknown' || local === 'checking')) return <div className="player player-native" />
-  const plan = media === undefined ? serverPlan(state.stream, state.playUrl, local === 'found' ? STREMIO_SERVER : undefined) : undefined
+  // v0.30: en la app de Windows convierte su propio motor (AC3, DTS, 5.1 y demás que Chromium no reproduce).
+  const converter = desktopTorrentBase() ?? (local === 'found' ? STREMIO_SERVER : undefined)
+  const plan = media === undefined ? serverPlan(state.stream, state.playUrl, converter) : undefined
   if (plan) {
     return (
       <StremioPrepare
@@ -234,7 +246,7 @@ function PlayerChoice({ state, resume }: { state: PlayState; resume?: Resume }) 
   return (
     <PlayerView
       state={state}
-      resume={fallback ?? resume}
+      resume={fallback ?? retry ?? resume}
       notice={fallback ? 'El reproductor de Android no pudo con este video: sigue el de la web' : undefined}
       onDebridFail={onDebridFail}
       media={media}
@@ -998,6 +1010,18 @@ function PlayerView({
     }
     // Se copia igual por si la app no está instalada o el navegador bloquea el esquema.
     const copying = launch.copy ? copyText(url) : Promise.resolve(false)
+    // v0.30: la app de Windows abre el programa instalado (VLC y mpv no registran su esquema en Windows).
+    const openPlayer = desktopApp()?.openPlayer
+    if (openPlayer) {
+      Promise.all([openPlayer(launch.href).catch(() => 'missing' as const), copying]).then(([result, copied]) =>
+        flash(
+          result === 'opened'
+            ? `Abriendo ${launch.label}…`
+            : `No encontré ${launch.label} en esta compu.${copied ? ' El enlace ya está copiado: pegalo en tu reproductor' : ''}`,
+        ),
+      )
+      return
+    }
     launchUrl(launch.href, currentPlatform().os)
     copying.then((ok) =>
       flash(ok ? `Abriendo ${launch.label}… Si no abre, el enlace ya está copiado: pegalo en tu reproductor` : `Abriendo ${launch.label}…`),

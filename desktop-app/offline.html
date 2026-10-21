@@ -1,0 +1,39 @@
+<!doctype html>
+<html lang="es-AR">
+  <head>
+    <meta charset="utf-8" />
+    <meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src 'unsafe-inline'; script-src 'sha256-oa6doTUE/78cXjaGDjvQsaDwSpAtED9eYhMj++XeFzQ='" />
+    <title>Flix</title>
+    <style>
+      :root { color-scheme: dark; }
+      html, body { height: 100%; margin: 0; }
+      body {
+        display: grid; place-items: center; background: #0b0b10; color: #ece9f5;
+        font: 16px/1.5 'Segoe UI', system-ui, sans-serif; text-align: center;
+      }
+      h1 { font-size: 22px; margin: 0 0 8px; }
+      p { margin: 0 0 24px; color: #a9a3bd; }
+      a {
+        display: inline-block; padding: 12px 22px; border-radius: 10px; background: #c4b0ff; color: #16121f;
+        font-weight: 600; text-decoration: none;
+      }
+      a:focus-visible { outline: 3px solid #ece9f5; outline-offset: 3px; }
+    </style>
+  </head>
+  <body>
+    <main>
+      <h1>No se pudo abrir Flix</h1>
+      <p>Revisá la conexión a internet. Probamos de nuevo solos cada 15 segundos.</p>
+      <a id="retry" href="https://series-pelis.pages.dev/">Reintentar</a>
+    </main>
+    <!-- Si se toca el script, cambia su sha256 en la CSP de arriba (shell.test.js lo vigila). -->
+    <script>
+      // La dirección que falló viene en ?url= (main.js). Solo se usa si es http/https.
+      var target = new URLSearchParams(location.search).get('url') || ''
+      var link = document.getElementById('retry')
+      if (/^https?:\/\//.test(target)) link.href = target
+      link.focus()
+      setTimeout(function () { location.href = link.href }, 15000)
+    </script>
+  </body>
+</html>

@@ -9,12 +9,12 @@ import {
   hlsUrl,
   markLocalStremioMissing,
   STREMIO_SERVER,
-  STREMIO_SERVICE_URL,
   torrentProgress,
   transcodeId,
   type MediaProbe,
   type ServerPlan,
 } from '../../lib/stremioServer'
+import { desktopTorrentBase } from '../../lib/desktop'
 import type { PlayState } from '../Detail'
 import { EngineError } from './EngineError'
 
@@ -33,10 +33,12 @@ const STATS_EVERY_MS = 1500
 type Failure = 'server' | 'peers' | 'error'
 
 const FAILURE_TEXT: Record<Failure, string> = {
-  server: 'No se pudo conectar con Stremio Service. Abrilo en esta compu (o instalalo) y probá de nuevo.',
+  server: 'No se pudo conectar con Stremio Service. Abrilo en esta compu y probá de nuevo.',
   peers: 'Nadie está compartiendo este torrent ahora o tarda demasiado en conectar. Probá de nuevo o elegí otra fuente.',
   error: 'El servidor de Stremio no pudo abrir este torrent. Probá de nuevo o elegí otra fuente.',
 }
+
+const DESKTOP_DOWN = 'El motor de torrents de la app no respondió. Cerrá Flix, abrilo de nuevo y probá otra vez.'
 
 async function probe(base: string, mediaUrl: string, timeoutMs: number): Promise<MediaProbe> {
   const res = await fetchWithTimeout(`${base}/hlsv2/probe?${new URLSearchParams([['mediaURL', mediaUrl]])}`, { timeoutMs })
@@ -153,16 +155,9 @@ export function StremioPrepare({
   }, [])
 
   if (failure) {
-    return (
-      <EngineError
-        state={state}
-        message={FAILURE_TEXT[failure]}
-        at={at}
-        onRetry={onRetry}
-        action={{ label: 'Probar de nuevo', onClick: onRetry }}
-        link={failure === 'server' ? { label: 'Descargar Stremio Service', href: STREMIO_SERVICE_URL } : undefined}
-      />
-    )
+    // v0.30: el motor de la app de Windows no responde (casi nunca pasa: arranca con la app).
+    const message = failure === 'server' && plan.base === desktopTorrentBase() ? DESKTOP_DOWN : FAILURE_TEXT[failure]
+    return <EngineError state={state} message={message} at={at} onRetry={onRetry} action={{ label: 'Probar de nuevo', onClick: onRetry }} />
   }
 
   const exit = () => {
