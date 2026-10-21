@@ -9,6 +9,7 @@ import { episodeLabel, formatTime, isHls } from '../lib/format'
 import { useTitle } from '../lib/hooks'
 import { langLabel } from '../lib/i18n'
 import { useLocalTitle } from '../lib/localTitles'
+import { desktopTorrentBase } from '../lib/desktop'
 import { isNativeApp } from '../lib/native'
 import { needsNativePlayer } from '../lib/torrentServer'
 import { serverPlan, STREMIO_SERVER, useLocalStremio } from '../lib/stremioServer'
@@ -153,8 +154,9 @@ function PlayerChoice({ state, resume }: { state: PlayState; resume?: Resume }) 
   const debrid = !!debridLinkOf(state)
   const [plainDebrid, setPlainDebrid] = useState(false)
   const [debridFail, setDebridFail] = useState<{ at: number }>()
-  // v0.29: con el servidor de Stremio (Stremio Service en la PC) se prepara antes: torrent creado y, si el
-  // navegador no puede con el formato, la versión convertida. `media` es lo que abre el reproductor de la web.
+  // v0.29: con el servidor de Stremio (Stremio Service en la PC; desde la v0.30, también el motor de la app de
+  // Windows) se prepara antes: torrent creado y, si el navegador no puede con el formato, la versión convertida.
+  // `media` es lo que abre el reproductor de la web.
   // Un link directo que el navegador quizás no pueda abrir: si se llegó sin pasar por las fuentes (Seguir viendo),
   // todavía no se buscó el servidor; se espera esa búsqueda (3 s como mucho) antes de abrirlo.
   const [media, setMedia] = useState<string>()
@@ -217,7 +219,9 @@ function PlayerChoice({ state, resume }: { state: PlayState; resume?: Resume }) 
     )
   }
   if (wantsLocal && (local === 'unknown' || local === 'checking')) return <div className="player player-native" />
-  const plan = media === undefined ? serverPlan(state.stream, state.playUrl, local === 'found' ? STREMIO_SERVER : undefined) : undefined
+  // v0.30: en la app de Windows convierte su propio motor (AC3, DTS, 5.1 y demás que Chromium no reproduce).
+  const converter = desktopTorrentBase() ?? (local === 'found' ? STREMIO_SERVER : undefined)
+  const plan = media === undefined ? serverPlan(state.stream, state.playUrl, converter) : undefined
   if (plan) {
     return (
       <StremioPrepare

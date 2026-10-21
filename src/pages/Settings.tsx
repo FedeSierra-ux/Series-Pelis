@@ -25,7 +25,7 @@ import { StremioImport } from './settings/StremioImport'
 import { TmdbSettings } from './settings/TmdbSettings'
 import { TvSettings } from './settings/TvSettings'
 import { ShortcutsSettings } from './settings/ShortcutsSettings'
-import { AppSettings } from './settings/AppSettings'
+import { AppSettings, showAppSettings } from './settings/AppSettings'
 import { DiagnosticsSettings } from './settings/DiagnosticsSettings'
 import { useReportsEnabled } from '../lib/diagnostics'
 import { useAuth, useCanEditAddons } from '../lib/auth'
@@ -35,7 +35,8 @@ import { SettingsBlock, SettingsIndex, WIDE_QUERY, goToSection, useActiveSection
 import { importErrorText } from '../lib/errors'
 import { isNativeApp } from '../lib/native'
 import { useTorrentEngine } from '../lib/torrentServer'
-import { ensureLocalStremio, STREMIO_SERVICE_URL, useLocalStremio } from '../lib/stremioServer'
+import { ensureLocalStremio, useLocalStremio } from '../lib/stremioServer'
+import { DESKTOP_DOWNLOAD_URL, desktopTorrentBase } from '../lib/desktop'
 import './settings/settings-layout.css'
 
 const DEFAULT_SERVER = 'http://127.0.0.1:11470'
@@ -180,6 +181,8 @@ function PlaybackSection() {
   const engine = useTorrentEngine()
   // PC (v0.29): Stremio Service se busca solo al abrir torrents (acá solo se muestra; "Probar" lo busca).
   const local = useLocalStremio()
+  // App de Windows (v0.30): trae su motor.
+  const desktop = !!desktopTorrentBase()
 
   const testServer = async () => {
     const server = settings.streamingServerUrl || DEFAULT_SERVER
@@ -190,7 +193,7 @@ function PlaybackSection() {
       setTest(res.ok ? '✓ Conectado al servidor de Stremio' : `Respondió ${res.status}`)
       // Con el motor de la app no se guarda solo: una dirección puesta le ganaría al motor. En la PC tampoco: Stremio
       // Service se encuentra solo (v0.29).
-      if (res.ok && !settings.streamingServerUrl && !engine && local === 'off') settingsStore.set((s) => ({ ...s, streamingServerUrl: server }))
+      if (res.ok && !settings.streamingServerUrl && !engine && !desktop && local === 'off') settingsStore.set((s) => ({ ...s, streamingServerUrl: server }))
       if (res.ok && local !== 'off') void ensureLocalStremio(true)
     } catch {
       setTest('No responde. ¿Está Stremio abierto en esta PC?')
@@ -219,12 +222,17 @@ function PlaybackSection() {
           dirección, se usa esa en vez del motor.
           {!settings.nativePlayer && ' El motor necesita el reproductor de Android (Ajustes → Reproductor).'}
         </p>
+      ) : desktop ? (
+        <p className="muted">
+          En la app de Windows los torrents se reproducen solos con el motor integrado, y lo que Chromium no puede (AC3,
+          DTS, 5.1) se convierte. Este campo es opcional: si ponés una dirección, se usa esa en vez del motor.
+        </p>
       ) : local !== 'off' ? (
         <p className="muted">
-          Con <a href={STREMIO_SERVICE_URL} target="_blank" rel="noreferrer">Stremio Service</a> (o Stremio) abierto en
-          esta compu, los torrents sin debrid se reproducen solos en el navegador, y lo que el navegador no puede (MKV,
-          x265, AC3) se convierte. {local === 'found' ? '✓ Encontrado en esta compu.' : local === 'checking' ? 'Buscando…' : local === 'missing' ? 'Ahora no está abierto.' : ''}{' '}
-          Este campo es solo para usar otro servidor.
+          En el navegador los torrents van por TorBox. Con <a href={DESKTOP_DOWNLOAD_URL}>Flix para Windows</a> se
+          reproducen directo, sin debrid y sin instalar nada más.
+          {local === 'found' && ' ✓ Stremio Service está abierto en esta compu: los torrents también van por ahí.'} Este
+          campo es solo para usar otro servidor.
         </p>
       ) : (
         <p className="muted">
@@ -342,7 +350,7 @@ const ALL_SECTIONS: SettingsSectionDef[] = [
   { id: 'sources', title: 'Elección de fuente', element: <SourceSettings /> },
   { id: 'taste', title: 'Gustos y spoilers', element: <TasteSettings /> },
   { id: 'tv', title: 'Pantalla y control remoto', element: <TvSettings /> },
-  { id: 'app', title: 'App de TV', element: <AppSettings /> },
+  { id: 'app', title: isNativeApp() ? 'App de TV' : 'App de Windows', element: <AppSettings /> },
   { id: 'shortcuts', title: 'Teclado y ayuda', element: <ShortcutsSettings /> },
   { id: 'data', title: 'Tus datos', element: <DataSection /> },
   { id: 'diagnostics', title: 'Diagnóstico', element: <DiagnosticsSettings /> },
@@ -365,7 +373,7 @@ export function Settings() {
         if (s.id === 'diagnostics') return reports
         if (s.id === 'house') return inHouse
         if (s.id === 'houses') return isAdmin
-        if (s.id === 'app') return isNativeApp()
+        if (s.id === 'app') return showAppSettings()
         return true
       }),
     [reports, inHouse, isAdmin],

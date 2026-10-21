@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import { fetchWithTimeout } from './abort'
+import { isDesktopApp } from './desktop'
 import { isNativeApp } from './native'
 import { currentPlatform, resolveTvMode } from './platform'
 import { settingsStore } from './store'
@@ -193,11 +194,12 @@ function wasFound(): boolean {
   }
 }
 
-/** ¿En este aparato tiene sentido buscar Stremio Service? */
+/** ¿En este aparato tiene sentido buscar Stremio Service? En la app de Windows no: trae su propio motor (v0.30). */
 export function canUseLocalStremio(): boolean {
   if (typeof window === 'undefined') return false
   const p = currentPlatform()
-  return isPcBrowser({ os: p.os, tv: p.tv, tvMode: resolveTvMode(settingsStore.get().tvMode, p.tv), native: isNativeApp() })
+  const app = isNativeApp() || isDesktopApp()
+  return isPcBrowser({ os: p.os, tv: p.tv, tvMode: resolveTvMode(settingsStore.get().tvMode, p.tv), native: app })
 }
 
 function setLocal(next: LocalStremio) {

@@ -116,6 +116,16 @@ describe('pickTorrentServer', () => {
   })
 })
 
+describe('pickTorrentServer (app de Windows)', () => {
+  it('v0.30: el motor de la app de Windows, salvo un servidor puesto a mano; lo abre el reproductor de la web', () => {
+    const DESK = 'http://127.0.0.1:52311/0123456789abcdef0123456789abcdef'
+    const pc = { explicit: '', native: false, nativePlayer: true, pc: false, desktop: DESK }
+    expect(pickTorrentServer(pc)).toEqual({ url: DESK })
+    expect(pickTorrentServer({ ...pc, local: 'http://127.0.0.1:11470' })).toEqual({ url: DESK })
+    expect(pickTorrentServer({ ...pc, explicit: 'http://192.168.0.5:11470' })).toEqual({ url: 'http://192.168.0.5:11470' })
+  })
+})
+
 describe('engineBaseOf', () => {
   it('solo con reproductor nativo y una URL a la propia máquina', () => {
     expect(engineBaseOf({ player: true, torrent: `${ENGINE}/` })).toBe(ENGINE)

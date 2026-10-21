@@ -1,9 +1,11 @@
 // Actualizar la app de Android TV sola (v0.21): el APK mira GitHub Releases al abrir, baja la versión nueva,
 // revisa que esté firmada con la misma llave y abre el instalador de Android. Solo falta tocar "Instalar".
 // Acá queda el estado para el aviso (components/AppUpdateToast.tsx) y Ajustes → App de TV.
+// v0.30: la app de Windows hace lo mismo con su instalador (`flixDesktop.update`, electron-updater).
 
 import { useSyncExternalStore } from 'react'
-import { listenNative, nativeUpdateCheck, nativeUpdateInstall, type NativeUpdateInfo } from './native'
+import { desktopApp } from './desktop'
+import { listenNative, nativeUpdateCheck, nativeUpdateInstall, type NativeUpdateEvent, type NativeUpdateInfo } from './native'
 
 export type AppUpdateState =
   | { step: 'idle' }
@@ -45,7 +47,7 @@ let listening = false
 function listen() {
   if (listening) return
   listening = true
-  listenNative('update', (e) => {
+  const onEvent = (e: NativeUpdateEvent) => {
     const info = infoOf(state) ?? { available: true, current: '' }
     switch (e.state) {
       case 'downloading':
@@ -60,17 +62,27 @@ function listen() {
         set({ step: 'error', message: e.message, info })
         break
     }
-  })
+  }
+  const desktop = desktopApp()?.update
+  if (desktop) desktop.onEvent(onEvent)
+  else listenNative('update', onEvent)
 }
 
-/** ¿Hay versión nueva? Sin `force`, el APK usa lo que averiguó en las últimas 6 h. Fuera de la app, nada. */
+/** Qué app se actualiza: la de Windows o la de Android (fuera de las dos, ninguna). */
+function updater(): { check: (force: boolean) => Promise<NativeUpdateInfo | undefined>; install: () => Promise<void> } {
+  const desktop = desktopApp()?.update
+  if (desktop) return { check: (force) => desktop.check(force), install: () => desktop.install() }
+  return { check: nativeUpdateCheck, install: nativeUpdateInstall }
+}
+
+/** ¿Hay versión nueva? Sin `force`, el APK usa lo que averiguó en las últimas 6 h. Fuera de las apps, nada. */
 export async function checkAppUpdate(force = false): Promise<void> {
   if (busy(state)) return
   listen()
   const before = state
   set({ step: 'checking' })
   try {
-    const info = await nativeUpdateCheck(force)
+    const info = await updater().check(force)
     if (!info) {
       set(before)
       return
@@ -88,7 +100,7 @@ export async function installAppUpdate(): Promise<void> {
   const info = infoOf(state)
   set({ step: 'downloading', info: info ?? { available: true, current: '' }, progress: 0 })
   try {
-    await nativeUpdateInstall()
+    await updater().install()
   } catch {
     set({ step: 'error', message: 'No se pudo bajar la actualización', info })
   }

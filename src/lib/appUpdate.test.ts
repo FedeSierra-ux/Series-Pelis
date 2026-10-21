@@ -54,6 +54,26 @@ describe('appUpdate', () => {
     expect(appUpdateState()).toMatchObject({ step: 'error', message: 'Firma distinta', info: { available: true } })
   })
 
+  it('v0.30: en la app de Windows usa su instalador', async () => {
+    let onEvent: ((e: unknown) => void) | undefined
+    const update = {
+      check: vi.fn(async () => ({ available: true, current: '0.30.0', latest: '0.31.0' })),
+      install: vi.fn(async () => {}),
+      onEvent: vi.fn((fn: (e: unknown) => void) => {
+        onEvent = fn
+        return () => {}
+      }),
+    }
+    vi.stubGlobal('window', { flixDesktop: { version: '0.30.0', torrent: '', update } })
+    await checkAppUpdate(true)
+    expect(update.check).toHaveBeenCalledWith(true)
+    expect(appUpdateState()).toMatchObject({ step: 'available', info: { latest: '0.31.0' } })
+    await installAppUpdate()
+    expect(update.install).toHaveBeenCalledOnce()
+    onEvent?.({ state: 'downloading', progress: 0.25 })
+    expect(appUpdateState()).toMatchObject({ step: 'downloading', progress: 0.25 })
+  })
+
   it('un APK viejo (sin update) no busca', async () => {
     const { plugin } = fakePlugin({ getInfo: vi.fn(async () => ({ tv: true, version: '0.19.0' })) })
     await checkAppUpdate(true)
