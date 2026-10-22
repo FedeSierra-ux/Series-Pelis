@@ -217,12 +217,12 @@ npm run preview    # sirve dist/ en http://localhost:4173
   `pair/approve` atómico con `UPDATE … RETURNING`), sesión de 2 años como máximo (`MAX_SESSION_AGE_MS`), entrar de
   nuevo borra la sesión vieja, topes de sync (`MAX_VALUE`, `PUSH_LIMIT`, `HOUSE_MAX_ROWS/BYTES`, 507), `readText`
   con tope de bytes, IPv6 por /64 en `clientIp`, `gatePath` en el middleware. Columnas nuevas en tablas que ya
-  existen = `ADDED_COLUMNS` (ALTER que ignora "duplicate column"). Los previews de Pages usan la misma D1.
+  existen = `ADDED_COLUMNS` (ALTER que ignora "duplicate column"). Los previews de Pages usan otra D1 desde la v0.30.4.
 - v0.17.1 hecha: un aparato **que no es del admin** que sale de la casa o lo sacan (paso de `in` a `out`) pierde los
   addons: `forgetAddonData()` en `store.ts` (addons → Cinemeta, `lastSource`, `catalogPrefs`, `sp-manifest-checked` y
   `clearCache()`), llamado desde `onAuth` de `cloudSync.ts` después de frenar el motor (`shouldForgetAddons`). Las
   **invitaciones no vencen** (decisión del usuario: se dejan como están). Base D1 aparte para las previews: sí
-  (falta el id de la base `series-pelis-preview`).
+  (hecha en la v0.30.4: `[[env.preview.d1_databases]]` → `series-pelis-preview`).
 - v0.18.0 hecha (rama `claude/perfiles-v0.18`): **perfiles** variante D. `lib/profileModel.ts` (puro: `MAIN_PROFILE`,
   `MAX_PROFILES = 6`, `PROFILE_COLORS`, `cleanProfile`, `profileStorageKey` → `p:<id>:<store>`; el principal usa
   las claves de siempre), `lib/profiles.ts` (perfil activo en localStorage `sp-profile`, fijo durante la página;
@@ -592,6 +592,9 @@ npm run preview    # sirve dist/ en http://localhost:4173
   `-max_interleave_delta 1` (en el 7 depende de los hilos: se arma solo, hasta 4 veces) y `earlyAudio` mide cuánto
   audio está antes de cada keyframe. Usuario: **sin temas** (137 descartada), sin búsqueda por voz, Comet no (solo
   Torrentio por ahora), el modo TV automático lo prueba él más adelante.
+  **Previews con su propia D1** (`series-pelis-preview`, `[[env.preview.d1_databases]]` en `wrangler.toml`): con
+  `[env.preview]` los bindings no se heredan, así que **un binding nuevo arriba va repetido en `env.preview`**. La
+  base de las previews arranca vacía: hay que entrar como admin (`ADMIN_KEY`, si es secreto de Preview) y crear casas.
 - **Decisiones para la v0.17 (reemplazan el reparto del plan de abajo)**: addons y TorBox **iguales para todas las
   casas**, solo los cambia el admin (opción A). Ajustes generales (subtítulos, idiomas, autoplay, saltar intro, sin
   spoilers, reglas de fuentes) **iguales en toda la casa**; lo físico (modo TV, tamaño de la interfaz, protector,

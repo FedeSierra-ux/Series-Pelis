@@ -10,6 +10,8 @@
 ### Cambiado
 - App de Windows: **ffprobe actualizado a la 6.1.1** (el mismo build que el ffmpeg que trae; antes era una 4.0.2
   de 2018), así los dos leen los archivos igual.
+- Las **previews** del sitio (las de cada PR) usan su **propia base** (`series-pelis-preview`): probar algo ahí ya
+  no toca las casas, perfiles ni historiales de verdad.
 
 ## [0.30.3] - 2026-10-22
 
