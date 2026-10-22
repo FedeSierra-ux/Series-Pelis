@@ -1,6 +1,6 @@
 # Changelog
 
-## [0.30.2] - 2026-10-22
+## [0.30.4] - 2026-10-22
 
 ### Arreglado
 - **App de Windows: ya no se corta el audio al saltar** a otra parte del video. En muchos MKV el audio del momento
@@ -10,6 +10,19 @@
 ### Cambiado
 - App de Windows: **ffprobe actualizado a la 6.1.1** (el mismo build que el ffmpeg que trae; antes era una 4.0.2
   de 2018), así los dos leen los archivos igual.
+
+## [0.30.3] - 2026-10-22
+
+### Agregado
+- `scripts/flix-icons.py`: el script que genera los íconos de Flix (favicon, PWA, íconos, banner y splash de la app
+  de TV). Antes vivía solo en la sesión de trabajo. Sin cambios en la app.
+
+## [0.30.2] - 2026-10-22
+
+### Agregado
+- `docs/investigacion/`: las notas de investigación de versiones anteriores (mejoras de UX de la v0.14, subtítulos
+  online de la v0.16, login de la v0.17 y perfiles de la v0.18), con un índice. Antes vivían solo en la sesión de
+  trabajo y se perdían al cerrarla. Sin cambios en la app.
 
 ## [0.30.1] - 2026-10-21
 

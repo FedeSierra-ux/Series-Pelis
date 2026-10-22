@@ -51,6 +51,8 @@ npm run preview    # sirve dist/ en http://localhost:4173
 - `desktop-app/` — app de Windows (Electron, v0.30): `main.js`, `preload.cjs` (`window.flixDesktop`), `updater.js`,
   `engine/` (motor de torrents + HLS con ffmpeg). Contrato en `desktop-app/CONTRACT.md`. Web: `src/lib/desktop.ts`.
 - `src/lib/debridWait.ts` — esperar a que TorBox baje un torrent no cacheado (navegador, v0.30).
+- `scripts/flix-icons.py` — genera los íconos de Flix (favicon, PWA, mipmaps, banner y splash de `tv-app`).
+- `docs/investigacion/` — notas de investigación de versiones anteriores (UX, subtítulos online, login, perfiles).
 - `.claude/agents/` — agentes de agency-agents útiles para este proyecto. `.claude/skills/` + `.mcp.json` — rea.
 
 ## Pendiente / ideas
@@ -141,7 +143,7 @@ npm run preview    # sirve dist/ en http://localhost:4173
   géneros en chips, chips activos), `FilterPanel.tsx` (panel lateral / hoja en celular, `role="dialog"`, `#root`
   inert), `filters.css`; helpers `panelFilters`/`withoutFilter`/`clearAll` en `lib/discoverFilters.ts` (misma URL).
   Se sacaron las listas curadas "Mejor puntaje IMDb" (`isRemovedList` limpia filas viejas de Inicio).
-- v0.14.0 hecha: mejoras de UX de `research/ux-funciones.md` (en el scratchpad de la sesión) y arreglos de las
+- v0.14.0 hecha: mejoras de UX de `docs/investigacion/ux-funciones-v0.14.md` y arreglos de las
   auditorías. **Paleta: se queda la actual** (el usuario no quiso ninguna de las 5). Hechas U1–U8, U10, U12–U17,
   U20, U23–U26, U29–U31, U34, U35, F5, F13 y F17.
   - U11 (Películas/Series como página de filas) queda para más adelante.
@@ -288,8 +290,7 @@ npm run preview    # sirve dist/ en http://localhost:4173
   que el actualizador y Downloader lean Releases. Sin probar todavía en una TV real.
 - v0.22.0 hecha (rama `claude/flix-v0.22`): **la app pasa a llamarse Flix** (pedido del usuario) con el ícono **2B**
   (F de neón lavanda `#c4b0ff` sobre violeta oscuro, con brillo y estrellitas). Los íconos (favicon, PWA, mipmaps,
-  banner, splash) salen de `scratchpad/flix-assets/gen.py` (Chromium headless + PIL; si se pierde el scratchpad, el
-  dibujo está en `public/favicon.svg`). Android: paquete **`ar.flix.tv`** (antes `ar.seriespelis.tv`; se cambió
+  banner, splash) salen de `scripts/flix-icons.py` (Chromium headless + PIL; desde la v0.30.3 en el repo). Android: paquete **`ar.flix.tv`** (antes `ar.seriespelis.tv`; se cambió
   porque todavía no había nada instalado), esquema `flix://`, User-Agent `FlixApp/<v>`, APK **`flix-tv.apk`**
   (Release con etiqueta **`flix-v0.22.0`**: desde la v0.22 las etiquetas son `flix-vX.Y.Z`, pedido del usuario; el
   workflow y `TAG_RE` de `AppUpdater.java` las exigen así). El logo del riel usa `/favicon.svg`. **Se quedan con el nombre viejo**: el
@@ -533,7 +534,7 @@ npm run preview    # sirve dist/ en http://localhost:4173
     Program Files / `%LOCALAPPDATA%\Programs` / scoop / PATH y lo abre con `spawn` sin shell, la URL como único
     argumento, `--` antes en mpv). Sin el programa → `'missing'` (no se prueba el esquema: Windows ofrecería la
     Store). Pedido del usuario. F5 recarga. Sin firma: SmartScreen avisa.
-  - **Motor** `desktop-app/engine/` (webtorrent 3.0.21, ffmpeg-static 5.3.0; ffprobe desde la v0.30.2): misma API que
+  - **Motor** `desktop-app/engine/` (webtorrent 3.0.21, ffmpeg-static 5.3.0; ffprobe desde la v0.30.4): misma API que
     Stremio Service (`POST /<hash>/create`, `stats.json`, `/<hash>/<idx>` con Range, `/hlsv2/probe`,
     `/hlsv2/<id>/master.m3u8`), en 127.0.0.1 con puerto al azar y token de 128 bits; `originAllowed` con comodín
     (`*.series-pelis.pages.dev` para previews). 2 torrents como mucho, metadata 120 s, 3 conversiones. Los módulos
@@ -569,7 +570,15 @@ npm run preview    # sirve dist/ en http://localhost:4173
   no termina nunca). El MKV de prueba con subtítulos se arma **en dos pasos** (codificar, después copiar sumando
   los subtítulos): de un paso, el ffmpeg 6.1.1 de Windows deja el video ~250 ms detrás del audio en el archivo y el
   test del HLS falla. Sin probar en un Windows real.
-- v0.30.2 hecha (rama `ccr-4e8d431d-4nlzi9`): **ffprobe 6.1.1** y **audio sin hueco tras un salto** en la app de
+- v0.30.2 hecha (rama `claude/investigacion-v0.26.2`): las notas de investigación que vivían en el scratchpad de una
+  sesión pasaron a `docs/investigacion/` (UX v0.14, subtítulos online v0.16, login v0.17, perfiles v0.18; índice en su
+  `README.md`). Investigaciones nuevas que valga la pena guardar van ahí, **sin keys** (solo nombres de variables).
+  `scratchpad/v027-infohash.md` era de otra sesión y no se pudo rescatar. Sin cambios en la app.
+- v0.30.3 hecha (rama `claude/iconos-v0.30.3`): el generador de íconos de Flix (antes `scratchpad/flix-assets/gen.py`)
+  pasa a `scripts/flix-icons.py` (`python3 scripts/flix-icons.py .`, pide Pillow y `npm install` por la fuente Sora;
+  `CHROME=` para otro Chromium). Probado: vuelve a dar los mismos PNG; el banner difiere solo en el suavizado del
+  texto "Flix". Sin cambios en la app.
+- v0.30.4 hecha (rama `ccr-4e8d431d-4nlzi9`): **ffprobe 6.1.1** y **audio sin hueco tras un salto** en la app de
   Windows. Se fue `ffprobe-static` (4.0.2): `desktop-app/ffprobe.js` (sha256 por plataforma, Release `b6.1.1` de
   ffmpeg-static, el mismo build que su ffmpeg) + `scripts/ffprobe.mjs` (`postinstall`: baja el `.gz` a `bin/`,
   verifica el sha256, no hace nada si ya está; `bin/` en `.gitignore`, en `files` y `asarUnpack`). ffprobe ≥5 no
@@ -591,8 +600,8 @@ npm run preview    # sirve dist/ en http://localhost:4173
   se mezclan solos (gana el más nuevo). Login obligatorio con D1, también para `/api/tmdb` y `/api/subs`. Casas e
   invitaciones se manejan desde la app (Ajustes → Casas).
 - **Plan acordado (pedido "1, 2 y 3")**: v0.17.0 login "Código de casa" (opción A) + sincronización en D1
-  (investigación en `scratchpad/v15/login.md`); v0.18.0 perfiles variante D (investigación en
-  `scratchpad/v15/perfiles.md`): en la TV "¿Quién está mirando?" al abrir y tras el protector (entra solo a los 10 s),
+  (investigación en `docs/investigacion/login-v0.17.md`); v0.18.0 perfiles variante D (investigación en
+  `docs/investigacion/perfiles-v0.18.md`): en la TV "¿Quién está mirando?" al abrir y tras el protector (entra solo a los 10 s),
   en PC/celular recuerda el último; con un solo perfil, igual que hoy; avatar = inicial + color o fondo de una peli.
   Compartido por casa: addons, debrid y demás. Por perfil: historial, seguir viendo, lista, estrellas, no me interesa.
   Por aparato: idiomas, subtítulos, autoplay, sin spoilers, búsquedas, favoritos de TV en vivo, reglas de fuentes,
