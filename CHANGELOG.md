@@ -1,5 +1,18 @@
 # Changelog
 
+## [0.30.4] - 2026-10-22
+
+### Arreglado
+- **App de Windows: ya no se corta el audio al saltar** a otra parte del video. En muchos MKV el audio del momento
+  al que saltás está guardado un poco antes que la imagen, y el salto se lo salteaba: se escuchaba un hueco de
+  medio segundo (o más) cada vez. Ahora se lee desde unos segundos antes y se descarta lo que sobra.
+
+### Cambiado
+- App de Windows: **ffprobe actualizado a la 6.1.1** (el mismo build que el ffmpeg que trae; antes era una 4.0.2
+  de 2018), así los dos leen los archivos igual.
+- Las **previews** del sitio (las de cada PR) usan su **propia base** (`series-pelis-preview`): probar algo ahí ya
+  no toca las casas, perfiles ni historiales de verdad.
+
 ## [0.30.3] - 2026-10-22
 
 ### Agregado

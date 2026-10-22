@@ -217,12 +217,12 @@ npm run preview    # sirve dist/ en http://localhost:4173
   `pair/approve` atómico con `UPDATE … RETURNING`), sesión de 2 años como máximo (`MAX_SESSION_AGE_MS`), entrar de
   nuevo borra la sesión vieja, topes de sync (`MAX_VALUE`, `PUSH_LIMIT`, `HOUSE_MAX_ROWS/BYTES`, 507), `readText`
   con tope de bytes, IPv6 por /64 en `clientIp`, `gatePath` en el middleware. Columnas nuevas en tablas que ya
-  existen = `ADDED_COLUMNS` (ALTER que ignora "duplicate column"). Los previews de Pages usan la misma D1.
+  existen = `ADDED_COLUMNS` (ALTER que ignora "duplicate column"). Los previews de Pages usan otra D1 desde la v0.30.4.
 - v0.17.1 hecha: un aparato **que no es del admin** que sale de la casa o lo sacan (paso de `in` a `out`) pierde los
   addons: `forgetAddonData()` en `store.ts` (addons → Cinemeta, `lastSource`, `catalogPrefs`, `sp-manifest-checked` y
   `clearCache()`), llamado desde `onAuth` de `cloudSync.ts` después de frenar el motor (`shouldForgetAddons`). Las
   **invitaciones no vencen** (decisión del usuario: se dejan como están). Base D1 aparte para las previews: sí
-  (falta el id de la base `series-pelis-preview`).
+  (hecha en la v0.30.4: `[[env.preview.d1_databases]]` → `series-pelis-preview`).
 - v0.18.0 hecha (rama `claude/perfiles-v0.18`): **perfiles** variante D. `lib/profileModel.ts` (puro: `MAIN_PROFILE`,
   `MAX_PROFILES = 6`, `PROFILE_COLORS`, `cleanProfile`, `profileStorageKey` → `p:<id>:<store>`; el principal usa
   las claves de siempre), `lib/profiles.ts` (perfil activo en localStorage `sp-profile`, fijo durante la página;
@@ -534,7 +534,7 @@ npm run preview    # sirve dist/ en http://localhost:4173
     Program Files / `%LOCALAPPDATA%\Programs` / scoop / PATH y lo abre con `spawn` sin shell, la URL como único
     argumento, `--` antes en mpv). Sin el programa → `'missing'` (no se prueba el esquema: Windows ofrecería la
     Store). Pedido del usuario. F5 recarga. Sin firma: SmartScreen avisa.
-  - **Motor** `desktop-app/engine/` (webtorrent 3.0.21, ffmpeg-static 5.3.0, ffprobe-static 3.1.0): misma API que
+  - **Motor** `desktop-app/engine/` (webtorrent 3.0.21, ffmpeg-static 5.3.0; ffprobe desde la v0.30.4): misma API que
     Stremio Service (`POST /<hash>/create`, `stats.json`, `/<hash>/<idx>` con Range, `/hlsv2/probe`,
     `/hlsv2/<id>/master.m3u8`), en 127.0.0.1 con puerto al azar y token de 128 bits; `originAllowed` con comodín
     (`*.series-pelis.pages.dev` para previews). 2 torrents como mucho, metadata 120 s, 3 conversiones. Los módulos
@@ -556,7 +556,7 @@ npm run preview    # sirve dist/ en http://localhost:4173
     apunta `latest.yml` al Release con etiqueta (para el `.blockmap`). **Subir juntas** las versiones de la raíz,
     `tv-app` y `desktop-app`.
   - Sin probar en un Windows real ni con una cuenta de TorBox. El firewall de Windows pregunta en el primer torrent.
-    Pendiente: búsqueda por voz en la app (no anda), ffprobe-static trae la 4.0.2.
+    Búsqueda por voz en la app: no anda y el usuario dijo que **no hace falta**.
 - v0.30.1 hecha (rama `ccr-4e8d431d-4nlzi9`): **subtítulos de texto del video en la app de Windows** (opción 1 del
   usuario; PGS/VobSub no). Motor: `desktop-app/engine/subtitles.js` (`GET /subtitles/<index>/<n>.vtt?mediaURL=`,
   tramos de `SUB_WINDOW_S = 120` s con `-ss n·W -copyts -i … -to (n+1)·W` y `dropBefore` para el cue repetido al
@@ -578,6 +578,23 @@ npm run preview    # sirve dist/ en http://localhost:4173
   pasa a `scripts/flix-icons.py` (`python3 scripts/flix-icons.py .`, pide Pillow y `npm install` por la fuente Sora;
   `CHROME=` para otro Chromium). Probado: vuelve a dar los mismos PNG; el banner difiere solo en el suavizado del
   texto "Flix". Sin cambios en la app.
+- v0.30.4 hecha (rama `ccr-4e8d431d-4nlzi9`): **ffprobe 6.1.1** y **audio sin hueco tras un salto** en la app de
+  Windows. Se fue `ffprobe-static` (4.0.2): `desktop-app/ffprobe.js` (sha256 por plataforma, Release `b6.1.1` de
+  ffmpeg-static, el mismo build que su ffmpeg) + `scripts/ffprobe.mjs` (`postinstall`: baja el `.gz` a `bin/`,
+  verifica el sha256, no hace nada si ya está; `bin/` en `.gitignore`, en `files` y `asarUnpack`). ffprobe ≥5 no
+  tiene `pkt_pts_time`: usar `pts_time`/`duration_time`. Los ffmpeg/ffprobe estáticos de **Linux** crashean leyendo
+  MPEG-TS con el iconv del sistema: las pruebas ponen `GCONV_PATH=/nonexistent` (en Windows no pasa).
+  Audio (`jobArgs` en `engine/hls.js`): muchos MKV guardan el audio de [t, t+δ) antes del keyframe de t y un `-ss`
+  de entrada caía en ese keyframe y perdía δ. Un ffmpeg de audio que no arranca en 0 lee desde
+  `AUDIO_PREROLL_S = 3` s antes y corta con **`-ss` de salida + `-output_ts_offset`** (con `-copyts`, en tiempos del
+  archivo; al copiar corta por paquete, al convertir por muestra). **No usar** `-bsf:a noise=drop=…` (en ffmpeg 6
+  la base de tiempo es otra) ni `setts` (en el 7 cambia los pts). Prueba: `Serie.S01E04.mkv` mal intercalado con
+  `-max_interleave_delta 1` (en el 7 depende de los hilos: se arma solo, hasta 4 veces) y `earlyAudio` mide cuánto
+  audio está antes de cada keyframe. Usuario: **sin temas** (137 descartada), sin búsqueda por voz, Comet no (solo
+  Torrentio por ahora), el modo TV automático lo prueba él más adelante.
+  **Previews con su propia D1** (`series-pelis-preview`, `[[env.preview.d1_databases]]` en `wrangler.toml`): con
+  `[env.preview]` los bindings no se heredan, así que **un binding nuevo arriba va repetido en `env.preview`**. La
+  base de las previews arranca vacía: hay que entrar como admin (`ADMIN_KEY`, si es secreto de Preview) y crear casas.
 - **Decisiones para la v0.17 (reemplazan el reparto del plan de abajo)**: addons y TorBox **iguales para todas las
   casas**, solo los cambia el admin (opción A). Ajustes generales (subtítulos, idiomas, autoplay, saltar intro, sin
   spoilers, reglas de fuentes) **iguales en toda la casa**; lo físico (modo TV, tamaño de la interfaz, protector,

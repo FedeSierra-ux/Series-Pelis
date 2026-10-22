@@ -9,7 +9,7 @@ import path from 'node:path'
 import { after, before, describe, it } from 'node:test'
 import { promisify } from 'node:util'
 import ffmpegPath from 'ffmpeg-static'
-import ffprobeStatic from 'ffprobe-static'
+import { ffprobePath } from '../ffprobe.js'
 import { Prober } from './probe.js'
 import { SUB_WINDOW_S, Subtitles, dropBefore, isTextSubtitle, subtitleArgs } from './subtitles.js'
 
@@ -78,7 +78,7 @@ describe('Subtitles por tramos', { timeout: 120_000 }, () => {
       '-map', '0:v', '-map', '1:a', '-map', '2', '-c:v', 'libx264', '-preset', 'ultrafast', '-g', '48', '-c:a', 'aac', '-c:s', 'srt',
       file,
     ])
-    prober = new Prober(ffprobeStatic.path)
+    prober = new Prober(ffprobePath())
     subs = new Subtitles({ ffmpegPath: FFMPEG, prober })
   })
 
