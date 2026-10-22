@@ -111,7 +111,17 @@ export function mediaCapsFrom(c: { canPlay: (mime: string) => boolean; chrome: b
 /** Lo que devuelve `/hlsv2/probe` (solo lo que se usa). */
 export interface MediaProbe {
   format?: { name?: string; duration?: number }
-  streams?: { track?: string; codec?: string; channels?: number; language?: string | null }[]
+  streams?: {
+    track?: string
+    codec?: string
+    channels?: number
+    language?: string | null
+    /** v0.30.1, solo el motor de la app de Windows: índice de ffprobe, nombre de la pista y marcas. */
+    index?: number
+    title?: string | null
+    forced?: boolean
+    sdh?: boolean
+  }[]
 }
 
 /**

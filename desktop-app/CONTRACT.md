@@ -20,8 +20,14 @@ API bajo `engine.base` (la misma que usa `src/pages/player/StremioPrepare.tsx` c
   → bloquea hasta tener la metadata → `200 { guessedFileIdx, files: [{ name, length }] }`.
 - `GET /<infoHash>/stats.json` → `{ peers, downloadSpeed }` (también antes de la metadata).
 - `GET|HEAD /<infoHash>/<fileIdx>` (fileIdx -1 = el video más grande) con `Range` → bytes del archivo (prioriza lo pedido).
-- `GET /hlsv2/probe?mediaURL=<url>` → `{ format: { name, duration }, streams: [{ track: 'video'|'audio'|'subtitle', codec, channels, language }] }`
-  (`format.name` = `format_name` de ffprobe, p. ej. `matroska,webm` / `mov,mp4,m4a,3gp,3g2,mj2`).
+- `GET /hlsv2/probe?mediaURL=<url>` → `{ format: { name, duration }, streams: [{ index, track: 'video'|'audio'|'subtitle', codec, channels, language, title, default, forced, sdh }] }`
+  (`format.name` = `format_name` de ffprobe, p. ej. `matroska,webm` / `mov,mp4,m4a,3gp,3g2,mj2`; `index` es el de
+  ffprobe; `forced`/`sdh` salen de la `disposition` de los subtítulos).
+- `GET /subtitles/<index>/<n>.vtt?mediaURL=<url>` (v0.30.1) → WebVTT con los subtítulos de texto de la pista `index`
+  (SRT, ASS/SSA, mov_text, WebVTT) que **empiezan** en el tramo `n` (`[n·120, (n+1)·120)` s, tiempos del archivo).
+  Pasado el final, `WEBVTT` vacío. 404 si la pista no existe o es de imagen (PGS, VobSub); 400 sin `mediaURL`.
+  La web pide el tramo actual y, a 30 s del final, el siguiente (`src/lib/embeddedSubs.ts`). Solo la app de Windows:
+  Stremio Service no tiene esta ruta.
 - `GET /hlsv2/<id>/master.m3u8?mediaURL=&videoCodecs=h264&videoCodecs=…&audioCodecs=aac…&maxAudioChannels=2` → HLS VOD
   (playlist completa desde el principio, se puede saltar a cualquier parte) que lee hls.js.
 - `mediaURL` puede ser el propio motor (`<base>/<hash>/<idx>`) o un link https de internet (debrid, `notWebReady`).

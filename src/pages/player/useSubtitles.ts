@@ -2,6 +2,7 @@ import type Hls from 'hls.js'
 import type { MediaPlaylist } from 'hls.js'
 import { useCallback, useEffect, useMemo, useRef, useState, type DragEvent, type RefObject } from 'react'
 import { getSubtitles } from '../../lib/addons'
+import { emptyVttUrl, feedVideoSubs, videoSubOptions, type VideoSubsSource } from '../../lib/embeddedSubs'
 import { useAddons } from '../../lib/hooks'
 import { langLabel } from '../../lib/i18n'
 import { fetchOnlineSubs, streamText } from '../../lib/onlineSubs'
@@ -24,7 +25,8 @@ import {
 import { SUBTITLE_FILE_RE, loadSubtitle, loadSubtitleFile } from '../../lib/subtitles'
 import type { PlayState } from '../Detail'
 
-// Subtítulos del reproductor: los de los addons, los del stream HLS y los archivos propios.
+// Subtítulos del reproductor: los de los addons, los del stream HLS, los del propio video (app de Windows) y los
+// archivos propios.
 
 const hlsKey = (i: number) => `hls:${i}`
 /** Pistas HLS que marcan descripciones de sonidos (subtítulos para sordos). */
@@ -47,6 +49,7 @@ export function useSubtitles({
   closeMenu,
   controlsClear = 0,
   cueBottom = 0,
+  videoSubs,
 }: {
   videoRef: RefObject<HTMLVideoElement | null>
   hlsRef: RefObject<Hls | null>
@@ -62,13 +65,18 @@ export function useSubtitles({
    * pone el celular con controles cuando hay algo en la esquina ("Saltar", siguiente episodio…).
    */
   cueBottom?: number
+  /** v0.30.1: pistas de texto del video que saca el motor de la app de Windows. */
+  videoSubs?: VideoSubsSource
 }) {
   const addons = useAddons()
   const settings = useStore(settingsStore)
   const metaId = state.meta.id
   const pref = useStore(trackPrefsStore)[metaId]
   const videoId = state.video?.id ?? metaId
-  const [subs, setSubs] = useState<SubOption[]>(() => (state.stream.subtitles ?? []).map(addonSubOption))
+  const [subs, setSubs] = useState<SubOption[]>(() => [
+    ...(state.stream.subtitles ?? []).map(addonSubOption),
+    ...(videoSubs ? videoSubOptions(videoSubs.probe, langName) : []),
+  ])
   const subsRef = useRef(subs)
   subsRef.current = subs
   const [active, setActiveState] = useState('')
@@ -85,6 +93,14 @@ export function useSubtitles({
   const autoRank = useRef(99)
   const request = useRef(0)
   const cueOrigin = useRef(new WeakMap<TextTrackCue, [number, number]>())
+  /** Frena la carga por tramos de la pista del video activa. */
+  const stopFeed = useRef<(() => void) | undefined>(undefined)
+  useEffect(
+    () => () => {
+      stopFeed.current?.()
+    },
+    [],
+  )
   /** Pista HLS a recuperar al cambiar de fuente: se elige cuando hls.js la anuncia. */
   const pendingHls = useRef('')
   const [dragging, setDragging] = useState(false)
@@ -194,7 +210,8 @@ export function useSubtitles({
     }
     // Primero se baja el archivo: si falla, sigue el subtítulo que estaba (antes quedaban apagados).
     let src: string | undefined
-    if (url && option?.hls === undefined) {
+    const fromVideo = option?.embedded !== undefined && videoSubs ? option.embedded : undefined
+    if (url && option?.hls === undefined && fromVideo === undefined) {
       try {
         src = await loadSubtitle(url, { stripSdh: settingsStore.get().hideSdh })
       } catch {
@@ -210,6 +227,8 @@ export function useSubtitles({
       else if (option && !option.file && option.lang) rememberTracks(metaId, { subOff: false, subLang: lang3(option.lang), subForced: !!option.forced })
     }
     setActive(url)
+    stopFeed.current?.()
+    stopFeed.current = undefined
     if (!el) return
     // Solo se borran los <track> propios: hls.js también crea los suyos (y uno de metadatos).
     Array.from(el.querySelectorAll('track[data-sp-sub]')).forEach((t) => t.remove())
@@ -222,6 +241,8 @@ export function useSubtitles({
         hls.subtitleTrack = option.hls
       }
     }
+    // La del video arranca vacía y se va llenando por tramos.
+    if (fromVideo !== undefined) src = emptyVttUrl()
     if (!src) return
     const track = document.createElement('track')
     track.kind = 'subtitles'
@@ -231,6 +252,25 @@ export function useSubtitles({
     track.default = true
     track.dataset.spSub = ''
     track.addEventListener('load', adjustCues)
+    if (fromVideo !== undefined && videoSubs) {
+      // Recién con el archivo vacío cargado: antes, el navegador borraría los cues que se suman.
+      track.addEventListener(
+        'load',
+        () => {
+          if (activeRef.current !== url || !track.isConnected) return
+          stopFeed.current?.()
+          stopFeed.current = feedVideoSubs({
+            video: el,
+            track: track.track,
+            source: videoSubs,
+            index: fromVideo,
+            stripSdh: settingsStore.get().hideSdh,
+            onCues: adjustCues,
+          })
+        },
+        { once: true },
+      )
+    }
     el.appendChild(track)
     track.track.mode = 'showing'
   }

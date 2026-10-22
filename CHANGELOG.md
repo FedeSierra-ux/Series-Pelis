@@ -1,5 +1,17 @@
 # Changelog
 
+## [0.30.1] - 2026-10-21
+
+### Agregado
+- **Subtítulos del video en la app de Windows**: los de texto que trae el archivo (SRT/ASS de un MKV, mov_text de un
+  MP4) aparecen en **Subtítulos** como "… (del video)", junto a los online. El motor los saca de a 2 minutos a medida
+  que baja el torrent (no hace falta bajarlo entero). Si la pista dice "Latino" o similar, la elección automática la
+  prefiere; la de España nunca se elige sola, igual que con los online. Los de imagen (PGS) no se ofrecen.
+
+### Cambiado
+- Entre dos subtítulos del mismo idioma, la elección automática prefiere el del video (está sincronizado con ese
+  archivo). Un latino online sigue ganándole a uno del video que no dice "Latino".
+
 ## [0.30.0] - 2026-10-21
 
 ### Agregado
