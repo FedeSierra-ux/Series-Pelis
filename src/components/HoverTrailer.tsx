@@ -14,6 +14,7 @@ import {
   ytPlayerState,
   type OpenTrailer,
 } from '../lib/hoverTrailer'
+import { useLocalTitle } from '../lib/localTitles'
 import { displayYear } from '../lib/yearLabel'
 import { ImdbRating } from './Rating'
 
@@ -45,6 +46,8 @@ function HoverTrailerCard({ t }: { t: OpenTrailer }) {
   // Si intentamos arrancar con sonido y el navegador lo frena, volvemos a sin sonido.
   const autoUnmute = useRef(false)
   const gotState = useRef(false)
+  // El póster ya pidió el nombre en español (v0.28): acá solo se lee.
+  const name = useLocalTitle(t.meta.id, t.meta.name, { enabled: false })
 
   const post = (func: string, args: unknown[] = []) => frame.current?.contentWindow?.postMessage(ytCommand(func, args), YT_ORIGIN)
 
@@ -162,7 +165,7 @@ function HoverTrailerCard({ t }: { t: OpenTrailer }) {
           ref={frame}
           className={ready ? 'ready' : undefined}
           src={hoverTrailerUrl(t.ytId, origin)}
-          title={`Tráiler de ${meta.name}`}
+          title={`Tráiler de ${name}`}
           tabIndex={-1}
           allow="autoplay; encrypted-media; picture-in-picture"
           referrerPolicy="strict-origin-when-cross-origin"
@@ -174,7 +177,7 @@ function HoverTrailerCard({ t }: { t: OpenTrailer }) {
         </span>
       </div>
       <div className="ht-info">
-        <strong className="ht-title">{meta.name}</strong>
+        <strong className="ht-title">{name}</strong>
         <span className="ht-meta">
           <ImdbRating value={meta.imdbRating} size="sm" />
           {year && <span>{year}</span>}

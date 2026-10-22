@@ -1,6 +1,7 @@
 import { useId } from 'react'
 import { Advanced } from '../../components/Advanced'
 import { saveDataOn } from '../../lib/dataSaver'
+import { isDesktopApp } from '../../lib/desktop'
 import { effectivePlayer, playersFor } from '../../lib/externalPlayers'
 import { langLabel } from '../../lib/i18n'
 import { isNativeApp } from '../../lib/native'
@@ -96,7 +97,7 @@ export function PlayerSettings() {
         <input type="checkbox" checked={settings.autoSubtitles} onChange={(e) => update({ autoSubtitles: e.target.checked })} />
         Activarlos solos en el primer idioma preferido que haya
       </label>
-      <LangChips label="Idiomas de subtítulos preferidos" value={settings.subtitleLangs} onChange={(subtitleLangs) => update({ subtitleLangs })} />
+      <LangChips label="Idiomas de subtítulos preferidos" value={settings.subtitleLangs} onChange={(subtitleLangs) => update({ subtitleLangs, langsChosen: true })} />
       <Advanced>
       <label className="check">
         <input type="checkbox" checked={settings.hideSdh} onChange={(e) => update({ hideSdh: e.target.checked })} />
@@ -178,7 +179,7 @@ export function PlayerSettings() {
       </div>
 
       <h3>Idioma de audio preferido</h3>
-      <LangChips label="Idiomas de audio preferidos" value={settings.audioLangs} onChange={(audioLangs) => update({ audioLangs })} />
+      <LangChips label="Idiomas de audio preferidos" value={settings.audioLangs} onChange={(audioLangs) => update({ audioLangs, langsChosen: true })} />
       <p className="muted small">Solo sirve en streams con varias pistas de audio.</p>
 
 
@@ -234,7 +235,8 @@ export function PlayerSettings() {
         {os === 'android'
           ? '“Del sistema” muestra la lista de reproductores instalados; los demás abren directo esa app (si no está, Android ofrece instalarla).'
           : '“Del sistema” copia el enlace para pegarlo en tu reproductor. Los demás lo abren directo si están instalados (y el enlace queda copiado por si no abre).'}{' '}
-        {effectivePlayer(settings.externalPlayer, os).note}
+        {/* En la app de Windows mpv no necesita el manejador de enlaces: se abre el programa. */}
+        {isDesktopApp() ? 'En la app de Windows se abre el programa instalado (VLC, mpv o PotPlayer).' : effectivePlayer(settings.externalPlayer, os).note}
       </p>
     </section>
   )

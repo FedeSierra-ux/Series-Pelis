@@ -23,6 +23,7 @@ import {
   TORRENT_LOADING,
   TORRENT_NEEDS_PC,
   TORRENT_NEEDS_PLAYER,
+  TORRENT_NEEDS_SERVICE,
   TORRENT_NEEDS_UPDATE,
   torrentServer,
   torrentServerReady,
@@ -102,7 +103,26 @@ describe('pickTorrentServer', () => {
     expect(pickTorrentServer({ ...base, engine: undefined, pending: true })).toEqual({ url: '', missing: TORRENT_LOADING })
     expect(pickTorrentServer({ ...base, pending: true })).toEqual({ url: ENGINE, engine: true })
     expect(TORRENT_NEEDS_PLAYER).toBe('Torrent: activá el reproductor de Android (Ajustes → Reproductor) o usá un addon con debrid')
-    expect(TORRENT_NEEDS_PC).toBe('Torrent: abrí Stremio en la PC (servidor local) o usá un addon con debrid')
+    expect(TORRENT_NEEDS_PC).toBe('Torrent sin debrid: el navegador no lo puede abrir. Elegí una fuente de TorBox (debrid)')
+  })
+
+  it('v0.29: en la PC, Stremio Service si se encontró; si no, el aviso', () => {
+    const pc = { ...base, native: false, engine: undefined, pc: true }
+    expect(pickTorrentServer({ ...pc, local: 'http://127.0.0.1:11470' })).toEqual({ url: 'http://127.0.0.1:11470' })
+    expect(pickTorrentServer(pc)).toEqual({ url: '', missing: TORRENT_NEEDS_SERVICE })
+    // Lo puesto a mano sigue ganando; en la app de Android no cuenta.
+    expect(pickTorrentServer({ ...pc, explicit: 'http://192.168.0.5:11470', local: 'http://127.0.0.1:11470' })).toEqual({ url: 'http://192.168.0.5:11470' })
+    expect(pickTorrentServer({ ...base, local: 'http://127.0.0.1:11470' })).toEqual({ url: ENGINE, engine: true })
+  })
+})
+
+describe('pickTorrentServer (app de Windows)', () => {
+  it('v0.30: el motor de la app de Windows, salvo un servidor puesto a mano; lo abre el reproductor de la web', () => {
+    const DESK = 'http://127.0.0.1:52311/0123456789abcdef0123456789abcdef'
+    const pc = { explicit: '', native: false, nativePlayer: true, pc: false, desktop: DESK }
+    expect(pickTorrentServer(pc)).toEqual({ url: DESK })
+    expect(pickTorrentServer({ ...pc, local: 'http://127.0.0.1:11470' })).toEqual({ url: DESK })
+    expect(pickTorrentServer({ ...pc, explicit: 'http://192.168.0.5:11470' })).toEqual({ url: 'http://192.168.0.5:11470' })
   })
 })
 

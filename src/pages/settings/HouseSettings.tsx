@@ -98,12 +98,14 @@ export function DeviceList({ house, onChange }: { house?: string; onChange?: () 
               {confirming === d.id ? (
                 <span className="confirm-inline">
                   <span className="small">¿Sacarlo de la casa?</span>
-                  <button type="button" className="btn btn-small danger" onClick={() => void revoke(d.id)}>
-                    Sí, sacar
-                  </button>
-                  <button type="button" className="btn btn-small btn-ghost" onClick={() => setConfirming(undefined)}>
-                    No
-                  </button>
+                  <span className="confirm-inline-btns">
+                    <button type="button" className="btn btn-small danger" onClick={() => void revoke(d.id)}>
+                      Sí, sacar
+                    </button>
+                    <button type="button" className="btn btn-small btn-ghost" onClick={() => setConfirming(undefined)}>
+                      No
+                    </button>
+                  </span>
                 </span>
               ) : (
                 <button type="button" className="btn btn-small btn-ghost" onClick={() => setConfirming(d.id)}>

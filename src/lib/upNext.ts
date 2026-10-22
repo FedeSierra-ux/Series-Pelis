@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import { getMeta } from './addons'
+import { localTitle } from './localTitlesStore'
 import { useAddons } from './hooks'
 import { continueWatching, progressStore, useStore, watchlistStore, type ListItem, type WatchEntry } from './store'
 import { refreshPosterLabels } from './posterLabels'
@@ -16,6 +17,10 @@ const MAX_SERIES = 60
 
 export interface EpisodeItem {
   metaId: string
+  /**
+   * Nombre de la serie: el español si ya se sabía al calcular (v0.28), si no el de Cinemeta. Lo que se muestra
+   * igual pasa por `useLocalTitle`, así un nombre que llega después también se ve.
+   */
   seriesName: string
   poster?: string
   videoId: string
@@ -102,7 +107,7 @@ function toItem(meta: Meta, f: Followed, v: Video, progress: Record<string, Watc
   const entry = progress[v.id]
   return {
     metaId: f.id,
-    seriesName: meta.name || f.name,
+    seriesName: localTitle(f.id, meta.name || f.name),
     poster: meta.poster ?? f.poster,
     videoId: v.id,
     season: v.season ?? 0,

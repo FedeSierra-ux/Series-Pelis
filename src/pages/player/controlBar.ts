@@ -13,8 +13,31 @@ export function tip(label: string) {
  */
 export const COMPACT_BAR_QUERY = '(max-width: 760px) and (pointer: coarse)'
 
+/**
+ * Celular muy angosto (menos de 360 px, ej. 320): con una serie ("Audio" y "Siguiente episodio") la fila de
+ * íconos no entraba ni sin temporizador. Ahí el temporizador también pasa al ⚙ (lo esconde el CSS con la
+ * misma consulta). De 360 px para arriba, la barra queda igual.
+ */
+export const TINY_BAR_QUERY = '(max-width: 359px) and (pointer: coarse)'
+
 /** Pantalla angosta (celular vertical): el subtítulo sube por arriba de "Saltar intro" con los controles. */
 export const NARROW_QUERY = '(max-width: 760px)'
+
+/**
+ * Celular apaisado: más de 760 px de ancho pero pantalla táctil y poco alto (el mismo corte de 500 px que usa
+ * `player-v14.css` para la barra en dos renglones). Ahí el subtítulo también sube por arriba de la esquina.
+ */
+export const PHONE_LANDSCAPE_QUERY = '(pointer: coarse) and (max-height: 500px)'
+
+/**
+ * ¿El subtítulo sube por arriba de lo que hay en la esquina ("Saltar", siguiente episodio…) cuando se ven los
+ * controles? En el celular vertical (pantalla angosta, como desde la v0.26.1) y en el apaisado. En la TV
+ * nunca por el apaisado (algunas teles chicas podrían declarar `pointer: coarse` con poco alto): PC y TV
+ * quedan como estaban.
+ */
+export function liftsSubForCorner({ narrow, phoneLandscape, tv }: { narrow: boolean; phoneLandscape: boolean; tv: boolean }): boolean {
+  return narrow || (phoneLandscape && !tv)
+}
 
 function matchesNow(query: string) {
   try {

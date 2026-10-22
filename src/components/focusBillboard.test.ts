@@ -11,6 +11,7 @@ vi.mock('idb-keyval', () => ({
   clear: async () => undefined,
 }))
 
+import { rememberTitle, resetLocalTitles } from '../lib/localTitlesStore'
 import { buildInfo, parseDetailHref, shortText } from './focusBillboardData'
 
 describe('fondo que sigue al foco: datos', () => {
@@ -31,13 +32,13 @@ describe('fondo que sigue al foco: datos', () => {
     expect(shortText('   ')).toBeUndefined()
   })
 
-  it('nombre original de Cinemeta, sinopsis en español de TMDB, duración legible', () => {
+  it('nombre y sinopsis en español de TMDB, duración legible', () => {
     const info = buildInfo(
       'movie:tt1',
       { id: 'tt1', type: 'movie', name: 'The Matrix', imdbRating: '8.7', releaseInfo: '1999', runtime: '136 min', description: 'English text', genres: ['Action'] },
       { id: 603, title: 'Matrix', overview: 'Texto en español', genres: [{ id: 1, name: 'Acción' }, { id: 2, name: 'Ciencia ficción' }] },
     )
-    expect(info).toMatchObject({ name: 'The Matrix', rating: '8.7', description: 'Texto en español' })
+    expect(info).toMatchObject({ name: 'Matrix', rating: '8.7', description: 'Texto en español' })
     expect(info.facts).toEqual(['1999', '2 h 16 min', 'Acción · Ciencia ficción'])
     expect(info.background).toBe('https://images.metahub.space/background/medium/tt1/img')
   })
@@ -46,6 +47,20 @@ describe('fondo que sigue al foco: datos', () => {
     const meta = { id: 'tt2', type: 'series', name: 'Nueva', releaseInfo: '2026–', runtime: '50 min', videos: [{ id: 'tt2:1:1', season: 1, episode: 1 }] }
     expect(buildInfo('series:tt2', meta, undefined).facts).toEqual(['2026'])
     expect(buildInfo('series:tt2', meta, { id: 9, number_of_seasons: 2, first_air_date: '2026-01-10' }).facts).toEqual(['2026–'])
+  })
+
+  it('sin traducción de TMDB: Cinemeta y después el original', () => {
+    const meta = { id: 'tt3', type: 'movie', name: 'Spirited Away' }
+    // TMDB manda el nombre en japonés cuando no hay traducción: no sirve.
+    const tmdb = { id: 129, title: '千と千尋の神隠し', original_title: '千と千尋の神隠し' }
+    expect(buildInfo('movie:tt3', meta, tmdb).name).toBe('Spirited Away')
+    expect(buildInfo('movie:tt3', undefined, { id: 1, original_title: 'Original' }).name).toBe('Original')
+  })
+
+  it('el nombre del mapa gana (v0.28)', () => {
+    rememberTitle('tt4', { id: 4, title: 'El padrino', original_title: 'The Godfather' }, 'movie')
+    expect(buildInfo('movie:tt4', { id: 'tt4', type: 'movie', name: 'The Godfather' }, undefined).name).toBe('El padrino')
+    resetLocalTitles()
   })
 
   it('sin datos usa el nombre de la tarjeta', () => {

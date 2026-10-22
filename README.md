@@ -7,8 +7,8 @@ y un **historial** de todo lo que viste. Funciona en la PC, el celular y el nave
 
 ## Qué hace (v0.10.0)
 
-- **Más cómoda y más fácil de operar (v0.10)**: controles del sistema, velocidad y ventana flotante en el
-  reproductor, calidad según la conexión, atajos de teclado con ayuda (`?`) y guía del control remoto en la TV,
+- **Más cómoda y más fácil de operar (v0.10)**: controles del sistema y ventana flotante en el
+  reproductor (desde la v0.27.1 sin cambio de velocidad: siempre 1×), atajos de teclado con ayuda (`?`) y guía del control remoto en la TV,
   informes de errores opt-in (sin URLs ni keys) para que el dueño pueda ayudar a distancia, Ajustes con índice
   lateral y cabeceras de seguridad.
 - **Más sólida en la TV (v0.9)**: texto más grande a tres metros, el foco se centra y se recuerda al volver,
@@ -19,7 +19,7 @@ y un **historial** de todo lo que viste. Funciona en la PC, el celular y el nave
 - **Addons (v0.6)**: explorar los oficiales, activar o desactivar, gestor de catálogos (renombrar, ocultar,
   ordenar, fusionar) e **importar desde tu cuenta de Stremio**.
 - **TV (v0.6)**: protector de pantalla, teclado en pantalla, más reproductores externos, modo sin conexión,
-  asistente inicial y Ajustes esencial/avanzado.
+  asistente inicial (con login, una sola vez por casa desde la v0.26.2) y Ajustes esencial/avanzado.
 - **Descubrir (v0.5)**: búsqueda al escribir, búsquedas recientes, personas y "juntos", filtros y orden,
   listas curadas (Oscar, mejor puntaje IMDb, sagas) y etiquetas clickeables en la ficha.
 - **Pósters (v0.5)**: puntaje sobre el póster, etiquetas (episodio nuevo, Top 10…) y tráiler al pasar por encima.
@@ -34,12 +34,17 @@ y un **historial** de todo lo que viste. Funciona en la PC, el celular y el nave
   tráiler con subtítulos en latino primero. En Inicio y en Películas/Series: portada, Top 10 de la semana,
   "Porque viste…" y tendencias.
   Al pausar muestra quién actúa en el episodio.
+- **Títulos en español latino (v0.28)**: con TMDB, los nombres de pelis y series van como en Netflix Argentina (los
+  logos y los episodios, en el idioma original). Buscar encuentra por los dos nombres.
 - **Catálogo** de Cinemeta (populares, nuevas y mejor puntuadas) y de cualquier addon que agregues.
 - **Puntaje de IMDb** en pósters, portada y ficha.
 - **Addons de Stremio**: pegás la URL del manifest y listo. Si tu addon (por ejemplo Torrentio) está configurado
   con Real-Debrid o TorBox, los streams llegan como enlaces directos y arrancan rápido (siempre van primero).
+- **TorBox para todas las casas (v0.27)**: con Torrentio configurado con TorBox, lo que TorBox no tiene arranca por
+  torrent mientras TorBox lo baja, y si falla aparece "Reproducir por torrent" (ver "TorBox para todas las casas").
 - **Torrents sin debrid (v0.25)**: la app de Android (Android 9+) trae su propio motor de torrents, como Stremio. En la
-  PC, con Stremio abierto (servidor local).
+  PC (desde la v0.29), con **Stremio Service** abierto: Flix lo encuentra solo y convierte lo que el navegador no puede
+  abrir (MKV con x265, audio AC3/5.1), como Stremio Web (ver "Torrents en la PC").
 - **Rediseño (v0.26)**: Inicio, Películas/Series, Buscar, ficha, reproductor y Vos con los ajustes de la auditoría visual
   (filas alineadas bajo la portada, fuentes con idioma y tamaño, episodios vistos atenuados, subtítulo que no tapa "Saltar" ni la tarjeta del siguiente episodio en el celular, desde la v0.26.1).
 - **Ficha de las series** con pestaña **Detalles**: reparto, creación, países y dónde verla en Argentina.
@@ -79,6 +84,47 @@ npm run preview   # probar el build en http://localhost:4173
 
 En **Ajustes → Addons de Stremio** pegá la URL de cada addon que uses (termina en `/manifest.json`; también sirve el
 enlace `stremio://`).
+
+### Torrents sin debrid
+
+El navegador no puede bajar torrents por su cuenta. Según dónde mires:
+
+- **Navegador (PC o celular)**: los torrents van por **TorBox** (ver abajo). Lo que TorBox ya tiene arranca enseguida;
+  lo que no, TorBox lo baja y el video arranca solo cuando está listo ("TorBox lo está bajando…").
+- **App de Windows** ([Flix para Windows](https://github.com/FedeSierra-ux/Series-Pelis/releases/latest/download/flix-pc-setup.exe)):
+  como Stremio de escritorio. Elegís el torrent y reproduce, sin debrid y sin instalar nada más: trae su propio motor
+  de torrents y convierte lo que Chromium no puede (AC3, DTS, 5.1). Ver [App para Windows](#app-para-windows-v030).
+- **App de Android TV** (9+): motor de torrents propio (v0.25).
+- Si en la compu está abierto **Stremio Service** (o Stremio), Flix lo usa solo, como en la v0.29.
+
+En Ajustes → Reproductor → "Servidor de streaming" se puede poner otro servidor a mano.
+
+### TorBox para todas las casas (Torrentio)
+
+La key de TorBox va **dentro del addon** Torrentio: la carga una sola vez el administrador y llega sola a todas las
+casas. La app nunca la guarda aparte.
+
+1. En TorBox, entrá a [torbox.app/settings](https://torbox.app/settings) y copiá tu **API Key**. Para ~10 casas
+   conviene el plan con más descargas activas a la vez (Pro); verificá los planes en torbox.app/pricing.
+2. Abrí [torrentio.strem.fun/configure](https://torrentio.strem.fun/configure) y elegí:
+   - **Providers**: los de fábrica (podés sumar MejorTorrent, Wolfmax4k o Cinecalidad para contenido en español).
+   - **Sorting**: el de fábrica (por calidad). **Priority Language**: Latino (y Spanish, si querés).
+   - **Exclude Resolutions**: CAM y Screener.
+   - **Debrid Provider**: TorBox, y pegá la **API Key**.
+   - **Options**: tildá **"Don't show debrid catalog"** (si no, en Inicio aparecen las descargas de la cuenta, que
+     es de todas las casas). **No** tildes "Don't show download to debrid links": la app los usa para lo que TorBox
+     todavía no tiene.
+3. Tocá **Copy Link** y, desde el aparato del administrador, pegalo en **Ajustes → Addons de Stremio**. Si había un
+   Torrentio sin debrid, sacalo: la app arma sola el que necesita para los torrents.
+4. Ese link **lleva la key**: no lo pegues en chats ni lo muestres en capturas. Si se filtra, reseteá la key en
+   TorBox y volvé a cargar el addon.
+
+Cómo se comporta:
+- **Listo para ver** (`[TB+]`): reproduce directo desde TorBox.
+- **Tiene que descargarse** (`[TB download]`): con motor de torrents (app de Windows, app de Android 9+ o Stremio
+  abierto en la PC) arranca por torrent y le pide a TorBox que lo baje para la próxima. En el navegador, TorBox lo baja
+  y el video arranca solo cuando está listo (puede tardar unos minutos; Torrentio tarda hasta ~1 min en avisar).
+- **Si TorBox falla**: cartel con el motivo y, si hay motor de torrents, el botón "Reproducir por torrent".
 
 Para tener todo en español y las filas de tendencias, sacá una key gratis en
 [themoviedb.org → Ajustes → API](https://www.themoviedb.org/settings/api) y pegala en **Ajustes → TMDB**
@@ -167,6 +213,35 @@ siempre con la misma llave: secretos `ANDROID_KEYSTORE_BASE64`, `ANDROID_KEYSTOR
 Compilar en la PC (con el SDK de Android y Java 21): `cd tv-app && npm install && npx cap sync android &&
 cd android && ./gradlew assembleDebug`.
 
+## App para Windows (v0.30)
+
+La carpeta `desktop-app/` es una app de [Electron](https://www.electronjs.org) que abre
+`https://series-pelis.pages.dev` (mismo login, perfiles e historial) y trae adentro un **motor de torrents**
+(webtorrent) y la **conversión de video** (ffmpeg), como Stremio de escritorio: los torrents sin debrid se reproducen
+sin instalar nada más.
+
+**Instalarla**: bajá
+[`flix-pc-setup.exe`](https://github.com/FedeSierra-ux/Series-Pelis/releases/latest/download/flix-pc-setup.exe)
+(Windows 10/11, 64 bits) y abrilo. El instalador no está firmado: Windows SmartScreen avisa que la app "no es
+conocida" → **Más información** → **Ejecutar de todos modos**. Se instala para tu usuario, con acceso en el escritorio
+y en el menú Inicio, y **se actualiza sola** (Ajustes → App de Windows).
+
+**Subtítulos del video** (v0.30.1): los de texto que vienen adentro del archivo (SRT/ASS de un MKV, mov_text de un
+MP4) aparecen en **Subtítulos** como "… (del video)", junto a los online. El motor los saca de a 2 minutos a medida
+que baja el torrent. Si la pista dice "Latino" (o "LatAm", "es-419", "México"), la elección automática la prefiere; la
+de "Castellano"/"España" nunca se elige sola. Los de imagen (PGS, VobSub) no se ofrecen.
+
+**Abrir en VLC / mpv / PotPlayer** (Ajustes → Reproductor → Reproductor externo): la app abre directo el programa
+instalado, también con los torrents. Si no lo encuentra, avisa y deja el enlace copiado.
+
+**Armar una versión nueva**: el workflow `.github/workflows/desktop.yml` arma el instalador en Windows en cada cambio
+de `desktop-app/` (queda como *artifact*) y, con la etiqueta `flix-vX.Y.Z`, sube `flix-pc-setup.exe`, su
+`.blockmap` y `latest.yml` al mismo Release que el APK de la TV. La etiqueta tiene que coincidir con la versión de
+`desktop-app/package.json` (y con la de `tv-app/`): se suben juntas.
+
+Probar en la PC: `cd desktop-app && npm install && npm start` (con `FLIX_URL=http://localhost:5173` usa el
+`npm run dev` local). Pruebas: `npm test`. El ffmpeg que viene adentro es GPL (de `ffmpeg-static`).
+
 Para probar localmente igual que en Cloudflare (con la función y los headers): `npm run build && npx wrangler pages dev`.
 
 ## Herramientas para Claude Code
@@ -180,7 +255,6 @@ Para probar localmente igual que en Cloudflare (con la función y los headers): 
 
 ## Roadmap
 
-- **v0.27**: debrid (TorBox) dentro del addon, con "Reproducir por torrent" si falla.
 - **Pendiente de confirmar**: variantes del Tema 2 (negro OLED, acento a elección, color del póster).
 - **Próximo**: cuenta con código de vinculación (como Netflix) y sincronización del historial en Cloudflare (Workers + D1).
 - Importar addons desde la cuenta de Stremio.

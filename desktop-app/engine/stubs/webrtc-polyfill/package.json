@@ -1,0 +1,9 @@
+{
+  "name": "webrtc-polyfill",
+  "version": "1.999.0",
+  "private": true,
+  "description": "Reemplazo vacío (Flix): sin WebRTC en el motor, así no se instala node-datachannel (nativo).",
+  "type": "module",
+  "exports": { ".": "./index.js" },
+  "main": "index.js"
+}

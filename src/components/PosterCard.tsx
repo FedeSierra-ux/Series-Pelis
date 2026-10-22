@@ -6,6 +6,8 @@ import { displayYear } from '../lib/yearLabel'
 import { genreLabel } from '../lib/i18n'
 import { armTrailer, disarmTrailer } from '../lib/hoverTrailer'
 import { LABEL_TEXT, usePosterLabel } from '../lib/posterLabels'
+import { useLocalTitle } from '../lib/localTitles'
+import { useLogoTone } from '../lib/logoTone'
 import { addonsStore, settingsStore, useStore } from '../lib/store'
 import { cardBackdrop, useNearOnce, useTitleLogo } from '../lib/titleArt'
 import { imdbFromTmdb, parseTmdbId } from '../lib/tmdb'
@@ -28,7 +30,11 @@ interface Props {
    * Sin logo va el nombre. La forma de cada fila se elige en el gestor de catálogos.
    */
   landscape?: boolean
-  /** Sin la etiqueta "Top 10" (v0.26: filas de recomendaciones de Inicio, que ya tiene la fila del Top 10). */
+  /**
+   * Sin la etiqueta "Top 10" (pasa a la siguiente, ej. "Estreno"). Va en todas las filas de Inicio y de
+   * Películas/Series (las dos pantallas ya tienen la fila del Top 10) y en la grilla de catálogos; la etiqueta
+   * queda donde no hay Top 10 a la vista: Buscar, la ficha, personas, Mi lista y listas.
+   */
   hideTop10Label?: boolean
 }
 
@@ -49,10 +55,13 @@ export const PosterCard = memo(function PosterCard({ meta, progress, watched, su
   const src = landscape ? (backdrop ?? posterSrc) : posterSrc
   // Si la imagen no carga (404, CDN caído) mostramos el nombre en vez de un hueco vacío.
   const [brokenSrc, setBrokenSrc] = useState<string>()
-  const [imgRef, near] = useNearOnce<HTMLDivElement>(!!landscape && !eager)
+  // Cerca de la pantalla: pide el logo (apaisadas) y el nombre en español (v0.28, todas).
+  const [imgRef, near] = useNearOnce<HTMLDivElement>(!eager)
   const logo = useTitleLogo(meta, !!landscape && (eager || near))
+  const name = useLocalTitle(meta.id, meta.name, { type: meta.type, enabled: eager || near })
   const [brokenLogo, setBrokenLogo] = useState<string>()
   const showLogo = !!logo && logo !== brokenLogo
+  const logoTone = useLogoTone(showLogo ? logo : undefined)
   // v0.5: puntaje sobre el póster, etiqueta y tráiler al quedarse encima.
   const { posterRating, posterLabels } = useStore(settingsStore)
   const posterLabel = usePosterLabel(meta, posterLabels, hideTop10Label)
@@ -80,15 +89,15 @@ export const PosterCard = memo(function PosterCard({ meta, progress, watched, su
       data-focus-id={meta.id}
       className={landscape ? 'poster-card is-landscape' : `poster-card shape-${meta.posterShape ?? 'poster'}`}
       // Apaisada: el nombre está en el logo, así que no se repite abajo (sí para el lector de pantalla).
-      aria-label={landscape ? [meta.name, landInfo(meta)].filter(Boolean).join(', ') : undefined}
+      aria-label={landscape ? [name, landInfo(meta)].filter(Boolean).join(', ') : undefined}
       onMouseEnter={onEnter}
       onMouseLeave={(e) => disarmTrailer(e.currentTarget, 'mouse')}
       onFocus={onFocus}
       onBlur={(e) => disarmTrailer(e.currentTarget, 'focus')}
       onTouchStart={prefetch}
-      title={meta.name}
+      title={name}
     >
-      <div className="poster-img" ref={landscape ? imgRef : undefined}>
+      <div className="poster-img" ref={imgRef}>
         {src && src !== brokenSrc ? (
           <img
             src={src}
@@ -100,14 +109,14 @@ export const PosterCard = memo(function PosterCard({ meta, progress, watched, su
             onError={() => setBrokenSrc(src)}
           />
         ) : (
-          !landscape && <div className="poster-fallback">{meta.name}</div>
+          !landscape && <div className="poster-fallback">{name}</div>
         )}
         {landscape && (
           <div className="land-art" aria-hidden>
             {showLogo ? (
-              <img className="land-logo" src={logo} alt="" loading="lazy" decoding="async" onError={() => setBrokenLogo(logo)} />
+              <img className="land-logo" {...logoTone} src={logo} alt="" loading="lazy" decoding="async" onError={() => setBrokenLogo(logo)} />
             ) : (
-              <span className="land-name">{meta.name}</span>
+              <span className="land-name">{name}</span>
             )}
           </div>
         )}
@@ -126,7 +135,7 @@ export const PosterCard = memo(function PosterCard({ meta, progress, watched, su
         )}
       </div>
       <div className="poster-info">
-        {!landscape && <span className="poster-title">{meta.name}</span>}
+        {!landscape && <span className="poster-title">{name}</span>}
         <span className="poster-sub">
           {subtitle ?? (landscape ? landInfo(meta) : displayYear(meta))}
           {posterRating === 'below' && <ImdbRating value={meta.imdbRating} size="sm" />}
@@ -176,8 +185,14 @@ export function PosterSkeleton({ landscape }: { landscape?: boolean }) {
   return (
     <div className={`poster-card skeleton-card${landscape ? ' is-landscape' : ''}`} aria-hidden>
       <div className="poster-img skeleton" />
+      {/* Los mismos dos renglones que la tarjeta (título y año): si no, al llegar los datos la fila crecía (1 px en
+          PC, ~22 px en la TV, donde el texto es más alto). */}
       <div className="poster-info">
-        <span className="skeleton skeleton-line" />
+        <span className="poster-title">
+          <span className="skeleton skeleton-line" />
+          {' '}
+        </span>
+        <span className="poster-sub">{' '}</span>
       </div>
     </div>
   )

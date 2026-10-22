@@ -11,6 +11,8 @@ import { episodeLabel, formatTime, relativeDate, seasonCount, seriesYear } from 
 import { useMeta, useTitle, useTmdbDetails } from '../lib/hooks'
 import { trailerKeyFromMeta } from '../lib/hoverTrailer'
 import { typeLabel } from '../lib/i18n'
+import { useLocalTitle, useOriginalTitle } from '../lib/localTitles'
+import { useLogoTone } from '../lib/logoTone'
 import { useRating } from '../lib/ratings'
 import { remainingLabel } from '../lib/remaining'
 import { takeReturnVideo } from '../lib/returnVideo'
@@ -21,7 +23,6 @@ import { lastSourceStore, progressStore, RESUME_MIN_S, setWatched, settingsStore
 import {
   getDetails,
   imdbFromTmdb,
-  itemTitle,
   itemYear,
   parseTmdbId,
   pickLogo,
@@ -45,7 +46,8 @@ import { safeMeta } from './detail/safeData'
 import { SectionBoundary } from './detail/SectionBoundary'
 import { SeriesDetailsPanel } from './detail/SeriesDetailsPanel'
 import { StreamList, type DetailLocationState } from './detail/StreamList'
-import { isYtId, originalTitle } from './detail/trailers'
+import { detailNames, logoCaption, type DetailNames } from './detail/detailNames'
+import { isYtId } from './detail/trailers'
 import { NARROW_QUERY, useMediaQuery } from './detail/useMediaQuery'
 import { ReadMore } from './detail/ReadMore'
 import './detail/detail-fixes.css'
@@ -142,9 +144,11 @@ function TmdbResolver({ type, tmdbType, tmdbId, onRetry }: { type: string; tmdbT
 
 /** Ficha armada solo con TMDB, para títulos que no tienen id de IMDb. */
 function TmdbOnlyDetail({ details: d, type, tmdbType }: { details: TmdbDetails; type: string; tmdbType: TmdbType }) {
-  // El nombre original, no el traducido (el usuario no quiere títulos en español).
-  const title = originalTitle(d, itemTitle(d))
-  const logo = tmdbImg(pickLogo(d), 'w500')
+  // v0.28: el nombre en español de la ficha de TMDB (si es una traducción que sirve) y el original aparte.
+  const names = detailNames({ tmdb: d })
+  const title = names.name
+  const logoPath = pickLogo(d)
+  const logo = tmdbImg(logoPath, 'w500')
   const poster = tmdbImg(d.poster_path, 'w342')
   const bg = tmdbImg(d.backdrop_path, 'w1280')
   const year = itemYear(d)
@@ -160,9 +164,7 @@ function TmdbOnlyDetail({ details: d, type, tmdbType }: { details: TmdbDetails; 
         <div className="detail-head">
           {poster && <img className="detail-poster" src={poster} alt="" />}
           <div className="detail-info">
-            <h1 className={`detail-title${!logo && isLongTitle(title) ? ' is-long' : ''}`}>
-              {logo ? <img className="detail-logo" src={logo} alt={title} /> : title}
-            </h1>
+            <DetailTitle names={names} logo={logo} logoLang={logoLanguage(d, logoPath)} />
             {d.tagline && <p className="detail-tagline">{d.tagline}</p>}
             <div className="hero-meta">
               <span>{typeLabel(type, false)}</span>
@@ -190,8 +192,45 @@ function TmdbOnlyDetail({ details: d, type, tmdbType }: { details: TmdbDetails; 
 }
 
 const NOT_FOUND = 'No encontramos este título'
+/** Logo del título; un logo oscuro (Severance) lleva halo claro para leerse sobre la portada (`lib/logoTone`). */
+function DetailLogo({ src, alt, onError }: { src: string; alt: string; onError?: () => void }) {
+  const tone = useLogoTone(src)
+  return <img className="detail-logo" {...tone} src={src} alt={alt} onError={onError} />
+}
+
 /** v0.26 (ficha-02): un título en texto (sin logo) de más de 40 letras va con la letra un poco más chica. */
 const isLongTitle = (t: string) => t.length > 40
+
+/** Idioma del logo que eligió `pickLogo` (`es` solo si TMDB no tenía otro). */
+const logoLanguage = (d: TmdbDetails | undefined, path: string | undefined) => (path ? d?.images?.logos?.find((l) => l.file_path === path)?.iso_639_1 : undefined)
+
+/**
+ * v0.28: el h1 con el nombre en español. Con logo (en el idioma original, decisión del usuario) el h1 es el logo con
+ * el nombre en español de `alt`, y debajo va el nombre en texto si el logo dice otra cosa. Sin logo, el nombre en
+ * texto y "Título original" si se lee distinto.
+ */
+function DetailTitle({ names, cinemeta, logo, logoLang, onLogoError }: { names: DetailNames; cinemeta?: string; logo?: string; logoLang?: string | null; onLogoError?: () => void }) {
+  const caption = logo ? logoCaption(names, cinemeta, logoLang) : { original: names.original }
+  return (
+    <div className="detail-titles">
+      {/* El h1 siempre está (auditoría de uso, UX 4): con logo, el logo es su contenido y su texto alternativo, el nombre. */}
+      <h1 className={`detail-title${!logo && isLongTitle(names.name) ? ' is-long' : ''}`}>
+        {logo ? <DetailLogo src={logo} alt={names.name} onError={onLogoError} /> : names.name}
+      </h1>
+      {/* Ya lo dice el `alt` del logo: el lector de pantalla no lo lee dos veces. */}
+      {caption.name && (
+        <p className="detail-local-name" aria-hidden="true">
+          {caption.name}
+        </p>
+      )}
+      {caption.original && (
+        <p className="detail-original">
+          Título original: <span lang={names.originalLang}>{caption.original}</span>
+        </p>
+      )}
+    </div>
+  )
+}
 const reducedMotion = () => typeof matchMedia === 'function' && matchMedia('(prefers-reduced-motion: reduce)').matches
 /** "T2 E4" para el botón principal. */
 const shortEp = (v: Video) => `T${v.season ?? 0} E${episodeNumber(v) ?? '?'}`
@@ -211,9 +250,13 @@ function DetailPage({ type, id, onRetry }: { type: string; id: string; onRetry: 
   const spoilerSettings = useStore(settingsStore)
   const hideEpisodeSpoiler = useEpisodeSpoilers()
   const hideSynopsis = hideTitleSynopsis(spoilerSettings, id, progress, rated)
-  // El título es el de Cinemeta (el original): con TMDB solo van en español la sinopsis y los datos.
-  const title = meta?.name || undefined
-  useTitle(title)
+  // v0.28: el nombre que se ve va en español (el del mapa de `localTitles`, si no el de la ficha de TMDB, si no el
+  // de Cinemeta). Lo que se guarda (historial, Mi lista, estrellas) sigue con el de Cinemeta (`name`, más abajo).
+  // La ficha de TMDB ya anota el nombre en el mapa: acá no se pide aparte.
+  const localName = useLocalTitle(id, '', { type, enabled: false })
+  const storedOriginal = useOriginalTitle(id)
+  const names = detailNames({ local: localName, tmdb, cinemeta: meta?.name, storedOriginal })
+  useTitle(meta?.name ? names.name : undefined)
   // Celular: las fuentes van debajo del episodio elegido (en PC y TV, a la derecha).
   const tv = useTvMode()
   const inlineStreams = useMediaQuery(NARROW_QUERY) && !tv
@@ -302,13 +345,17 @@ function DetailPage({ type, id, onRetry }: { type: string; id: string; onRetry: 
   // Cinemeta responde con una ficha vacía para ids que no existen (`tt0000000`).
   if (!meta || !meta.name) return <DetailError message={NOT_FOUND} />
 
+  // El de Cinemeta: es el que se guarda (lo que se ve es `names.name`).
   const name = meta.name
   const fullMeta: Meta = { ...meta, type }
   const bg = meta.background ?? (id.startsWith('tt') ? `https://images.metahub.space/background/medium/${id}/img` : undefined)
   const peopleIndex = tmdbPeopleIndex(tmdb)
   const description = tmdb?.overview || meta.description
-  const tmdbLogo = tmdbImg(pickLogo(tmdb), 'w500')
+  const tmdbLogoPath = pickLogo(tmdb)
+  const tmdbLogo = tmdbImg(tmdbLogoPath, 'w500')
   const logo = logoFailed ? undefined : (tmdbLogo ?? meta.logo)
+  // El de metahub (sin TMDB) está en inglés, como el nombre de Cinemeta.
+  const logoLang = tmdbLogo ? logoLanguage(tmdb, tmdbLogoPath) : undefined
   const movieProgress = progress[id]
   const tmdbTrailer = pickTrailer(tmdb?.videos?.results, tmdb?.original_language)?.key
   const trailerKey = isYtId(tmdbTrailer) ? tmdbTrailer : trailerKeyFromMeta(meta)
@@ -554,15 +601,12 @@ function DetailPage({ type, id, onRetry }: { type: string; id: string; onRetry: 
     <div className="page detail">
       <section className={`detail-hero${bg ? ' has-bg' : ''}`} style={{ backgroundImage: bg ? `url(${bg})` : undefined }}>
         <DetailBack />
-        {trailerKey && backdropAllowed && <HeroTrailer ytId={trailerKey} title={name} suspended={!!trailer} />}
+        {trailerKey && backdropAllowed && <HeroTrailer ytId={trailerKey} title={names.name} suspended={!!trailer} />}
         <div className="hero-shade" />
         <div className="detail-head">
           {meta.poster && <img className="detail-poster" src={meta.poster} alt="" />}
           <div className="detail-info">
-            {/* El h1 siempre está (auditoría de uso, UX 4): con logo, el logo es su contenido y su texto alternativo, el nombre. */}
-            <h1 className={`detail-title${!logo && isLongTitle(name) ? ' is-long' : ''}`}>
-              {logo ? <img className="detail-logo" src={logo} alt={name} onError={() => setLogoFailed(true)} /> : name}
-            </h1>
+            <DetailTitle names={names} cinemeta={name} logo={logo} logoLang={logoLang} onLogoError={() => setLogoFailed(true)} />
             {tmdb?.tagline && <p className="detail-tagline">{tmdb.tagline}</p>}
             <div className="hero-meta">
               <ImdbRating value={meta.imdbRating} />
@@ -601,7 +645,7 @@ function DetailPage({ type, id, onRetry }: { type: string; id: string; onRetry: 
 
       <DetailTabs tabs={tabs} active={activeTab} onChange={setTab} onExitUp={focusHeroActions} />
 
-      {trailer && <TrailerPlayer ytId={trailer.ytId} kind={trailer.kind} title={name} backdrop={bg} onClose={() => setTrailer(undefined)} />}
+      {trailer && <TrailerPlayer ytId={trailer.ytId} kind={trailer.kind} title={names.name} backdrop={bg} onClose={() => setTrailer(undefined)} />}
     </div>
   )
 }

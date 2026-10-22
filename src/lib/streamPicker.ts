@@ -1,5 +1,6 @@
 import { streamingServerUrl } from './addons'
 import { sameAddon } from './addonKey'
+import { isDebridDownload } from './debrid'
 import type { LastSource, SourceRules } from './store'
 import type { TorrentServer } from './torrentServer'
 import type { AddonStreams, InstalledAddon, Stream } from './types'
@@ -316,7 +317,9 @@ export function analyzeStreams(groups: AddonStreams[], rules: SourceRules, last:
   // url), aunque el torrent sea la misma fuente de antes o esté en el idioma de antes. Un torrent se elige
   // solo si no hay nada directo reproducible; entre torrents, el orden de siempre.
   // Los que no se pueden reproducir (sin `url`) siguen al final, después de los torrents.
-  const direct = (c: (typeof candidates)[number]) => Number(!!c.url && !!c.stream.url)
+  // v0.27: lo que TorBox todavía no tiene ("[TB download]") cuenta como torrent: se reproduce por torrent mientras
+  // TorBox lo baja, así que lo que ya está listo en TorBox le gana siempre.
+  const direct = (c: (typeof candidates)[number]) => Number(!!c.url && !!c.stream.url && !isDebridDownload(c.stream))
   candidates.sort((a, b) => direct(b) - direct(a) || b.score - a.score || a.addonIndex - b.addonIndex || a.streamIndex - b.streamIndex)
   const seen = new Set<string>()
   const ranked: RankedStream[] = []

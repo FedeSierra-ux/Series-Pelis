@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState, type RefObject } from 'react'
 import { episodeLabel } from '../../lib/format'
+import { useLocalTitle } from '../../lib/localTitles'
 import { nativeKeepAwake } from '../../lib/native'
 import type { PlayState } from '../Detail'
 
@@ -32,6 +33,8 @@ export function useMediaSession({
   onNext?: () => void
 }) {
   const { meta, video } = state
+  // v0.28: en la pantalla de bloqueo y la notificación, el nombre en español (lo pide el reproductor).
+  const name = useLocalTitle(meta.id, meta.name, { enabled: false })
   const episode = video ? [episodeLabel(video.season, video.episode), video.title ?? video.name].filter(Boolean).join(' · ') : ''
 
   // Metadatos: título, episodio y póster.
@@ -40,9 +43,9 @@ export function useMediaSession({
     if (!ms || typeof MediaMetadata === 'undefined') return
     try {
       ms.metadata = new MediaMetadata({
-        title: meta.name,
+        title: name,
         artist: episode || state.addonName,
-        album: video ? meta.name : '',
+        album: video ? name : '',
         artwork: meta.poster ? [{ src: meta.poster, sizes: '300x450', type: '' }] : [],
       })
     } catch {
@@ -55,7 +58,7 @@ export function useMediaSession({
         // nada
       }
     }
-  }, [meta.name, meta.poster, episode, state.addonName, !!video])
+  }, [name, meta.poster, episode, state.addonName, !!video])
 
   // Botones: play, pausa, ±10 s, ir a una posición, siguiente episodio y "anterior" (= empezar de nuevo).
   const nextRef = useRef(onNext)

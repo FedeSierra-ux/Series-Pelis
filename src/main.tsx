@@ -4,6 +4,7 @@ import { App } from './App'
 import { checkAuth } from './lib/auth'
 import { initCloudSync } from './lib/cloudSync'
 import { initDiagnostics, probeReportServer } from './lib/diagnostics'
+import { loadLocalTitles } from './lib/localTitlesStore'
 import { initNative } from './lib/native'
 import { hydrateStores } from './lib/store'
 import { initProfileWatch } from './lib/profileSwitch'
@@ -38,8 +39,9 @@ window.addEventListener('vite:preloadError', (event) => {
 })
 
 // Leemos los datos guardados antes de pintar (tarda unos milisegundos) para que
-// "Seguir viendo" y los addons aparezcan en el primer render.
-hydrateStores().finally(() => {
+// "Seguir viendo" y los addons aparezcan en el primer render. Los nombres en español (v0.28) también: así no
+// aparece el original y enseguida cambia.
+Promise.all([hydrateStores(), loadLocalTitles()]).finally(() => {
   // Errores globales → informe (solo si el ajuste está activo) y reintento de los que quedaron en cola.
   initDiagnostics()
   // `data-tv` en <html>: letras y controles grandes para mirar desde el sillón.

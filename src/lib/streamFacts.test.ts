@@ -6,7 +6,7 @@ describe('streamFacts', () => {
   it('Torrentio con Real-Debrid en caché: 4K, Dolby Vision, Atmos, varios idiomas', () => {
     const s: Stream = {
       name: '[RD+] Torrentio\n4k DV | HDR',
-      title: 'The.Matrix.1999.2160p.UHD.BluRay.REMUX.DV.HDR.HEVC.TrueHD.Atmos.7.1-FGT\n👤 182 💾 61.2 GB ⚙️ RARBG\nMulti Audio / 🇬🇧 / 🇪🇸 / 🇲🇽',
+      title: 'The.Matrix.1999.2160p.UHD.BluRay.REMUX.DV.HDR.HEVC.TrueHD.Atmos.7.1-FGT\n👤 182 💾 61.2 GB ⚙️ RARBG\nMulti Audio / 🇬🇧 / 🇪🇸 / 🇫🇷',
       url: 'https://cdn.example/1.mkv',
     }
     expect(streamFacts(s, 'Torrentio')).toEqual({
@@ -32,8 +32,21 @@ describe('streamFacts', () => {
     expect(dl.lang).toBeUndefined()
   })
 
-  it('castellano (bandera de España) no es latino', () => {
-    expect(streamFacts({ name: 'Torrentio', title: 'X.1080p.DTS-HD.MA.5.1\n🇬🇧 / 🇪🇸', url: 'u' })).toMatchObject({ lang: 'Castellano', latino: false, audio: '5.1' })
+  it('audio de España (bandera o "Castellano"): se rotula "España" y no es latino', () => {
+    expect(streamFacts({ name: 'Torrentio', title: 'X.1080p.DTS-HD.MA.5.1\n🇬🇧 / 🇪🇸', url: 'u' })).toMatchObject({ lang: 'España', latino: false, audio: '5.1' })
+    expect(streamFacts({ name: 'A', title: 'X.1080p.Castellano.mkv', url: 'u' })).toMatchObject({ lang: 'España', latino: false })
+    // "Castellano latino" es latino.
+    expect(streamFacts({ name: 'A', title: 'X.1080p.Castellano.Latino.mkv', url: 'u' })).toMatchObject({ lang: 'Latino', latino: true })
+  })
+
+  it('varios idiomas con uno latino: "Latino"', () => {
+    const multi = 'X.2160p.HDR\nMulti Audio / 🇬🇧 / 🇪🇸 / 🇲🇽'
+    expect(streamFacts({ name: '[RD+] Torrentio', title: multi, url: 'u' })).toMatchObject({ lang: 'Latino', latino: true })
+    expect(streamFacts({ name: 'A', title: 'X.1080p.DUAL.Latino-Ingles.mkv', url: 'u' })).toMatchObject({ lang: 'Latino', latino: true })
+    expect(streamFacts({ name: 'A', description: 'X 1080p\n🌐 Multi · Latino', url: 'u' })).toMatchObject({ lang: 'Latino', latino: true })
+    // Sin latino entre los idiomas, sigue siendo "Varios idiomas" (aunque esté el de España).
+    expect(streamFacts({ name: 'A', title: 'X.1080p.Dual.Castellano.Ingles.mkv', url: 'u' })).toMatchObject({ lang: 'Varios idiomas', latino: false })
+    expect(streamFacts({ name: 'A', title: 'X.1080p\nMulti / 🇬🇧 / 🇫🇷', url: 'u' })).toMatchObject({ lang: 'Varios idiomas', latino: false })
   })
 
   it('TorBox de Comet: servicio del nombre, sin el emoji del archivo', () => {

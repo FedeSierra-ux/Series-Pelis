@@ -1,0 +1,30 @@
+{
+  "name": "flix-desktop",
+  "private": true,
+  "version": "0.30.2",
+  "description": "App de Flix para Windows: abre series-pelis.pages.dev en Electron, con motor de torrents y conversión de video adentro.",
+  "author": "Flix",
+  "main": "main.js",
+  "type": "module",
+  "scripts": {
+    "start": "electron .",
+    "test": "node --test engine/*.test.js shell.test.js",
+    "dist": "electron-builder --win nsis --publish never"
+  },
+  "dependencies": {
+    "bufferutil": "file:engine/stubs/bufferutil",
+    "electron-updater": "6.8.10",
+    "ffmpeg-static": "5.3.0",
+    "ffprobe-static": "3.1.0",
+    "fs-native-extensions": "file:engine/stubs/fs-native-extensions",
+    "utf-8-validate": "file:engine/stubs/utf-8-validate",
+    "utp-native": "file:engine/stubs/utp-native",
+    "webrtc-polyfill": "file:engine/stubs/webrtc-polyfill",
+    "webtorrent": "3.0.21"
+  },
+  "devDependencies": {
+    "bittorrent-tracker": "11.2.3",
+    "electron": "44.6.0",
+    "electron-builder": "26.17.0"
+  }
+}

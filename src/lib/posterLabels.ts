@@ -206,8 +206,9 @@ function subscribe(listener: () => void) {
 const getVersion = () => version
 
 /**
- * Etiqueta (una sola) para un póster, o `undefined`. Con `noTop10` (v0.26: filas de recomendaciones de Inicio,
- * que ya tiene la fila del Top 10) nunca da "Top 10" y pasa a la siguiente (ej. "Estreno").
+ * Etiqueta (una sola) para un póster, o `undefined`. Con `noTop10` (las filas de Inicio y de Películas/Series,
+ * que ya tienen la fila del Top 10, y la grilla de catálogos; ver `hideTop10Label` en PosterCard) nunca da
+ * "Top 10" y pasa a la siguiente (ej. "Estreno").
  */
 export function usePosterLabel(meta: Pick<MetaPreview, 'id' | 'type' | 'released'>, enabled: boolean, noTop10 = false): PosterLabel | undefined {
   useSyncExternalStore(subscribe, getVersion, getVersion)

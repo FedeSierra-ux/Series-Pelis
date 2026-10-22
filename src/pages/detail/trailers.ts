@@ -62,9 +62,3 @@ export function backdropTrailerAllowed(env: BackdropEnv): boolean {
 
 /** A los cuántos milisegundos de abrir la ficha el fondo pasa al tráiler. */
 export const BACKDROP_DELAY_MS = 3000
-
-/** Título original si está en alfabeto latino; si no (japonés, coreano…), el que manda TMDB. */
-export function originalTitle(item: { original_title?: string; original_name?: string } | undefined, fallback: string): string {
-  const orig = item?.original_title ?? item?.original_name
-  return orig && /^[\p{Script=Latin}\p{N}\p{P}\p{S}\s]+$/u.test(orig) ? orig : fallback
-}

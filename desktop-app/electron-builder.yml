@@ -1,0 +1,67 @@
+# Instalador de Flix para Windows (electron-builder). `npm run dist` → dist/flix-pc-setup.exe, su .blockmap y
+# latest.yml (lo que lee electron-updater). Lo publica .github/workflows/desktop.yml en el Release flix-vX.Y.Z.
+appId: ar.flix.desktop
+productName: Flix
+copyright: Flix
+directories:
+  output: dist
+  buildResources: build
+
+files:
+  - main.js
+  - preload.cjs
+  - origins.js
+  - players.js
+  - log.js
+  - updater.js
+  - update-errors.js
+  - window-state.js
+  - offline.html
+  - engine/**
+  - '!engine/**/*.test.*'
+  - '!engine/**/test/**'
+  - '!engine/**/*.md'
+  - package.json
+  # ffprobe-static trae los binarios de todas las plataformas: solo va el de Windows x64.
+  - '!node_modules/ffprobe-static/bin/darwin/**'
+  - '!node_modules/ffprobe-static/bin/linux/**'
+  - '!node_modules/ffprobe-static/bin/win32/ia32/**'
+
+# Un .exe adentro del asar no se puede ejecutar: ffmpeg y ffprobe van afuera (main.js arma la ruta a
+# app.asar.unpacked).
+asarUnpack:
+  - node_modules/ffmpeg-static/**
+  - node_modules/ffprobe-static/**
+
+win:
+  target:
+    - target: nsis
+      arch: [x64]
+  icon: build/icon.ico
+  # Sin firma de código (SmartScreen avisa la primera vez). Sin `publisherName`, electron-updater no pide firma a
+  # la actualización; se verifica con el sha512 de latest.yml.
+  verifyUpdateCodeSignature: false
+
+# Instalador básico: un clic, por usuario (sin permisos de administrador), acceso directo en el escritorio y en el
+# menú Inicio, y abre Flix al terminar. Las actualizaciones usan el mismo instalador en silencio.
+nsis:
+  oneClick: true
+  perMachine: false
+  artifactName: flix-pc-setup.exe
+  shortcutName: Flix
+  uninstallDisplayName: Flix
+  createDesktopShortcut: true
+  createStartMenuShortcut: true
+  runAfterFinish: true
+  deleteAppDataOnUninstall: false
+  installerLanguages: [es_ES]
+  multiLanguageInstaller: false
+  # Genera flix-pc-setup.exe.blockmap: electron-updater baja solo los pedazos que cambiaron.
+  differentialPackage: true
+
+# latest.yml apunta acá. El workflow reescribe la `url` del instalador a la del Release con etiqueta
+# (releases/download/flix-vX.Y.Z/…): así electron-updater encuentra el .blockmap de la versión instalada.
+publish:
+  - provider: generic
+    url: https://github.com/FedeSierra-ux/Series-Pelis/releases/latest/download/
+    useMultipleRangeRequest: true

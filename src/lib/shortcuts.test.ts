@@ -24,6 +24,13 @@ describe('SHORTCUT_GROUPS', () => {
     }
   })
 
+  it('el reproductor no tiene teclas de velocidad (se sacaron: siempre 1×)', () => {
+    const player = SHORTCUT_GROUPS.find((g) => g.id === 'player')!
+    const keys = player.shortcuts.flatMap((s) => s.keys)
+    for (const k of ['<', '>', ',', '.']) expect(keys).not.toContain(k)
+    expect(player.shortcuts.some((s) => /velocidad/i.test(s.description))).toBe(false)
+  })
+
   it('la ayuda lista todos los destinos de "G + letra"', () => {
     const global = SHORTCUT_GROUPS.find((g) => g.id === 'global')!
     for (const letter of Object.keys(GOTO_TARGETS)) {

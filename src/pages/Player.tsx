@@ -8,8 +8,11 @@ import { androidIntent, externalLaunch } from '../lib/externalPlayers'
 import { episodeLabel, formatTime, isHls } from '../lib/format'
 import { useTitle } from '../lib/hooks'
 import { langLabel } from '../lib/i18n'
+import { useLocalTitle } from '../lib/localTitles'
+import { desktopApp, desktopTorrentBase } from '../lib/desktop'
 import { isNativeApp } from '../lib/native'
-import { needsNativePlayer } from '../lib/torrentServer'
+import { needsNativePlayer, torrentServer } from '../lib/torrentServer'
+import { serverPlan, STREMIO_SERVER, useLocalStremio } from '../lib/stremioServer'
 import { nativePlayerAvailable, probeNativePlayer } from '../lib/nativePlayer'
 import { findNextStream, nextEpisodeSeason, prefetchNextStreams } from '../lib/nextEpisode'
 import { setReturnVideo } from '../lib/returnVideo'
@@ -20,7 +23,6 @@ import { audioPrefs, guessAudioLang, lang3, langRank, subtitleClasses } from '..
 import { useTvMode } from '../lib/tv'
 import type { PlayState } from './Detail'
 import './player/player-fixes.css'
-import './player/player-extras.css'
 import { CreditsNotice } from './player/CreditsNotice'
 import { RateAtEnd } from './player/RateAtEnd'
 import { daysAway, RECAP_AFTER_DAYS, RecapOffer } from './player/RecapOffer'
@@ -28,14 +30,17 @@ import { SeekPreview } from './player/SeekPreview'
 import { SourcesMenu, useSwitchSource, type Resume, type SwitchState } from './player/SourcesMenu'
 import { ReportButton } from '../components/ReportButton'
 import { PlayerIcon } from './player/PlayerIcons'
-import { NARROW_QUERY, tip, useCompactBar, useMediaQuery } from './player/controlBar'
-import { formatRate, readRate, SpeedMenu, stepRate, storeRate, type Rate } from './player/SpeedMenu'
+import { liftsSubForCorner, NARROW_QUERY, PHONE_LANDSCAPE_QUERY, TINY_BAR_QUERY, tip, useCompactBar, useMediaQuery } from './player/controlBar'
 import { SubtitleMenu } from './player/SubtitleMenu'
 import { useMediaSession, usePictureInPicture, useWakeLock } from './player/useMediaSession'
 import { useSubtitles } from './player/useSubtitles'
+import type { VideoSubsSource } from '../lib/embeddedSubs'
 import { launchUrl } from './player/externalLaunch'
 import { NativePlayerView } from './player/NativePlayer'
 import { EngineError } from './player/EngineError'
+import { DEBRID_READY_NOTE, DebridDownload, DebridError } from './player/DebridSwitch'
+import { StremioPrepare } from './player/StremioPrepare'
+import { debridLinkOf, isDebridDownload, looksLikeStatusVideo } from '../lib/debrid'
 import { MIN_HISTORY_EPISODE_S, MIN_HISTORY_S, NEXT_FALLBACK_S, readAutoCount, writeAutoCount } from './player/autoNext'
 import { detailPathFor } from './player/fallback'
 import { isPhoneLike, toggleFullscreen as toggleScreen, usePlayerScreen } from './player/fullscreen'
@@ -58,11 +63,13 @@ const NEXT_COUNTDOWN_S = 10
 const HLS_NETWORK_RETRIES = 2
 const HLS_RETRY_MS = 1000
 const SLEEP_KEY = 'sp-sleep-at'
+/** Velocidad que guardaban las versiones con botón "1×" (hasta la v0.27): ya no se lee, se borra. */
+const OLD_RATE_KEY = 'sp-rate'
 const VOLUME_STEP = 0.1
 /** Px entre el final del subtítulo y lo que haya en la esquina ("Saltar", siguiente…), en el celular con controles. */
 const SUB_CORNER_GAP = 16
 
-type Menu = 'subs' | 'audio' | 'sleep' | 'sources' | 'speed' | 'quick'
+type Menu = 'subs' | 'audio' | 'sleep' | 'sources' | 'quick'
 type Sleep = { kind: 'off' } | { kind: 'time'; at: number; minutes?: number } | { kind: 'episode' }
 
 // sessionStorage puede estar bloqueado (modo privado en algunos navegadores de TV).
@@ -78,6 +85,13 @@ function sessionSet(key: string, value: string) {
     sessionStorage.setItem(key, value)
   } catch {
     // sin persistencia, no pasa nada
+  }
+}
+function sessionRemove(key: string) {
+  try {
+    sessionStorage.removeItem(key)
+  } catch {
+    // sin persistencia, no hay nada que borrar
   }
 }
 
@@ -136,6 +150,22 @@ function PlayerChoice({ state, resume }: { state: PlayState; resume?: Resume }) 
   const [fallback, setFallback] = useState<Resume>()
   const [engineFail, setEngineFail] = useState<{ at: number; message?: string }>()
   const [retry, setRetry] = useState<Resume>()
+  // v0.27: link de debrid de Torrentio. Lo que TorBox no tiene va por torrent (si se puede); si el debrid falla,
+  // cartel con "Reproducir por torrent".
+  const debrid = !!debridLinkOf(state)
+  const [plainDebrid, setPlainDebrid] = useState(false)
+  const [debridFail, setDebridFail] = useState<{ at: number }>()
+  // v0.29: con el servidor de Stremio (Stremio Service en la PC; desde la v0.30, también el motor de la app de
+  // Windows) se prepara antes: torrent creado y, si el navegador no puede con el formato, la versión convertida.
+  // `media` es lo que abre el reproductor de la web.
+  // Un link directo que el navegador quizás no pueda abrir: si se llegó sin pasar por las fuentes (Seguir viendo),
+  // todavía no se buscó el servidor; se espera esa búsqueda (3 s como mucho) antes de abrirlo.
+  const [media, setMedia] = useState<string>()
+  // v0.30.1: subtítulos de texto del video (solo con el motor de la app de Windows).
+  const [videoSubs, setVideoSubs] = useState<VideoSubsSource>()
+  const wantsLocal = media === undefined && !!state.stream.url && !!state.stream.behaviorHints?.notWebReady
+  const local = useLocalStremio(wantsLocal)
+  const [prepareTry, setPrepareTry] = useState(0)
   useEffect(() => {
     if (native !== undefined) return
     let alive = true
@@ -147,6 +177,25 @@ function PlayerChoice({ state, resume }: { state: PlayState; resume?: Resume }) 
     }
   }, [native])
   if (native === undefined) return <div className="player player-native" />
+  if (debrid && debridFail) {
+    // Reintentar el mismo link: sin volver a pasar por el torrent (para eso está el otro botón).
+    const retryDebrid = () => {
+      // v0.30: sin servidor de torrents, lo que TorBox todavía no tiene vuelve a la espera ("TorBox lo está bajando…").
+      setPlainDebrid(!(isDebridDownload(state.stream) && !torrentServer().url))
+      setRetry({ ...resume, at: debridFail.at })
+      setDebridFail(undefined)
+    }
+    return <DebridError state={state} at={debridFail.at} onRetry={retryDebrid} />
+  }
+  if (debrid && !plainDebrid && isDebridDownload(state.stream)) {
+    // v0.30: la espera terminó (TorBox ya lo tiene): el mismo link, desde donde iba, con el aviso.
+    const debridReady = () => {
+      setRetry({ ...resume, at: resume?.at ?? 0, note: DEBRID_READY_NOTE })
+      setPlainDebrid(true)
+    }
+    return <DebridDownload state={state} resume={resume} onPlain={() => setPlainDebrid(true)} onReady={debridReady} />
+  }
+  const onDebridFail = debrid ? (at: number) => setDebridFail({ at }) : undefined
   // Torrent del motor de la app (http a 127.0.0.1): el reproductor de la web no lo puede abrir. Si falla el
   // nativo no se le pasa; se muestra el error de Android y se ofrece otra fuente.
   const engineOnly = needsNativePlayer(state.playUrl)
@@ -156,6 +205,7 @@ function PlayerChoice({ state, resume }: { state: PlayState; resume?: Resume }) 
         state={state}
         resume={retry ?? resume}
         onFallback={(at, message) => (engineOnly ? setEngineFail({ at, message }) : setFallback({ at }))}
+        onDebridFail={onDebridFail}
       />
     )
   }
@@ -179,16 +229,59 @@ function PlayerChoice({ state, resume }: { state: PlayState; resume?: Resume }) 
       />
     )
   }
+  if (wantsLocal && (local === 'unknown' || local === 'checking')) return <div className="player player-native" />
+  // v0.30: en la app de Windows convierte su propio motor (AC3, DTS, 5.1 y demás que Chromium no reproduce).
+  const converter = desktopTorrentBase() ?? (local === 'found' ? STREMIO_SERVER : undefined)
+  const plan = media === undefined ? serverPlan(state.stream, state.playUrl, converter) : undefined
+  if (plan) {
+    return (
+      <StremioPrepare
+        key={prepareTry}
+        state={state}
+        plan={plan}
+        at={fallback?.at ?? resume?.at}
+        onReady={(url, subs) => {
+          setVideoSubs(subs)
+          setMedia(url)
+        }}
+        onPlain={() => setMedia(state.playUrl)}
+        onRetry={() => setPrepareTry((n) => n + 1)}
+      />
+    )
+  }
   return (
     <PlayerView
       state={state}
-      resume={fallback ?? resume}
+      resume={fallback ?? retry ?? resume}
       notice={fallback ? 'El reproductor de Android no pudo con este video: sigue el de la web' : undefined}
+      onDebridFail={onDebridFail}
+      media={media}
+      videoSubs={videoSubs}
     />
   )
 }
 
-function PlayerView({ state, resume, notice }: { state: PlayState; resume?: Resume; notice?: string }) {
+/**
+ * `onDebridFail` (v0.27): el link de debrid dio un video de aviso de Torrentio (no el video).
+ * `media` (v0.29): lo que se abre en lugar de `state.playUrl` (preparado con el servidor de Stremio: el torrent o
+ * su versión convertida). Con la convertida no hay vista previa al buscar: pediría otra conversión, y el servidor
+ * hace una sola a la vez (cortaría la del video).
+ */
+function PlayerView({
+  state,
+  resume,
+  notice,
+  onDebridFail,
+  media,
+  videoSubs,
+}: {
+  state: PlayState
+  resume?: Resume
+  notice?: string
+  onDebridFail?: (at: number) => void
+  media?: string
+  videoSubs?: VideoSubsSource
+}) {
   const navigate = useNavigate()
   const settings = useStore(settingsStore)
   const videoRef = useRef<HTMLVideoElement>(null)
@@ -238,10 +331,6 @@ function PlayerView({ state, resume, notice }: { state: PlayState; resume?: Resu
     return at > Date.now() ? { kind: 'time', at, minutes: minutes || undefined } : { kind: 'off' }
   })
   const [sleepFired, setSleepFired] = useState(false)
-  // Velocidad de reproducción: se recuerda mientras dure la sesión (pasa al siguiente episodio), no más.
-  const [rate, setRate] = useState<Rate>(readRate)
-  const rateRef = useRef(rate)
-  rateRef.current = rate
   // Último subtítulo activo, para que la tecla C lo vuelva a prender.
   const lastSub = useRef<string>('')
   // Después de N episodios seguidos sin tocar nada, el siguiente arranca en pausa y pregunta.
@@ -302,7 +391,9 @@ function PlayerView({ state, resume, notice }: { state: PlayState; resume?: Resu
 
   const { meta, video } = state
   const videoId = video?.id ?? meta.id
-  useTitle(video ? `${meta.name} ${episodeLabel(video.season, video.episode)}` : meta.name)
+  // v0.28: lo que se ve va en español; en el progreso se sigue guardando el de Cinemeta (`meta.name`).
+  const shownName = useLocalTitle(meta.id, meta.name, { type: meta.type })
+  useTitle(video ? `${shownName} ${episodeLabel(video.season, video.episode)}` : shownName)
 
   const flash = useCallback((msg: string) => {
     setToast(msg)
@@ -345,32 +436,30 @@ function PlayerView({ state, resume, notice }: { state: PlayState; resume?: Resu
     closeMenu: () => setMenu(null),
     controlsClear,
     cueBottom,
+    videoSubs,
   })
   const pip = usePictureInPicture(videoRef)
   // Celular vertical: "Abrir en…", ventana flotante y Ajustar van dentro del ⚙ (el CSS los saca de la barra).
   const compactBar = useCompactBar()
+  // Celular de menos de 360 px: tampoco entra el temporizador en la fila (con una serie: Audio y Siguiente).
+  const tinyBar = useMediaQuery(TINY_BAR_QUERY)
   const narrow = useMediaQuery(NARROW_QUERY)
+  const phoneLandscape = useMediaQuery(PHONE_LANDSCAPE_QUERY)
   // Pantalla prendida mientras se reproduce; se suelta en pausa y al salir.
   useWakeLock(playing)
 
   // ---------- Velocidad ----------
+  // Siempre 1× (el usuario no usa la velocidad: no hay botón ni teclas). Lo que dejó guardado una versión
+  // vieja en esta sesión se borra para que no vuelva a leerse.
   useEffect(() => {
-    const el = videoRef.current
-    if (el && el.playbackRate !== rate) el.playbackRate = rate
-  }, [rate, state.playUrl])
-
-  const changeRate = (next: Rate, announce = true) => {
-    setRate(next)
-    storeRate(next)
-    if (announce) flash(next === 1 ? 'Velocidad normal' : `Velocidad: ${formatRate(next)}`)
-    showControls()
-  }
+    sessionRemove(OLD_RATE_KEY)
+  }, [])
 
   // ---------- Carga del video ----------
   useEffect(() => {
     const el = videoRef.current
     if (!el) return
-    const url = state.playUrl
+    const url = media ?? state.playUrl
     let disposed = false
     let retryTimer: ReturnType<typeof setTimeout> | undefined
     const token = {}
@@ -462,7 +551,7 @@ function PlayerView({ state, resume, notice }: { state: PlayState; resume?: Resu
         el.load()
       })
     }
-  }, [state.playUrl])
+  }, [state.playUrl, media])
 
   // Intro, resumen y créditos.
   useEffect(() => {
@@ -540,9 +629,15 @@ function PlayerView({ state, resume, notice }: { state: PlayState; resume?: Resu
   const onLoadedMetadata = () => {
     const el = videoRef.current
     if (!el) return
+    // v0.27: 35 s o menos con un link de debrid = el aviso de Torrentio ("descargando", "límite"…), no el video.
+    if (onDebridFail && looksLikeStatusVideo(el.duration)) {
+      el.pause()
+      onDebridFail(resume?.at ?? 0)
+      return
+    }
     setDuration(el.duration)
-    // Algunos navegadores vuelven a 1× al cargar otra fuente.
-    if (el.playbackRate !== rateRef.current) el.playbackRate = rateRef.current
+    // Siempre 1× (por si el navegador o un reproductor anterior dejó otra velocidad).
+    if (el.playbackRate !== 1) el.playbackRate = 1
     const saved = progressStore.get()[videoId]
     // `resume.at === 0` es "sin posición" (se cambió de fuente antes de que cargara el video): vale lo guardado.
     if (resume && resume.at > 0) el.currentTime = Math.min(resume.at, Math.max(0, el.duration - 1))
@@ -795,7 +890,7 @@ function PlayerView({ state, resume, notice }: { state: PlayState; resume?: Resu
   // Al cambiar de fuente se vuelve a poner el subtítulo (y el retraso) que estaba activo.
   useEffect(() => {
     if (!resume) return
-    flash(notice ?? `Fuente: ${state.addonName}`)
+    flash(notice ?? resume.note ?? `Fuente: ${state.addonName}`)
     if (resume.sub !== undefined) subs.restore(resume.sub, resume.subDelay ?? 0, resume.subLabel)
   }, [])
 
@@ -918,13 +1013,25 @@ function PlayerView({ state, resume, notice }: { state: PlayState; resume?: Resu
     videoRef.current?.pause()
     persist()
     // Cada reproductor arma su enlace o intent según el sistema (lib/externalPlayers.ts).
-    const launch = externalLaunch(settings.externalPlayer, url, currentPlatform().os, state.meta.name)
+    const launch = externalLaunch(settings.externalPlayer, url, currentPlatform().os, shownName)
     if (!launch.href) {
       copyText(url).then((ok) => flash(ok ? 'Enlace copiado: pegalo en tu reproductor' : 'No se pudo copiar el enlace'))
       return
     }
     // Se copia igual por si la app no está instalada o el navegador bloquea el esquema.
     const copying = launch.copy ? copyText(url) : Promise.resolve(false)
+    // v0.30: la app de Windows abre el programa instalado (VLC y mpv no registran su esquema en Windows).
+    const openPlayer = desktopApp()?.openPlayer
+    if (openPlayer) {
+      Promise.all([openPlayer(launch.href).catch(() => 'missing' as const), copying]).then(([result, copied]) =>
+        flash(
+          result === 'opened'
+            ? `Abriendo ${launch.label}…`
+            : `No encontré ${launch.label} en esta compu.${copied ? ' El enlace ya está copiado: pegalo en tu reproductor' : ''}`,
+        ),
+      )
+      return
+    }
     launchUrl(launch.href, currentPlatform().os)
     copying.then((ok) =>
       flash(ok ? `Abriendo ${launch.label}… Si no abre, el enlace ya está copiado: pegalo en tu reproductor` : `Abriendo ${launch.label}…`),
@@ -1158,14 +1265,6 @@ function PlayerView({ state, resume, notice }: { state: PlayState; resume?: Resu
         case 'p':
           if (pip.supported) togglePip()
           return
-        case '<':
-        case ',':
-          changeRate(stepRate(rate, -1))
-          return
-        case '>':
-        case '.':
-          changeRate(stepRate(rate, 1))
-          return
         case 'i':
           // Saltar intro / resumen (o los créditos) cuando hay segmento.
           if (skipKind) {
@@ -1216,13 +1315,13 @@ function PlayerView({ state, resume, notice }: { state: PlayState; resume?: Resu
     rootRef.current?.querySelector<HTMLElement>('.player-corner > .skip-btn')?.focus({ preventScroll: true })
     // Solo cuando aparece el botón (o cambia de intro a resumen/créditos).
   }, [skipFocusKey])
-  // Celular con controles: lo de la esquina ("Saltar", la tarjeta del siguiente episodio, la oferta del resumen o
+  // Celular (vertical o apaisado) con controles: lo de la esquina ("Saltar", la tarjeta del siguiente episodio, la oferta del resumen o
   // "Más como esto") le tapaba el final al subtítulo. El subtítulo termina SUB_CORNER_GAP px por arriba de lo que
   // haya, tenga los renglones que tenga (ver `cuePlacement`). La esquina no se mueve con los controles (bottom
   // fijo, sin transición) y offsetTop no cuenta la animación de entrada, así que ya es el lugar final; el
   // ResizeObserver sigue a la tarjeta cuando cambia de alto (cargando → con imagen) y al giro de pantalla.
   const cornerKind = !showCorner ? null : offerRecap && !showNextCard ? 'recap' : showNextCard ? 'next' : postPlayDue ? 'more' : 'skip'
-  const liftForCorner = narrow && controls && cornerKind !== null
+  const liftForCorner = liftsSubForCorner({ narrow, phoneLandscape, tv: tvMode }) && controls && cornerKind !== null
   useEffect(() => {
     const root = rootRef.current
     const corner = root?.querySelector<HTMLElement>('.player-corner')
@@ -1390,7 +1489,7 @@ function PlayerView({ state, resume, notice }: { state: PlayState; resume?: Resu
               <PlayerIcon name="alert" size={tvMode ? 48 : 40} />
             </span>
             <div className="player-error-heading">
-              <strong>{meta.name}</strong>
+              <strong>{shownName}</strong>
               {video && (
                 <span>
                   {[episodeLabel(video.season, video.episode), video.title ?? video.name].filter(Boolean).join(' · ')}
@@ -1442,7 +1541,7 @@ function PlayerView({ state, resume, notice }: { state: PlayState; resume?: Resu
         <div className="player-dim player-float player-modal" role="dialog" aria-labelledby="still-title">
           <h2 id="still-title">¿Seguís viendo?</h2>
           <p className="muted">
-            {meta.name}
+            {shownName}
             {video ? ` · ${episodeLabel(video.season, video.episode)}` : ''}
           </p>
           <div className="hero-actions">
@@ -1502,11 +1601,11 @@ function PlayerView({ state, resume, notice }: { state: PlayState; resume?: Resu
       )}
 
       <div className="player-top">
-        <button className="btn btn-ghost" onClick={exit} aria-label="Volver">
+        <button className="btn btn-ghost" onClick={exit} {...tip('Volver')}>
           ←
         </button>
         <div className="player-title">
-          <strong>{meta.name}</strong>
+          <strong>{shownName}</strong>
           {video && (
             <span>
               {episodeLabel(video.season, video.episode)} · {video.title ?? video.name}
@@ -1515,7 +1614,7 @@ function PlayerView({ state, resume, notice }: { state: PlayState; resume?: Resu
           <span className="muted small">{state.addonName}</span>
         </div>
         {touch && (
-          <button className="btn btn-ghost player-lock-btn" onClick={lockScreen} aria-label="Bloquear pantalla">
+          <button className="btn btn-ghost player-lock-btn" onClick={lockScreen} {...tip('Bloquear pantalla')}>
             <PlayerIcon name="lock" />
             <span>Bloquear</span>
           </button>
@@ -1553,6 +1652,21 @@ function PlayerView({ state, resume, notice }: { state: PlayState; resume?: Resu
               more={
                 compactBar
                   ? [
+                      ...(tinyBar
+                        ? [
+                            {
+                              label:
+                                sleep.kind === 'time'
+                                  ? `Temporizador: ${sleepMinutesLeft} min`
+                                  : sleep.kind === 'episode'
+                                    ? 'Temporizador: fin del episodio'
+                                    : 'Temporizador para dormir',
+                              active: sleep.kind !== 'off',
+                              // El ⚙ sigue siendo el que abrió el menú: al cerrar el temporizador el foco vuelve ahí.
+                              onClick: () => setMenu('sleep'),
+                            },
+                          ]
+                        : []),
                       ...(pip.supported
                         ? [{ label: pip.active ? 'Cerrar la ventana flotante' : 'Ventana flotante', active: pip.active, onClick: () => { setMenu(null); togglePip() } }]
                         : []),
@@ -1570,15 +1684,6 @@ function PlayerView({ state, resume, notice }: { state: PlayState; resume?: Resu
               </button>
             ))}
           {menu === 'sources' && <SourcesMenu state={state} onPick={changeSource} />}
-          {menu === 'speed' && (
-            <SpeedMenu
-              rate={rate}
-              onPick={(r) => {
-                changeRate(r, false)
-                setMenu(null)
-              }}
-            />
-          )}
           {menu === 'sleep' && (
             <>
               <span className="player-menu-title muted small">Temporizador</span>
@@ -1625,7 +1730,7 @@ function PlayerView({ state, resume, notice }: { state: PlayState; resume?: Resu
           bar={seekbarRef}
           url={state.playUrl}
           duration={duration}
-          enabled={settings.seekPreview && !saveDataOn()}
+          enabled={settings.seekPreview && !saveDataOn() && (media === undefined || media === state.playUrl)}
           scrubAt={scrub?.target}
         />
         <div className="controls-row">
@@ -1655,22 +1760,32 @@ function PlayerView({ state, resume, notice }: { state: PlayState; resume?: Resu
             <PlayerIcon name="sources" />
           </button>
           <button
-            onClick={(e) => toggleMenu('speed', e)}
-            data-menu="speed"
-            {...tip(`Velocidad de reproducción: ${formatRate(rate)}`)}
-            aria-expanded={menu === 'speed'}
-            className={`speed-btn ${rate !== 1 ? 'active' : ''}`}
-          >
-            {formatRate(rate)}
-          </button>
-          <button
             onClick={(e) => toggleMenu('sleep', e)}
-            {...tip('Temporizador para dormir')}
+            {...tip(
+              sleep.kind === 'time'
+                ? `Temporizador para dormir: quedan ${sleepMinutesLeft} min`
+                : sleep.kind === 'episode'
+                  ? 'Temporizador para dormir: al final del episodio'
+                  : 'Temporizador para dormir',
+            )}
             aria-expanded={menu === 'sleep'}
-            className={sleep.kind !== 'off' ? 'active' : ''}
+            className={`sleep-btn ${sleep.kind !== 'off' ? 'active' : ''}`}
           >
             <PlayerIcon name="moon" />
-            {sleep.kind === 'time' ? `${sleepMinutesLeft} min` : sleep.kind === 'episode' ? 'Fin' : ''}
+            {sleep.kind !== 'off' && (
+              // En el celular el texto pasa a ser un globito sobre la luna (el CSS saca " min"): así la fila
+              // de íconos no se parte en dos renglones.
+              <span className="sleep-left" aria-hidden="true">
+                {sleep.kind === 'time' ? (
+                  <>
+                    {sleepMinutesLeft}
+                    <span className="sleep-unit"> min</span>
+                  </>
+                ) : (
+                  'Fin'
+                )}
+              </span>
+            )}
           </button>
           {settings.externalPlayer !== 'none' && (
             <button onClick={openExternal} className="external-btn" {...tip(externalLabel)}>

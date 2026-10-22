@@ -1,16 +1,22 @@
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import { Link, useLocation, useNavigate } from 'react-router-dom'
 import { getStreams } from '../../lib/addons'
+import { isDebridDownload, prefetchTorrentTwins } from '../../lib/debrid'
+import { debridTwinOf } from '../../lib/debridWait'
 import { useAddons } from '../../lib/hooks'
+import { desktopTorrentBase } from '../../lib/desktop'
+import { isNativeApp } from '../../lib/native'
 import { isOnline } from '../../lib/online'
 import { lastSourceStore, settingsStore, useStore } from '../../lib/store'
 import { sourceCounts, streamFacts } from '../../lib/streamFacts'
 import { analyzeStreams, lastSourceOf, playable, streamKey, type RankedStream } from '../../lib/streamPicker'
-import { useTorrentServer } from '../../lib/torrentServer'
+import { ensureLocalStremio, useLocalStremio } from '../../lib/stremioServer'
+import { TORRENT_LOADING, useTorrentServer } from '../../lib/torrentServer'
 import type { AddonStreams, InstalledAddon, Meta, Stream, Video } from '../../lib/types'
 import { createRecentSet } from './autoPlayed'
 import { episodeNumber } from './episodes'
 import { pendingNames, safeGroups } from './safeData'
+import { streamOrder } from './streamOrder'
 
 export interface PlayState {
   stream: Stream
@@ -30,6 +36,11 @@ export interface DetailLocationState {
   noAuto?: boolean
   /** "Ver desde el principio": el reproductor arranca en 0 aunque haya progreso guardado. */
   fromStart?: boolean
+}
+
+/** v0.29: ¿a este stream le sirve Stremio Service en la PC? */
+function benefitsFromServer(s: Stream): boolean {
+  return (!!s.infoHash && !s.url) || isDebridDownload(s) || !!s.behaviorHints?.notWebReady
 }
 
 export function streamLabel(s: Stream) {
@@ -65,11 +76,9 @@ export function StreamList({ meta, video, nextVideoId }: { meta: Meta; video?: V
   const [openTorrents, setOpenTorrents] = useState<Set<string>>(() => new Set())
   const listRef = useRef<HTMLDivElement>(null)
   const cancelRef = useRef<HTMLButtonElement>(null)
-  // Orden de las fuentes de cada addon, fijado la primera vez que se muestran. La recomendación llega
-  // tarde (a los GRACE_MS o cuando responde el último addon): si ese addon ya estaba en pantalla, el
-  // recomendado se marca donde está y nada se corre bajo el dedo o el mouse.
-  const orderRef = useRef<{ key: string; byAddon: Map<string, number[]> }>({ key: '', byAddon: new Map() })
-  if (orderRef.current.key !== fetchKey) orderRef.current = { key: fetchKey, byAddon: new Map() }
+  // La fuente de la lista que tenía el foco (control remoto o teclado), para pasarlo a la recomendada
+  // cuando la lista se reordena (ver abajo).
+  const focusedItem = useRef<HTMLElement | null>(null)
 
   useEffect(
     () => getStreams(addons, meta.type, videoId, (groups) => setResult({ key: fetchKey, groups })),
@@ -85,15 +94,37 @@ export function StreamList({ meta, video, nextVideoId }: { meta: Meta; video?: V
   const loading = !fetched || groups.some((g) => g.loading)
   const hasPlayable = ranked.length > 0
 
+  // v0.27: si hay algo que TorBox todavía no tiene y hay con qué abrir torrents, se precarga el Torrentio sin
+  // debrid (trackers e índice del archivo) para arrancar por torrent sin esperar.
+  const twinAddons = useMemo(
+    () => (server.url ? groups.filter((g) => !g.loading && g.streams.some(isDebridDownload)).map((g) => g.addon) : []),
+    [groups, server.url],
+  )
+  useEffect(() => {
+    for (const addon of twinAddons) prefetchTorrentTwins(addon, meta.type, videoId)
+  }, [twinAddons, meta.type, videoId])
+
+  // v0.29: en la PC se busca Stremio Service recién cuando la lista trae algo que lo aprovecha (torrents, lo que
+  // TorBox todavía no tiene o links que el navegador quizás no abre), así el permiso de Chrome no sale de la nada.
+  const local = useLocalStremio()
+  const wantsLocal = local !== 'off' && !settings.streamingServerUrl.trim() && groups.some((g) => g.streams.some(benefitsFromServer))
+  useEffect(() => {
+    if (wantsLocal) void ensureLocalStremio()
+  }, [wantsLocal])
+  // v0.30: lo que el navegador no puede (MKV/HEVC/AC3) lo convierte el motor de la app de Windows o Stremio Service.
+  const converts = !!desktopTorrentBase() || local === 'found'
+
   useEffect(() => {
     if (!hasPlayable) return
     const t = setTimeout(() => setGraceFor(fetchKey), GRACE_MS)
     return () => clearTimeout(t)
   }, [hasPlayable, fetchKey])
 
-  // Se recomienda recién cuando respondieron todos (o pasó la espera), así la lista no salta.
+  // Se recomienda recién cuando respondieron todos (o pasó la espera). Si después un addon lento trae algo mejor,
+  // la recomendación cambia y la lista se reacomoda otra vez (decisión del usuario, v0.27.1).
   const settled = fetched && (!loading || graceFor === fetchKey)
   const best = settled ? ranked[0] : undefined
+  const bestId = best ? `${best.addon.transportUrl}|${best.streamIndex}` : ''
   const autoKey = `${location.key}|${fetchKey}`
   const pending = countdown?.key === autoKey ? countdown : undefined
 
@@ -144,6 +175,39 @@ export function StreamList({ meta, video, nextVideoId }: { meta: Meta; video?: V
     if (hasPending) cancelRef.current?.focus()
   }, [hasPending])
 
+  // Al llegar la recomendación la lista salta una vez (la recomendada pasa arriba de todo). Si el foco estaba
+  // en una fuente va a la recomendada: queda arriba, donde estaba el foco, y OK reproduce lo que se ve marcado.
+  // Si la recomendación cambia después (un addon que tardó más que la espera trajo algo mejor), el foco la
+  // sigue solo si estaba en la anterior; si estabas en otra fuente, se queda ahí (React puede haber movido
+  // ese botón y sacarle el foco: se lo devuelve). Si el foco estaba en otra parte de la ficha, no se toca.
+  const prevBest = useRef<{ id: string; el: HTMLElement | null }>({ id: '', el: null })
+  // Un clic o toque fuera de las fuentes (sinopsis, espacio vacío) deja el foco en `body` igual que cuando React
+  // mueve un botón: se olvida la fuente enfocada, así no se roba el foco ni se mueve la página al llegar la
+  // recomendación.
+  useEffect(() => {
+    const onPointer = (e: PointerEvent) => {
+      if (!(e.target instanceof Element) || !e.target.closest('.stream-item')) focusedItem.current = null
+    }
+    document.addEventListener('pointerdown', onPointer, true)
+    return () => document.removeEventListener('pointerdown', onPointer, true)
+  }, [])
+  useLayoutEffect(() => {
+    const list = listRef.current
+    const rec = bestId ? (list?.querySelector<HTMLElement>('.stream-item.recommended') ?? null) : null
+    const prev = prevBest.current
+    prevBest.current = { id: bestId, el: rec }
+    const item = focusedItem.current
+    if (!rec || !item) return
+    const active = document.activeElement
+    const lost = !active || active === document.body
+    const onStream = active instanceof HTMLElement && active.classList.contains('stream-item') && !!list?.contains(active)
+    if (!lost && !onStream) return
+    const target = !prev.id || item === prev.el || !item.isConnected ? rec : item
+    if (target === active) return
+    target.focus({ preventScroll: true })
+    target.scrollIntoView({ block: 'nearest' })
+  }, [bestId])
+
   const cancelAuto = () => {
     setCountdown(undefined)
     requestAnimationFrame(() => {
@@ -166,22 +230,23 @@ export function StreamList({ meta, video, nextVideoId }: { meta: Meta; video?: V
     )
   }
 
-  // Las fuentes de cada addon, en el orden fijado: las que se pueden abrir y los torrents sin debrid aparte.
+  // v0.30: sin servidor de torrents, un torrent que también está en el Torrentio con TorBox (mismo hash y archivo) se
+  // reproduce por TorBox: lo que ya tiene arranca enseguida y lo que no, espera a que lo baje.
+  // Mientras arranca el motor de la app de Android no: ahí el torrent va a andar en unos segundos.
+  const twinOf = (s: Stream) => (server.url || server.missing === TORRENT_LOADING ? undefined : debridTwinOf(s, groups))
+  // Las fuentes de cada addon: las que se pueden abrir y los torrents sin debrid aparte.
   const isDeadTorrent = (s: Stream) => {
     const p = playable(s, server)
-    return !p.url && !p.external && !!s.infoHash
+    return !p.url && !p.external && !!s.infoHash && !twinOf(s)
   }
-  const parts = groups.map((g, addonIndex) => {
-    const bestIndex = best?.addon.transportUrl === g.addon.transportUrl ? best.streamIndex : -1
-    // El recomendado va primero dentro de su addon solo si ya se sabía al mostrarlo por primera vez
-    // (ver `orderRef`); los que esconden los filtros van aparte.
-    const frozen = orderRef.current.byAddon
-    let order = frozen.get(g.addon.transportUrl)
-    if (!order || order.length !== g.streams.length) {
-      order = g.streams.map((_, i) => i)
-      if (bestIndex >= 0) order.sort((a, b) => Number(b === bestIndex) - Number(a === bestIndex))
-      if (order.length > 0) frozen.set(g.addon.transportUrl, order)
-    }
+  // La recomendada va primera (su addon arriba y ella primera dentro de él; ver `streamOrder`). Los que
+  // esconden los filtros van aparte.
+  const sorted = streamOrder(
+    groups.map((g) => ({ addonUrl: g.addon.transportUrl, count: g.streams.length })),
+    best && { addonUrl: best.addon.transportUrl, streamIndex: best.streamIndex },
+  )
+  const parts = sorted.map(({ addonIndex, bestIndex, order }) => {
+    const g = groups[addonIndex]
     const items = order.map((i) => ({ s: g.streams[i], i })).filter(({ i }) => !hidden.has(streamKey(addonIndex, i)))
     // Los torrents que no se pueden abrir (sin debrid ni servidor de Stremio) van plegados, así no tapan los que sí andan.
     const usable = items.filter(({ s }) => !isDeadTorrent(s))
@@ -191,10 +256,11 @@ export function StreamList({ meta, video, nextVideoId }: { meta: Meta; video?: V
 
   const total = groups.reduce((n, g) => n + g.streams.length, 0)
   const totalLabel = total === 1 ? '1 fuente' : `${total} fuentes`
+  const deadTorrents = parts.reduce((n, pt) => n + pt.torrents.length, 0)
   // v0.26 (ficha-10): se cuentan las que se pueden abrir, no todas ("6 listas para ver · 2 torrents sin debrid · 1 oculta…").
   const counts = sourceCounts({
-    ready: parts.reduce((n, pt) => n + pt.usable.filter(({ s }) => { const p = playable(s, server); return !!(p.url || p.external) }).length, 0),
-    torrents: parts.reduce((n, pt) => n + pt.torrents.length, 0),
+    ready: parts.reduce((n, pt) => n + pt.usable.filter(({ s }) => { const p = playable(s, server); return !!(p.url || p.external || twinOf(s)) }).length, 0),
+    torrents: deadTorrents,
     hidden: hidden.size,
   })
   const countsText = (
@@ -220,6 +286,7 @@ export function StreamList({ meta, video, nextVideoId }: { meta: Meta; video?: V
   const renderItem = (s: Stream, i: number, addon: InstalledAddon, recommended: boolean, hiddenReason?: string, key: string | number = i) => {
     const { name, lines } = streamLabel(s)
     const p = playable(s, server)
+    const twin = !p.url && !p.external ? twinOf(s) : undefined
     // v0.26 (ficha-03): etiquetas grandes (calidad, HDR, audio, idioma, peso), el servicio en palabras y el
     // archivo chico abajo. El texto crudo del addon queda en el `title` (al pasar el mouse).
     const f = streamFacts(s, addon.manifest.name)
@@ -248,8 +315,10 @@ export function StreamList({ meta, video, nextVideoId }: { meta: Meta; video?: V
         {service && <span className="sx-src">{service}</span>}
         {file && <span className="sx-file">{file}</span>}
         {hiddenReason && <span className="stream-hidden-reason">{hiddenReason}</span>}
-        {p.reason && <span className="stream-warn">{p.reason}</span>}
-        {s.behaviorHints?.notWebReady && p.url && <span className="stream-warn">Puede no reproducirse en el navegador (formato MKV/HEVC)</span>}
+        {p.reason && !twin && <span className="stream-warn">{p.reason}</span>}
+        {twin && <span className="stream-hidden-reason">{isDebridDownload(twin.stream) ? 'Por TorBox: lo baja y arranca solo' : 'Por TorBox'}</span>}
+        {/* Con la app de Windows o Stremio Service se convierte si hace falta (v0.29). */}
+        {s.behaviorHints?.notWebReady && p.url && !converts && <span className="stream-warn">Puede no reproducirse en el navegador (formato MKV/HEVC)</span>}
       </>
     )
     const cls = `stream-item sx${recommended ? ' recommended' : ''}`
@@ -257,6 +326,12 @@ export function StreamList({ meta, video, nextVideoId }: { meta: Meta; video?: V
     if (p.url)
       return (
         <button key={key} className={cls} title={raw} data-autofocus={recommended || undefined} onClick={() => play(s, p.url!, addon)}>
+          {content}
+        </button>
+      )
+    if (twin)
+      return (
+        <button key={key} className={cls} title={raw} onClick={() => play(twin.stream, twin.stream.url!, twin.addon)}>
           {content}
         </button>
       )
@@ -274,7 +349,17 @@ export function StreamList({ meta, video, nextVideoId }: { meta: Meta; video?: V
   }
 
   return (
-    <div className="streams" ref={listRef}>
+    <div
+      className="streams"
+      ref={listRef}
+      onFocus={(e) => {
+        focusedItem.current = e.target.classList.contains('stream-item') ? e.target : null
+      }}
+      onBlur={(e) => {
+        // Sin destino (relatedTarget null) puede ser que React movió el botón: se recuerda igual.
+        if (e.relatedTarget) focusedItem.current = null
+      }}
+    >
       {pending && (
         <div className="auto-play-banner" role="status" aria-live="polite">
           <span>
@@ -314,8 +399,8 @@ export function StreamList({ meta, video, nextVideoId }: { meta: Meta; video?: V
             {torrents.length > 0 && (
               <>
                 <button className="stream-hidden-toggle stream-torrents-toggle" aria-expanded={torrentsOpen} onClick={toggleTorrents}>
-                  {torrentsOpen ? '▾' : '▸'} {torrents.length === 1 ? '1 torrent sin debrid' : `${torrents.length} torrents sin debrid`} (necesitan
-                  el servidor de Stremio)
+                  {torrentsOpen ? '▾' : '▸'} {torrents.length === 1 ? '1 torrent sin debrid' : `${torrents.length} torrents sin debrid`}{' '}
+                  {isNativeApp() ? '(necesitan el motor de la app)' : '(el navegador no los puede abrir)'}
                 </button>
                 {torrentsOpen && <div className="stream-items">{torrents.map(({ s, i }) => renderItem(s, i, g.addon, false))}</div>}
               </>

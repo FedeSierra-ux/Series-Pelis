@@ -4,6 +4,7 @@ import { tmdbGenreName } from './discoverFilters'
 import { settingsStore, useStore } from './store'
 import type { MetaPreview } from './types'
 import { reportUnauthorized } from './auth'
+import { baseImdbId, isFresh, peekTitleEntry, rememberTitle } from './localTitlesStore'
 
 // Cliente de TMDB (api.themoviedb.org/3). Es opcional: sin key la app sigue con Cinemeta.
 // Acepta la "API Key" (v3, va como ?api_key=) o el "API Read Access Token" (v4, un JWT que
@@ -281,15 +282,39 @@ export interface TmdbPerson {
 
 // ---------- Ids: IMDb ↔ TMDB ----------
 
+/** Pedidos `/find` en curso (el mismo título desde varias tarjetas va una sola vez). */
+const finding = new Map<string, Promise<number | undefined>>()
+
+/**
+ * Pide `/find/{tt}` en español (v0.28): con el mismo pedido salen el id de TMDB y el nombre en español, que queda
+ * en el mapa de `localTitlesStore` (30 días; no en la caché general). Devuelve el id de TMDB.
+ */
+export function fetchFind(imdbId: string, type?: string): Promise<number | undefined> {
+  const tt = baseImdbId(imdbId) ?? imdbId
+  const running = finding.get(tt)
+  if (running) return running
+  const job = tmdbFetch<{ movie_results: TmdbListItem[]; tv_results: TmdbListItem[] }>(`/find/${tt}`, { external_source: 'imdb_id', language: LANG })
+    .then((res) => {
+      const movies = res.movie_results ?? []
+      const shows = res.tv_results ?? []
+      const preferred = type ? (toTmdbType(type) === 'movie' ? movies : shows) : []
+      const hit = preferred[0] ?? movies[0] ?? shows[0]
+      const kind: TmdbType | undefined = !hit ? undefined : movies.includes(hit) ? 'movie' : 'tv'
+      rememberTitle(tt, hit, kind)
+      return hit?.id
+    })
+    .finally(() => finding.delete(tt))
+  finding.set(tt, job)
+  return job
+}
+
 /** Id de TMDB a partir del de IMDb (`tt…`). Las series de Stremio usan el id de la serie. */
 export async function findByImdb(imdbId: string, type: string): Promise<number | undefined> {
-  const res = await tmdbCached<{ movie_results: TmdbListItem[]; tv_results: TmdbListItem[] }>(
-    `/find/${imdbId}`,
-    { external_source: 'imdb_id' },
-    30 * DAY,
-  )
-  const list = toTmdbType(type) === 'movie' ? res.movie_results : res.tv_results
-  return (list[0] ?? res.movie_results[0] ?? res.tv_results[0])?.id
+  // El id de TMDB no cambia: si ya se sabe, no se pregunta (aunque el nombre esté por vencer).
+  const known = peekTitleEntry(imdbId)
+  if (known?.t !== undefined) return known.t
+  if (known && isFresh(known)) return undefined
+  return fetchFind(imdbId, type)
 }
 
 /** Id de IMDb a partir del de TMDB, para abrir la ficha y pedir streams a los addons. */
@@ -322,6 +347,11 @@ export function getDetails(type: TmdbType, id: number): Promise<TmdbDetails> {
     append_to_response: extra,
     include_image_language: 'es,en,null',
     include_video_language: 'es,en',
+  }).then((d) => {
+    // v0.28: la ficha ya trae el nombre en español; queda anotado para las tarjetas sin otro pedido.
+    const tt = d.external_ids?.imdb_id ?? d.imdb_id
+    if (tt && !isFresh(peekTitleEntry(tt))) rememberTitle(tt, d, type)
+    return d
   })
 }
 
@@ -406,7 +436,8 @@ export function pickTrailer(videos: TmdbVideo[] | undefined, originalLanguage?: 
 
 /**
  * Logo del título (PNG transparente) con su nombre original: inglés, sin idioma, otro y el doblado al
- * español al final (el usuario no quiere los títulos traducidos, solo la sinopsis y los datos).
+ * español al final. Desde la v0.28 el nombre va en español, pero el logo sigue en el idioma original (decisión
+ * del usuario).
  */
 export function pickLogo(d: TmdbDetails | undefined): string | undefined {
   const logos = d?.images?.logos ?? []

@@ -217,6 +217,24 @@
     background: var(--tonal);
   }
 }
+/* Mientras se confirma, "Sí, sacar" tiene la misma píldora que "Sacar": con el fondo normal del botón (igual al de
+   la tarjeta) quedaba como texto suelto y parecía que el botón se achicaba. Los dos botones van juntos: en un
+   celular angosto el "No" bajaba solo a otro renglón. */
+.confirm-inline-btns {
+  display: inline-flex;
+  gap: 8px;
+}
+[data-theme='2'] .house-item > .house-item-actions .confirm-inline .btn.danger {
+  background: var(--bg-3);
+}
+[data-theme='2'] .house-item > .house-item-actions .confirm-inline .btn.danger:focus-visible {
+  background: var(--tonal);
+}
+@media (hover: hover) {
+  [data-theme='2'] .house-item > .house-item-actions .confirm-inline .btn.danger:hover {
+    background: var(--tonal);
+  }
+}
 /* En el celular, "Sacar" queda en el mismo renglón (antes bajaba y duplicaba el alto de cada aparato). Mientras
    se confirma ("¿Sacarlo de la casa? Sí, sacar · No") sigue bajando: en un renglón no entra. */
 @media (max-width: 700px) {

@@ -16,7 +16,7 @@ historial, "Seguir viendo" y "Mi lista". Interfaz en **español latino (es-AR)**
 | Plataforma | PWA (PC, celular, navegador de la TV). Pensada para llevarla después a Fire TV / Android TV (TWA o Capacitor). |
 | Metadatos | **Cinemeta** (`v3-cinemeta.strem.io`): sin API key, incluye `imdbRating`. Desde v0.3, **TMDB opcional** para español, reparto, sagas y tendencias. |
 | Streams | Protocolo de addons de Stremio. El usuario pega las URLs de manifest de sus addons; el debrid (Real-Debrid / TorBox) va configurado dentro del addon, la app no lo maneja. |
-| Torrents sin debrid | Desde la v0.25: **motor propio en la app de Android** (libtorrent4j, como Stremio/Nuvio; pedido del usuario). En PC, servidor local de Stremio (`http://127.0.0.1:11470`). Debrid/directo siempre primero. |
+| Torrents sin debrid | Desde la v0.25: **motor propio en la app de Android** (libtorrent4j, como Stremio/Nuvio; pedido del usuario). Desde la v0.30, en Windows la **app Flix para Windows** (`desktop-app/`, motor adentro, sin instalar nada más); en el navegador, por **TorBox** (Torrentio con debrid). Stremio Service queda como extra silencioso. Debrid/directo siempre primero. |
 | Datos del usuario | v0.1: IndexedDB en el navegador + exportar/importar JSON. |
 | Backend (v0.2) | **Cloudflare**: Pages (web) + Workers (API/caché) + D1 (base). No usar Supabase. |
 | Login (v0.2) | **Código de vinculación** estilo Netflix: usuario/contraseña en PC o celular y código de 6 dígitos en la TV. |
@@ -48,6 +48,9 @@ npm run preview    # sirve dist/ en http://localhost:4173
 - `src/pages/` — Inicio, Películas/Series (`discover/BrowsePage`, filas) y Descubrir (grilla), Buscar, Detalle, Reproductor, Historial, Tu año, Calendario, Vos (con Mi lista), Ajustes
   (`settings/PlayerSettings.tsx`, `settings/SourceSettings.tsx`).
 - `vite.config.ts` — PWA (Workbox): pósters CacheFirst, Cinemeta StaleWhileRevalidate.
+- `desktop-app/` — app de Windows (Electron, v0.30): `main.js`, `preload.cjs` (`window.flixDesktop`), `updater.js`,
+  `engine/` (motor de torrents + HLS con ffmpeg). Contrato en `desktop-app/CONTRACT.md`. Web: `src/lib/desktop.ts`.
+- `src/lib/debridWait.ts` — esperar a que TorBox baje un torrent no cacheado (navegador, v0.30).
 - `docs/investigacion/` — notas de investigación de versiones anteriores (UX, subtítulos online, login, perfiles).
 - `.claude/agents/` — agentes de agency-agents útiles para este proyecto. `.claude/skills/` + `.mcp.json` — rea.
 
@@ -86,15 +89,16 @@ npm run preview    # sirve dist/ en http://localhost:4173
   Nuevos: `lib/errors.ts` (`errorText`: errores en español), `lib/returnVideo.ts` ("Volver" tras el autoplay deja la
   ficha en el último episodio visto), `components/AddonUrlForm.tsx`, `pages/player/PlayerIcons.tsx`, `LandscapeCard` (en `ContinueCard`),
   prop `errorNotice` de `Row`, parámetro `clear` de `placeCue`, `data-autofocus` para la primera flecha de la TV.
-  El usuario NO quiere títulos en español: solo sinopsis y datos; el badge de IMDb va arriba a la derecha.
+  El usuario NO quería títulos en español (desde la v0.28 sí: ver el plan de la v0.28.0); el badge de IMDb va arriba a la derecha.
 - v0.9.1 hecha: pantalla en negro al navegar en Chrome 150+ (`scrollTo` devuelve una promesa; la v0.8 la devolvía
   como limpieza del efecto). **Un efecto nunca devuelve el resultado de una llamada** (`useEffect(() => algo())`):
   siempre con llaves, salvo que devuelva la función de limpieza a propósito. `lib/effects.test.ts` lo vigila para las
   APIs del navegador que dan promesas. El `ErrorBoundary` de afuera (App) va con `keepMounted`: al navegar solo saca
   el error, no remonta Layout/menú. Los de adentro (alrededor del `Outlet` y del Player) remontan por `pathname`.
   El usuario NO quiere sumar otro puntaje cuando falta el de IMDb (se deja como está).
-- Debrid: el usuario va a pagar **un TorBox (Standard)** para 3-4 casas cercanas; el resto de las ~10 casas usa su
-  propio debrid. Real-Debrid no sirve para compartir (una IP a la vez). Todavía no quiere login/perfiles ni asistente.
+- Debrid: desde la v0.27 **todas las casas usan una sola cuenta de TorBox** a través de **Torrentio** (decisión del
+  usuario; antes eran 3-4 casas con TorBox y el resto con su propio debrid). TorBox permite compartir la cuenta (uso
+  justo). Recomendado el plan con más descargas activas (Pro). Real-Debrid no sirve para compartir (una IP a la vez).
 - v0.9.0 hecha: auditoría de la v0.8 (43 bugs, 16 ítems visuales), modo TV con `html[data-tv]` (`syncTvAttr()` en
   `lib/tv.ts`), `UpdateToast` (SW con `registerType: 'prompt'`), `lib/focusMemory.ts` + `ScrollMemory`, `EmptyState`,
   `setWatchedMany`, identidad de addons por URL (`addonKey`), `refreshManifests` con TTL de 24 h, CI en GitHub Actions.
@@ -421,12 +425,155 @@ npm run preview    # sirve dist/ en http://localhost:4173
   nada) para el año sin guion en tarjetas/Buscar/Inicio/protector/PostPlay. `Onboarding.tsx` `houseSynced()`: con login
   espera la primera sincronización también con sesión guardada (tope 10 s). Los pendientes "asistente de una
   pantalla", "año sin guion" y "series sin duración" ya estaban desde la v0.22.1/v0.22.2.
-- v0.26.2 hecha: las notas de investigación pasaron del scratchpad (se borra con la sesión) a `docs/investigacion/`
-  (UX v0.14, subtítulos online v0.16, login v0.17, perfiles v0.18; índice en su `README.md`). Investigaciones nuevas
-  que valga la pena guardar van ahí, **sin keys** (solo nombres de variables). Decisiones de la v0.26.1: con subtítulos
-  "Muy grande" y 4–5 renglones se acepta que se pisen con "¿Qué te pareció?" o el reparto en pausa. Próximo: v0.26.3 =
-  **no mostrar el asistente si la casa ya eligió idiomas** (decidido: sí; hace falta una marca de la casa, p. ej.
-  `langsChosen` en `HOUSE_SETTINGS` con `HOUSE_SCHEMA` 2, porque todo aparato que sincroniza sube todos los campos).
+- v0.26.2 hecha (rama `ccr-4e8d431d-4nlzi9`): **el asistente no aparece si la casa ya eligió idiomas**. Marca de
+  la casa `langsChosen` (en `HOUSE_SETTINGS`, `HOUSE_SCHEMA = 2`; el servidor no cambia porque filtra por tienda, no
+  por campo). Se pone al cerrar el asistente ("Empezar" o Atrás) y al cambiar idiomas de audio o subtítulos en
+  Ajustes del reproductor. `houseChoseLangs(auth, langsChosen)` en `Onboarding.tsx`: solo con login y recién con la
+  casa sincronizada (`useHouseReady`); si da verdadero, el aparato pone `onboardingDone` sin mostrarlo. Abierto desde
+  Ajustes (`openOnboarding`, estado `manual`) se muestra igual. Sin login, como antes. **Sin migración** para casas
+  viejas (la app todavía no se usaba). Aceptado por el usuario: con subtítulos "Muy grande" y 4–5 renglones se pueden
+  pisar con "¿Qué te pareció?" o con el reparto en pausa; en PC y TV el subtítulo puede pisarse con la esquina (la
+  v0.26.1 solo lo arregla en el celular). No volver a proponerlo.
+- v0.26.3 hecha (rama `ccr-4e8d431d-4nlzi9`): si la primera sincronización tarda más de `SYNC_WAIT_MS` (10 s), el
+  asistente **no se abre** (pedido del usuario; antes se abría igual) y quedan los idiomas de fábrica. `useHouseWait`
+  (`wait` / `synced` / `timeout`, se queda fijo) + `onboardingSkip(house, auth, langsChosen)` puro en
+  `Onboarding.tsx` (`chosen` marca `onboardingDone`; `unknown` no marca nada, así si la casa no eligió aparece en la
+  próxima apertura). Un error de sincronización (`phase: 'error'`) sigue contando como sincronizada (se abre).
+- v0.27.0 hecha (rama `ccr-4e8d431d-4nlzi9`): **TorBox a través de Torrentio** (solo Torrentio; Comet quedó para
+  más adelante: la key pasa por la instancia y por StremThru, y en packs no dice el archivo). Investigación en
+  `scratchpad/v027-infohash.md` (sesión). `lib/debrid.ts` (puro + tests): `parseDebridLink` (hash de 40 hex e índice
+  de `…/resolve/<servicio>/<key>/<hash>/<entrada>/<índice>/…`), `isDebridDownload` (`[TB download]`),
+  `plainTorrentioUrl` (mismo manifest sin `torbox=`/`debridoptions`/otros debrid; aprobado por el usuario),
+  `torrentTwin` (cruce **solo por hash exacto** y archivo), `torrentStreamFor`, `looksLikeStatusVideo`
+  (`STATUS_VIDEO_MAX_S = 35`: los avisos de Torrentio duran 30 s), `failureFromLocation`/`debridFailureText`,
+  `requestDebridDownload` (fetch no-cors una vez por link y sesión, se corta al responder), `prefetchTorrentTwins`.
+  `getAddonStreams` en `addons.ts`. `streamPicker`: `[TB download]` no cuenta como directo (lo cacheado gana siempre).
+  Reproductor: `pages/player/DebridSwitch.tsx` — `DebridDownload` (en `PlayerChoice`: pide la descarga a TorBox y
+  navega con `replace` al torrent; sin servidor de torrents sigue con el link) y `DebridError` (cartel con
+  **"Reproducir por torrent"**, nunca automático; `EngineError` tiene prop `action`). Detección: duración ≤35 s en
+  `onLoadedMetadata` (web) o en `ready` (nativo, sin marcar listo para no guardar progreso). **Los errores del video no
+  cuentan como falla del debrid** (en el navegador suelen ser de formato MKV). Aviso al arrancar por torrent con
+  `Resume.note`. Android: `debridProbe` en `SpNativePlugin` (sin seguir redirecciones, solo https, devuelve status y
+  `Location` **sin query**: el link final de TorBox lleva la key) + `getInfo.debridProbe`; web `nativeDebridProbe`.
+  La descarga en paralelo es **automática** (decisión del usuario) aunque, con la cuenta llena, Torrentio puede borrar
+  una descarga en curso de otra casa. Config de Torrentio para el admin en el README ("TorBox para todas las casas":
+  tildar "Don't show debrid catalog", no tildar "Don't show download to debrid links"). Sin probar con una cuenta real.
+  Arreglos de la revisión: `debridLinkOf`/`torrentStateFor` viven en `lib/debrid.ts` (addons por parámetro);
+  `findNextStream` ya resuelve el torrent de un `[TB download]` (el reproductor de Android no se cierra entre
+  episodios) y no corta la espera por un `[TB download]`; en el nativo, `ended`/`progress` con duración de aviso o
+  `error` antes del `ready` = falla del debrid; `DebridError` reintenta el mismo link (`onRetry`); toast con
+  `resume.note` en el nativo; el botón "Preparando…" usa `aria-disabled` (con `disabled` se perdía el foco en la TV).
+
+- v0.27.1 hecha (rama `ccr-4e8d431d-4nlzi9`): dudas abiertas de la v0.26 (páginas de capturas en artifacts
+  "Dudas visuales de Flix" y "Últimas dudas v0.27.1"). Hecho en paralelo con 4 agentes en worktrees
+  (`.claude/worktrees` está en `.gitignore`; **correr `npx vitest run --dir src`**, si no vitest toma las copias).
+  - Fuentes: `pages/detail/streamOrder.ts` (puro + test): la recomendada primera y su addon arriba; sin `orderRef`;
+    la recomendación **puede cambiar** si un addon lento trae algo mejor (decisión del usuario: opción A, la lista
+    puede saltar dos veces); el foco de la TV la sigue (`useLayoutEffect` en `StreamList`).
+  - `streamFacts`: `cas` = **"España"**; con varios idiomas y latino gana **"Latino"**. `searchResults`: con empate gana
+    el **título** (la persona necesita más puntaje que el mejor título sin el desempate por grupo).
+  - Reproductor: **sin velocidad** (ni botón, ni teclas `<`/`>`/`,`/`.`, ni menú; siempre 1×, se borra `sp-rate`; el
+    nativo manda `rate: 1`; se borró `SpeedMenu`). Celular: temporizador como globito sobre la luna; por debajo de
+    360 px (`TINY_BAR_QUERY`) pasa a "Más opciones". `tip()` en ← y Bloquear (etiqueta debajo). Subtítulo sobre la
+    esquina también en el **celular apaisado** (`PHONE_LANDSCAPE_QUERY` = `(pointer: coarse) and (max-height: 500px)`,
+    `liftsSubForCorner`, nunca en la TV).
+  - **Halo solo en logos oscuros**: `lib/logoTone.ts` (`classifyLogoPixels` puro: claro si ≥ `LIGHT_SHARE = 0.25` de
+    lo opaco tiene contraste 3:1 con el fondo; Dune y The Batman quedan claros por decisión del usuario), medido con
+    canvas en un pedido CORS aparte después del `onLoad` del `<img>` (el `<img>` va sin `crossOrigin`: metahub a veces
+    no manda CORS o redirige a `live.metahub.space`), caché en memoria + localStorage `sp-logo-tone`; si no se puede
+    medir, **con halo**. `data-logo-tone` + variables `--logo-shadow`/`--logo-halo` en `theme2.css`. En la ficha
+    (`DetailLogo`) los claros siguen sin sombra (decisión del usuario).
+  - **Top 10 al 70 % del póster en todas las pantallas** (Inicio, Películas y Series; en PC/TV ya eran iguales, la
+    vista previa estaba mal y el usuario eligió igual el más chico). Esqueleto de pósters con dos renglones (sin salto).
+    `hideTop10Label` en las filas de Inicio, Películas/Series y la grilla; la etiqueta sigue en Buscar, la ficha,
+    Persona, Mi lista, Listas y Juntos.
+  - `initTabReveal()` en `lib/spatialNav.ts`: con Tab, misma posición que con las flechas (solo con portada fija,
+    fuera de la TV). Chips de Vos/Historial con lugar para el anillo. "Sí, sacar" de Ajustes → Casa como botón.
+  - Asistente: `houseSynced` ya no cuenta el error; estado `'error'` = `unknown` (no se abre ni marca nada).
+  - Decisiones que quedan: póster borroso en la TV, fundido de pestañas, fila pegada a la portada en PC y fuentes en
+    dos columnas solo en pelis **se quedan como están**; "Porque viste" en la TV sí; perfiles como mucho 4.
+- v0.28.0 hecha (rama `ccr-4e8d431d-4nlzi9`): **títulos en español latino** (TMDB es-MX; reemplaza la nota de la
+  v0.8) en todos lados; **logos y títulos de episodios en idioma original**. Lo guardado (historial, Mi lista, D1)
+  sigue con el nombre de Cinemeta: **se traduce al mostrar**. `lib/localTitlesStore.ts` (puro + mapa: `tt → {n, o, t,
+  k, at}`, IndexedDB aparte `flix-names`, 30 días con nombre / 7 sin traducción, tope 5000; `spanishName` acepta solo
+  alfabeto latino, si no queda Cinemeta; `localTitle(id, fallback)`; avisa por id) y `lib/localTitles.ts` (cola de 4
+  pedidos a `/find` con `language`, pausa de 30 s con un 429, `useLocalTitle`, `useOriginalTitle`,
+  `useTitlesVersion` para listas que ordenan/filtran). `findByImdb` usa el `t` del mapa; `getDetails` anota el
+  nombre. `loadLocalTitles()` va en `main.tsx` con `hydrateStores`. `useNearOnce` con **un solo
+  IntersectionObserver** compartido (lo usan todas las tarjetas). Buscar: `searchTitlesTmdb` (`/search/multi`),
+  los de TMDB van al final del grupo, sin repetidos (por id del mapa o nombre + año ±1), `pickBestResult` mira
+  los dos nombres. Ficha: `pages/detail/detailNames.ts` (`detailNames`, `logoCaption`, `titleKey`): con logo, el
+  nombre en español debajo (`.detail-local-name`) si difiere; sin logo, h1 en español + "Título original" con
+  `lang`. `buildHomeData(profile, items, nameOf?)` para la TV. **Portada de Inicio** más grande y **sin el
+  buscador de arriba** (`.t2-searchbar` se fue; Buscar solo desde el riel).
+
+- v0.29.0 hecha (rama `ccr-4e8d431d-4nlzi9`): **torrents sin debrid en la PC con Stremio Service**, como Stremio Web
+  (pedido del usuario: entrar desde la compu y que ande). `lib/stremioServer.ts` (puro + tests): `isPcBrowser`
+  (windows/mac/linux, sin modo TV ni app), estado `off|unknown|checking|found|missing` con `ensureLocalStremio`
+  (lazy: solo cuando hay torrents en las fuentes o se abre un link `notWebReady`, por el permiso de **Local Network
+  Access** de Chrome, que pregunta una vez), `GET /settings` con tope de 3 s, localStorage `sp-stremio-local` (lo da
+  por encontrado al cargar), re-búsqueda al volver a la pestaña si faltaba. `serverPlan`: torrent → `POST
+  /<hash>/create` (trackers + `dht:`, `guessFileIdx` con temporada/episodio si no hay índice; bloquea hasta tener la
+  metadata) y `notWebReady` → `/hlsv2/probe`; `canPlayDirect` (mp4, o matroska en Chrome; códecs soportados, ≤2
+  canales en Chrome / 6 en Firefox, un solo audio; los subtítulos embebidos no cuentan) o `hlsUrl`
+  (`/hlsv2/<id>/master.m3u8`, h264 forzado en Chrome; el servicio convierte **uno a la vez**). En `torrentServer.ts`
+  el local va después del motor nativo (`TORRENT_NEEDS_SERVICE`). UI: `pages/player/StremioPrepare.tsx` (antes de
+  `PlayerView`; prop `media` = URL final; error de red = servicio cerrado, timeout de 90 s = nadie comparte),
+  `EngineError` con prop `link`, `detail/StremioServiceNotice.tsx` (aviso en `StreamList`), estado en Ajustes →
+  Reproductor ("Probar" no guarda el servidor a mano si el local aplica). Sin subtítulos embebidos por HLS todavía.
+  Probado con Stremio Service 4.20.8 (probe, HLS, create); en Chromium headless no hay H.264: probar en Chrome real.
+- v0.30.0 hecha (rama `ccr-4e8d431d-4nlzi9`): **Flix para Windows** + **torrents por TorBox en el navegador** (pedido
+  del usuario: "selecciono la peli, elijo el torrent y reproduce… No quiero instalar nada"; eligió Windows, instalador
+  básico y sacar el aviso de Stremio Service). Hecho en paralelo con 3 agentes en worktrees.
+  - **App** `desktop-app/` (Electron 44.6.0, electron-builder 26.17.0, electron-updater 6.8.10): carga el mismo sitio
+    (`FLIX_URL` para probar otro), así login/perfiles/historial son los de siempre. appId `ar.flix.desktop`, NSIS de un
+    clic por usuario, `flix-pc-setup.exe`, datos en `%APPDATA%\Flix`, User-Agent `FlixPC/<v>` (**nunca** `FlixApp/`, que
+    es la de Android). `preload.cjs` deja `window.flixDesktop = {version, torrent, update:{check, install, onEvent}}`.
+    La ventana solo navega http(s); **"Abrir en VLC/mpv/PotPlayer"** va por `flixDesktop.openPlayer(href)` →
+    `desktop-app/players.js` (`parsePlayerLink` acepta solo `vlc|mpv|potplayer://` + URL http/https; busca el .exe en
+    Program Files / `%LOCALAPPDATA%\Programs` / scoop / PATH y lo abre con `spawn` sin shell, la URL como único
+    argumento, `--` antes en mpv). Sin el programa → `'missing'` (no se prueba el esquema: Windows ofrecería la
+    Store). Pedido del usuario. F5 recarga. Sin firma: SmartScreen avisa.
+  - **Motor** `desktop-app/engine/` (webtorrent 3.0.21, ffmpeg-static 5.3.0, ffprobe-static 3.1.0): misma API que
+    Stremio Service (`POST /<hash>/create`, `stats.json`, `/<hash>/<idx>` con Range, `/hlsv2/probe`,
+    `/hlsv2/<id>/master.m3u8`), en 127.0.0.1 con puerto al azar y token de 128 bits; `originAllowed` con comodín
+    (`*.series-pelis.pages.dev` para previews). 2 torrents como mucho, metadata 120 s, 3 conversiones. Los módulos
+    nativos opcionales de webtorrent se reemplazan con `engine/stubs/` (dependencias `file:`): **sin módulos nativos**.
+    ffmpeg/ffprobe van en `asarUnpack`. En Windows un archivo abierto no se borra (EBUSY): borrar carpetas con `RM_DIR`
+    (`engine/util.js`, con reintentos). `desktop-app/.gitattributes` fuerza LF (la CSP de `offline.html` lleva el sha256). `npm test` en `desktop-app` = `engine/*.test.js` + `shell.test.js`.
+  - **Web**: `lib/desktop.ts` (`desktopTorrentBase`, `ENGINE_RE`, `DESKTOP_DOWNLOAD_URL`); `pickTorrentServer` =
+    explícito → **app de Windows** → motor de Android → Stremio local. El motor de Windows lo reproduce la web vía
+    `StremioPrepare` (no es `engine: true`) y también convierte links `notWebReady`. `appUpdate.ts`/`AppUpdateToast`
+    usan el actualizador de la app. Ajustes → **App de Windows** (versión, motor, actualizaciones) o, en un Windows
+    sin la app, botón "Bajar Flix para Windows". Se borró `StremioServiceNotice`.
+  - **Navegador por TorBox** (`lib/debridWait.ts` + `DebridWait` en `DebridSwitch.tsx`): un torrent sin debrid con
+    gemelo de TorBox (mismo hash) se puede elegir ("Por TorBox" / "Por TorBox: lo baja y arranca solo"); si no está
+    cacheado pide la descarga y consulta a los 5 s y cada 25 s (tope 30 min); al estar, toast "Listo: TorBox ya lo
+    bajó". Sin servidor de torrents no hay "Reproducir por torrent". Torrentio guarda la respuesta de estado: el
+    aviso llega ~60–85 s tarde.
+  - **Release**: `desktop.yml` (windows-latest) publica en el **mismo Release** `flix-vX.Y.Z` que el APK (nombre y texto
+    iguales en los dos workflows); exige etiqueta = versión de `desktop-app/package.json`. `scripts/latest-yml.mjs`
+    apunta `latest.yml` al Release con etiqueta (para el `.blockmap`). **Subir juntas** las versiones de la raíz,
+    `tv-app` y `desktop-app`.
+  - Sin probar en un Windows real ni con una cuenta de TorBox. El firewall de Windows pregunta en el primer torrent.
+    Pendiente: búsqueda por voz en la app (no anda), ffprobe-static trae la 4.0.2.
+- v0.30.1 hecha (rama `ccr-4e8d431d-4nlzi9`): **subtítulos de texto del video en la app de Windows** (opción 1 del
+  usuario; PGS/VobSub no). Motor: `desktop-app/engine/subtitles.js` (`GET /subtitles/<index>/<n>.vtt?mediaURL=`,
+  tramos de `SUB_WINDOW_S = 120` s con `-ss n·W -copyts -i … -to (n+1)·W` y `dropBefore` para el cue repetido al
+  saltar; 2 ffmpeg a la vez, caché `Lru(400)`, 404 si no es de texto) y el probe suma `index`/`title`/`forced`/`sdh`.
+  Web: `lib/embeddedSubs.ts` (`videoSubOptions` → `SubOption.embedded`, etiqueta "… (del video)", `videoSubLang`:
+  título latino → `spl`, España → `spn`; `feedVideoSubs` pide el tramo actual y a `EMBEDDED_AHEAD_S = 30` s el
+  siguiente, y suma `VTTCue` a una pista vacía recién después de su `load`). Solo con el motor de Windows
+  (`videoSubsFor` en `StremioPrepare`: `base === desktopTorrentBase()`), pasa por `onReady(url, videoSubs)` →
+  `PlayerView` → `useSubtitles`. Elección: `videoBonus` 0,25 (nunca le gana al latino, 0,5); los forzados prefieren
+  los sincronizados (HLS o del video). En los tests de ffmpeg las entradas extra van antes de `-t` (si no, lavfi
+  no termina nunca). El MKV de prueba con subtítulos se arma **en dos pasos** (codificar, después copiar sumando
+  los subtítulos): de un paso, el ffmpeg 6.1.1 de Windows deja el video ~250 ms detrás del audio en el archivo y el
+  test del HLS falla. Sin probar en un Windows real.
+- v0.30.2 hecha (rama `claude/investigacion-v0.26.2`): las notas de investigación que vivían en el scratchpad de una
+  sesión pasaron a `docs/investigacion/` (UX v0.14, subtítulos online v0.16, login v0.17, perfiles v0.18; índice en su
+  `README.md`). Investigaciones nuevas que valga la pena guardar van ahí, **sin keys** (solo nombres de variables).
+  `scratchpad/v027-infohash.md` era de otra sesión y no se pudo rescatar. Sin cambios en la app.
 - **Decisiones para la v0.17 (reemplazan el reparto del plan de abajo)**: addons y TorBox **iguales para todas las
   casas**, solo los cambia el admin (opción A). Ajustes generales (subtítulos, idiomas, autoplay, saltar intro, sin
   spoilers, reglas de fuentes) **iguales en toda la casa**; lo físico (modo TV, tamaño de la interfaz, protector,

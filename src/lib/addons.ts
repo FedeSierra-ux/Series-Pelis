@@ -350,6 +350,15 @@ export function getStreams(
   }
 }
 
+/**
+ * v0.27: los streams de un solo addon, con la misma caché que `getStreams` (10 min). Lo usa el Torrentio sin
+ * debrid que se arma desde el manifest del que tiene TorBox (ver `lib/debrid.ts`).
+ */
+export function getAddonStreams(addon: InstalledAddon, type: string, videoId: string, timeoutMs = STREAM_TIMEOUT, signal?: AbortSignal): Promise<Stream[]> {
+  const url = resourceUrl(addon, 'stream', type, videoId)
+  return cached(`stream:${url}`, async (sig) => listField(await fetchJson<unknown>(url, timeoutMs, sig), 'streams', cleanStream), STREAM_TTL, false, signal)
+}
+
 /** Precarga los streams (quedan 10 min en caché) sin cortarlos: alguien los va a usar enseguida. */
 export function prefetchStreams(addons: InstalledAddon[], type: string, videoId: string) {
   for (const addon of enabledAddons(addons).filter((a) => supportsResource(a.manifest, 'stream', type, videoId))) {

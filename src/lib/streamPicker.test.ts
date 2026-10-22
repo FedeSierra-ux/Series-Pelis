@@ -376,6 +376,30 @@ describe('debrid primero (v0.25)', () => {
     expect(rankStreams(groups, rules(), last, SERVER).map((r) => r.stream.infoHash)).toEqual(['a1080', 'a720', 'a4k'])
   })
 
+  it('v0.27: lo que TorBox ya tiene le gana a lo que tiene que bajar, aunque sea de menor calidad', () => {
+    const hash = 'a1b2c3d4e5f60718293a4b5c6d7e8f9012345678'
+    const link = (idx: number) => `https://torrentio.strem.fun/resolve/torbox/K/${hash}/x/${idx}/x.mkv`
+    const groups = [
+      group(TIO, [
+        { name: '[TB download] Torrentio\n1080p', title: 'Serie.S01E02.1080p', url: link(0) },
+        { name: '[TB+] Torrentio\n720p', title: 'Serie.S01E02.720p', url: link(1) },
+      ]),
+    ]
+    expect(rankStreams(groups, rules(), undefined, SERVER).map((r) => r.stream.name)).toEqual(['[TB+] Torrentio\n720p', '[TB download] Torrentio\n1080p'])
+  })
+
+  it('v0.30: sin servidor, lo que TorBox tiene que bajar queda como último recurso (y los torrents afuera)', () => {
+    const hash = 'a1b2c3d4e5f60718293a4b5c6d7e8f9012345678'
+    const link = (idx: number) => `https://torrentio.strem.fun/resolve/torbox/K/${hash}/x/${idx}/x.mkv`
+    const download: Stream = { name: '[TB download] Torrentio\n1080p', title: 'Serie.S01E02.1080p 🇲🇽 Latino', url: link(0), behaviorHints: { bingeGroup: 'tio|1080p' } }
+    const cached: Stream = { name: '[TB+] Torrentio\n720p', title: 'Serie.S01E02.720p 🇬🇧 English', url: link(1) }
+    const none = { url: '', missing: 'sin servidor' }
+    // Lo que ya está en TorBox gana aunque el otro sea la misma fuente, en el mismo idioma y mejor calidad.
+    expect(pickBest([group(TIO, [torrent('abc'), download, cached])], rules(), last, none)?.stream).toBe(cached)
+    // Sin nada listo, el "[TB download]" (el reproductor espera a que TorBox lo baje); el torrent nunca.
+    expect(rankStreams([group(TIO, [torrent('abc'), download])], rules(), last, none).map((r) => r.stream)).toEqual([download])
+  })
+
   it('sin servidor el torrent no se reproduce y dice por qué', () => {
     const p = playable(torrent('abc'), { url: '', missing: 'Torrent: abrí Stremio en la PC (servidor local) o usá un addon con debrid' })
     expect(p.url).toBeUndefined()

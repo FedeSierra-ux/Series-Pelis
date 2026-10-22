@@ -2259,7 +2259,9 @@ html[data-tv] .player-float .btn:focus {
 
 /* ---------- v0.3 inicio TMDB ---------- */
 
-/* Top 10: número grande al costado del póster, estilo Netflix. */
+/* Top 10: número grande al costado del póster, estilo Netflix. Al 70 % del póster y poco metido debajo (v0.26,
+   explorar-03, primero solo en el celular; después en todas las pantallas): entran más pósters y se nota que la fila sigue. El mismo
+   en Inicio, Películas y Series, y en el esqueleto (`.is-skel`), así la fila no salta al cargar. */
 .top10-item {
   flex: 0 0 auto;
   display: flex;
@@ -2267,9 +2269,9 @@ html[data-tv] .player-float .btn:focus {
 }
 .top10-rank {
   flex: 0 0 auto;
-  margin-right: calc(var(--poster-w) * -0.06);
+  margin-right: calc(var(--poster-w) * -0.03);
   padding-bottom: 40px;
-  font-size: calc(var(--poster-w) * 0.95);
+  font-size: calc(var(--poster-w) * 0.7);
   font-weight: 900;
   line-height: 0.78;
   letter-spacing: -0.08em;
@@ -2285,7 +2287,7 @@ html[data-tv] .player-float .btn:focus {
 @media (max-width: 760px) {
   .top10-rank {
     -webkit-text-stroke-width: 2px;
-    padding-bottom: 36px;
+    padding-bottom: 38px;
   }
 }
 /* TV: el título y el año de la tarjeta son más altos; el número termina al pie de la imagen, no encima del texto. */

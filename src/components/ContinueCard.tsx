@@ -1,8 +1,10 @@
 import { memo, useState, type KeyboardEvent, type MouseEvent } from 'react'
 import { Link } from 'react-router-dom'
 import { prefetchMeta } from '../lib/addons'
+import { useLocalTitle } from '../lib/localTitles'
 import { continueSubtitle } from '../lib/remaining'
 import { addonsStore, type WatchEntry } from '../lib/store'
+import { useNearOnce } from '../lib/titleArt'
 import './rows.css'
 
 // Tarjeta apaisada de "Seguir viendo" del Tema 2: fondo 16:9, título, "T1 E3 · quedan 24 min"
@@ -75,7 +77,7 @@ const INFO_STATE = { noAuto: true }
 export const LandscapeCard = memo(function LandscapeCard({
   metaId,
   type,
-  name,
+  name: savedName,
   subtitle,
   backdrop,
   poster,
@@ -88,6 +90,10 @@ export const LandscapeCard = memo(function LandscapeCard({
   infoTo,
   badge,
 }: LandscapeProps) {
+  // v0.28: el nombre guardado es el original; se muestra el de TMDB en español si se sabe, y si no se pide
+  // cuando la tarjeta se acerca a la pantalla (igual que en PosterCard).
+  const [wrapRef, near] = useNearOnce<HTMLDivElement>(true)
+  const name = useLocalTitle(metaId, savedName, { type, enabled: near })
   const [broken, setBroken] = useState(false)
   const src = broken ? poster : backdrop
   const pct = progress ? Math.min(100, progress * 100) : 0
@@ -120,7 +126,7 @@ export const LandscapeCard = memo(function LandscapeCard({
   const label = removeLabel ?? 'Quitar'
 
   return (
-    <div className={`t2-cont-wrap${busy ? ' is-busy' : ''}`} onKeyDown={hasActions ? onKey : undefined}>
+    <div ref={wrapRef} className={`t2-cont-wrap${busy ? ' is-busy' : ''}`} onKeyDown={hasActions ? onKey : undefined}>
       <Link
         to={to}
         className="t2-cont"

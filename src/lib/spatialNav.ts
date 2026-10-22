@@ -443,5 +443,44 @@ export function initSpatialNav(onBack: () => void) {
     }
   }
   window.addEventListener('keydown', handler)
-  return () => window.removeEventListener('keydown', handler)
+  const stopTabReveal = initTabReveal()
+  return () => {
+    window.removeEventListener('keydown', handler)
+    stopTabReveal()
+  }
+}
+
+/**
+ * Tab / Shift+Tab del teclado debajo de la portada fija de Películas/Series (PC): el navegador lleva la tarjeta a
+ * la vista a su manera y, al volver a la fila de arriba, el título quedaba tapado por la portada. Después de ese
+ * scroll, la fila se acomoda igual que con las flechas (`reveal`, sin animación como el del navegador). Solo con
+ * Tab (las flechas ya lo hacen y el mouse no mueve la página), nunca en la TV ni sin portada fija
+ * (`visibleTop()` en 0: celular, pantallas bajas y el resto de las páginas).
+ */
+function initTabReveal() {
+  let tabbing = false
+  const onKey = (e: KeyboardEvent) => {
+    tabbing = e.key === 'Tab' && !e.altKey && !e.ctrlKey && !e.metaKey
+  }
+  const onPointer = () => {
+    tabbing = false
+  }
+  const onFocusIn = (e: FocusEvent) => {
+    if (!tabbing) return
+    tabbing = false
+    const el = e.target
+    if (!(el instanceof HTMLElement) || isTv() || !el.closest('.row-scroller') || visibleTop() <= 0) return
+    // En el cuadro siguiente: el scroll del navegador por el foco llega después de este evento.
+    requestAnimationFrame(() => {
+      if (document.activeElement === el) reveal(el, true)
+    })
+  }
+  window.addEventListener('keydown', onKey, true)
+  window.addEventListener('pointerdown', onPointer, true)
+  document.addEventListener('focusin', onFocusIn)
+  return () => {
+    window.removeEventListener('keydown', onKey, true)
+    window.removeEventListener('pointerdown', onPointer, true)
+    document.removeEventListener('focusin', onFocusIn)
+  }
 }

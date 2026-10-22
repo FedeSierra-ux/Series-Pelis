@@ -33,7 +33,7 @@ export function MergedCatalogRow({ row, eager }: { row: CatalogRowDef; eager: bo
         landscape={landscape}
       >
         {items.map((m, i) => (
-          <PosterCard key={m.id} meta={{ ...m, type: m.type ?? row.type }} eager={eager && i < 6} landscape={landscape} />
+          <PosterCard key={m.id} meta={{ ...m, type: m.type ?? row.type }} eager={eager && i < 6} landscape={landscape} hideTop10Label />
         ))}
       </Row>
     </div>

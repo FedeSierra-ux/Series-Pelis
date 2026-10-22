@@ -2,8 +2,10 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { getMeta, getSubtitles } from '../../lib/addons'
 import { creditsPlan } from '../../lib/credits'
+import { looksLikeStatusVideo } from '../../lib/debrid'
 import { episodeLabel } from '../../lib/format'
 import { useAddons, useTitle } from '../../lib/hooks'
+import { useLocalTitle } from '../../lib/localTitles'
 import { nativePlayer, type NativePlayerEvent } from '../../lib/nativePlayer'
 import { findNextStream, nextEpisodeSeason, prefetchNextStreams } from '../../lib/nextEpisode'
 import { fetchOnlineSubs, streamText } from '../../lib/onlineSubs'
@@ -18,7 +20,6 @@ import { isEmbedded, nativeStartAt, nativeSubList, nativeSubtitleStyle, shouldSa
 import { nextEpisodeTitle } from './NextCard'
 import { daysAway, RECAP_AFTER_DAYS } from './RecapOffer'
 import type { Resume } from './SourcesMenu'
-import { readRate } from './SpeedMenu'
 import { langName } from './useSubtitles'
 
 // Reproductor nativo de la app de Android TV (v0.20). Android reproduce (Media3) y dibuja los botones encima
@@ -34,15 +35,20 @@ const SAVE_EVERY_MS = 5000
  */
 let closeTimer: ReturnType<typeof setTimeout> | undefined
 
-/** `onFallback`: Android no pudo con el video; `at` es dónde iba y `message`, lo que dijo Android. */
+/**
+ * `onFallback`: Android no pudo con el video; `at` es dónde iba y `message`, lo que dijo Android.
+ * `onDebridFail` (v0.27): el link de debrid dio el video de aviso de Torrentio (30 s), no el video.
+ */
 export function NativePlayerView({
   state,
   resume,
   onFallback,
+  onDebridFail,
 }: {
   state: PlayState
   resume?: Resume
   onFallback: (at: number, message?: string) => void
+  onDebridFail?: (at: number) => void
 }) {
   const navigate = useNavigate()
   const settings = useStore(settingsStore)
@@ -50,7 +56,9 @@ export function NativePlayerView({
   const { meta, video } = state
   const videoId = video?.id ?? meta.id
   const pref = useStore(trackPrefsStore)[meta.id]
-  useTitle(video ? `${meta.name} ${episodeLabel(video.season, video.episode)}` : meta.name)
+  // v0.28: a Android va el nombre en español (el que se ve); en el progreso se sigue guardando el de Cinemeta.
+  const shownName = useLocalTitle(meta.id, meta.name, { type: meta.type })
+  useTitle(video ? `${shownName} ${episodeLabel(video.season, video.episode)}` : shownName)
 
   /** Android ya cargó este video (hasta entonces los eventos pueden ser del episodio anterior). */
   const [ready, setReady] = useState(false)
@@ -85,13 +93,15 @@ export function NativePlayerView({
     const s = settingsStore.get()
     nativePlayer.open({
       url: state.playUrl,
-      title: meta.name,
+      // `playerUpdate` no cambia el título: va el que se sabe al abrir (casi siempre ya está, de la ficha).
+      title: shownName,
       subtitle: video ? [episodeLabel(video.season, video.episode), video.title ?? video.name].filter(Boolean).join(' · ') : undefined,
       startAt: nativeStartAt(resume?.at, progressStore.get()[videoId]),
       paused: askStill.current || undefined,
       // Al venir de otra fuente, primero el idioma que se estaba escuchando.
       audioLangs: [...(resume?.audioLang ? [resume.audioLang] : []), ...audioPrefs(trackPrefsStore.get()[meta.id], s.audioLangs ?? [])],
-      rate: readRate(),
+      // Siempre 1× (sin botón ni teclas de velocidad).
+      rate: 1,
       subtitleStyle: nativeSubtitleStyle(s.subtitleStyle),
     })
     return () => {
@@ -299,12 +309,21 @@ export function NativePlayerView({
   const onEvent = (e: NativePlayerEvent) => {
     switch (e.type) {
       case 'ready':
+        // Sin marcarlo como listo: así no se guarda el progreso del aviso.
+        if (onDebridFail && looksLikeStatusVideo(e.duration)) {
+          onDebridFail(resume?.at ?? 0)
+          return
+        }
         readyRef.current = true
         setReady(true)
         if (e.duration > 0) setDuration(e.duration)
+        // v0.27: por qué arrancó así (por ejemplo, por torrent en vez del debrid).
+        if (resume?.note) nativePlayer.update({ toast: resume.note })
         if (askStill.current) nativePlayer.update({ toast: '¿Seguís viendo? Apretá OK para seguir' })
         break
       case 'progress': {
+        // Retomando más allá del final del aviso, Android puede no mandar nunca `ready`.
+        if (!readyRef.current && onDebridFail && looksLikeStatusVideo(e.duration)) return onDebridFail(resume?.at ?? 0)
         if (!readyRef.current) return
         last.current = { position: e.position, duration: e.duration }
         if (e.duration > 0) setDuration(e.duration)
@@ -342,6 +361,7 @@ export function NativePlayerView({
         void goNext(e.auto)
         break
       case 'ended':
+        if (!readyRef.current && onDebridFail) return onDebridFail(resume?.at ?? 0)
         if (!readyRef.current) return
         persist(last.current.duration, last.current.duration)
         if (state.nextVideoId && settingsStore.get().autoplayNext) void goNext(true)
@@ -355,6 +375,8 @@ export function NativePlayerView({
         exit()
         break
       case 'error':
+        // v0.27: un link de debrid que falla antes de arrancar es casi siempre el debrid (Android sí abre MKV).
+        if (!readyRef.current && onDebridFail) return onDebridFail(resume?.at ?? 0)
         // Android no pudo con este video: sigue el reproductor de la web desde el mismo lugar.
         if (readyRef.current) persist(last.current.position, last.current.duration)
         onFallback(readyRef.current ? e.position || last.current.position : 0, e.message)
@@ -369,5 +391,5 @@ export function NativePlayerView({
   }, [])
 
   // Android dibuja todo encima; atrás queda negro (por si se ve un instante al abrir o cerrar).
-  return <div className="player player-native" aria-label={`Reproduciendo ${meta.name}`} />
+  return <div className="player player-native" aria-label={`Reproduciendo ${shownName}`} />
 }

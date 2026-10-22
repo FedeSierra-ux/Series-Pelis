@@ -1,11 +1,122 @@
 # Changelog
 
-## [0.26.2] - 2026-10-19
+## [0.30.2] - 2026-10-22
 
 ### Agregado
 - `docs/investigacion/`: las notas de investigación de versiones anteriores (mejoras de UX de la v0.14, subtítulos
   online de la v0.16, login de la v0.17 y perfiles de la v0.18), con un índice. Antes vivían solo en la sesión de
   trabajo y se perdían al cerrarla. Sin cambios en la app.
+
+## [0.30.1] - 2026-10-21
+
+### Agregado
+- **Subtítulos del video en la app de Windows**: los de texto que trae el archivo (SRT/ASS de un MKV, mov_text de un
+  MP4) aparecen en **Subtítulos** como "… (del video)", junto a los online. El motor los saca de a 2 minutos a medida
+  que baja el torrent (no hace falta bajarlo entero). Si la pista dice "Latino" o similar, la elección automática la
+  prefiere; la de España nunca se elige sola, igual que con los online. Los de imagen (PGS) no se ofrecen.
+
+### Cambiado
+- Entre dos subtítulos del mismo idioma, la elección automática prefiere el del video (está sincronizado con ese
+  archivo). Un latino online sigue ganándole a uno del video que no dice "Latino".
+
+## [0.30.0] - 2026-10-21
+
+### Agregado
+- **Flix para Windows** (`desktop-app/`, Electron): la misma app (login, perfiles e historial) con un **motor de
+  torrents** y la **conversión de video** adentro, como Stremio de escritorio. Elegís el torrent y reproduce, sin
+  debrid y sin instalar nada más; lo que Chromium no puede (AC3, DTS, 5.1, varios audios) se convierte solo.
+  Instalador básico `flix-pc-setup.exe` que **se actualiza solo** desde GitHub Releases (Ajustes → App de Windows).
+- **Torrents por TorBox en el navegador**: un torrent sin debrid usa su par de TorBox (mismo torrent y archivo).
+  Lo que TorBox ya tiene arranca enseguida; lo que no, muestra **"TorBox lo está bajando…"** con el tiempo de espera
+  y el video **arranca solo** cuando está listo.
+- En la app de Windows, **Abrir en VLC / mpv / PotPlayer** abre directo el programa instalado (también con los
+  torrents). Si no está, avisa y deja el enlace copiado.
+- Ajustes → **App de Windows**: en la app, versión y actualizaciones; en el navegador de Windows, el botón
+  **Bajar Flix para Windows**.
+
+### Cambiado
+- Se fue el aviso **"Descargar Stremio Service"** de las fuentes y del reproductor. Si Stremio Service está abierto
+  en la compu, Flix lo sigue usando solo.
+- En el navegador, si TorBox falla, el cartel ya no ofrece "Reproducir por torrent" (no hay con qué): queda
+  "Probar de nuevo".
+
+## [0.29.0] - 2026-10-21
+
+### Agregado
+- **Torrents sin debrid en la PC**, como Stremio Web: con **Stremio Service** abierto en la compu, Flix lo encuentra
+  solo (`127.0.0.1:11470`) y los torrents de Torrentio se reproducen en el navegador.
+- Pantalla **"Conectando con el torrent…"** con cuánta gente lo comparte y a qué velocidad baja.
+- **Conversión automática** (HLS a través del servicio) de lo que el navegador no puede abrir: MKV con x265, audio
+  AC3/E-AC3 o 5.1, varios audios. También para los links directos marcados como "no aptos para la web".
+- Aviso en las fuentes cuando no se encuentra el servicio, con **Descargar Stremio Service** y **Probar de nuevo**
+  (se vuelve a buscar solo al volver a la pestaña). El estado se ve en Ajustes → Reproductor.
+
+### Cambiado
+- Si Stremio Service no está abierto al darle a reproducir un torrent, el cartel ofrece descargarlo o probar de nuevo.
+
+## [0.28.0] - 2026-10-19
+
+### Agregado
+- **Títulos en español latino** (los de TMDB, como en Netflix o Disney+ Argentina) en pósters, filas, portadas,
+  Seguir viendo, Mi lista, historial, calendario, Tu año, la ficha, el reproductor y las filas del inicio de la TV.
+  Los logos y los títulos de los episodios siguen en el idioma original. Sin TMDB queda el nombre de Cinemeta.
+- Ficha: con logo, el nombre en español debajo cuando el logo dice otro; sin logo, el título en español y
+  "Título original: …".
+- **Buscar** encuentra por el nombre en español y por el original (también trae títulos de TMDB que no están en
+  los catálogos de los addons).
+
+### Cambiado
+- **Portada de Inicio más grande** y sin el buscador de arriba: Buscar queda en el menú de la izquierda.
+
+## [0.27.1] - 2026-10-19
+
+### Cambiado
+- **Fuentes**: la recomendada va siempre primera (su addon arriba de todo). Si un addon lento trae algo mejor, la
+  recomendación cambia y la lista se reacomoda.
+- Idiomas de las fuentes: el audio de España dice **"España"** (antes "Castellano") y una fuente con varios
+  idiomas que trae latino dice **"Latino"**.
+- Buscar: en "Mejor resultado", con empate gana el título y no la persona.
+- **Top 10** con el número más chico (70 % del póster), igual en Inicio, Películas y Series, en todas las pantallas.
+- Sin la etiqueta "Top 10" sobre los pósters de las filas de Inicio, Películas/Series y la grilla.
+- **Halo solo en los logos oscuros** (también en la ficha, donde antes no había): los claros van sin halo.
+- Reproductor: sin botón ni teclas de velocidad (siempre 1×). En el celular la barra va siempre en una fila: el
+  temporizador se ve como un globito sobre la luna y, por debajo de 360 px, pasa a "Más opciones" (⚙).
+- Cartelito al pasar el mouse en ← (volver) y en Bloquear.
+- Celular apaisado: el subtítulo sube por encima de "Saltar" y de las tarjetas de la esquina, como en vertical.
+- Asistente inicial: si la primera sincronización da error, no se abre (como cuando tarda más de 10 s).
+
+### Arreglado
+- Películas y Series: moviéndose con Tab, el título de la fila enfocada ya no queda tapado por la portada.
+- Los esqueletos de los pósters ya no hacen saltar la fila cuando cargan.
+- Vos e Historial en el celular: el anillo de foco de los chips ya no se corta.
+- Ajustes → Casa: "Sí, sacar" mantiene el aspecto de botón y en el celular "No" no baja a otro renglón.
+
+## [0.27.0] - 2026-10-19
+
+### Agregado
+- **TorBox a través de Torrentio** para todas las casas. La key va dentro del addon (la carga el administrador); la
+  app nunca la guarda aparte. Guía de configuración en el README.
+- **Lo que TorBox todavía no tiene** ("tiene que descargarse"): arranca por torrent (app de Android o Stremio en la
+  PC) y al mismo tiempo le pide a TorBox que lo baje, así la próxima vez ya está listo.
+- **Si TorBox falla** con una fuente (límite de descargas, cuenta, video que no pudo preparar): cartel con el motivo y
+  el botón **"Reproducir por torrent"**. Nunca pasa solo. En la app de Android dice el motivo exacto.
+
+### Cambiado
+- Elección de fuente: lo que TorBox ya tiene listo gana siempre a lo que tiene que descargarse, aunque sea de menor
+  calidad (lo segundo va por torrent).
+
+## [0.26.3] - 2026-10-19
+
+### Cambiado
+- **Asistente inicial**: si la casa tarda más de 10 segundos en sincronizar, ya no se abre igual. El aparato usa los
+  idiomas de fábrica (o los de la casa cuando termina de sincronizar); si la casa todavía no eligió, aparece la
+  próxima vez que se abra la app.
+
+## [0.26.2] - 2026-10-19
+
+### Cambiado
+- **Asistente inicial**: si la casa ya eligió los idiomas (en el asistente de otro aparato o en Ajustes), un
+  aparato nuevo de la casa ya no lo muestra. Se puede abrir igual desde Ajustes. Sin login, igual que antes.
 
 ## [0.26.1] - 2026-10-18
 

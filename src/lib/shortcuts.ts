@@ -65,7 +65,6 @@ export const SHORTCUT_GROUPS: ShortcutGroup[] = [
       { keys: ['A', 'V'], description: 'Fuentes' },
       { keys: ['N'], description: 'Siguiente episodio' },
       { keys: ['P'], description: 'Imagen en imagen (ventana flotante)' },
-      { keys: ['<', '>'], description: 'Velocidad más lenta o más rápida' },
       { keys: ['0–9'], description: 'Saltar al 0 %, 10 %… 90 % del video' },
       { keys: ['I'], description: 'Saltar la intro o el resumen' },
       { keys: ['Esc', 'Atrás'], description: 'Salir del reproductor' },
