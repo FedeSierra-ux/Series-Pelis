@@ -51,6 +51,7 @@ npm run preview    # sirve dist/ en http://localhost:4173
 - `desktop-app/` — app de Windows (Electron, v0.30): `main.js`, `preload.cjs` (`window.flixDesktop`), `updater.js`,
   `engine/` (motor de torrents + HLS con ffmpeg). Contrato en `desktop-app/CONTRACT.md`. Web: `src/lib/desktop.ts`.
 - `src/lib/debridWait.ts` — esperar a que TorBox baje un torrent no cacheado (navegador, v0.30).
+- `scripts/flix-icons.py` — genera los íconos de Flix (favicon, PWA, mipmaps, banner y splash de `tv-app`).
 - `docs/investigacion/` — notas de investigación de versiones anteriores (UX, subtítulos online, login, perfiles).
 - `.claude/agents/` — agentes de agency-agents útiles para este proyecto. `.claude/skills/` + `.mcp.json` — rea.
 
@@ -289,8 +290,7 @@ npm run preview    # sirve dist/ en http://localhost:4173
   que el actualizador y Downloader lean Releases. Sin probar todavía en una TV real.
 - v0.22.0 hecha (rama `claude/flix-v0.22`): **la app pasa a llamarse Flix** (pedido del usuario) con el ícono **2B**
   (F de neón lavanda `#c4b0ff` sobre violeta oscuro, con brillo y estrellitas). Los íconos (favicon, PWA, mipmaps,
-  banner, splash) salen de `scratchpad/flix-assets/gen.py` (Chromium headless + PIL; si se pierde el scratchpad, el
-  dibujo está en `public/favicon.svg`). Android: paquete **`ar.flix.tv`** (antes `ar.seriespelis.tv`; se cambió
+  banner, splash) salen de `scripts/flix-icons.py` (Chromium headless + PIL; desde la v0.30.3 en el repo). Android: paquete **`ar.flix.tv`** (antes `ar.seriespelis.tv`; se cambió
   porque todavía no había nada instalado), esquema `flix://`, User-Agent `FlixApp/<v>`, APK **`flix-tv.apk`**
   (Release con etiqueta **`flix-v0.22.0`**: desde la v0.22 las etiquetas son `flix-vX.Y.Z`, pedido del usuario; el
   workflow y `TAG_RE` de `AppUpdater.java` las exigen así). El logo del riel usa `/favicon.svg`. **Se quedan con el nombre viejo**: el
@@ -574,6 +574,10 @@ npm run preview    # sirve dist/ en http://localhost:4173
   sesión pasaron a `docs/investigacion/` (UX v0.14, subtítulos online v0.16, login v0.17, perfiles v0.18; índice en su
   `README.md`). Investigaciones nuevas que valga la pena guardar van ahí, **sin keys** (solo nombres de variables).
   `scratchpad/v027-infohash.md` era de otra sesión y no se pudo rescatar. Sin cambios en la app.
+- v0.30.3 hecha (rama `claude/iconos-v0.30.3`): el generador de íconos de Flix (antes `scratchpad/flix-assets/gen.py`)
+  pasa a `scripts/flix-icons.py` (`python3 scripts/flix-icons.py .`, pide Pillow y `npm install` por la fuente Sora;
+  `CHROME=` para otro Chromium). Probado: vuelve a dar los mismos PNG; el banner difiere solo en el suavizado del
+  texto "Flix". Sin cambios en la app.
 - **Decisiones para la v0.17 (reemplazan el reparto del plan de abajo)**: addons y TorBox **iguales para todas las
   casas**, solo los cambia el admin (opción A). Ajustes generales (subtítulos, idiomas, autoplay, saltar intro, sin
   spoilers, reglas de fuentes) **iguales en toda la casa**; lo físico (modo TV, tamaño de la interfaz, protector,

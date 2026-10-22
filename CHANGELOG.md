@@ -1,5 +1,11 @@
 # Changelog
 
+## [0.30.3] - 2026-10-22
+
+### Agregado
+- `scripts/flix-icons.py`: el script que genera los íconos de Flix (favicon, PWA, íconos, banner y splash de la app
+  de TV). Antes vivía solo en la sesión de trabajo. Sin cambios en la app.
+
 ## [0.30.2] - 2026-10-22
 
 ### Agregado

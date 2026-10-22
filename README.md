@@ -251,6 +251,8 @@ Para probar localmente igual que en Cloudflare (con la función y los headers): 
 - `.claude/skills/reverse-engineer-anything` + `.mcp.json`: [rea](https://github.com/morluto/rea) para analizar apps y binarios.
 - `scripts/install-claude-tools.sh`: instala todo **global** en tu Claude Code (todos los agentes + rea).
   Corrélo una vez en tu PC. Con `--project` actualiza solo lo de este repo.
+- `scripts/flix-icons.py`: vuelve a generar los íconos de Flix (favicon, PWA y los de la app de TV).
+  Uso: `python3 scripts/flix-icons.py .` (pide Pillow, Chromium y `npm install`).
 - `docs/investigacion/`: notas de investigación de versiones anteriores (UX, subtítulos online, login, perfiles).
 
 ## Roadmap
