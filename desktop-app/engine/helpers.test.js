@@ -269,6 +269,23 @@ test('argumentos de ffmpeg', () => {
   assert.equal(a.indexOf('-ss'), -1)
   assert.equal(at('-segment_times'), '4.000000')
   assert.equal(at('-ac'), '2')
+  // Audio después de un salto: se lee desde 3 s antes y se descarta lo anterior al segmento (en tiempos del archivo).
+  const audio = { kind: /** @type {const} */ ('audio'), stream: st({ index: 2, track: 'audio' }) }
+  a = jobArgs({ input: 'x.mkv', plan, track: { ...audio, mode: 'aac' }, from: 2, to: 4, fileStart: 0.5, outPattern: 'o', hdrTonemap: false, threads: 3 })
+  const outSs = () => a[a.lastIndexOf('-ss') + 1]
+  assert.equal(at('-ss'), '4.500000')
+  assert.equal(at('-t'), (16 - 0.001 - 5).toFixed(6))
+  assert.ok(a.lastIndexOf('-ss') > a.indexOf('-i'))
+  assert.equal(outSs(), '8.000000')
+  assert.equal(at('-output_ts_offset'), '8.000000')
+  assert.equal(at('-segment_times'), '4.000000')
+  a = jobArgs({ input: 'x.mkv', plan, track: { ...audio, mode: 'copy' }, from: 1, to: 3, fileStart: 0, outPattern: 'o', hdrTonemap: false, threads: 3 })
+  assert.equal(at('-ss'), '1.000000')
+  assert.equal(outSs(), '4.000000')
+  assert.equal(at('-c:a'), 'copy')
+  // Desde el principio no hace falta.
+  a = jobArgs({ input: 'x.mkv', plan, track: { ...audio, mode: 'copy' }, from: 0, to: 3, fileStart: 0, outPattern: 'o', hdrTonemap: false, threads: 3 })
+  assert.equal(a.indexOf('-output_ts_offset'), -1)
 })
 
 test('Lru', () => {

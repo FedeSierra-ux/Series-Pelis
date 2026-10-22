@@ -240,7 +240,8 @@ de `desktop-app/` (queda como *artifact*) y, con la etiqueta `flix-vX.Y.Z`, sube
 `desktop-app/package.json` (y con la de `tv-app/`): se suben juntas.
 
 Probar en la PC: `cd desktop-app && npm install && npm start` (con `FLIX_URL=http://localhost:5173` usa el
-`npm run dev` local). Pruebas: `npm test`. El ffmpeg que viene adentro es GPL (de `ffmpeg-static`).
+`npm run dev` local). Pruebas: `npm test`. El ffmpeg y el ffprobe que vienen adentro son GPL (los dos del Release `b6.1.1` de
+`ffmpeg-static`; ffprobe lo baja `npm install` a `desktop-app/bin/`, verificado con su sha256).
 
 Para probar localmente igual que en Cloudflare (con la función y los headers): `npm run build && npx wrangler pages dev`.
 

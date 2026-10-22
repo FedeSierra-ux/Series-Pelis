@@ -28,6 +28,11 @@ const JOB_SEGMENTS = { copy: 40, x264: 20, aac: 60 }
 const LOOKAHEAD = 12
 /** Si el ffmpeg que viene está a más de esto del segmento pedido, se arranca otro justo ahí. */
 const WAIT_AHEAD = 4
+/**
+ * El audio de un ffmpeg que no arranca en 0 se lee desde estos segundos antes (y se descarta hasta el inicio): cubre
+ * los MKV con el audio guardado antes del keyframe (hasta ~2 s en archivos mal intercalados).
+ */
+const AUDIO_PREROLL_S = 3
 /** Segmentos que se guardan por pista (los más lejos de lo que se mira se borran). */
 const KEEP_SEGMENTS = 150
 /** Sin pedidos en este tiempo, los ffmpeg de la sesión se cortan (los segmentos quedan). */
@@ -107,16 +112,17 @@ export function jobArgs(o) {
   const start = b.starts[o.from]
   const args = ['-hide_banner', '-nostdin', '-loglevel', 'error', '-y']
   if (/^https?:/.test(o.input)) args.push('-rw_timeout', '30000000')
-  // Al copiar, ffmpeg arranca en el keyframe ≤ al punto: se apunta apenas después del inicio (que es un keyframe).
+  const audio = o.track.kind === 'audio'
+  // Video copiado: ffmpeg arranca en el keyframe ≤ al punto, así que se apunta apenas después del inicio (que es un
+  // keyframe). Audio: se arranca AUDIO_PREROLL_S antes y lo anterior al segmento se descarta abajo (en muchos MKV el
+  // audio del principio del segmento está guardado antes del keyframe y el salto se lo saltearía).
   let eps = 0
-  if (o.track.mode === 'copy' && o.track.kind === 'video') {
+  if (o.track.mode === 'copy' && !audio) {
     const kf = o.plan.keyframes ?? []
     const next = kf.find((t) => t > start + 1e-6)
     eps = Math.min(0.05, next !== undefined ? (next - start) / 2 : 0.05)
-  } else if (o.track.mode === 'copy') {
-    eps = 0.05
   }
-  const ss = Math.max(0, start - o.fileStart + eps)
+  const ss = Math.max(0, start - o.fileStart + (audio && o.from > 0 ? -AUDIO_PREROLL_S : eps))
   if (o.from > 0 || ss > 0.001) args.push('-ss', ss.toFixed(6))
   if (o.to < total) {
     // Hasta justo antes del primer segmento que no le toca.
@@ -155,8 +161,12 @@ export function jobArgs(o) {
     args.push('-vn')
     if (o.track.mode === 'copy') args.push('-c:a', 'copy')
     else args.push('-c:a', 'aac', '-b:a', '192k', '-ac', '2', '-ar', '48000')
+    // Lo leído de más (antes del segmento) afuera: `-ss` de salida descarta hasta ahí (al copiar, paquete por
+    // paquete; al convertir, muestra por muestra) pero corre los tiempos, que `-output_ts_offset` devuelve. Con
+    // -copyts el corte va en tiempos del archivo. Igual en ffmpeg 6 y 7 (un filtro de paquetes no: el 6 le pasa otra base).
+    if (o.from > 0) args.push('-ss', start.toFixed(6), '-output_ts_offset', start.toFixed(6))
   }
-  const times = segmentTimes(b, o.from, o.to - 1, o.track.kind === 'audio')
+  const times = segmentTimes(b, o.from, o.to - 1, audio)
   // Sin correr los tiempos: con B-frames (o el priming del AAC) el primer DTS da negativo y, por defecto, solo el
   // ffmpeg que arranca en 0 lo corre (unos 20–70 ms): sus segmentos no encajarían con los de otro ffmpeg. Va en
   // los dos muxers (el de segmentos y el TS de adentro).
