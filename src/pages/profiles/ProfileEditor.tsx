@@ -4,6 +4,7 @@ import { ProfileAvatar } from '../../components/ProfileAvatar'
 import { AVATAR_GROUPS, AVATARS, avatarById, avatarUrl, randomAvatar, type AvatarGroup } from '../../lib/avatars'
 import { MAIN_PROFILE, MAX_NAME, PROFILE_COLORS, type Profile } from '../../lib/profileModel'
 import { createProfile, deleteProfile, updateProfile } from '../../lib/profileSwitch'
+import { useTvMode } from '../../lib/tv'
 
 /**
  * Crear o editar un perfil: nombre, personaje (animales, personajes o criaturas, v0.24) y color de fondo.
@@ -19,9 +20,12 @@ export function ProfileEditor({ profile, defaultColor, takenAvatars = [], onClos
   const [error, setError] = useState<string>()
   const nameRef = useRef<HTMLInputElement>(null)
   const deleteRef = useRef<HTMLButtonElement>(null)
+  const tv = useTvMode()
 
+  // Con el control remoto (tv-11) el campo no se enfoca (abría el teclado del sistema de Android TV): el teclado
+  // en pantalla arranca abierto y el foco va a su primera tecla (`openInTv`).
   useEffect(() => {
-    nameRef.current?.focus({ preventScroll: true })
+    if (!tv) nameRef.current?.focus({ preventScroll: true })
   }, [])
   useEffect(() => {
     if (confirming) deleteRef.current?.focus({ preventScroll: true })
@@ -31,7 +35,8 @@ export function ProfileEditor({ profile, defaultColor, takenAvatars = [], onClos
     e?.preventDefault()
     if (!name.trim()) {
       setError('Poné un nombre.')
-      nameRef.current?.focus()
+      // En la TV el foco lo repone el botón "Teclado" (ver `KeyboardToggle`), no el campo.
+      if (!tv) nameRef.current?.focus()
       return
     }
     if (profile) updateProfile(profile.id, { name, color, avatar })
@@ -59,12 +64,14 @@ export function ProfileEditor({ profile, defaultColor, takenAvatars = [], onClos
             value={name}
             maxLength={MAX_NAME}
             autoComplete="off"
+            tabIndex={tv ? -1 : undefined}
+            data-nav-skip={tv || undefined}
             onChange={(e) => {
               setName(e.target.value)
               setError(undefined)
             }}
           />
-          <KeyboardToggle value={name} onChange={(v) => setName(v.slice(0, MAX_NAME))} onDone={() => submit()} doneLabel="Listo" label="Teclado para el nombre" />
+          <KeyboardToggle value={name} onChange={(v) => setName(v.slice(0, MAX_NAME))} onDone={() => submit()} doneLabel="Listo" label="Teclado para el nombre" openInTv />
         </div>
       </div>
 

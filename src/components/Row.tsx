@@ -108,7 +108,9 @@ export function Row({ title, moreTo, loading, error, empty, errorNotice, reportC
           <h2>{title}</h2>
         )}
         {moreTo && (
-          <Link to={moreTo} className="row-more">
+          // Mientras la fila muestra el esqueleto no se puede enfocar (tv-13): ↓ desde la fila de arriba caía acá,
+          // el único enfocable de la fila, y la pantalla se anclaba al título.
+          <Link to={moreTo} className="row-more" tabIndex={showSkeleton ? -1 : undefined} data-nav-skip={showSkeleton || undefined}>
             Ver todo
           </Link>
         )}

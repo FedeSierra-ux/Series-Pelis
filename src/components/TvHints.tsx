@@ -157,7 +157,19 @@ export function TvHints() {
 
   // "Atrás" del control también la cierra, sin llegar a la navegación general (que cambiaría de página).
   const onKeyDown = (e: KeyboardEvent<HTMLDivElement>) => {
-    if (!BACK_KEYS.has(e.key) || e.altKey || e.ctrlKey || e.metaKey) return
+    if (e.altKey || e.ctrlKey || e.metaKey) return
+    if (e.key === 'Tab' && box.current) {
+      // Tab y Shift+Tab dan la vuelta dentro de la guía (a11y-03): si no, el foco se iba al botón de perfil, detrás
+      // de la capa, y desde ahí Escape ya no la cerraba.
+      const els = Array.from(box.current.querySelectorAll<HTMLElement>('a[href], button:not([disabled]), [tabindex]:not([tabindex="-1"])'))
+      if (!els.length) return
+      const i = els.indexOf(document.activeElement as HTMLElement)
+      const next = e.shiftKey ? (i <= 0 ? els.length - 1 : i - 1) : i >= els.length - 1 ? 0 : i + 1
+      e.preventDefault()
+      els[next].focus({ preventScroll: true })
+      return
+    }
+    if (!BACK_KEYS.has(e.key)) return
     e.preventDefault()
     e.stopPropagation()
     close()

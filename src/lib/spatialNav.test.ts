@@ -1,5 +1,19 @@
 import { describe, expect, it } from 'vitest'
-import { ROW_HEAD_GAP, anchoredScrollLeft, backStep, ladderApplies, navScore, rowAnchorY, rowRevealTop } from './spatialNav'
+import {
+  INITIAL_FOCUS_MARKED_MS,
+  INITIAL_FOCUS_MAX_MS,
+  ROW_HEAD_GAP,
+  anchoredScrollLeft,
+  backStep,
+  blocksPageScroll,
+  enterTogglesCheck,
+  initialPick,
+  ladderApplies,
+  navScore,
+  revealBehavior,
+  rowAnchorY,
+  rowRevealTop,
+} from './spatialNav'
 
 describe('"Atrás" en escalera', () => {
   it('vale en Inicio, Películas, Series y Vos', () => {
@@ -98,5 +112,59 @@ describe('rowRevealTop (fila debajo de la portada fija en PC)', () => {
 
   it('nunca negativo', () => {
     expect(rowRevealTop({ scrollY: 0, viewTop: 300, viewH: 900, cardTop: 320, cardBottom: 600, headTop: 280 })).toBe(0)
+  })
+})
+
+describe('OK sobre casillas nativas en la TV (tv-02)', () => {
+  it('en la TV, Enter sobre un checkbox o radio lo cambia', () => {
+    expect(enterTogglesCheck({ tv: true, key: 'Enter', tag: 'INPUT', type: 'checkbox' })).toBe(true)
+    expect(enterTogglesCheck({ tv: true, key: 'Enter', tag: 'INPUT', type: 'radio' })).toBe(true)
+  })
+  it('fuera de la TV, con otra tecla, repetida o sobre otros controles no hace nada', () => {
+    expect(enterTogglesCheck({ tv: false, key: 'Enter', tag: 'INPUT', type: 'checkbox' })).toBe(false)
+    expect(enterTogglesCheck({ tv: true, key: ' ', tag: 'INPUT', type: 'checkbox' })).toBe(false)
+    expect(enterTogglesCheck({ tv: true, key: 'Enter', repeat: true, tag: 'INPUT', type: 'checkbox' })).toBe(false)
+    expect(enterTogglesCheck({ tv: true, key: 'Enter', tag: 'INPUT', type: 'text' })).toBe(false)
+    expect(enterTogglesCheck({ tv: true, key: 'Enter', tag: 'BUTTON' })).toBe(false)
+  })
+})
+
+describe('↑/↓ sin destino no scrollean la página de fondo (tv-12)', () => {
+  const base = { vertical: true, inScope: false, inRail: false, hasBillboard: false, inBrowseRow: false }
+  it('con el foco anclado (capa modal, riel, portada fija, filas de Películas/Series) se frena el scroll', () => {
+    expect(blocksPageScroll({ ...base, inScope: true })).toBe(true)
+    expect(blocksPageScroll({ ...base, inRail: true })).toBe(true)
+    expect(blocksPageScroll({ ...base, hasBillboard: true })).toBe(true)
+    expect(blocksPageScroll({ ...base, inBrowseRow: true })).toBe(true)
+  })
+  it('en una página común sigue el scroll nativo, y ←/→ nunca se frenan', () => {
+    expect(blocksPageScroll(base)).toBe(false)
+    expect(blocksPageScroll({ ...base, vertical: false, inScope: true })).toBe(false)
+  })
+})
+
+describe('desplazamiento al enfocar en la TV (tv-10)', () => {
+  it('sin animación con la tecla mantenida, con reducir movimiento o dentro de un contenedor con scroll propio', () => {
+    expect(revealBehavior({ instant: true, reduced: false, tv: true, ownScroller: false })).toBe('auto')
+    expect(revealBehavior({ instant: false, reduced: true, tv: true, ownScroller: false })).toBe('auto')
+    expect(revealBehavior({ instant: false, reduced: false, tv: true, ownScroller: true })).toBe('auto')
+  })
+  it('si no, suave (y fuera de la TV el contenedor propio no cambia nada)', () => {
+    expect(revealBehavior({ instant: false, reduced: false, tv: true, ownScroller: false })).toBe('smooth')
+    expect(revealBehavior({ instant: false, reduced: false, tv: false, ownScroller: true })).toBe('smooth')
+  })
+})
+
+describe('foco inicial al entrar a una pantalla nueva (tv-04)', () => {
+  it('lo marcado con data-autofocus gana apenas aparece', () => {
+    expect(initialPick({ marked: true, any: true, elapsed: 0 })).toBe('marked')
+  })
+  it('lo primero de <main> recién pasado el tiempo de gracia (la portada tarda más que un "Ver todo")', () => {
+    expect(initialPick({ marked: false, any: true, elapsed: INITIAL_FOCUS_MARKED_MS - 1 })).toBe('wait')
+    expect(initialPick({ marked: false, any: true, elapsed: INITIAL_FOCUS_MARKED_MS })).toBe('any')
+  })
+  it('sin nada, se espera; pasado el tope, se deja de esperar', () => {
+    expect(initialPick({ marked: false, any: false, elapsed: 3000 })).toBe('wait')
+    expect(initialPick({ marked: false, any: false, elapsed: INITIAL_FOCUS_MAX_MS })).toBe('stop')
   })
 })

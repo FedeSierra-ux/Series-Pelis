@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState, type KeyboardEvent } from 'react'
+import { restorePending } from '../lib/focusMemory'
 import { applyKey, oskRows, type OskKey, type OskLayer } from '../lib/osk'
 import { useTvMode } from '../lib/tv'
 import { Theme2Icon } from './Theme2Icons'
@@ -68,12 +69,15 @@ export function OnScreenKeyboard({
   const [layer, setLayer] = useState<OskLayer>('letters')
   const [upper, setUpper] = useState(false)
   const rootRef = useRef<HTMLDivElement>(null)
+  const tv = useTvMode()
   // El valor más nuevo, por si llegan varias teclas antes del re-render.
   const valueRef = useRef(value)
   valueRef.current = value
 
   useEffect(() => {
-    if (autoFocus) rootRef.current?.querySelector<HTMLButtonElement>('button')?.focus({ preventScroll: true })
+    // Al volver con "Atrás" (tv-07) la memoria de foco está por devolver el foco al resultado del que se salió:
+    // el teclado no se lo roba.
+    if (autoFocus && !restorePending()) rootRef.current?.querySelector<HTMLButtonElement>('button')?.focus({ preventScroll: true })
   }, [autoFocus])
 
   const press = (k: OskKey) => {
@@ -89,7 +93,9 @@ export function OnScreenKeyboard({
   const onKeyDown = (e: KeyboardEvent<HTMLDivElement>) => {
     if (e.altKey || e.ctrlKey || e.metaKey) return
     if (e.key === 'Backspace') {
-      // Si no, la navegación con el control lo toma como "Atrás".
+      // En la TV, Backspace es la tecla "Atrás" del control (tv-08): se deja pasar a la navegación (la tecla ⌫ del
+      // teclado en pantalla sigue borrando). Con un teclado físico fuera de la TV, borra una letra.
+      if (tv) return
       e.preventDefault()
       press({ kind: 'backspace' })
     } else if (e.key.length === 1 && e.key !== ' ') {
@@ -104,7 +110,9 @@ export function OnScreenKeyboard({
         <div key={r} className={`osk-row${r === 4 ? ' osk-actions' : ''}`}>
           {row.map((k, i) => (
             <button
-              key={`${layer}${r}-${i}`}
+              // Solo la posición (tv-01): al cambiar de capa el botón se reutiliza con otro texto y conserva el foco
+              // (con la capa en la clave se desmontaban todas las teclas y el foco quedaba en <body>).
+              key={`${r}-${i}`}
               type="button"
               className={`osk-key osk-${k.kind}${(k.kind === 'shift' && upper) || (k.kind === 'layer' && layer === 'symbols') ? ' active' : ''}`}
               aria-label={keyAria(k, layer, upper, doneLabel)}

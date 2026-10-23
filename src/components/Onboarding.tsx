@@ -3,11 +3,13 @@ import { useLocation } from 'react-router-dom'
 import { CINEMETA_URL } from '../lib/addons'
 import { useAuth, type AuthState } from '../lib/auth'
 import { useSyncStatus, type SyncStatus } from '../lib/cloudSync'
+import { focusInitialTarget, isTv } from '../lib/spatialNav'
 import { addonsStore, progressStore, settingsStore, useStore, watchlistStore, type Settings } from '../lib/store'
 import { LangChips } from '../pages/settings/PlayerSettings'
 
 const OPEN_EVENT = 'sp-open-onboarding'
 const BACK_KEYS = new Set(['Escape', 'GoBack', 'BrowserBack', 'Backspace'])
+const FOCUSABLE = 'a[href], button:not([disabled]), input:not([disabled]), [tabindex]:not([tabindex="-1"])'
 /** Si la primera sincronización no termina en este tiempo, el asistente no se abre (v0.26.3; ver `onboardingSkip`). */
 const SYNC_WAIT_MS = 10_000
 
@@ -127,11 +129,28 @@ export function Onboarding() {
 
   // Con el control remoto: el foco arranca en el primer idioma. En pantallas táctiles (v0.26) va a la caja
   // del diálogo: si no, el primer chip arrancaba con el anillo de foco, como si estuviera elegido de otra forma.
+  // Al cerrar (a11y-03) el foco vuelve a donde estaba (el botón de Ajustes que lo abrió) o, en la TV, a lo primero
+  // de la pantalla; antes quedaba en <body>.
+  const before = useRef<HTMLElement | null>(null)
+  const wasShown = useRef(false)
   useEffect(() => {
-    if (!visible) return
-    const touch = !document.documentElement.hasAttribute('data-tv') && typeof matchMedia === 'function' && matchMedia('(pointer: coarse)').matches
-    const first = touch ? boxRef.current : boxRef.current?.querySelector<HTMLElement>('.ob-body button, .ob-body input, .ob-actions .btn-primary')
-    first?.focus({ preventScroll: true })
+    if (visible) {
+      wasShown.current = true
+      const prev = document.activeElement
+      before.current = prev instanceof HTMLElement && prev !== document.body ? prev : null
+      const touch = !document.documentElement.hasAttribute('data-tv') && typeof matchMedia === 'function' && matchMedia('(pointer: coarse)').matches
+      const first = touch ? boxRef.current : boxRef.current?.querySelector<HTMLElement>('.ob-body button, .ob-body input, .ob-actions .btn-primary')
+      first?.focus({ preventScroll: true })
+      return
+    }
+    if (!wasShown.current) return
+    wasShown.current = false
+    const prev = before.current
+    before.current = null
+    const active = document.activeElement
+    if (active && active !== document.body) return
+    if (prev?.isConnected) prev.focus({ preventScroll: true })
+    else if (isTv()) focusInitialTarget()
   }, [visible])
 
   // Mientras espera la sincronización deja una marca, así la guía de la TV no se abre antes que el asistente.
@@ -148,7 +167,19 @@ export function Onboarding() {
   // "Atrás" del control (Escape, Backspace, GoBack) cierra el asistente.
   // Nunca llega a la navegación general (que cambiaría la página que está debajo).
   const onKeyDown = (e: KeyboardEvent<HTMLDivElement>) => {
-    if (!BACK_KEYS.has(e.key) || e.defaultPrevented || e.altKey || e.ctrlKey || e.metaKey) return
+    if (e.defaultPrevented || e.altKey || e.ctrlKey || e.metaKey) return
+    if (e.key === 'Tab' && boxRef.current) {
+      // Tab y Shift+Tab dan la vuelta dentro del asistente (a11y-03); las flechas ya se quedan por `data-nav-scope`.
+      const els = Array.from(boxRef.current.querySelectorAll<HTMLElement>(FOCUSABLE)).filter((el) => el.getClientRects().length > 0)
+      if (!els.length) return
+      const i = els.indexOf(document.activeElement as HTMLElement)
+      const next = e.shiftKey ? (i <= 0 ? els.length - 1 : i - 1) : i >= els.length - 1 ? 0 : i + 1
+      e.preventDefault()
+      els[next].focus({ preventScroll: true })
+      els[next].scrollIntoView({ block: 'nearest' })
+      return
+    }
+    if (!BACK_KEYS.has(e.key)) return
     e.preventDefault()
     e.stopPropagation()
     finish()

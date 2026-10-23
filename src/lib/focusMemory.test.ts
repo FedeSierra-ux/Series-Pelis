@@ -1,8 +1,11 @@
 import { beforeAll, describe, expect, it } from 'vitest'
 import {
   MAX_ENTRIES,
+  RETRY_MS,
+  RETRY_NO_ROW_MS,
   STORAGE_KEY,
   needsReveal,
+  restoreWaitMs,
   pickMatch,
   recallSnapshot,
   rememberSnapshot,
@@ -183,5 +186,13 @@ describe('needsReveal en horizontal (póster fuera de su fila)', () => {
   it('afuera, a la derecha o a la izquierda, sí', () => {
     expect(needsReveal({ top: 300, bottom: 600, left: 3203, right: 3400 }, 0, 800, row)).toBe(true)
     expect(needsReveal({ top: 300, bottom: 600, left: -150, right: 40 }, 0, 800, row)).toBe(true)
+  })
+})
+
+describe('cuánto esperar al elemento guardado (tv-15)', () => {
+  it('en una fila se espera la carga perezosa; fuera de una fila, poco (si no aparece, ya no existe)', () => {
+    expect(restoreWaitMs({ row: 'Seguir viendo' })).toBe(RETRY_MS)
+    expect(restoreWaitMs({})).toBe(RETRY_NO_ROW_MS)
+    expect(RETRY_NO_ROW_MS).toBeLessThan(RETRY_MS)
   })
 })

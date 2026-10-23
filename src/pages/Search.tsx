@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState, type FormEvent, type KeyboardEvent, type MouseEvent } from 'react'
-import { Link, useSearchParams } from 'react-router-dom'
+import { Link, useNavigationType, useSearchParams } from 'react-router-dom'
 import { EmptyState } from '../components/EmptyState'
 import { KeyboardToggle } from '../components/OnScreenKeyboard'
 import { PosterCard, PosterSkeleton } from '../components/PosterCard'
@@ -27,6 +27,7 @@ import {
 import { recentSearchesStore, useStore } from '../lib/store'
 import { useTmdbKey } from '../lib/tmdb'
 import { useTvMode } from '../lib/tv'
+import { resultsAnnouncement } from './search/announce'
 import { BestResult } from './search/BestResult'
 import { SearchSuggestions } from './search/SearchSuggestions'
 import './search/search-v14.css'
@@ -38,6 +39,10 @@ const SKELETONS = 12
 const ALL_TAB_MAX = 12
 
 const saveRecent = (q: string) => recentSearchesStore.set((list) => pushRecent(list, q))
+
+/** Cuánto esperar antes de anunciar los resultados a los lectores de pantalla (no leer a cada letra). */
+const ANNOUNCE_MS = 600
+
 
 /** Lo primero que se enfoca debajo del campo (control remoto: ↓ o "Buscar" del teclado en pantalla). */
 const FIRST_BELOW =
@@ -209,6 +214,7 @@ export function Search() {
   const [retry, setRetry] = useState(0)
   const input = useRef<HTMLInputElement>(null)
   const tv = useTvMode()
+  const navType = useNavigationType()
   const online = useOnline()
   // Al volver la conexión se busca de nuevo solo (no hace falta tocar "Reintentar").
   const wasOffline = useRef(!online)
@@ -260,13 +266,39 @@ export function Search() {
   const tabs = SEARCH_TABS.filter((t) => t.id !== 'people' || tmdbOn)
   const shownTab: SearchTab = tab === 'people' && !tmdbOn ? 'all' : tab
 
-  // La búsqueda y la pestaña quedan en la URL: "Atrás" desde una ficha vuelve a lo mismo.
+  // La búsqueda y la pestaña quedan en la URL: "Atrás" desde una ficha vuelve a lo mismo. Solo si cambió algo: al
+  // montar con `?q=` ya puesto, el REPLACE de más creaba otra entrada y cancelaba la memoria de foco que estaba
+  // devolviendo el foco al resultado del que se salió (tv-07, pc-06).
   useEffect(() => {
     const next: Record<string, string> = {}
     if (query) next.q = query
     if (query && shownTab !== 'all') next.tab = shownTab
+    if ((params.get('q') ?? undefined) === next.q && (params.get('tab') ?? undefined) === next.tab) return
     setParams(next, { replace: true })
   }, [query, shownTab])
+
+  // a11y-05: una región viva (oculta) dice cuántos resultados hay cuando termina la búsqueda, con un pequeño
+  // debounce para no leer a cada letra. El `aria-busy` de la grilla queda.
+  const [announce, setAnnounce] = useState('')
+  const settled = (outcome === 'results' || outcome === 'empty') && groups.every((g) => !g.loading) && !people.loading
+  useEffect(() => {
+    if (!settled) return
+    const count = (t: string) => groups.filter((g) => g.type === t).reduce((n, g) => n + g.items.length, 0)
+    const total = groups.reduce((n, g) => n + g.items.length, 0) + people.people.length
+    const text = resultsAnnouncement({ query, movies: count('movie'), series: count('series'), people: people.people.length, total })
+    const t = setTimeout(() => setAnnounce(text), ANNOUNCE_MS)
+    return () => clearTimeout(t)
+  }, [settled, query, groups, people.people])
+  useEffect(() => {
+    if (!active) setAnnounce('')
+  }, [active])
+
+  // Con el control remoto el campo de texto queda fuera de las flechas (tv-11): enfocarlo abría el teclado del
+  // sistema de Android TV encima de la app. Se escribe con el teclado en pantalla.
+  const focusField = () => {
+    const key = tv ? document.querySelector<HTMLElement>('.osk button') : null
+    ;(key ?? input.current)?.focus({ preventScroll: true })
+  }
 
   const change = (v: string) => {
     setText(v)
@@ -295,7 +327,7 @@ export function Search() {
 
   const pickRecent = (q: string) => {
     runNow(q)
-    input.current?.focus({ preventScroll: true })
+    focusField()
   }
 
   // Abrir un resultado cuenta como búsqueda "hecha": va a recientes.
@@ -337,8 +369,11 @@ export function Search() {
             ref={input}
             className="search-input"
             type="search"
-            // En la TV el foco arranca en el teclado en pantalla (así no salta el teclado del sistema).
-            autoFocus={!tv}
+            // En la TV el foco arranca en el teclado en pantalla (así no salta el teclado del sistema). Al volver
+            // con "Atrás" a una búsqueda hecha (pc-06) tampoco: el foco vuelve al resultado del que se salió.
+            autoFocus={!tv && !(navType === 'POP' && query.length > 0)}
+            tabIndex={tv ? -1 : undefined}
+            data-nav-skip={tv || undefined}
             // En el celular el largo se cortaba ("…o “Dar"): uno corto (v0.26, explorar-09).
             placeholder={narrow ? 'Peli, serie o actor' : tmdbOn ? 'Película, serie, actor… o “Darín y Francella”' : 'Película, serie, actor...'}
             aria-label="Buscar"
@@ -361,6 +396,9 @@ export function Search() {
         </div>
       </form>
       <VoiceStatus voice={voice} />
+      <p className="sp-sr-only" role="status" aria-live="polite">
+        {announce}
+      </p>
       <KeyboardToggle
         value={text}
         onChange={change}
@@ -411,7 +449,7 @@ export function Search() {
                     const neighbor = (li?.nextElementSibling ?? li?.previousElementSibling)?.querySelector<HTMLElement>('.recent-remove')
                     recentSearchesStore.set((list) => removeRecent(list, q))
                     if (neighbor) requestAnimationFrame(() => neighbor.focus())
-                    else input.current?.focus()
+                    else focusField()
                   }}
                 >
                   ✕
