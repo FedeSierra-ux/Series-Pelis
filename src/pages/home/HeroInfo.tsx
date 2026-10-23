@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { Link } from 'react-router-dom'
 import { ImdbRating } from '../../components/Rating'
+import { portraitLogo } from '../../components/focusBillboardData'
 import { useLogoTone } from '../../lib/logoTone'
 import type { DetailLocationState } from '../detail/StreamList'
 
@@ -78,7 +79,22 @@ export function HeroInfo({ eyebrow, title, logo, titleReady = true, rating, fact
       {eyebrow && <span className="portada-eyebrow">{eyebrow}</span>}
       {/* h2: el h1 es el de la página (este título cambia con el carrusel). */}
       <h2 className={`portada-title${showLogo ? ' has-logo' : ''}${titleReady ? '' : ' is-pending'}`}>
-        {showLogo ? <img className="portada-logo" {...logoTone} src={showLogo} alt={title} onError={() => setBrokenLogo(showLogo)} /> : <span>{title}</span>}
+        {showLogo ? (
+          <img
+            className="portada-logo"
+            {...logoTone}
+            src={showLogo}
+            alt={title}
+            onLoad={(e) => {
+              logoTone.onLoad(e)
+              // Logo vertical de metahub (visual-01): a 44×65 px no se lee, va el título en texto.
+              if (portraitLogo(e.currentTarget.naturalWidth, e.currentTarget.naturalHeight)) setBrokenLogo(showLogo)
+            }}
+            onError={() => setBrokenLogo(showLogo)}
+          />
+        ) : (
+          <span>{title}</span>
+        )}
       </h2>
       {(rating || facts.length > 0) && (
         <p className="portada-facts">

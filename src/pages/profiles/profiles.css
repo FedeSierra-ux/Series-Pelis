@@ -426,3 +426,10 @@ html[data-tv] .pf-name {
     transform: none;
   }
 }
+
+/* Pantallas bajas (PC a 1280×720): con 42vh de avatares, "Guardar" nacía 7 px debajo del borde. */
+@media (max-height: 760px) {
+  .pf-avatars {
+    max-height: min(330px, 34vh);
+  }
+}

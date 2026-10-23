@@ -284,11 +284,11 @@
   background: color-mix(in srgb, var(--bg) 40%, transparent);
   backdrop-filter: blur(8px);
 }
-/* 24 px de alto para tocarlos bien; lo que se ve es la rayita de adentro. */
+/* 24 px de ancho y alto para tocarlos bien (WCAG 2.5.8); lo que se ve es la rayita de adentro. */
 .portada .portada-dot {
   display: grid;
   place-items: center;
-  min-width: 22px;
+  min-width: 24px;
   height: 28px;
   padding: 0 4px;
   border: 0;

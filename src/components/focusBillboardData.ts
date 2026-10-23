@@ -1,5 +1,6 @@
 import { getMeta } from '../lib/addons'
 import { seasonCount, seriesYear } from '../lib/format'
+import { genreLabel } from '../lib/i18n'
 import { localTitle, spanishName } from '../lib/localTitlesStore'
 import { addonsStore } from '../lib/store'
 import { formatRuntime, getDetails, getDetailsByImdb, hasTmdb, imdbFromTmdb, parseTmdbId, pickLogo, tmdbImg, type TmdbDetails } from '../lib/tmdb'
@@ -65,7 +66,8 @@ export function buildInfo(key: string, meta: Meta | undefined, tmdb: TmdbDetails
   const year = (series ? seriesYear(releaseInfo, tmdb?.number_of_seasons ?? seasonCount(meta?.videos)) : releaseInfo) ?? (tmdb?.release_date || tmdb?.first_air_date || '').slice(0, 4)
   // En las series la duración cambia en cada episodio: solo en las pelis.
   const runtime = series ? '' : cinemetaRuntime(meta?.runtime) || formatRuntime(tmdb?.runtime || undefined)
-  const genres = tmdb?.genres?.length ? tmdb.genres.map((g) => g.name) : (meta?.genres ?? meta?.genre ?? [])
+  // Los de TMDB ya vienen en español; los de Cinemeta se traducen como en el resto de la app (pc-03 / visual-12).
+  const genres = tmdb?.genres?.length ? tmdb.genres.map((g) => g.name) : (meta?.genres ?? meta?.genre ?? []).map(genreLabel)
   const tmdbLogo = tmdbImg(pickLogo(tmdb), 'w500')
   return {
     key,
@@ -102,4 +104,12 @@ export async function loadBillboard(target: BillboardTarget): Promise<BillboardI
     !tmdb && imdb && hasTmdb() ? getDetailsByImdb(imdb, target.type).catch(() => undefined) : Promise.resolve(tmdb),
   ])
   return { ...buildInfo(key, meta, details, target.name), poster: target.poster || meta?.poster }
+}
+
+/**
+ * Logo vertical o cuadrado (metahub a veces manda uno de 780×1141): en una franja apaisada queda de 44×65 px,
+ * ilegible, así que se trata como roto y va el nombre en texto (visual-01).
+ */
+export function portraitLogo(naturalWidth: number, naturalHeight: number): boolean {
+  return naturalWidth > 0 && naturalHeight > naturalWidth * 0.8
 }

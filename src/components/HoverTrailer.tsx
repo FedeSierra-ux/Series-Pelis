@@ -3,6 +3,7 @@ import { createPortal } from 'react-dom'
 import {
   closeTrailer,
   disarmTrailer,
+  dismissTrailer,
   hoverTrailerUrl,
   keepTrailer,
   placeCard,
@@ -75,7 +76,8 @@ function HoverTrailerCard({ t }: { t: OpenTrailer }) {
         // "Atrás" primero cierra la vista previa (y no vuelve de página).
         e.preventDefault()
         e.stopPropagation()
-        closeTrailer()
+        // Con el mouse encima, el póster no vuelve a armar el tráiler hasta que el mouse lo deje (pc-02).
+        dismissTrailer()
       } else if ((e.key === 'm' || e.key === 'M') && !e.ctrlKey && !e.metaKey && !e.altKey) {
         e.preventDefault()
         toggleRef.current()

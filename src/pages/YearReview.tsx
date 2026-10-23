@@ -7,7 +7,7 @@ import { useLocalTitle } from '../lib/localTitles'
 import { availableYears, computeYearStats, entriesOfYear, formatDuration, loadYearMetas, type TitleStat } from '../lib/stats'
 import { progressStore, useStore } from '../lib/store'
 import type { Meta } from '../lib/types'
-import { wholeHours } from '../lib/watchStats'
+import { yearTotal } from '../lib/yearTotal'
 import { GoalBars, useYearGoal } from './goals/GoalBars'
 
 function TitleRow({ t, extra }: { t: TitleStat; extra?: string }) {
@@ -48,7 +48,8 @@ export function YearReview() {
   }, [addons, progress, year])
 
   const s = useMemo(() => computeYearStats(progress, year, metas), [progress, year, metas])
-  const hours = wholeHours(s.seconds)
+  // Mismo redondeo que el Historial y plural bien (pc-07 / visual-04).
+  const total = yearTotal(s.seconds)
   const empty = s.seconds === 0 && s.activeDays === 0
   const maxGenre = s.genres[0]?.seconds ?? 1
   const goalLines = useYearGoal(year, s.seconds)
@@ -82,9 +83,9 @@ export function YearReview() {
         <>
           <section className="year-hero">
             <div className="year-hero-main">
-              <span className="year-big">{hours >= 1 ? hours.toLocaleString('es-AR') : Math.floor(s.seconds / 60)}</span>
+              <span className="year-big">{total.big}</span>
               <span className="year-big-label">
-                {hours >= 1 ? (hours === 1 ? 'hora' : 'horas') : 'minutos'} de pelis y series en {year}
+                {total.unit} de pelis y series en {year}
               </span>
             </div>
             <dl className="year-kpis">
