@@ -10,14 +10,18 @@ import path from 'node:path'
 import { after, before, describe, it } from 'node:test'
 import { promisify } from 'node:util'
 import ffmpegPath from 'ffmpeg-static'
-import ffprobeStatic from 'ffprobe-static'
+import { ffprobePath } from '../ffprobe.js'
 import { Server as TrackerServer } from 'bittorrent-tracker'
 import WebTorrent from 'webtorrent'
 import { startEngine } from './index.js'
 
+// Los ffmpeg/ffprobe estáticos de Linux (glibc estática) crashean al leer MPEG-TS si encuentran los módulos de iconv
+// del sistema; sin ellos andan. Pasa solo en Linux (las pruebas); en Windows no.
+if (process.platform === 'linux') process.env.GCONV_PATH = '/nonexistent'
+
 const run = promisify(execFile)
 const FFMPEG = /** @type {string} */ (/** @type {unknown} */ (ffmpegPath))
-const FFPROBE = ffprobeStatic.path
+const FFPROBE = ffprobePath()
 const ORIGIN = 'https://app.example'
 const CHROME_CAPS = 'videoCodecs=h264&audioCodecs=aac&audioCodecs=mp3&audioCodecs=ac3&audioCodecs=eac3&maxAudioChannels=2'
 
@@ -30,6 +34,7 @@ const CHROME_CAPS = 'videoCodecs=h264&audioCodecs=aac&audioCodecs=mp3&audioCodec
 /** @type {string} */ let announce
 /** @type {{ base: string, close: () => Promise<void> }} */ let engine
 /** @type {{ name: string, path: string, length: number }[]} */ let files = []
+/** @type {Awaited<ReturnType<typeof earlyAudio>>} */ let e04Early
 
 /** @param {string[]} args */
 const ffmpeg = (args) => run(FFMPEG, ['-hide_banner', '-loglevel', 'error', '-y', ...args], { maxBuffer: 16 << 20 })
@@ -92,7 +97,7 @@ async function inspectSegment(url, kind) {
   return {
     codec: s.codec_name,
     channels: Number(s.channels) || undefined,
-    pts: Number(f.pkt_pts_time ?? f.pts_time ?? f.best_effort_timestamp_time),
+    pts: Number(f.pts_time ?? f.best_effort_timestamp_time),
     key: f.key_frame === 1,
     end: await lastFrameEnd(file, sel),
     streams: (await run(FFPROBE, ['-v', 'error', '-print_format', 'json', '-show_streams', file]).then((x) => JSON.parse(x.stdout).streams)).length,
@@ -105,9 +110,35 @@ async function inspectSegment(url, kind) {
  * @param {string} sel
  */
 async function lastFrameEnd(file, sel) {
-  const { stdout } = await run(FFPROBE, ['-v', 'error', '-select_streams', sel, '-show_entries', 'frame=pkt_pts_time,pkt_duration_time', '-of', 'csv=p=0', file], { maxBuffer: 16 << 20 })
+  const { stdout } = await run(FFPROBE, ['-v', 'error', '-select_streams', sel, '-show_entries', 'frame=pts_time,duration_time', '-of', 'csv=p=0', file], { maxBuffer: 16 << 20 })
   const rows = stdout.trim().split('\n').map((l) => l.split(',').map(Number)).filter((r) => Number.isFinite(r[0]))
   return Math.max(...rows.map((r) => r[0] + (r[1] || 0)))
+}
+
+/**
+ * Cuánto audio guarda el archivo antes de cada keyframe: para un keyframe en t, el audio desde t que está escrito
+ * antes que él (lo que un salto a t se saltearía).
+ * @param {string} file
+ */
+async function earlyAudio(file) {
+  const { stdout } = await run(FFPROBE, ['-v', 'error', '-print_format', 'json', '-show_entries', 'stream=index,codec_type:packet=stream_index,pts_time,pos,flags', file], { maxBuffer: 64 << 20 })
+  const j = JSON.parse(stdout)
+  const kind = new Map(j.streams.map((/** @type {any} */ s) => [s.index, s.codec_type]))
+  const pkts = j.packets
+    .map((/** @type {any} */ p) => ({ kind: kind.get(p.stream_index), t: Number(p.pts_time), pos: Number(p.pos), key: String(p.flags).includes('K') }))
+    .filter((/** @type {any} */ p) => Number.isFinite(p.t) && Number.isFinite(p.pos))
+  const audio = pkts.filter((/** @type {any} */ p) => p.kind === 'audio')
+  const keyframes = pkts.filter((/** @type {any} */ p) => p.kind === 'video' && p.key && p.t > 0)
+  /** @param {any} kf */
+  const before = (kf) => Math.max(0, ...audio.filter((/** @type {any} */ p) => p.t >= kf.t && p.pos < kf.pos).map((/** @type {any} */ p) => p.t - kf.t))
+  return {
+    worst: Math.max(0, ...keyframes.map(before)),
+    /** @param {number} t */
+    at: (t) => {
+      const kf = keyframes.find((/** @type {any} */ p) => Math.abs(p.t - t) < 0.01)
+      return kf ? before(kf) : 0
+    },
+  }
 }
 
 /** @param {string} m3u8 */
@@ -176,6 +207,18 @@ describe('motor de punta a punta', { timeout: 300_000 }, () => {
         path.join(media, 'Serie.S01E03.x265.mkv')]),
       fs.promises.writeFile(path.join(media, 'info.txt'), 'hola\n'),
     ])
+    // Mal intercalado a propósito (`-max_interleave_delta 1`: los paquetes van en el orden en que salen de los
+    // codificadores): el audio queda escrito unos 0,2–0,5 s antes que su keyframe. AAC (se copia) + AC3 (se convierte).
+    // En ffmpeg 6 sale siempre igual; en el 7 depende de los hilos: sin otras codificaciones a la vez y, si salió en
+    // orden, otra vez.
+    const e04 = path.join(media, 'Serie.S01E04.mkv')
+    for (let i = 0; i < 4; i++) {
+      await ffmpeg([...lavfi('640x360', 24, 30), '-map', '0:v', '-map', '1:a', '-map', '2:a', '-c:v', 'libx264', '-preset', 'ultrafast',
+        '-g', '48', '-pix_fmt', 'yuv420p', '-c:a:0', 'aac', '-ac:a:0', '2', '-c:a:1', 'ac3', '-ac:a:1', '2',
+        '-max_interleave_delta', '1', e04])
+      e04Early = await earlyAudio(e04)
+      if (e04Early.worst > 0.15) break
+    }
 
     tracker = new TrackerServer({ udp: false, http: true, ws: false, stats: false })
     await new Promise((resolve, reject) => {
@@ -231,7 +274,7 @@ describe('motor de punta a punta', { timeout: 300_000 }, () => {
     assert.equal(r.headers['access-control-allow-origin'], ORIGIN)
     const j = JSON.parse(r.body.toString())
     files = j.files
-    assert.equal(files.length, 4)
+    assert.equal(files.length, 5)
     for (const f of files) assert.equal(typeof f.length, 'number')
     assert.equal(files[j.guessedFileIdx].name, 'Serie.S01E02.mkv')
 
@@ -379,6 +422,39 @@ describe('motor de punta a punta', { timeout: 300_000 }, () => {
 
     // Misma id = misma sesión: la maestra se repite igual.
     assert.equal(await getText(`${root}/master.m3u8?${q}`), master)
+  })
+
+  it('después de un salto el audio arranca con su segmento aunque el archivo lo guarde antes del keyframe', async () => {
+    const name = 'Serie.S01E04.mkv'
+    const root = `${engine.base}/hlsv2/e04`
+    const master = await getText(`${root}/master.m3u8?mediaURL=${encodeURIComponent(localUrl(name))}&${CHROME_CAPS}`)
+    const lines = master.split('\n')
+    const videoList = await getText(`${root}/${lines.find((l) => l && !l.startsWith('#'))}`)
+    const audioUris = lines.filter((l) => l.startsWith('#EXT-X-MEDIA:')).map((l) => /** @type {string} */ (/URI="([^"]+)"/.exec(l)?.[1]))
+    assert.equal(audioUris.length, 2, master)
+    const segUri = (/** @type {string} */ list, /** @type {number} */ n) =>
+      `${root}/${/** @type {string} */ (list.split('\n').filter((l) => l && !l.startsWith('#'))[n])}`
+    const vd = extinfs(videoList)
+    assert.ok(vd.length >= 4, `pocos segmentos: ${vd.length}`)
+    const v0 = await inspectSegment(segUri(videoList, 0), 'v')
+    // En el TS los tiempos van corridos (el muxer suma su demora); en el MKV el video arranca en 0.
+    const starts = vd.map((_, k) => v0.pts + sum(vd, k))
+    const inFile = (/** @type {number} */ k) => e04Early.at(sum(vd, k))
+    // Si el archivo no quedó mal intercalado en los cortes, la prueba no prueba nada.
+    const worst = Math.max(...vd.slice(1).map((_, k) => inFile(k + 1)))
+    assert.ok(worst > 0.15, `el archivo quedó bien intercalado (${worst} s en los cortes, ${e04Early.worst} s en total)`)
+    for (const [i, u] of audioUris.entries()) {
+      const list = await getText(`${root}/${u}`)
+      // De atrás para adelante: cada segmento lo hace un ffmpeg que arranca justo ahí (un salto).
+      for (let k = vd.length - 1; k >= 1; k--) {
+        const a = await inspectSegment(segUri(list, k), 'a')
+        assert.equal(a.codec, 'aac')
+        assert.ok(
+          Math.abs(a.pts - starts[k]) < 0.05,
+          `audio ${i}, segmento ${k}: arranca en ${a.pts} y el segmento en ${starts[k]} (audio antes del keyframe: ${inFile(k)} s)`,
+        )
+      }
+    }
   })
 
   it('MP4 h264 + aac: video y audio copiados', async () => {

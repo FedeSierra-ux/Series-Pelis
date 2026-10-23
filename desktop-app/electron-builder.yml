@@ -21,17 +21,16 @@ files:
   - '!engine/**/*.test.*'
   - '!engine/**/test/**'
   - '!engine/**/*.md'
+  - ffprobe.js
   - package.json
-  # ffprobe-static trae los binarios de todas las plataformas: solo va el de Windows x64.
-  - '!node_modules/ffprobe-static/bin/darwin/**'
-  - '!node_modules/ffprobe-static/bin/linux/**'
-  - '!node_modules/ffprobe-static/bin/win32/ia32/**'
+  # ffprobe lo baja `npm ci` (scripts/ffprobe.mjs) a bin/.
+  - bin/ffprobe.exe
 
 # Un .exe adentro del asar no se puede ejecutar: ffmpeg y ffprobe van afuera (main.js arma la ruta a
 # app.asar.unpacked).
 asarUnpack:
   - node_modules/ffmpeg-static/**
-  - node_modules/ffprobe-static/**
+  - bin/**
 
 win:
   target:

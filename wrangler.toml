@@ -16,6 +16,15 @@ binding = "DB"
 database_name = "series-pelis"
 database_id = "da6e1fd0-df31-46db-a965-d3b74591fe42"
 
+# Las previews (cada PR o rama) usan otra base, así lo que se prueba no toca las casas de verdad.
+# Creada en el panel: `series-pelis-preview`. Lo de arriba vale para producción y `wrangler pages dev`.
+# Ojo: con [env.preview], los bindings (d1_databases, kv_namespaces, vars…) NO se heredan: si se suma uno arriba,
+# hay que repetirlo acá (si no, el deploy de las previews falla).
+[[env.preview.d1_databases]]
+binding = "DB"
+database_name = "series-pelis-preview"
+database_id = "599f2e78-229c-430e-baf9-9e146a04dc9c"
+
 # ---- Informes de errores (functions/api/report) ----
 # Sin el KV, /api/report/_status contesta { enabled: false } y la app no muestra nada de esto.
 #
@@ -31,6 +40,7 @@ database_id = "da6e1fd0-df31-46db-a965-d3b74591fe42"
 # [[kv_namespaces]]
 # binding = "REPORTS"
 # id = "<id del namespace>"
+# (y lo mismo en [[env.preview.kv_namespaces]], con otro namespace o el mismo)
 
 # Secretos del sitio (se cargan con `npx wrangler pages secret put <NOMBRE>`, nunca van acá):
 #   TMDB_KEY          key v3 o token v4 de TMDB para /api/tmdb (opcional).

@@ -10,6 +10,7 @@ import { app, BrowserWindow, ipcMain, session, shell } from 'electron'
 import { createLogger } from './log.js'
 import { findPlayer, parsePlayerLink, playerArgs } from './players.js'
 import { desktopUserAgent, engineOrigins, externalAction, originCheck, startUrl } from './origins.js'
+import { ffprobePath } from './ffprobe.js'
 import { createUpdater } from './updater.js'
 import { DEFAULT_HEIGHT, DEFAULT_WIDTH, loadWindowState, trackWindowState } from './window-state.js'
 
@@ -134,7 +135,7 @@ async function startTorrentEngine() {
       cacheDir: path.join(app.getPath('temp'), 'flix-torrents'),
       allowedOrigins: engineOrigins(START_URL),
       ffmpegPath: binaryPath(() => require('ffmpeg-static')),
-      ffprobePath: binaryPath(() => require('ffprobe-static').path),
+      ffprobePath: binaryPath(() => ffprobePath()),
       log: (/** @type {unknown} */ msg) => log.info('[motor]', msg),
     })
     log.info('motor: listo')
