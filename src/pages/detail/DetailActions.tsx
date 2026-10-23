@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState, type KeyboardEvent } from 'react'
 import { StarRatingInput } from '../../components/StarRating'
 import { useNotInterested } from '../../components/NotInterested'
-import { formatStars } from '../../lib/stars'
+import { formatStars, starsLabel } from '../../lib/stars'
 import { useRating, type RatedTitle } from '../../lib/ratings'
 import { DetailIcon } from './DetailIcons'
 import { MoreMenu, type MoreItem } from './MoreMenu'
@@ -114,7 +114,7 @@ export function DetailActions({ title, tmdbId, primary, inList, onToggleList, on
             type="button"
             className={`d-icon-btn${rating ? ' on' : ''}`}
             aria-expanded={rateOpen}
-            aria-label={rating ? `Tu puntaje: ${formatStars(rating.stars)} estrellas. Cambiar` : 'Calificar'}
+            aria-label={rating ? `Tu puntaje: ${starsLabel(rating.stars)}. Cambiar` : 'Calificar'}
             onClick={() => (rateOpen ? closeRating() : setRateOpen(true))}
           >
             <span className="d-icon-circle">

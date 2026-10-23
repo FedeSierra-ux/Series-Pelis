@@ -4,12 +4,13 @@ import { prefetchMeta } from '../lib/addons'
 import { smallPoster } from '../lib/format'
 import { displayYear } from '../lib/yearLabel'
 import { genreLabel } from '../lib/i18n'
-import { armTrailer, disarmTrailer } from '../lib/hoverTrailer'
+import { armTrailer, disarmTrailer, mouseMoveTrailer } from '../lib/hoverTrailer'
 import { LABEL_TEXT, usePosterLabel } from '../lib/posterLabels'
 import { useLocalTitle } from '../lib/localTitles'
 import { useLogoTone } from '../lib/logoTone'
 import { addonsStore, settingsStore, useStore } from '../lib/store'
 import { cardBackdrop, useNearOnce, useTitleLogo } from '../lib/titleArt'
+import { portraitLogo } from './focusBillboardData'
 import { imdbFromTmdb, parseTmdbId } from '../lib/tmdb'
 import type { MetaPreview } from '../lib/types'
 import { ImdbRating, PosterRating } from './Rating'
@@ -36,9 +37,11 @@ interface Props {
    * queda donde no hay Top 10 a la vista: Buscar, la ficha, personas, Mi lista y listas.
    */
   hideTop10Label?: boolean
+  /** Puesto en la fila "Top 10": el número grande es decorativo, esto lo dice al lector de pantalla (a11y-06). */
+  rank?: number
 }
 
-export const PosterCard = memo(function PosterCard({ meta, progress, watched, subtitle, to, eager, onRemove, removeLabel, landscape, hideTop10Label }: Props) {
+export const PosterCard = memo(function PosterCard({ meta, progress, watched, subtitle, to, eager, onRemove, removeLabel, landscape, hideTop10Label, rank }: Props) {
   const prefetched = useRef(false)
   // Precargamos la ficha cuando el usuario se detiene en el póster: al entrar ya está lista.
   const prefetch = () => {
@@ -72,10 +75,9 @@ export const PosterCard = memo(function PosterCard({ meta, progress, watched, su
       if (el) disarmTrailer(el)
     }
   }, [])
-  const onEnter = (e: MouseEvent<HTMLAnchorElement>) => {
-    prefetch()
-    armTrailer({ anchor: e.currentTarget, meta, via: 'mouse' })
-  }
+  // El tráiler se arma con un movimiento real del mouse (pc-02): Chrome manda `mouseenter` con el puntero quieto
+  // cuando cambia lo que hay debajo (se cerró el asistente o la tarjeta ampliada), y eso abría tráileres solos.
+  const onMove = (e: MouseEvent<HTMLAnchorElement>) => mouseMoveTrailer({ anchor: e.currentTarget, meta, via: 'mouse' }, e.clientX, e.clientY)
   const onFocus = (e: FocusEvent<HTMLAnchorElement>) => {
     prefetch()
     // Solo con teclado o control remoto (no al hacer clic con el mouse).
@@ -89,14 +91,16 @@ export const PosterCard = memo(function PosterCard({ meta, progress, watched, su
       data-focus-id={meta.id}
       className={landscape ? 'poster-card is-landscape' : `poster-card shape-${meta.posterShape ?? 'poster'}`}
       // Apaisada: el nombre está en el logo, así que no se repite abajo (sí para el lector de pantalla).
-      aria-label={landscape ? [name, landInfo(meta)].filter(Boolean).join(', ') : undefined}
-      onMouseEnter={onEnter}
+      aria-label={landscape ? [rankText(rank), name, landInfo(meta)].filter(Boolean).join(', ') : undefined}
+      onMouseEnter={prefetch}
+      onMouseMove={onMove}
       onMouseLeave={(e) => disarmTrailer(e.currentTarget, 'mouse')}
       onFocus={onFocus}
       onBlur={(e) => disarmTrailer(e.currentTarget, 'focus')}
       onTouchStart={prefetch}
       title={name}
     >
+      {rank !== undefined && !landscape && <span className="sp-sr-only">{rankText(rank)}, </span>}
       <div className="poster-img" ref={imgRef}>
         {src && src !== brokenSrc ? (
           <img
@@ -114,7 +118,20 @@ export const PosterCard = memo(function PosterCard({ meta, progress, watched, su
         {landscape && (
           <div className="land-art" aria-hidden>
             {showLogo ? (
-              <img className="land-logo" {...logoTone} src={logo} alt="" loading="lazy" decoding="async" onError={() => setBrokenLogo(logo)} />
+              <img
+                className="land-logo"
+                {...logoTone}
+                src={logo}
+                alt=""
+                loading="lazy"
+                decoding="async"
+                onLoad={(e) => {
+                  logoTone.onLoad(e)
+                  // Logo vertical de metahub (visual-01): en 16:9 queda ilegible, va el nombre.
+                  if (portraitLogo(e.currentTarget.naturalWidth, e.currentTarget.naturalHeight)) setBrokenLogo(logo)
+                }}
+                onError={() => setBrokenLogo(logo)}
+              />
             ) : (
               <span className="land-name">{name}</span>
             )}
@@ -196,4 +213,9 @@ export function PosterSkeleton({ landscape }: { landscape?: boolean }) {
       </div>
     </div>
   )
+}
+
+/** "Puesto 3" para el nombre accesible de la fila Top 10. */
+function rankText(rank: number | undefined): string | undefined {
+  return rank === undefined ? undefined : `Puesto ${rank}`
 }

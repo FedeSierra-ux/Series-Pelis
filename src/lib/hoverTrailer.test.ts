@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { hoverTrailerUrl, placeCard, trailerAllowed, trailerKeyFromMeta, ytCommand, ytPlayerState, type TrailerEnv } from './hoverTrailer'
+import { createMouseTracker, hoverTrailerUrl, placeCard, trailerAllowed, trailerKeyFromMeta, ytCommand, ytPlayerState, type TrailerEnv } from './hoverTrailer'
 
 describe('hoverTrailerUrl', () => {
   const url = new URL(hoverTrailerUrl('dQw4w9WgXcQ', 'http://localhost:4177'))
@@ -108,5 +108,27 @@ describe('ytPlayerState', () => {
     expect(ytPlayerState(JSON.stringify({ event: 'infoDelivery', info: { muted: true } }))).toBeUndefined()
     expect(ytPlayerState('no es json')).toBeUndefined()
     expect(ytPlayerState(null)).toBeUndefined()
+  })
+})
+
+describe('createMouseTracker (pc-02: el tráiler solo con movimiento real del mouse)', () => {
+  it('la primera posición solo se anota (puede ser el mousemove falso de Chrome tras un scroll)', () => {
+    const m = createMouseTracker()
+    expect(m.note(100, 100)).toBe(false)
+  })
+
+  it('un mousemove con las mismas coordenadas no cuenta: el puntero está quieto', () => {
+    const m = createMouseTracker()
+    m.note(100, 100)
+    expect(m.note(100, 100)).toBe(false)
+    expect(m.note(100, 100)).toBe(false)
+  })
+
+  it('cambiar de lugar, aunque sea un píxel, es movimiento real', () => {
+    const m = createMouseTracker()
+    m.note(100, 100)
+    expect(m.note(101, 100)).toBe(true)
+    expect(m.note(101, 100)).toBe(false)
+    expect(m.note(101, 99)).toBe(true)
   })
 })

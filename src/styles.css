@@ -2875,6 +2875,8 @@ html[data-tv] .top10-rank {
 }
 .poster-label-premiere {
   background: var(--accent-fill);
+  /* Texto oscuro sobre el lila: el blanco daba 1,9:1 (a11y-01). */
+  color: var(--on-accent);
 }
 /* En la fila "Top 10 de hoy" la etiqueta sobra: ya está el número. */
 .top10-item .poster-label-top10 {
@@ -3930,6 +3932,13 @@ button.chip-link {
   max-width: 860px;
   margin: 0 0 16px;
   line-height: 1.5;
+}
+/* Las pestañas van en su propio tablist (sin "Restablecer" adentro), con el mismo armado que `.filters`. */
+.catalog-manager-tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
 }
 .catalog-manager-filters .danger {
   margin-left: auto;

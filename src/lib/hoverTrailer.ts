@@ -149,7 +149,32 @@ let open: OpenTrailer | undefined
 let timers: ReturnType<typeof setTimeout>[] = []
 let closeTimer: ReturnType<typeof setTimeout> | undefined
 let suppressed = 0
+/** Póster cuyo tráiler se cerró con Escape/Atrás: no se vuelve a armar con el mouse hasta que lo deje (v0.31, pc-02). */
+let dismissed: HTMLElement | undefined
 const listeners = new Set<() => void>()
+
+/**
+ * Movimiento real del mouse (puro, para los tests). Chrome manda `mouseenter` y hasta un `mousemove` con el
+ * puntero quieto cuando cambia lo que hay debajo (se cerró el asistente, se cerró la tarjeta ampliada, la página
+ * se movió con la rueda): el tráiler se arma solo con un `mousemove` cuyas coordenadas cambiaron. La primera
+ * posición solo se anota, como hace `BrowseHero` con `still`.
+ */
+export function createMouseTracker() {
+  let x = NaN
+  let y = NaN
+  return {
+    /** Devuelve verdadero si el mouse se movió de verdad respecto del último `mousemove`. */
+    note(nx: number, ny: number): boolean {
+      const first = Number.isNaN(x)
+      const moved = nx !== x || ny !== y
+      x = nx
+      y = ny
+      return moved && !first
+    },
+  }
+}
+
+const mouse = createMouseTracker()
 
 /**
  * Apaga el tráiler de los pósters mientras la pantalla tiene el suyo (Películas y Series pasan el
@@ -175,6 +200,15 @@ function clearTimers() {
   timers = []
 }
 
+/**
+ * El mouse se movió sobre un póster (`mousemove`): arma el tráiler solo si fue un movimiento real
+ * (ver `createMouseTracker`). El `mouseenter` solo no alcanza: Chrome lo manda con el puntero quieto.
+ */
+export function mouseMoveTrailer(target: HoverTarget, x: number, y: number) {
+  if (!mouse.note(x, y)) return
+  armTrailer(target)
+}
+
 /** El mouse o el foco llegó a un póster: si se queda, a los 2 s se abre el tráiler. */
 export function armTrailer(target: HoverTarget) {
   if (armed?.anchor === target.anchor) {
@@ -182,6 +216,9 @@ export function armTrailer(target: HoverTarget) {
     clearTimeout(closeTimer)
     return
   }
+  // Cerrado con Escape: con el mouse encima no se reabre solo; recién al salir y volver a entrar.
+  if (target.via === 'mouse' && dismissed === target.anchor) return
+  dismissed = undefined
   closeTrailer()
   if (suppressed > 0 || !trailerAllowed(currentEnv(), target.via)) return
   armed = target
@@ -207,6 +244,7 @@ export function armTrailer(target: HoverTarget) {
 
 /** El mouse o el foco se fue del póster. Con el mouse damos un respiro por si pasó a la tarjeta ampliada. */
 export function disarmTrailer(anchor: HTMLElement, via?: TrailerVia) {
+  if (dismissed === anchor && via !== 'focus') dismissed = undefined
   if (armed?.anchor === anchor && (!via || armed.via === via)) {
     if (open?.anchor === anchor && via === 'mouse') {
       clearTimeout(closeTimer)
@@ -220,6 +258,12 @@ export function disarmTrailer(anchor: HTMLElement, via?: TrailerVia) {
 /** El mouse entró a la tarjeta ampliada: que no se cierre. */
 export function keepTrailer() {
   clearTimeout(closeTimer)
+}
+
+/** Cerrado por el usuario (Escape/Atrás): además de cerrar, ese póster no se rearma con el mouse hasta que lo deje. */
+export function dismissTrailer() {
+  dismissed = open?.anchor ?? armed?.anchor
+  closeTrailer()
 }
 
 export function closeTrailer() {

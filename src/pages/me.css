@@ -258,3 +258,9 @@ html[data-tv] .me-tile-text strong {
     transform: none;
   }
 }
+
+/* En la TV la letra es más grande y "Buscar en lo que viste…" no entraba en 260 px (visual-03). */
+html[data-tv] .history-filters .filter-input {
+  max-width: 400px;
+  flex-basis: 400px;
+}

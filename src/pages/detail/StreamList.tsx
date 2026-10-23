@@ -298,8 +298,8 @@ export function StreamList({ meta, video, nextVideoId }: { meta: Meta; video?: V
       f.size && { k: 'size', t: f.size },
     ].filter((c): c is { k: string; t: string; cls?: string } => !!c)
     const service = [f.service, f.state, hiddenReason && f.service !== addon.manifest.name ? addon.manifest.name : undefined].filter(Boolean).join(' · ')
-    // Sin etiquetas ni archivo (un tráiler, un enlace suelto): el nombre que manda el addon.
-    const file = f.file ?? (chips.length === 0 && name !== f.service ? name : undefined)
+    // Sin etiquetas (un tráiler, un enlace suelto): el nombre que manda el addon, y el archivo al lado si hay (pc-05).
+    const file = chips.length === 0 && name !== f.service ? [name, f.file !== name ? f.file : undefined].filter(Boolean).join(' · ') : f.file
     const content = (
       <>
         {recommended && <span className="stream-badge">Recomendado</span>}
