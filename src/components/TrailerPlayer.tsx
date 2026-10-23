@@ -58,6 +58,12 @@ export function TrailerPlayer({ ytId, title, kind = 'Tráiler', backdrop, onClos
         const p = ytRef.current
         if (p.playing) p.pause()
         else p.play()
+      } else if (e.key === 'MediaPlay' || e.key === 'MediaPause') {
+        // Controles con Play y Pausa separados (LG, Samsung, Sony, HDMI-CEC).
+        e.preventDefault()
+        e.stopPropagation()
+        if (e.key === 'MediaPlay') ytRef.current.play()
+        else ytRef.current.pause()
       }
     }
     const onVis = () => document.visibilityState === 'hidden' && ytRef.current.pause()

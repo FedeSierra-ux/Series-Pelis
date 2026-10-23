@@ -37,26 +37,31 @@ export function SubtitleMenu({ subs, isSeries, onInteract }: { subs: SubtitlesAp
           </button>
         </div>
       )}
-      <button className={subs.active === '' ? 'active' : ''} onClick={() => subs.select('')}>
-        Sin subtítulos
-      </button>
-      {subs.options.map((s, i) => {
-        if (collapse && !subs.featured[i]) return null
-        const { main, extra } = subs.labels[i]
-        const isFirstOther = showAll && !subs.featured[i] && firstHidden
-        if (isFirstOther) firstHidden = false
-        return (
-          <button
-            key={s.url + i}
-            ref={isFirstOther ? firstOther : undefined}
-            className={subs.active === s.url ? 'active' : ''}
-            onClick={() => subs.select(s.url)}
-          >
-            {main}
-            {extra ? <span className="muted small"> · {extra}</span> : null}
-          </button>
-        )
-      })}
+      {/* Las opciones son radios (una sola activa): un lector dice cuál está elegida. Igual que el ⚙. */}
+      <div className="player-menu-group" role="radiogroup" aria-label="Subtítulos">
+        <button role="radio" aria-checked={subs.active === ''} className={subs.active === '' ? 'active' : ''} onClick={() => subs.select('')}>
+          Sin subtítulos
+        </button>
+        {subs.options.map((s, i) => {
+          if (collapse && !subs.featured[i]) return null
+          const { main, extra } = subs.labels[i]
+          const isFirstOther = showAll && !subs.featured[i] && firstHidden
+          if (isFirstOther) firstHidden = false
+          return (
+            <button
+              key={s.url + i}
+              ref={isFirstOther ? firstOther : undefined}
+              role="radio"
+              aria-checked={subs.active === s.url}
+              className={subs.active === s.url ? 'active' : ''}
+              onClick={() => subs.select(s.url)}
+            >
+              {main}
+              {extra ? <span className="muted small"> · {extra}</span> : null}
+            </button>
+          )
+        })}
+      </div>
       {collapse && (
         <button
           className="sub-menu-more"

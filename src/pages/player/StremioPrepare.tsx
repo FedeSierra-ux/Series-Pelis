@@ -185,8 +185,9 @@ export function StremioPrepare({
       : !stats || stats.peers === 0
         ? 'Buscando quién lo comparte'
         : `${stats.peers === 1 ? '1 persona lo comparte' : `${stats.peers} personas lo comparten`}${stats.speed > 0 ? ` · ${formatSpeed(stats.speed)}` : ''}`
+  // Sin <video> todavía: `data-no-screensaver` para que el protector no tape el video cuando arranque.
   return (
-    <div className="player player-native player-prepare">
+    <div className="player player-native player-prepare" data-no-screensaver>
       <div className="player-prepare-box" role="status" aria-live="polite">
         <div className="player-spinner" aria-hidden="true" />
         <strong>{title}</strong>

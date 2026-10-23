@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { normalizeManifestUrl } from './addons'
+import { cleanStream, normalizeManifestUrl } from './addons'
 
 describe('normalizeManifestUrl', () => {
   it('deja igual una URL completa', () => {
@@ -28,6 +28,27 @@ describe('normalizeManifestUrl', () => {
 
   it('respeta la query del manifest', () => {
     expect(normalizeManifestUrl('https://addon.example/manifest.json?token=1')).toBe('https://addon.example/manifest.json?token=1')
+  })
+})
+
+describe('cleanStream: enlaces externos (code-06)', () => {
+  it('externalUrl solo con http(s): javascript:, data: e intent: se descartan', () => {
+    expect(cleanStream({ externalUrl: 'https://ejemplo.com/ver?x=1' })?.externalUrl).toBe('https://ejemplo.com/ver?x=1')
+    expect(cleanStream({ externalUrl: 'HTTP://ejemplo.com/ver' })?.externalUrl).toBe('HTTP://ejemplo.com/ver')
+    // Sin nada reproducible, el stream entero se va.
+    expect(cleanStream({ externalUrl: 'javascript:alert(1)' })).toBeUndefined()
+    expect(cleanStream({ externalUrl: 'data:text/html,<h1>hola</h1>' })).toBeUndefined()
+    expect(cleanStream({ externalUrl: 'intent://x#Intent;end' })).toBeUndefined()
+    expect(cleanStream({ externalUrl: 'https://ejemplo.com/con espacio' })).toBeUndefined()
+    // Con url propia el stream queda, pero sin el enlace sucio.
+    expect(cleanStream({ url: 'https://cdn.example/a.mp4', externalUrl: 'javascript:1' })).toEqual({ url: 'https://cdn.example/a.mp4' })
+  })
+
+  it('ytId solo con pinta de id de YouTube', () => {
+    expect(cleanStream({ ytId: 'dQw4w9WgXcQ' })?.ytId).toBe('dQw4w9WgXcQ')
+    expect(cleanStream({ ytId: 'abc&list=PL123' })).toBeUndefined()
+    expect(cleanStream({ ytId: 'a/b' })).toBeUndefined()
+    expect(cleanStream({ url: 'https://cdn.example/a.mp4', ytId: 'x y' })).toEqual({ url: 'https://cdn.example/a.mp4' })
   })
 })
 

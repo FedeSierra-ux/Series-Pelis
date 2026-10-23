@@ -3,6 +3,7 @@ import { desktopTorrentBase } from './desktop'
 import { isNativeApp, listenNative, nativeInfo, type NativeInfo } from './native'
 import { settingsStore, useStore } from './store'
 import { canUseLocalStremio, ensureLocalStremio, localStremioBase, useLocalStremio, STREMIO_SERVER } from './stremioServer'
+import type { Stream } from './types'
 
 // Con qué se reproducen los torrents (infoHash sin url): el servidor de Stremio que puso el usuario en
 // Ajustes, el motor de la app de Windows (v0.30), en la PC el de Stremio Service que se encuentra solo (v0.29)
@@ -166,6 +167,21 @@ export function torrentServer(): TorrentServer {
 export async function torrentServerReady(): Promise<TorrentServer> {
   await probeEngine()
   if (!settingsStore.get().streamingServerUrl.trim()) await ensureLocalStremio()
+  return torrentServer()
+}
+
+/** ¿Alguno de estos streams necesita el servidor de torrents (torrent suelto o formato que el navegador no abre)? */
+export function needsTorrentServer(streams: readonly Stream[]): boolean {
+  return streams.some((s) => !!s.infoHash || !!s.behaviorHints?.notWebReady)
+}
+
+/**
+ * El servidor para elegir entre estos streams: se busca Stremio Service (v0.29, permiso de red local de Chrome)
+ * solo si alguno lo necesita; si no, lo que se sabe ahora (esperando igual la respuesta del APK en la app).
+ */
+export async function torrentServerFor(streams: readonly Stream[]): Promise<TorrentServer> {
+  if (needsTorrentServer(streams)) return torrentServerReady()
+  await probeEngine()
   return torrentServer()
 }
 

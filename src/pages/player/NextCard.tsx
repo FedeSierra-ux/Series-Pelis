@@ -76,7 +76,8 @@ export function NextCard({ state, loading, autoplay, secondsLeft, total, onPlay,
         </span>
         {title && <strong className="next-title">{title}</strong>}
         <div className="next-card-actions">
-          <button className="btn btn-primary btn-small" onClick={onPlay} disabled={loading} autoFocus>
+          {/* `aria-disabled` y no `disabled`: con el foco puesto, `disabled` lo soltaba y el OK del control caía en el video. */}
+          <button className="btn btn-primary btn-small" onClick={loading ? undefined : onPlay} aria-disabled={loading || undefined} autoFocus>
             Ver ahora
           </button>
           <button className="btn btn-small" onClick={onCancel}>

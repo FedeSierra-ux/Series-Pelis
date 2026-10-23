@@ -587,6 +587,30 @@ html[data-tv] .player-menu {
 html[data-tv] .player-chip ~ .player-rate {
   margin-top: 60px;
 }
+/* visual-02: en pausa, la cabecera (título + addon, hasta 127 px de alto en la TV) tapaba el título y la
+   sinopsis de `.pause-info`. Y la columna del reparto quedaba con el texto de 188 px: más ancha, el texto la usa. */
+html[data-tv] .pause-cast {
+  padding-top: 160px;
+  width: 520px;
+}
+
+/* code-04: los botones que se "deshabilitan" con el foco puesto ("Ver ahora", "Siguiente episodio",
+   "Preparando…") usan `aria-disabled` para no soltar el foco del control remoto: se ven como `disabled`. */
+.player [aria-disabled='true'] {
+  opacity: 0.4;
+  cursor: default;
+}
+
+/* a11y-04: las opciones de un menú van en un grupo de radios; el grupo se apila igual que los botones sueltos
+   y mantiene el separador de "Cargar archivo…". */
+.player-menu .player-menu-group {
+  display: flex;
+  flex-direction: column;
+}
+.player-menu .player-menu-group + .sub-menu-extra {
+  margin-top: 4px;
+  border-top: 1px solid var(--line);
+}
 
 /* ---------- Rediseño v0.26 ---------- */
 

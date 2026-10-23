@@ -21,6 +21,11 @@ export interface Resume {
   audioLang?: string
   /** v0.27: aviso al arrancar en lugar de "Fuente: …" (por ejemplo, que va por torrent en vez del debrid). */
   note?: string
+  /**
+   * "Ver desde el principio": arranca en 0 aunque haya progreso guardado. Hace falta porque `at === 0` solo
+   * significa "sin posición" (vale lo guardado), ver `onLoadedMetadata` en `Player.tsx` y `nativeStartAt`.
+   */
+  fromStart?: boolean
 }
 
 export type SwitchState = PlayState & { resume?: Resume }
@@ -96,27 +101,31 @@ export function SourcesMenu({ state, onPick }: { state: PlayState; onPick: (pick
         Fuentes{loading ? ' · buscando…' : ''}
       </span>
       {!loading && items.length === 0 && <span className="player-menu-title muted small">No hay otras fuentes reproducibles.</span>}
-      {items.map((it, i) => {
-        const current = it.url === state.playUrl
-        const sub = lines(it.stream)
-        return (
-          <button
-            key={`${it.addon.transportUrl}|${i}`}
-            className={`source-item ${current ? 'active' : ''}`}
-            aria-current={current || undefined}
-            onClick={() => onPick(it)}
-          >
-            <span className="source-name">
-              {(it.stream.name ?? '').replace(/\n/g, ' ') || it.addon.manifest.name}
-              {current && <em> · Actual</em>}
-            </span>
-            <span className="source-lines muted small">
-              {it.addon.manifest.name}
-              {sub.length ? ` · ${sub.join(' · ')}` : ''}
-            </span>
-          </button>
-        )
-      })}
+      {/* Radios: un lector de pantalla dice cuál es la fuente actual. */}
+      <div className="player-menu-group" role="radiogroup" aria-label="Fuentes">
+        {items.map((it, i) => {
+          const current = it.url === state.playUrl
+          const sub = lines(it.stream)
+          return (
+            <button
+              key={`${it.addon.transportUrl}|${i}`}
+              className={`source-item ${current ? 'active' : ''}`}
+              role="radio"
+              aria-checked={current}
+              onClick={() => onPick(it)}
+            >
+              <span className="source-name">
+                {(it.stream.name ?? '').replace(/\n/g, ' ') || it.addon.manifest.name}
+                {current && <em> · Actual</em>}
+              </span>
+              <span className="source-lines muted small">
+                {it.addon.manifest.name}
+                {sub.length ? ` · ${sub.join(' · ')}` : ''}
+              </span>
+            </button>
+          )
+        })}
+      </div>
     </>
   )
 }

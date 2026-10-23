@@ -135,7 +135,7 @@ export function StreamList({ meta, video, nextVideoId }: { meta: Meta; video?: V
         [meta.id]: lastSourceOf(addon.transportUrl, s),
       }))
     }
-    const state: PlayState & { resume?: { at: number } } = {
+    const state: PlayState & { resume?: { at: number; fromStart?: boolean } } = {
       stream: s,
       playUrl: url,
       meta: { id: meta.id, type: meta.type, name: meta.name, poster: meta.poster, background: meta.background, logo: meta.logo },
@@ -145,7 +145,7 @@ export function StreamList({ meta, video, nextVideoId }: { meta: Meta; video?: V
       addonUrl: addon.transportUrl,
     }
     // "Ver desde el principio": `resume` manda sobre el progreso guardado (ver `Player.tsx`).
-    if (fromStart) state.resume = { at: 0 }
+    if (fromStart) state.resume = { at: 0, fromStart: true }
     navigate(`/watch/${meta.type}/${encodeURIComponent(videoId)}`, { state })
   }
 

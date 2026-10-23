@@ -4,6 +4,7 @@ import type { NativeSubOption, NativeSubtitleStyle, NativeTextTrack } from '../.
 import { RESUME_MIN_S, type SubtitleStyle, type WatchEntry } from '../../lib/store'
 import { langRank, looksForced, looksSdh, subMenuLabels, type SubOption } from '../../lib/subtitlePrefs'
 import { MIN_HISTORY_EPISODE_S, MIN_HISTORY_S } from './autoNext'
+import type { Resume } from './SourcesMenu'
 
 /** Prefijo de los subtítulos que vienen dentro del video (los arma Android: `emb:<grupo>:<pista>`). */
 export const EMBEDDED_PREFIX = 'emb:'
@@ -11,10 +12,12 @@ export const isEmbedded = (id: string) => id.startsWith(EMBEDDED_PREFIX)
 
 /**
  * Dónde arranca: la posición que trae el cambio de fuente o, si no, lo guardado (igual que el reproductor de
- * la web: más de `RESUME_MIN_S` y no en los últimos 30 s). `resumeAt === 0` es "sin posición".
+ * la web: más de `RESUME_MIN_S` y no en los últimos 30 s). `at === 0` es "sin posición"; con `fromStart`
+ * ("Ver desde el principio") arranca en 0 aunque haya progreso.
  */
-export function nativeStartAt(resumeAt: number | undefined, saved: Pick<WatchEntry, 'position' | 'duration' | 'watched'> | undefined): number {
-  if (resumeAt !== undefined && resumeAt > 0) return resumeAt
+export function nativeStartAt(resume: Pick<Resume, 'at' | 'fromStart'> | undefined, saved: Pick<WatchEntry, 'position' | 'duration' | 'watched'> | undefined): number {
+  if (resume?.fromStart) return 0
+  if (resume !== undefined && resume.at > 0) return resume.at
   if (saved && !saved.watched && saved.position > RESUME_MIN_S && (!(saved.duration > 0) || saved.position < saved.duration - 30)) return saved.position
   return 0
 }
