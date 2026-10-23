@@ -135,7 +135,7 @@ export function StreamList({ meta, video, nextVideoId }: { meta: Meta; video?: V
         [meta.id]: lastSourceOf(addon.transportUrl, s),
       }))
     }
-    const state: PlayState & { resume?: { at: number } } = {
+    const state: PlayState & { resume?: { at: number; fromStart?: boolean } } = {
       stream: s,
       playUrl: url,
       meta: { id: meta.id, type: meta.type, name: meta.name, poster: meta.poster, background: meta.background, logo: meta.logo },
@@ -145,7 +145,7 @@ export function StreamList({ meta, video, nextVideoId }: { meta: Meta; video?: V
       addonUrl: addon.transportUrl,
     }
     // "Ver desde el principio": `resume` manda sobre el progreso guardado (ver `Player.tsx`).
-    if (fromStart) state.resume = { at: 0 }
+    if (fromStart) state.resume = { at: 0, fromStart: true }
     navigate(`/watch/${meta.type}/${encodeURIComponent(videoId)}`, { state })
   }
 
@@ -298,8 +298,8 @@ export function StreamList({ meta, video, nextVideoId }: { meta: Meta; video?: V
       f.size && { k: 'size', t: f.size },
     ].filter((c): c is { k: string; t: string; cls?: string } => !!c)
     const service = [f.service, f.state, hiddenReason && f.service !== addon.manifest.name ? addon.manifest.name : undefined].filter(Boolean).join(' · ')
-    // Sin etiquetas ni archivo (un tráiler, un enlace suelto): el nombre que manda el addon.
-    const file = f.file ?? (chips.length === 0 && name !== f.service ? name : undefined)
+    // Sin etiquetas (un tráiler, un enlace suelto): el nombre que manda el addon, y el archivo al lado si hay (pc-05).
+    const file = chips.length === 0 && name !== f.service ? [name, f.file !== name ? f.file : undefined].filter(Boolean).join(' · ') : f.file
     const content = (
       <>
         {recommended && <span className="stream-badge">Recomendado</span>}

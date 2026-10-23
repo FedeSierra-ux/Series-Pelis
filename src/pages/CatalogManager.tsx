@@ -61,17 +61,20 @@ export function CatalogManager() {
         Los addons desactivados no aparecen acá.
       </p>
 
-      <div className="filters catalog-manager-filters" role="tablist" aria-label="Tipo">
-        {['all', ...types].map((t) => (
-          <button key={t} type="button" role="tab" aria-selected={filter === t} className={`tab${filter === t ? ' active' : ''}`} onClick={() => setFilter(t)}>
-            {t === 'all' ? 'Todos' : typeLabel(t)}
-          </button>
-        ))}
+      <div className="filters catalog-manager-filters">
+        {/* "Restablecer" va afuera del tablist: adentro el lector contaba una pestaña de más (a11y-07). */}
+        <div className="catalog-manager-tabs" role="tablist" aria-label="Tipo">
+          {['all', ...types].map((t) => (
+            <button key={t} type="button" role="tab" aria-selected={filter === t} className={`tab${filter === t ? ' active' : ''}`} onClick={() => setFilter(t)}>
+              {t === 'all' ? 'Todos' : typeLabel(t)}
+            </button>
+          ))}
+        </div>
         <button
           type="button"
           className="btn btn-ghost danger"
           onClick={() => {
-            if (confirm('¿Volver a los catálogos como vienen de los addons? Se pierden los nombres, el orden y las fusiones.')) {
+            if (confirm('¿Volver a los catálogos como vienen de los addons? Se pierden los nombres, el orden, las fusiones, las filas ocultas y las apaisadas.')) {
               updateCatalogPrefs(() => DEFAULT_CATALOG_PREFS)
               setStatus('Catálogos restablecidos')
             }

@@ -250,6 +250,22 @@ export function restoredElement(): HTMLElement | undefined {
 
 /** Lo que se espera a que aparezca el elemento: las filas lejanas cargan cuando se acercan (a veces >5 s). */
 export const RETRY_MS = 8000
+/**
+ * Fuera de una fila (un episodio, una fuente, una tecla) no hay carga perezosa que esperar: si el elemento no
+ * aparece enseguida es porque ya no existe (ej. la ficha vuelve del autoplay en otro episodio, tv-15) y conviene
+ * pasar pronto al respaldo (`fallback`) en vez de dejar la pantalla sin foco 8 s.
+ */
+export const RETRY_NO_ROW_MS = 2500
+
+/** Cuánto esperar al elemento guardado según dónde estaba. Puro. */
+export function restoreWaitMs(snap: Pick<FocusSnapshot, 'row'>): number {
+  return snap.row !== undefined ? RETRY_MS : RETRY_NO_ROW_MS
+}
+
+/** ¿Hay una restauración de foco en curso (esperando a que aparezca el elemento guardado)? */
+export function restorePending(): boolean {
+  return cancelPending !== undefined
+}
 
 /**
  * ¿Hay que volver a centrar el elemento? Sí si se sale por abajo o si su parte de arriba queda tapada por lo
@@ -312,17 +328,6 @@ export function restoreFocus(key: string, options: RestoreOptions = {}): boolean
   if (!snap) return false
   window.scrollTo(0, snap.scrollY)
   lastScrollY = snap.scrollY
-  if (!snap.focus) return true
-  const selector = snap.focus
-  restored = { selector, row: snap.row, nth: snap.nth }
-  const started = performance.now()
-  let raf = 0
-  const stop = () => {
-    cancelAnimationFrame(raf)
-    for (const type of STOP_EVENTS) window.removeEventListener(type, onUser, true)
-    cancelPending = undefined
-  }
-  const onUser = () => stop()
   const land = (el: HTMLElement) => {
     // El contenido pudo haber cambiado de alto al cargar: volvemos al scroll guardado y enfocamos.
     window.scrollTo(0, snap.scrollY)
@@ -334,8 +339,25 @@ export function restoreFocus(key: string, options: RestoreOptions = {}): boolean
     if (options.reveal) options.reveal(el, needed)
     else if (needed) el.scrollIntoView({ block: 'center', inline: 'center' })
   }
+  if (!snap.focus) {
+    // Nada guardado (se salió sin foco): el respaldo, si lo hay, para no dejar la pantalla sin foco.
+    const other = document.activeElement === document.body || !document.activeElement ? options.fallback?.() : undefined
+    if (other) land(other)
+    return true
+  }
+  const selector = snap.focus
+  restored = { selector, row: snap.row, nth: snap.nth }
+  const started = performance.now()
+  const waitMs = restoreWaitMs(snap)
+  let raf = 0
+  const stop = () => {
+    cancelAnimationFrame(raf)
+    for (const type of STOP_EVENTS) window.removeEventListener(type, onUser, true)
+    cancelPending = undefined
+  }
+  const onUser = () => stop()
   const tick = () => {
-    const timedOut = performance.now() - started >= RETRY_MS
+    const timedOut = performance.now() - started >= waitMs
     const el = locate(selector, snap, timedOut)
     if (el && el !== 'wait') {
       stop()

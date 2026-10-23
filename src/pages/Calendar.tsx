@@ -121,20 +121,29 @@ export function Calendar() {
 
       {data && data.followed > 0 && (
         <>
-          <section className="cal-section">
-            <h2>Próximos</h2>
-            {upcoming.length === 0 && <p className="muted">No hay episodios nuevos anunciados para los próximos 60 días.</p>}
-            {upcoming.map((g) => (
-              <div key={g.day} className="cal-day">
-                <h3>{g.label}</h3>
-                <ul className="cal-list">
-                  {g.items.map((it) => (
-                    <CalendarItem key={it.videoId} it={it} spoil={!it.watched && hideEpisodeSpoiler(it)} />
-                  ))}
-                </ul>
-              </div>
-            ))}
-          </section>
+          {/* Sin nada anunciado, la misma tarjeta que Historial, Mi lista y Tu año (visual-06, v0.31). */}
+          {upcoming.length === 0 ? (
+            <EmptyState
+              icon="calendar"
+              title="Nada anunciado por ahora"
+              text="Acá aparecen los episodios de las series que viste o tenés en Mi lista: los próximos 60 días y la última semana."
+              action={{ label: 'Explorar series', to: '/discover/series' }}
+            />
+          ) : (
+            <section className="cal-section">
+              <h2>Próximos</h2>
+              {upcoming.map((g) => (
+                <div key={g.day} className="cal-day">
+                  <h3>{g.label}</h3>
+                  <ul className="cal-list">
+                    {g.items.map((it) => (
+                      <CalendarItem key={it.videoId} it={it} spoil={!it.watched && hideEpisodeSpoiler(it)} />
+                    ))}
+                  </ul>
+                </div>
+              ))}
+            </section>
+          )}
 
           {recent.length > 0 && (
             <section className="cal-section">

@@ -6,8 +6,12 @@ const name = (c?: string) => ({ spa: 'Español', eng: 'Inglés', spl: 'Español'
 
 describe('nativeStartAt', () => {
   it('la posición del cambio de fuente gana; 0 es "sin posición"', () => {
-    expect(nativeStartAt(250, { position: 900, duration: 3000, watched: false })).toBe(250)
-    expect(nativeStartAt(0, { position: 900, duration: 3000, watched: false })).toBe(900)
+    expect(nativeStartAt({ at: 250 }, { position: 900, duration: 3000, watched: false })).toBe(250)
+    expect(nativeStartAt({ at: 0 }, { position: 900, duration: 3000, watched: false })).toBe(900)
+  })
+  it('"Ver desde el principio" arranca en 0 aunque haya progreso', () => {
+    expect(nativeStartAt({ at: 0, fromStart: true }, { position: 900, duration: 3000, watched: false })).toBe(0)
+    expect(nativeStartAt({ at: 0, fromStart: true }, undefined)).toBe(0)
   })
   it('como la web: ni lo visto, ni los primeros segundos, ni el final', () => {
     expect(nativeStartAt(undefined, { position: 900, duration: 3000, watched: true })).toBe(0)

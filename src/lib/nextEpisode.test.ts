@@ -32,6 +32,13 @@ vi.mock('./addons', async (orig) => ({
   },
 }))
 
+// pc-01: Stremio Service se busca solo si hace falta (en Chrome dispara el permiso de red local).
+const stremio = vi.hoisted(() => ({ ensure: vi.fn(async () => {}) }))
+vi.mock('./stremioServer', async (orig) => ({
+  ...(await orig<typeof import('./stremioServer')>()),
+  ensureLocalStremio: stremio.ensure,
+}))
+
 import { acceptsPick, episodeToResume, findNextStream, findResumeStream, locateNextEpisode } from './nextEpisode'
 import { lastSourceStore, progressStore, settingsStore, type WatchEntry } from './store'
 import type { InstalledAddon, Video } from './types'
@@ -201,6 +208,57 @@ describe('findResumeStream', () => {
     const pending = findResumeStream({ type: 'movie', metaId: 'tt9' }, ctrl.signal)
     ctrl.abort()
     expect(await pending).toBeUndefined()
+  })
+})
+
+describe('pc-01: Stremio Service se sondea solo si hay torrents entre las fuentes', () => {
+  const addon: InstalledAddon = {
+    transportUrl: 'https://addon.example/manifest.json',
+    manifest: { id: 'x', version: '1', name: 'Addon X', resources: ['stream'], types: ['movie', 'series'], catalogs: [] },
+  }
+  const group = (streams: unknown[]) => [{ addon, streams, loading: false }]
+  const rules = settingsStore.get().sourceRules
+  const state = {
+    stream: { name: 'Addon X', url: 'https://cdn.example/e1.mp4' },
+    playUrl: 'https://cdn.example/e1.mp4',
+    meta: { id: 'tt1', type: 'series', name: 'Serie' },
+    video: { id: 'tt1:1:1', season: 1, episode: 1 },
+    nextVideoId: 'tt1:1:2',
+    addonName: 'Addon X',
+    addonUrl: addon.transportUrl,
+  }
+
+  beforeEach(() => {
+    stremio.ensure.mockClear()
+    fake.requested = []
+    fake.streams = {}
+    fake.sequence = {}
+    fake.meta = { id: 'tt1', type: 'series', name: 'Serie', videos: [{ id: 'tt1:1:1', season: 1, episode: 1 }, { id: 'tt1:1:2', season: 1, episode: 2 }] }
+    settingsStore.set((s) => ({ ...s, streamingServerUrl: '', sourceRules: { ...rules, mode: 'auto' } }))
+  })
+  afterEach(() => {
+    settingsStore.set((s) => ({ ...s, sourceRules: rules }))
+  })
+
+  it('siguiente episodio con solo enlaces http: no se sondea', async () => {
+    fake.streams['tt1:1:2'] = group([{ name: 'Addon X', url: 'https://cdn.example/e2.mp4' }])
+    const next = await findNextStream(state as never)
+    expect(next?.playUrl).toBe('https://cdn.example/e2.mp4')
+    expect(stremio.ensure).not.toHaveBeenCalled()
+  })
+
+  it('"Continuar" con solo enlaces http: no se sondea', async () => {
+    fake.streams['tt1:1:1'] = group([{ name: 'Addon X', url: 'https://cdn.example/e1.mp4' }])
+    const found = await findResumeStream({ type: 'series', metaId: 'tt1', videoId: 'tt1:1:1' })
+    expect(found?.playUrl).toBe('https://cdn.example/e1.mp4')
+    expect(stremio.ensure).not.toHaveBeenCalled()
+  })
+
+  it('con un torrent en la lista sí se sondea (una vez)', async () => {
+    fake.streams['tt1:1:2'] = group([{ name: 'Torrent', infoHash: 'abc' }, { name: 'Addon X', url: 'https://cdn.example/e2.mp4' }])
+    const next = await findNextStream(state as never)
+    expect(next?.playUrl).toBe('https://cdn.example/e2.mp4')
+    expect(stremio.ensure).toHaveBeenCalledTimes(1)
   })
 })
 

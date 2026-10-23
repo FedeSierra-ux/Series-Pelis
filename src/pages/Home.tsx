@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { backdropFor, ContinueCard, LandscapeCard } from '../components/ContinueCard'
 import { FocusBillboard } from '../components/FocusBillboard'
@@ -12,7 +12,8 @@ import { catalogLabel, genreLabel } from '../lib/i18n'
 import { localTitle, useLocalTitle, useTitlesVersion } from '../lib/localTitles'
 import { useHiddenIds } from '../lib/ratings'
 import { withoutHidden } from '../lib/recommend'
-import { continueWatching, hideFromContinue, progressStore, toggleWatchlist, useStore, watchlistStore, type WatchEntry } from '../lib/store'
+import { continueWatching, progressStore, toggleWatchlist, useStore, watchlistStore, type WatchEntry } from '../lib/store'
+import { useUndoHide } from '../lib/undoHide'
 import { useTmdbKey } from '../lib/tmdb'
 import { continueRowItems, episodeLink, useUpNext, type ContinueItem } from '../lib/upNext'
 import type { CatalogDef, InstalledAddon, MetaPreview } from '../lib/types'
@@ -112,43 +113,6 @@ function Hero({ addon, catalog }: { addon: InstalledAddon; catalog: CatalogDef }
       />
     </HeroCarousel>
   )
-}
-
-const UNDO_MS = 5000
-
-/** Aviso "Eliminado de Seguir viendo · Deshacer" que se va solo a los 5 s. */
-function useUndoHide() {
-  const [undo, setUndo] = useState<{ name: string; ids: string[] }>()
-  const timer = useRef<ReturnType<typeof setTimeout>>(undefined)
-  useEffect(() => () => clearTimeout(timer.current), [])
-
-  const hide = useCallback((metaId: string, name: string) => {
-    // Guardamos qué entradas estaban visibles para devolver exactamente esas.
-    const ids = Object.values(progressStore.get())
-      .filter((e) => e.metaId === metaId && !e.hidden)
-      .map((e) => e.videoId)
-    hideFromContinue(metaId)
-    setUndo({ name, ids })
-    clearTimeout(timer.current)
-    timer.current = setTimeout(() => setUndo(undefined), UNDO_MS)
-  }, [])
-
-  const restore = useCallback(() => {
-    if (!undo) return
-    progressStore.set((all) => {
-      const copy = { ...all }
-      for (const id of undo.ids) {
-        if (!copy[id]) continue
-        const { hidden: _hidden, ...rest } = copy[id]
-        copy[id] = rest
-      }
-      return copy
-    })
-    clearTimeout(timer.current)
-    setUndo(undefined)
-  }, [undo])
-
-  return { undo, hide, restore }
 }
 
 /** Ficha de lo que está en "Seguir viendo", en la temporada y el episodio que corresponde. */

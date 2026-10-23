@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
-import { Link, useLocation, useNavigate, useParams, useSearchParams } from 'react-router-dom'
+import { Link, useLocation, useNavigate, useNavigationType, useParams, useSearchParams } from 'react-router-dom'
 import { GenreChips, PeopleLinks, tmdbPeopleIndex } from '../components/DetailTags'
 import { ImdbRating } from '../components/Rating'
 import { SpoilerText, useEpisodeSpoilers } from '../components/Spoiler'
@@ -32,6 +32,8 @@ import {
   type TmdbDetails,
   type TmdbType,
 } from '../lib/tmdb'
+import { restorePending } from '../lib/focusMemory'
+import { focusInitialTarget } from '../lib/spatialNav'
 import { useTvMode } from '../lib/tv'
 import type { Meta, Video } from '../lib/types'
 import { errorText } from '../lib/errors'
@@ -260,6 +262,17 @@ function DetailPage({ type, id, onRetry }: { type: string; id: string; onRetry: 
   // Celular: las fuentes van debajo del episodio elegido (en PC y TV, a la derecha).
   const tv = useTvMode()
   const inlineStreams = useMediaQuery(NARROW_QUERY) && !tv
+  // tv-04: en la TV, cuando llega la ficha el cursor aparece en el botón principal ("Reproducir", `data-autofocus`)
+  // sin esperar a la primera flecha. No al volver con "Atrás" (ahí la memoria de foco devuelve el foco a la fuente
+  // o al episodio del que se salió) ni si algo ya tiene el foco o hay una capa modal abierta.
+  const navType = useNavigationType()
+  const hasMeta = !!meta
+  useEffect(() => {
+    if (!tv || !hasMeta || navType === 'POP' || restorePending()) return
+    if (document.activeElement && document.activeElement !== document.body) return
+    if (document.querySelector('[data-nav-scope]')) return
+    focusInitialTarget(true)
+  }, [tv, hasMeta])
   const backdropAllowed = useBackdropTrailerAllowed()
   const [trailer, setTrailer] = useState<{ ytId: string; kind?: string }>()
   // Si el logo no carga, va el nombre en texto (y no la imagen rota).
@@ -435,7 +448,7 @@ function DetailPage({ type, id, onRetry }: { type: string; id: string; onRetry: 
       const state = await findResumeStream({ type, metaId: id, videoId: video?.id }, ctrl.signal)
       if (ctrl.signal.aborted) return
       if (!state) return fallback()
-      const full = fromStart ? { ...state, resume: { at: 0 } } : state
+      const full = fromStart ? { ...state, resume: { at: 0, fromStart: true } } : state
       navigate(`/watch/${type}/${encodeURIComponent(state.video?.id ?? id)}`, { state: full })
     } catch {
       if (!ctrl.signal.aborted) fallback()

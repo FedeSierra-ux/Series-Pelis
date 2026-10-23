@@ -67,9 +67,11 @@ export function MoreMenu({ items, label = 'Más opciones' }: { items: MoreItem[]
     const els = Array.from(menu.current?.querySelectorAll<HTMLElement>('[role^="menuitem"]') ?? [])
     const i = els.indexOf(document.activeElement as HTMLElement)
     if (CLOSE_KEYS.has(e.key) || e.key === 'Tab') {
-      if (e.key !== 'Tab') e.preventDefault()
+      // Tab también cierra y devuelve el foco al ⋯ (a11y-09): como el menú vive en un portal al final del
+      // <body>, si no el navegador saltaba al primer foco de la página.
+      e.preventDefault()
       e.stopPropagation()
-      close(e.key !== 'Tab')
+      close()
     } else if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
       e.preventDefault()
       const next = e.key === 'ArrowDown' ? Math.min(els.length - 1, i + 1) : Math.max(0, i - 1)

@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, type AnimationEvent, type PointerEvent, type ReactNode } from 'react'
+import { useEffect, useRef, useState, type AnimationEvent, type KeyboardEvent, type PointerEvent, type ReactNode } from 'react'
 import { useMediaQuery } from '../detail/useMediaQuery'
 import { HeroIcon } from './HeroInfo'
 import './hero.css'
@@ -89,6 +89,19 @@ export function HeroCarousel({ slides, index, onIndex, variant, label, children,
     if (e.animationName === 'portada-fill' && running) go(current + 1)
   }
 
+  // Control remoto (tv-03): ← desde el primer indicador vuelve al último botón de la portada ("Más info"); los
+  // botones llegan a los indicadores con → y a la pausa con ↑ (ver `HeroInfo`).
+  const onControlsKey = (e: KeyboardEvent<HTMLDivElement>) => {
+    if (e.key !== 'ArrowLeft' || e.defaultPrevented || e.altKey || e.ctrlKey || e.metaKey) return
+    const first = e.currentTarget.querySelector<HTMLElement>('.portada-dot')
+    if (e.target !== first) return
+    const actions = Array.from(ref.current?.querySelectorAll<HTMLElement>('.portada-actions a[href], .portada-actions button') ?? [])
+    const last = actions[actions.length - 1]
+    if (!last) return
+    e.preventDefault()
+    last.focus({ preventScroll: true })
+  }
+
   const onPointerDown = (e: PointerEvent) => {
     swipe.current = e.pointerType === 'touch' ? { x: e.clientX, y: e.clientY } : undefined
   }
@@ -152,7 +165,7 @@ export function HeroCarousel({ slides, index, onIndex, variant, label, children,
           {children}
         </div>
         {multi && (
-          <div className="portada-controls">
+          <div className="portada-controls" onKeyDown={onControlsKey}>
             <div className="portada-dots" role="group" aria-label="Elegir destacado">
               {slides.map((s, i) => (
                 <button

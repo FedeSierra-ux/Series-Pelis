@@ -183,7 +183,7 @@ function rowPool(els: HTMLElement[], active: Element, dir: Dir): HTMLElement[] {
 
 // ---------- Modo TV: foco anclado (U31) ----------
 
-const isTv = () => document.documentElement.hasAttribute('data-tv')
+export const isTv = () => document.documentElement.hasAttribute('data-tv')
 /** Teclas mantenidas en la TV: como mucho un paso cada tanto (si no, el scroll queda atrás del foco). */
 const REPEAT_MS = 80
 /** Altura fija de la fila enfocada en las pantallas sin fondo que sigue al foco (fracción de la ventana). */
@@ -266,7 +266,7 @@ function reveal(el: HTMLElement, instant: boolean) {
     if (Math.abs(top - window.scrollY) > 1) window.scrollTo({ top, behavior })
     return
   }
-  const behavior: ScrollBehavior = instant || reducedMotion() ? 'auto' : 'smooth'
+  const behavior = revealBehavior({ instant, reduced: reducedMotion(), tv: true, ownScroller: false })
   const scroller = el.closest<HTMLElement>('.row-scroller')
   if (scroller) {
     const item = (el.closest('.row-scroller > *') as HTMLElement | null) ?? el
@@ -289,7 +289,27 @@ function reveal(el: HTMLElement, instant: boolean) {
     if (Math.abs(top - window.scrollY) > 1) window.scrollTo({ top, behavior })
     return
   }
-  el.scrollIntoView({ block: 'center', inline: 'nearest', behavior })
+  // Un contenedor con scroll horizontal propio (los géneros de la grilla): sin animación, si no con pulsaciones
+  // rápidas el foco se adelantaba al scroll suave y quedaba fuera de la pantalla (tv-10).
+  el.scrollIntoView({ block: 'center', inline: 'nearest', behavior: revealBehavior({ instant, reduced: reducedMotion(), tv: true, ownScroller: inOwnHorizontalScroller(el) }) })
+}
+
+/**
+ * Cómo desplazar al enfocar en la TV. Puro, para poder probarlo: sin animación con la tecla mantenida
+ * (`instant`), con "reducir movimiento" o dentro de un contenedor con scroll horizontal propio (tv-10).
+ */
+export function revealBehavior(o: { instant: boolean; reduced: boolean; tv: boolean; ownScroller: boolean }): ScrollBehavior {
+  return o.instant || o.reduced || (o.tv && o.ownScroller) ? 'auto' : 'smooth'
+}
+
+/** ¿Está dentro de algo que se desplaza en horizontal por su cuenta (que no es una fila de pósters)? */
+function inOwnHorizontalScroller(el: HTMLElement): boolean {
+  for (let node = el.parentElement; node && node !== document.body; node = node.parentElement) {
+    if (node.scrollWidth <= node.clientWidth + 1) continue
+    const overflow = getComputedStyle(node).overflowX
+    if (overflow === 'auto' || overflow === 'scroll') return true
+  }
+  return false
 }
 
 /**
@@ -315,12 +335,96 @@ export function firstVisibleCard(): HTMLElement | undefined {
  * Enfoca lo primero de la pantalla (lo marcado con `data-autofocus` o lo primero de <main>), por
  * ejemplo al cerrar la guía de la TV, que si no deja el foco en <body>. Devuelve si encontró algo.
  */
-export function focusInitialTarget(): boolean {
+export function focusInitialTarget(keepScroll = false): boolean {
   const target = initialTarget(candidates())
   if (!target) return false
   target.focus({ preventScroll: true })
-  reveal(target, true)
+  // `keepScroll`: al entrar a una pantalla recién cargada no se mueve nada si el botón ya se ve entero.
+  if (!keepScroll || !fullyVisible(target)) reveal(target, true)
   return true
+}
+
+/** Lo que enfocaría la primera flecha (lo marcado con `data-autofocus` o lo primero de <main>), sin enfocarlo. */
+export function initialFocusElement(): HTMLElement | undefined {
+  return initialTarget(candidates())
+}
+
+function fullyVisible(el: HTMLElement): boolean {
+  const r = el.getBoundingClientRect()
+  return r.top >= visibleTop() && r.bottom <= window.innerHeight && r.left >= 0 && r.right <= window.innerWidth
+}
+
+/** Hasta cuándo se espera lo marcado con `data-autofocus` antes de conformarse con lo primero de <main>. */
+export const INITIAL_FOCUS_MARKED_MS = 1500
+/** Cuánto se espera como mucho a que la pantalla nueva tenga algo para enfocar. */
+export const INITIAL_FOCUS_MAX_MS = 6000
+
+/**
+ * Qué hacer en cada cuadro mientras se espera el foco inicial de una pantalla nueva (tv-04). Puro. Lo marcado
+ * gana apenas aparece; lo primero de <main> recién pasados `INITIAL_FOCUS_MARKED_MS` (la portada de Inicio tarda
+ * más que un "Ver todo" de una fila); pasados `INITIAL_FOCUS_MAX_MS`, se deja de esperar.
+ */
+export function initialPick(o: { marked: boolean; any: boolean; elapsed: number }): 'marked' | 'any' | 'wait' | 'stop' {
+  if (o.marked) return 'marked'
+  if (o.elapsed >= INITIAL_FOCUS_MAX_MS) return 'stop'
+  if (o.any && o.elapsed >= INITIAL_FOCUS_MARKED_MS) return 'any'
+  return 'wait'
+}
+
+const USER_EVENTS = ['keydown', 'pointerdown', 'wheel', 'touchstart'] as const
+
+/**
+ * En la TV, al entrar a una pantalla nueva (PUSH / REPLACE) no quedaba nada marcado hasta la primera flecha y OK
+ * no hacía nada (tv-04). Espera (con requestAnimationFrame) a que la pantalla tenga algo para enfocar y lo enfoca
+ * si para entonces el foco sigue en <body>; si el usuario toca algo antes, si algo ya tomó el foco, con una capa
+ * modal abierta o en el reproductor, no hace nada. Devuelve la función para cancelar (al cambiar de pantalla).
+ */
+export function focusInitialWhenReady(): () => void {
+  if (!isTv()) return () => {}
+  const started = performance.now()
+  let raf = 0
+  const stop = () => {
+    cancelAnimationFrame(raf)
+    for (const type of USER_EVENTS) window.removeEventListener(type, stop, true)
+  }
+  const tick = () => {
+    const active = document.activeElement
+    if ((active && active !== document.body) || document.querySelector('[data-nav-disabled], [data-nav-scope]')) {
+      stop()
+      return
+    }
+    const els = candidates()
+    const main = document.querySelector('main')
+    const marked = main ? Array.from(main.querySelectorAll<HTMLElement>('[data-autofocus]')).some((el) => els.includes(el)) : false
+    const any = main ? els.some((el) => main.contains(el)) : els.length > 0
+    const pick = initialPick({ marked, any, elapsed: performance.now() - started })
+    if (pick === 'wait') {
+      raf = requestAnimationFrame(tick)
+      return
+    }
+    stop()
+    if (pick !== 'stop') focusInitialTarget(true)
+  }
+  for (const type of USER_EVENTS) window.addEventListener(type, stop, true)
+  raf = requestAnimationFrame(tick)
+  return stop
+}
+
+/**
+ * tv-02: el control remoto manda Enter (OK) y una casilla o un radio nativos solo cambian con Espacio. En la TV,
+ * OK sobre uno de ellos lo cambia (con `click()`). Puro, para poder probarlo. Fuera de la TV, nada cambia.
+ */
+export function enterTogglesCheck(o: { tv: boolean; key: string; repeat?: boolean; tag?: string; type?: string }): boolean {
+  return o.tv && o.key === 'Enter' && !o.repeat && o.tag === 'INPUT' && (o.type === 'checkbox' || o.type === 'radio')
+}
+
+/**
+ * tv-12: ↑ / ↓ sin destino no hacen el scroll de 40 px del navegador cuando el foco está anclado a algo: en una
+ * capa modal (`data-nav-scope`), en el riel, con una portada fija (`data-focus-billboard`, la grilla) o en las
+ * filas de Películas/Series. En el resto de las páginas el scroll nativo sigue (sirve para leer). Puro.
+ */
+export function blocksPageScroll(o: { vertical: boolean; inScope: boolean; inRail: boolean; hasBillboard: boolean; inBrowseRow: boolean }): boolean {
+  return o.vertical && (o.inScope || o.inRail || o.hasBillboard || o.inBrowseRow)
 }
 
 // ---------- "Atrás" en escalera (U1) ----------
@@ -402,6 +506,13 @@ export function initSpatialNav(onBack: () => void) {
       return
     }
 
+    // OK sobre una casilla nativa en la TV la cambia (Enter solo no lo hace; ver `enterTogglesCheck`).
+    if (active instanceof HTMLInputElement && enterTogglesCheck({ tv: isTv(), key: e.key, repeat: e.repeat, tag: active.tagName, type: active.type })) {
+      e.preventDefault()
+      active.click()
+      return
+    }
+
     const dir = KEYS[e.key]
     if (!dir) return
     if ((dir === 'left' || dir === 'right') && isTextInput(active) && !caretAtEdge(active as HTMLInputElement, dir)) return
@@ -436,9 +547,17 @@ export function initSpatialNav(onBack: () => void) {
       next.focus({ preventScroll: true })
       // Con la tecla mantenida, sin animación: el scroll suave quedaba atrás del foco.
       reveal(next, e.repeat)
-    } else if ((dir === 'up' || dir === 'down') && active?.closest('.page.browse .row-scroller')) {
-      // Películas/Series: en la última fila, ↓ no hace el scroll de 40 px del navegador (el título de la
-      // fila se metía debajo de la portada fija y asomaba la anterior).
+    } else if (
+      blocksPageScroll({
+        vertical: dir === 'up' || dir === 'down',
+        inScope: !!document.querySelector('[data-nav-scope]'),
+        inRail: inRail(active),
+        hasBillboard: !!document.querySelector('[data-focus-billboard]'),
+        // Películas/Series: en la última fila, ↓ no hace el scroll de 40 px del navegador (el título de la
+        // fila se metía debajo de la portada fija y asomaba la anterior).
+        inBrowseRow: !!active?.closest('.page.browse .row-scroller'),
+      })
+    ) {
       e.preventDefault()
     }
   }

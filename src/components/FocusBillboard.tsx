@@ -1,7 +1,7 @@
 import { useEffect, useLayoutEffect, useRef, useState, type ReactNode } from 'react'
 import { useLogoTone } from '../lib/logoTone'
 import { useTvMode } from '../lib/tv'
-import { loadBillboard, parseDetailHref, type BillboardInfo, type BillboardTarget } from './focusBillboardData'
+import { loadBillboard, parseDetailHref, type BillboardInfo, type BillboardTarget, portraitLogo } from './focusBillboardData'
 import { ImdbRating } from './Rating'
 import './focus-billboard.css'
 
@@ -164,6 +164,11 @@ export function Layer({ info, media }: { info: BillboardInfo; media?: ReactNode 
             src={logo}
             alt=""
             onLoad={(e) => {
+              // Logo vertical de metahub (visual-01): queda diminuto, mejor el nombre en texto.
+              if (portraitLogo(e.currentTarget.naturalWidth, e.currentTarget.naturalHeight)) {
+                setBrokenLogo(true)
+                return
+              }
               logoTone.onLoad(e)
               setLogoReady(true)
             }}

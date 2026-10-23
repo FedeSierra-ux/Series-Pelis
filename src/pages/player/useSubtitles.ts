@@ -15,6 +15,7 @@ import {
   cuePlacement,
   lang3,
   langRank,
+  langTag,
   looksForced,
   looksSdh,
   placeCue,
@@ -246,6 +247,9 @@ export function useSubtitles({
     if (!src) return
     const track = document.createElement('track')
     track.kind = 'subtitles'
+    // Idioma de la pista (BCP 47): los archivos propios no lo saben.
+    const srclang = option?.lang ? langTag(option.lang) : ''
+    if (srclang) track.srclang = srclang
     // Al cambiar de fuente la lista todavía no llegó: vale el nombre que traía la fuente anterior.
     track.label = option ? subLabel(option) : fallbackLabel || 'Subtítulos'
     track.src = src
@@ -343,7 +347,11 @@ export function useSubtitles({
     userPicked.current = true
     delayRef.current = d
     setDelay(d)
-    if (!url) return
+    // Estaban apagados: también hay que invalidar el automático que ya arrancó (los forzados no miran `subOff`).
+    if (!url) {
+      void select('', true)
+      return
+    }
     if (url.startsWith('hls:')) pendingHls.current = url
     else select(url, true, undefined, label)
   }

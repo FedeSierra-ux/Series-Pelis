@@ -64,8 +64,12 @@ export function EngineError({
             <div className="player-error-sources">
               <SourcesMenu
                 state={state}
-                // La misma URL no cambia la key del reproductor: se reintenta sin navegar.
-                onPick={(pick) => (pick.url === state.playUrl && onRetry ? onRetry() : switchSource(pick, { at }))}
+                // La misma URL no cambia la key del reproductor: se reintenta sin navegar (y sin `onRetry` no se hace nada,
+                // porque navegar a la misma fuente no remonta nada y la pantalla quedaba igual).
+                onPick={(pick) => {
+                  if (pick.url === state.playUrl) onRetry?.()
+                  else switchSource(pick, { at })
+                }}
               />
             </div>
           )}

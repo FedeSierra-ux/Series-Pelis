@@ -142,8 +142,15 @@ function textFields<T extends Record<string, unknown>>(x: T, fields: string[]): 
   return out as T
 }
 
+/** `externalUrl` va a un `<a href>` con `target="_blank"`: solo http(s) (nada de `javascript:`, `data:` o `intent:`). */
+const EXTERNAL_URL_RE = /^https?:\/\/\S+$/i
+/** `ytId` se pega en una URL de YouTube: solo un id (sin `&`, `/` ni espacios). */
+const YT_ID_RE = /^[\w-]{6,20}$/
+
 export function cleanStream(x: Record<string, unknown>): Stream | undefined {
   const s = textFields(x, ['url', 'ytId', 'infoHash', 'externalUrl', 'name', 'title', 'description'])
+  if (s.externalUrl !== undefined && !EXTERNAL_URL_RE.test(s.externalUrl as string)) delete s.externalUrl
+  if (s.ytId !== undefined && !YT_ID_RE.test(s.ytId as string)) delete s.ytId
   if (s.behaviorHints !== undefined && !isObj(s.behaviorHints)) delete s.behaviorHints
   if (s.fileIdx !== undefined && typeof s.fileIdx !== 'number') delete s.fileIdx
   if (s.sources !== undefined) s.sources = strList(s.sources)

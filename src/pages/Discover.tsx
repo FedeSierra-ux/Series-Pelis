@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
-import { Link, useParams, useSearchParams } from 'react-router-dom'
+import { Link, Navigate, useParams, useSearchParams } from 'react-router-dom'
 import { FocusBillboard } from '../components/FocusBillboard'
 import { PosterCard, PosterSkeleton } from '../components/PosterCard'
 import { ErrorBox } from '../components/Status'
@@ -64,7 +64,10 @@ function toOption(r: CatalogRowDef): CatalogOption {
 export function Discover() {
   const { type = 'movie' } = useParams()
   const [params] = useSearchParams()
+  const rows = useCatalogRows()
   if (isBrowseKind(type) && !wantsGrid(params)) return <BrowsePage key={type} kind={type} />
+  // `/discover/loquesea`: a Inicio, como cualquier ruta inexistente (pc-04). Otros tipos valen si algún addon los tiene.
+  if (!isBrowseKind(type) && !rows.some((r) => r.type === type)) return <Navigate to="/" replace />
   return <DiscoverGrid key={type} />
 }
 

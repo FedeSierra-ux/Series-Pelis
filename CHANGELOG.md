@@ -1,5 +1,56 @@
 # Changelog
 
+## [0.31.0] - 2026-10-23
+
+Auditoría completa de la app en PC y TV (funcional, accesibilidad, código y visual). Los cambios visuales se
+eligieron mirando capturas de antes y después.
+
+### Agregado
+- **Calendario vacío** con la misma tarjeta que Historial, Mi lista y Tu año, y el botón "Explorar series".
+- En la TV, **letra más grande** en lo chico que no se leía a 3 metros: el puntaje de IMDb de los pósters,
+  "Estreno", "Recomendado", "Continuar", "quedan N min" y los contadores de Buscar.
+- **Ajustes → Catálogos**: "Ocultar · Apaisada · Renombrar · Fusionar" con contorno, para que se vea que son botones.
+- **Películas y Series al cargar**: el esqueleto de la portada se funde como la portada real y anticipa el título.
+- **Buscar** avisa a los lectores de pantalla cuántos resultados encontró.
+
+### Cambiado
+- En la TV, **al entrar a una pantalla el cursor aparece solo** (por ejemplo en "Reproducir" de la ficha): ya no
+  hace falta apretar una flecha antes de OK.
+- En la TV, **OK pausa de una** aunque los controles estén ocultos (antes el primer OK solo los mostraba).
+- En el navegador de la TV, **Atrás con el teclado en pantalla vuelve** en vez de borrar una letra (la tecla ⌫ del
+  teclado sigue borrando).
+- En la TV, los campos de texto no se enfocan con las flechas: se escribe con el teclado en pantalla de Flix (el
+  de Android TV tapaba la app).
+- **Siguiente episodio a mano** (tecla N o el botón ⏭) busca la fuente aunque "Pasar solo al siguiente episodio"
+  esté apagado.
+- La etiqueta **"Estreno"** va con texto oscuro (el blanco sobre el lila no se leía).
+- **Tu año** cuenta los minutos igual que el Historial y dice "1 minuto" en singular.
+
+### Arreglado
+- **"Ver desde el principio"** arrancaba donde ibas.
+- En la app de Android TV, el **protector de pantalla** se activaba debajo del reproductor y, al salir de un
+  episodio largo, aparecía el protector (y a veces "¿Quién está mirando?"). Tampoco tapa más el video cuando una
+  espera de torrent o de TorBox termina.
+- El **teclado en pantalla** perdía el foco al pasar a símbolos (`#+=`): no se podía escribir una URL con el control.
+- En la TV, las **casillas de Ajustes** (incluida "Mostrar opciones avanzadas") no se tildaban con OK.
+- En la TV, los **puntos y la pausa del carrusel** de Inicio no se alcanzaban con las flechas.
+- **"¿Quién está mirando?"**, el asistente inicial y la guía del control dejaban escapar el foco a lo de atrás (y
+  desde ahí Escape no los cerraba); al cerrarlos el foco quedaba perdido.
+- Al volver de una ficha a **Buscar**, el foco vuelve al resultado (antes se lo llevaba el campo o el teclado).
+- El **tráiler de un póster** se abría solo al cerrar el asistente sin mover el mouse, y volvía a abrirse después de
+  cerrarlo con Escape.
+- **Logos verticales** de algunos títulos se veían diminutos ("LOVE / OF / YOUR / LIFE"): ahora va el nombre.
+- En la TV, en **pausa** la cabecera del reproductor tapaba el título y la sinopsis.
+- Botones de Play, Pausa y Stop **separados** de algunos controles (LG, Samsung, Sony) no hacían nada.
+- "Ver ahora" y "Siguiente episodio" soltaban el foco mientras cargaban y el OK pausaba el video.
+- Al pasar de episodio o tocar "Continuar" se buscaba Stremio Service sin que hubiera torrents (en Chrome pedía
+  el permiso de red local).
+- Géneros en inglés en la portada de Películas y Series; `/discover/` con un tipo inexistente; una fuente sin
+  calidad reconocible perdía su nombre; el aviso de "Restablecer" en Catálogos no decía todo lo que se pierde.
+- Accesibilidad: menús del reproductor como opciones elegibles, barra de progreso con Tab, idioma de la pista de
+  subtítulos, puesto del Top 10 para lectores de pantalla, menú "Más" de la ficha con Tab, indicadores del
+  carrusel más grandes.
+- Enlaces externos de un addon solo con http/https.
 ## [0.30.4] - 2026-10-22
 
 ### Arreglado

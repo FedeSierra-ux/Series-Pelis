@@ -1,7 +1,7 @@
 {
   "name": "flix-desktop",
   "private": true,
-  "version": "0.30.4",
+  "version": "0.31.0",
   "description": "App de Flix para Windows: abre series-pelis.pages.dev en Electron, con motor de torrents y conversión de video adentro.",
   "author": "Flix",
   "main": "main.js",

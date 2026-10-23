@@ -1,6 +1,7 @@
-import { useState } from 'react'
+import { useState, type KeyboardEvent } from 'react'
 import { Link } from 'react-router-dom'
 import { ImdbRating } from '../../components/Rating'
+import { portraitLogo } from '../../components/focusBillboardData'
 import { useLogoTone } from '../../lib/logoTone'
 import type { DetailLocationState } from '../detail/StreamList'
 
@@ -73,12 +74,44 @@ export function HeroInfo({ eyebrow, title, logo, titleReady = true, rating, fact
   const showLogo = logo && logo !== brokenLogo ? logo : undefined
   const logoTone = useLogoTone(showLogo)
   const listLabel = list.busy ? 'Agregando…' : list.unavailable ? 'No disponible' : list.inList ? 'En mi lista' : 'Mi lista'
+
+  // Control remoto (tv-03): ↑ desde los botones va a la pausa del carrusel y → desde el último botón al indicador
+  // del destacado actual. Si no, la navegación espacial caía en la fila de abajo (más cerca que los puntos) y
+  // desde la TV no había forma de pausar ni de elegir otro destacado. Sin carrusel (un solo título) no hace nada.
+  const onActionsKey = (e: KeyboardEvent<HTMLDivElement>) => {
+    if (e.defaultPrevented || e.altKey || e.ctrlKey || e.metaKey || (e.key !== 'ArrowUp' && e.key !== 'ArrowRight')) return
+    const portada = e.currentTarget.closest('.portada')
+    if (!portada) return
+    const actions = Array.from(e.currentTarget.querySelectorAll<HTMLElement>('a[href], button'))
+    if (e.key === 'ArrowRight' && e.target !== actions[actions.length - 1]) return
+    const pause = portada.querySelector<HTMLElement>('.portada-pause')
+    const dot = portada.querySelector<HTMLElement>('.portada-dot[aria-current]')
+    const target = e.key === 'ArrowUp' ? (pause ?? dot) : (dot ?? pause)
+    if (!target) return
+    e.preventDefault()
+    target.focus({ preventScroll: true })
+  }
   return (
     <div className="portada-content">
       {eyebrow && <span className="portada-eyebrow">{eyebrow}</span>}
       {/* h2: el h1 es el de la página (este título cambia con el carrusel). */}
       <h2 className={`portada-title${showLogo ? ' has-logo' : ''}${titleReady ? '' : ' is-pending'}`}>
-        {showLogo ? <img className="portada-logo" {...logoTone} src={showLogo} alt={title} onError={() => setBrokenLogo(showLogo)} /> : <span>{title}</span>}
+        {showLogo ? (
+          <img
+            className="portada-logo"
+            {...logoTone}
+            src={showLogo}
+            alt={title}
+            onLoad={(e) => {
+              logoTone.onLoad(e)
+              // Logo vertical de metahub (visual-01): a 44×65 px no se lee, va el título en texto.
+              if (portraitLogo(e.currentTarget.naturalWidth, e.currentTarget.naturalHeight)) setBrokenLogo(showLogo)
+            }}
+            onError={() => setBrokenLogo(showLogo)}
+          />
+        ) : (
+          <span>{title}</span>
+        )}
       </h2>
       {(rating || facts.length > 0) && (
         <p className="portada-facts">
@@ -100,7 +133,7 @@ export function HeroInfo({ eyebrow, title, logo, titleReady = true, rating, fact
           ))}
         </ul>
       )}
-      <div className="portada-actions">
+      <div className="portada-actions" onKeyDown={onActionsKey}>
         <Link
           className="portada-btn is-play"
           data-autofocus
