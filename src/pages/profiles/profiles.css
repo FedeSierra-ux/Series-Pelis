@@ -225,6 +225,14 @@ html[data-tv] .pf-name {
   width: 100%;
   box-sizing: border-box;
 }
+/* El teclado en pantalla del editor es angosto (10 columnas): la tecla "Limpiar" se cortaba en "Limp…" (tv-16).
+   Menos lugar para Espacio y más para Limpiar. */
+.pf-editor .osk-actions .osk-space {
+  flex-grow: 2;
+}
+.pf-editor .osk-actions .osk-clear {
+  flex-grow: 2;
+}
 /* La caja es --bg-2 como el campo: sin foco no se veía. */
 [data-theme='2'] .pf-editor input[type='text'] {
   background-color: var(--bg-3);

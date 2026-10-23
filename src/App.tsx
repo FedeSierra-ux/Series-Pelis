@@ -13,8 +13,8 @@ import { NativeLaunch } from './components/NativeLaunch'
 import { UpdateToast } from './components/UpdateToast'
 import { ViewTransitionRouter } from './components/ViewTransitionRouter'
 import { StorageWarning } from './components/StorageWarning'
-import { resetFocus, restoreFocus, saveFocus, trackFocus } from './lib/focusMemory'
-import { firstVisibleCard, initSpatialNav, ladderBack, revealRestored } from './lib/spatialNav'
+import { resetFocus, restoreFocus, restorePending, saveFocus, trackFocus } from './lib/focusMemory'
+import { firstVisibleCard, focusInitialWhenReady, initialFocusElement, initSpatialNav, isTv, ladderBack, revealRestored } from './lib/spatialNav'
 import { nativeExit } from './lib/native'
 import { Detail } from './pages/Detail'
 import { Discover } from './pages/Discover'
@@ -81,12 +81,22 @@ function ScrollMemory() {
     prev.current = { key: location.key, pathname: location.pathname }
     if (before && before.key !== location.key) saveFocus(before.key)
     if (type === 'POP') {
-      if (!restoreFocus(location.key, { reveal: revealRestored, fallback: firstVisibleCard })) window.scrollTo(0, 0)
+      // Si lo guardado ya no está (ej. la ficha vuelve del autoplay en otro episodio, tv-15): en la TV la primera
+      // tarjeta a la vista o lo primero de la pantalla; en PC solo al volver del reproductor (a11y-08), el botón
+      // principal de la ficha. En el resto de la PC, como siempre (nada).
+      const fromPlayer = !!before?.pathname.startsWith('/watch')
+      const fallback = () => firstVisibleCard() ?? (isTv() || fromPlayer ? initialFocusElement() : undefined)
+      if (!restoreFocus(location.key, { reveal: revealRestored, fallback })) window.scrollTo(0, 0)
+      // Sin nada que restaurar, en la TV se enfoca lo primero de la pantalla cuando aparezca (tv-04).
+      if (isTv() && !restorePending()) return focusInitialWhenReady()
       return
     }
     resetFocus()
     // REPLACE en la misma pantalla (ej. la búsqueda que actualiza "?q=") no mueve nada.
     if (type === 'PUSH' || before?.pathname !== location.pathname) window.scrollTo(0, 0)
+    // tv-04: en la TV, al entrar a una pantalla nueva el cursor aparece solo (en lo marcado con `data-autofocus`,
+    // ej. el "Reproducir" de la ficha) en vez de esperar a la primera flecha. Devuelve la cancelación a propósito.
+    if (isTv() && (type === 'PUSH' || before?.pathname !== location.pathname)) return focusInitialWhenReady()
   }, [location.key])
   return null
 }

@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { normalizeManifestUrl } from '../lib/addons'
 import { addonUrlProblem, errorText } from '../lib/errors'
 import { installAddon, setAddonEnabled } from '../lib/store'
+import { useTvMode } from '../lib/tv'
 import { KeyboardToggle } from './OnScreenKeyboard'
 
 type Msg = { ok: boolean; text: string; enableUrl?: string }
@@ -14,6 +15,7 @@ export function AddonUrlForm({ disableEmpty }: { disableEmpty?: boolean }) {
   const [url, setUrl] = useState('')
   const [busy, setBusy] = useState(false)
   const [msg, setMsg] = useState<Msg>()
+  const tv = useTvMode()
 
   const change = (value: string) => {
     setUrl(value)
@@ -61,6 +63,10 @@ export function AddonUrlForm({ disableEmpty }: { disableEmpty?: boolean }) {
           value={url}
           onChange={(e) => change(e.target.value)}
           aria-label="URL del manifest"
+          // Con el control remoto el campo queda fuera de las flechas (tv-11): enfocarlo abría el teclado del
+          // sistema de Android TV. Se escribe con el botón "Teclado".
+          tabIndex={tv ? -1 : undefined}
+          data-nav-skip={tv || undefined}
         />
         <button className="btn btn-primary" disabled={busy || (disableEmpty && !url.trim())}>
           {busy ? 'Agregando…' : 'Agregar'}

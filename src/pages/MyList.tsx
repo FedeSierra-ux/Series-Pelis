@@ -1,9 +1,10 @@
-import { useMemo, useState } from 'react'
+import { useMemo, useState, type KeyboardEvent } from 'react'
 import { EmptyState } from '../components/EmptyState'
 import { Picker } from '../components/Picker'
 import { PosterCard } from '../components/PosterCard'
 import { UserStars } from '../components/StarRating'
 import { localTitle, useTitlesVersion } from '../lib/localTitles'
+import { revealRestored } from '../lib/spatialNav'
 import { progressStore, ratingsStore, useStore, watchlistStore } from '../lib/store'
 import type { MetaPreview } from '../lib/types'
 
@@ -47,9 +48,21 @@ export function MyListSection() {
   }, [list])
   const watchedMovies = new Set(Object.values(progress).filter((e) => e.type === 'movie' && e.watched).map((e) => e.metaId))
 
+  // Control remoto (tv-14): ↓ desde "Ordenar" (a la derecha) va a la primera tarjeta de la lista. La navegación
+  // espacial elegía el botón del estado vacío del historial, más alineado que los pósters de la izquierda.
+  // (Una zona `data-nav-zone` no sirve acá: desde "Tu año", arriba, ↓ habría salteado la sección entera.)
+  const onHeadKey = (e: KeyboardEvent<HTMLElement>) => {
+    if (e.key !== 'ArrowDown' || e.defaultPrevented || (e.target as Element).closest('[role="listbox"], .picker-layer')) return
+    const first = e.currentTarget.parentElement?.querySelector<HTMLElement>('.grid a[href]')
+    if (!first) return
+    e.preventDefault()
+    first.focus({ preventScroll: true })
+    revealRestored(first, true)
+  }
+
   return (
     <section className="me-list" aria-labelledby="me-list-title">
-      <header className="me-list-head">
+      <header className="me-list-head" onKeyDown={onHeadKey}>
         <h2 id="me-list-title">Mi lista</h2>
         {items.length > 1 && (
           <div className="filters">

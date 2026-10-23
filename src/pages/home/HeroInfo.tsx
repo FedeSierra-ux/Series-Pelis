@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, type KeyboardEvent } from 'react'
 import { Link } from 'react-router-dom'
 import { ImdbRating } from '../../components/Rating'
 import { useLogoTone } from '../../lib/logoTone'
@@ -73,6 +73,23 @@ export function HeroInfo({ eyebrow, title, logo, titleReady = true, rating, fact
   const showLogo = logo && logo !== brokenLogo ? logo : undefined
   const logoTone = useLogoTone(showLogo)
   const listLabel = list.busy ? 'Agregando…' : list.unavailable ? 'No disponible' : list.inList ? 'En mi lista' : 'Mi lista'
+
+  // Control remoto (tv-03): ↑ desde los botones va a la pausa del carrusel y → desde el último botón al indicador
+  // del destacado actual. Si no, la navegación espacial caía en la fila de abajo (más cerca que los puntos) y
+  // desde la TV no había forma de pausar ni de elegir otro destacado. Sin carrusel (un solo título) no hace nada.
+  const onActionsKey = (e: KeyboardEvent<HTMLDivElement>) => {
+    if (e.defaultPrevented || e.altKey || e.ctrlKey || e.metaKey || (e.key !== 'ArrowUp' && e.key !== 'ArrowRight')) return
+    const portada = e.currentTarget.closest('.portada')
+    if (!portada) return
+    const actions = Array.from(e.currentTarget.querySelectorAll<HTMLElement>('a[href], button'))
+    if (e.key === 'ArrowRight' && e.target !== actions[actions.length - 1]) return
+    const pause = portada.querySelector<HTMLElement>('.portada-pause')
+    const dot = portada.querySelector<HTMLElement>('.portada-dot[aria-current]')
+    const target = e.key === 'ArrowUp' ? (pause ?? dot) : (dot ?? pause)
+    if (!target) return
+    e.preventDefault()
+    target.focus({ preventScroll: true })
+  }
   return (
     <div className="portada-content">
       {eyebrow && <span className="portada-eyebrow">{eyebrow}</span>}
@@ -100,7 +117,7 @@ export function HeroInfo({ eyebrow, title, logo, titleReady = true, rating, fact
           ))}
         </ul>
       )}
-      <div className="portada-actions">
+      <div className="portada-actions" onKeyDown={onActionsKey}>
         <Link
           className="portada-btn is-play"
           data-autofocus
