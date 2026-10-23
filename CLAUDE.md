@@ -578,6 +578,35 @@ npm run preview    # sirve dist/ en http://localhost:4173
   pasa a `scripts/flix-icons.py` (`python3 scripts/flix-icons.py .`, pide Pillow y `npm install` por la fuente Sora;
   `CHROME=` para otro Chromium). Probado: vuelve a dar los mismos PNG; el banner difiere solo en el suavizado del
   texto "Flix". Sin cambios en la app.
+- v0.31.0 hecha (rama `claude/determined-albattani-ko8t39`): **auditoría completa en PC y TV** con 5 agentes
+  (funcional PC, funcional TV solo teclado, accesibilidad WCAG 2.1 AA, revisión de código, visual) y 3 de arreglos en
+  worktrees. Página de votos "Antes y después de Flix" (artifact, colección `decisiones`). El usuario votó **NO** a
+  visual-08 ("Fuentes" como título en vez de pestaña única), visual-09 (títulos de pósters en dos renglones) y
+  visual-11 (IMDb/tipo/año/géneros en una fila en la ficha: "tapa espacio de la portada"): no volver a proponerlas.
+  Sí a visual-06 (Calendario vacío con `EmptyState`), visual-07 (piso tipográfico en TV, al final de `theme2.css`
+  con `html[data-tv][data-theme='2']` para ganarle a los CSS de cada pantalla), visual-10 (contorno en las acciones
+  de Catálogos) y visual-13 (esqueleto de `.bh-empty` con máscara), y a los cambios de uso tv-04, tv-05, tv-08,
+  tv-11 y code-07.
+  - TV: `focusInitialWhenReady()` (`spatialNav.ts`, desde `ScrollMemory`) enfoca `data-autofocus` / lo primero de
+    `<main>` al entrar a una pantalla; `enterTogglesCheck` (OK tilda casillas y radios nativos); `blocksPageScroll`
+    (↑/↓ sin destino no mueven el fondo en capas, riel y portada fija); `revealBehavior` (sin animación en
+    contenedores con scroll propio). `restorePending()` + `RETRY_NO_ROW_MS` en `focusMemory.ts` (respaldo rápido
+    cuando el elemento guardado ya no existe). El OSK usa `key` por posición (no por capa) y en la TV deja pasar
+    Backspace como Atrás. Campos de texto con `KeyboardToggle` en la TV: `tabIndex={-1}` + `data-nav-skip`.
+  - Capas modales: `WhoIsWatching` en portal con `#root` inert; asistente y `TvHints` encierran Tab; todos devuelven
+    el foco al cerrar. ⓘ y ✕ de Seguir viendo con `data-nav-skip`; "Ver todo" no enfocable mientras la fila carga.
+  - Reproductor: `Resume.fromStart` ("Ver desde el principio"; `at: 0` sigue siendo "sin posición"),
+    `data-no-screensaver` en `NativePlayerView`, `DebridWait`, `StremioPrepare` y las esperas de `PlayerChoice`, y
+    el protector se cierra solo si aparece un video andando (sin `SCREENSAVER_CLOSED`). `MediaPlay`/`MediaPause`/
+    `MediaStop`. Menús como `radiogroup`/`radio` (`role="group"` en el contenedor). En la TV, OK con controles
+    ocultos pausa. `aria-disabled` en "Ver ahora" y ⏭. N/⏭ buscan la fuente aunque `autoplayNext` esté apagado.
+  - `torrentServerFor(streams)` / `needsTorrentServer` (`torrentServer.ts`): Stremio Service se sondea solo si hay
+    `infoHash` o `notWebReady` entre las fuentes. `cleanStream` descarta `externalUrl` que no sea http(s) y `ytId`
+    raros. `useUndoHide` en `lib/undoHide.ts`. `langTag` para `srclang`.
+  - PC: el tráiler de los pósters se arma con `mousemove` real (`createMouseTracker`, `mouseMoveTrailer`) y
+    `dismissTrailer` evita que se reabra tras Escape. `portraitLogo()` (`focusBillboardData.ts`): logo de metahub
+    vertical o cuadrado → nombre en texto. "Estreno" con `--on-accent`. `yearTotal()` (Tu año). `PosterCard rank`.
+  - Sin probar en una TV real ni en la app de Android: lo del reproductor nativo y las teclas de medios.
 - **Decisiones para la v0.17 (reemplazan el reparto del plan de abajo)**: addons y TorBox **iguales para todas las
   casas**, solo los cambia el admin (opción A). Ajustes generales (subtítulos, idiomas, autoplay, saltar intro, sin
   spoilers, reglas de fuentes) **iguales en toda la casa**; lo físico (modo TV, tamaño de la interfaz, protector,

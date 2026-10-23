@@ -1155,3 +1155,51 @@ html[data-tv][data-theme='2'] .btn-small {
     --logo-halo-in: none;
   }
 }
+
+/* ---------- v0.31 (auditoría) ---------- */
+
+/* visual-07: piso tipográfico en la TV (se mira a 3 metros). Medido en 1080p: el badge de IMDb de los pósters
+   tenía 14 px (la palabra "IMDb", 11), "Estreno" 14, "Recomendado" 15, "Continuar" 16 y "quedan 2 min" 17.
+   Con `html[data-tv][data-theme='2']` gana sobre los estilos de cada pantalla (que cargan después). PC no cambia. */
+html[data-tv][data-theme='2'] .poster-rating {
+  font-size: 0.86rem;
+  padding: 3px 8px 3px 3px;
+}
+html[data-tv][data-theme='2'] .poster-rating b {
+  font-size: 0.82em;
+  padding: 3px 5px;
+}
+html[data-tv][data-theme='2'] .poster-label {
+  font-size: 0.82rem;
+  padding: 4px 10px;
+}
+html[data-tv][data-theme='2'] .stream-badge,
+html[data-tv][data-theme='2'] .ep-badge,
+html[data-tv][data-theme='2'] .t2-cont-badge,
+html[data-tv][data-theme='2'] .diary-wday {
+  font-size: 0.82rem;
+}
+html[data-tv][data-theme='2'] .chip.small {
+  font-size: 0.86rem;
+}
+html[data-tv][data-theme='2'] .t2-cont-sub,
+html[data-tv][data-theme='2'] .d-play-sub,
+html[data-tv][data-theme='2'] .ep-left,
+html[data-tv][data-theme='2'] .search-tab-count,
+html[data-tv][data-theme='2'] .search-best-eyebrow {
+  font-size: 0.9rem;
+}
+
+/* visual-10: Ajustes → Catálogos. "Ocultar · Apaisada · Renombrar · Fusionar…" leían como texto suelto (sobre todo
+   en la TV): con un contorno fino, el de los chips sin elegir, se ve que son botones. */
+[data-theme='2'] .catalog-item-actions {
+  gap: 8px;
+}
+[data-theme='2'] .catalog-item-actions .btn-text {
+  box-shadow: inset 0 0 0 1.5px var(--line);
+  border-radius: 999px;
+  padding: 7px 14px;
+}
+[data-theme='2'] .catalog-item-actions .btn-text[aria-pressed='false'] {
+  color: var(--muted);
+}
