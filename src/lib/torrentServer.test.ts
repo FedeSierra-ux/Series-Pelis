@@ -18,6 +18,7 @@ import { settingsStore } from './store'
 import {
   engineBaseOf,
   needsNativePlayer,
+  needsTorrentServer,
   pickTorrentServer,
   resetTorrentEngine,
   TORRENT_LOADING,
@@ -81,6 +82,15 @@ afterEach(() => {
   resetNativeInfo()
   resetTorrentEngine()
   settingsStore.set((s) => ({ ...s, streamingServerUrl: '', nativePlayer: true }))
+})
+
+describe('needsTorrentServer (pc-01: sondeo perezoso de Stremio Service)', () => {
+  it('solo con un torrent suelto o un formato que el navegador no abre', () => {
+    expect(needsTorrentServer([])).toBe(false)
+    expect(needsTorrentServer([{ url: 'https://cdn.example/a.mp4' }, { url: 'https://cdn.example/b.mp4', behaviorHints: { bingeGroup: 'x' } }])).toBe(false)
+    expect(needsTorrentServer([{ url: 'https://cdn.example/a.mp4' }, { infoHash: 'abc' }])).toBe(true)
+    expect(needsTorrentServer([{ url: 'https://cdn.example/a.mkv', behaviorHints: { notWebReady: true } }])).toBe(true)
+  })
 })
 
 describe('pickTorrentServer', () => {

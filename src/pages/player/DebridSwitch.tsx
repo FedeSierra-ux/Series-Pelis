@@ -61,9 +61,10 @@ export function DebridDownload({ state, resume, onPlain, onReady }: { state: Pla
     return () => ctrl.abort()
   }, [])
   if (waiting) return <DebridWait state={state} onReady={onReady} />
+  // Sin <video>: `data-no-screensaver` frena el protector mientras se prepara.
   return (
-    <div className="player player-native">
-      <div className="player-spinner" aria-label="Preparando el video" />
+    <div className="player player-native" data-no-screensaver>
+      <div className="player-spinner" role="status" aria-label="Preparando el video" />
     </div>
   )
 }
@@ -124,8 +125,10 @@ export function DebridWait({ state, onReady }: { state: PlayState; onReady: () =
     if (window.history.length > 1) navigate(-1)
     else navigate(`/detail/${state.meta.type}/${encodeURIComponent(state.meta.id)}`, { replace: true })
   }
+  // La espera puede durar minutos sin tocar nada: `data-no-screensaver` para que el protector no tape el video
+  // cuando arranque.
   return (
-    <div className="player player-native player-prepare player-debrid-wait">
+    <div className="player player-native player-prepare player-debrid-wait" data-no-screensaver>
       <div className="player-prepare-box" role="status" aria-live="polite">
         <div className="player-spinner" aria-hidden="true" />
         <strong>TorBox lo está bajando…</strong>

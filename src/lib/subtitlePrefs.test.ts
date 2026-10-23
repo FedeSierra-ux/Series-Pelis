@@ -1,5 +1,24 @@
 import { describe, expect, it } from 'vitest'
-import { canShiftCueBox, cuePlacement, placeCue } from './subtitlePrefs'
+import { canShiftCueBox, cuePlacement, langTag, placeCue } from './subtitlePrefs'
+
+describe('langTag (srclang de la pista, a11y-12)', () => {
+  it('traduce los códigos de 3 letras conocidos y deja los de 2', () => {
+    expect(langTag('spa')).toBe('es')
+    expect(langTag('spl')).toBe('es')
+    expect(langTag('ea')).toBe('es')
+    expect(langTag('eng')).toBe('en')
+    expect(langTag('pob')).toBe('pt')
+    expect(langTag('en')).toBe('en')
+    expect(langTag('es-419')).toBe('es')
+    expect(langTag('EN_US')).toBe('en')
+  })
+  it('un código raro queda tal cual; vacío o inválido, nada', () => {
+    expect(langTag('zht')).toBe('zht')
+    expect(langTag('')).toBe('')
+    expect(langTag(undefined)).toBe('')
+    expect(langTag('Español latino')).toBe('')
+  })
+})
 
 describe('cuePlacement', () => {
   it('sin nada en la esquina queda como siempre', () => {

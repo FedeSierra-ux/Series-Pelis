@@ -9,6 +9,15 @@ export function lang3(code?: string) {
   const c = (code ?? '').toLowerCase()
   return LANG3[c] ?? LANG3[c.split(/[-_]/)[0]] ?? c.split(/[-_]/)[0]
 }
+// Para `srclang` de la pista (BCP 47): los códigos de 3 letras con equivalente de 2 van traducidos.
+const LANG2: Record<string, string> = { spa: 'es', spl: 'es', spn: 'es', ea: 'es', eng: 'en', por: 'pt', pob: 'pt', fre: 'fr', fra: 'fr', ger: 'de', deu: 'de', ita: 'it', jpn: 'ja', kor: 'ko' }
+/** Etiqueta de idioma para `<track srclang>`: 2 letras si se conoce, si no el código tal cual (vacío si no hay). */
+export function langTag(code?: string): string {
+  const c = (code ?? '').trim().toLowerCase()
+  if (!c) return ''
+  const base = c.split(/[-_]/)[0]
+  return LANG2[c] ?? LANG2[base] ?? (/^[a-z]{2,3}$/.test(base) ? base : '')
+}
 /** Posición del idioma en las preferencias (99 si no está). */
 export function langRank(code: string | undefined, prefs: string[]) {
   const i = prefs.map(lang3).indexOf(lang3(code))

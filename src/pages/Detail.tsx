@@ -435,7 +435,7 @@ function DetailPage({ type, id, onRetry }: { type: string; id: string; onRetry: 
       const state = await findResumeStream({ type, metaId: id, videoId: video?.id }, ctrl.signal)
       if (ctrl.signal.aborted) return
       if (!state) return fallback()
-      const full = fromStart ? { ...state, resume: { at: 0 } } : state
+      const full = fromStart ? { ...state, resume: { at: 0, fromStart: true } } : state
       navigate(`/watch/${type}/${encodeURIComponent(state.video?.id ?? id)}`, { state: full })
     } catch {
       if (!ctrl.signal.aborted) fallback()

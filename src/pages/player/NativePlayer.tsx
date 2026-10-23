@@ -96,7 +96,7 @@ export function NativePlayerView({
       // `playerUpdate` no cambia el título: va el que se sabe al abrir (casi siempre ya está, de la ficha).
       title: shownName,
       subtitle: video ? [episodeLabel(video.season, video.episode), video.title ?? video.name].filter(Boolean).join(' · ') : undefined,
-      startAt: nativeStartAt(resume?.at, progressStore.get()[videoId]),
+      startAt: nativeStartAt(resume, progressStore.get()[videoId]),
       paused: askStill.current || undefined,
       // Al venir de otra fuente, primero el idioma que se estaba escuchando.
       audioLangs: [...(resume?.audioLang ? [resume.audioLang] : []), ...audioPrefs(trackPrefsStore.get()[meta.id], s.audioLangs ?? [])],
@@ -147,7 +147,8 @@ export function NativePlayerView({
     writeAutoCount(auto ? readAutoCount() + 1 : 0)
     persist(last.current.position, last.current.duration)
     nativePlayer.update({ loadingNext: true })
-    const next = settingsStore.get().autoplayNext ? await findNextStream(state).catch(() => undefined) : undefined
+    // "Pasar solo" apagado solo frena el paso automático: si lo pide el usuario, se busca la fuente igual.
+    const next = auto && !settingsStore.get().autoplayNext ? undefined : await findNextStream(state).catch(() => undefined)
     if (!alive.current) return
     if (next) {
       // Android sigue abierto: la vista del episodio nuevo le manda el video (ver `closeTimer`).
@@ -390,6 +391,7 @@ export function NativePlayerView({
     return stop
   }, [])
 
-  // Android dibuja todo encima; atrás queda negro (por si se ve un instante al abrir o cerrar).
-  return <div className="player player-native" aria-label={`Reproduciendo ${shownName}`} />
+  // Android dibuja todo encima; atrás queda negro (por si se ve un instante al abrir o cerrar). Sin <video> en la
+  // web, el protector de pantalla no sabe que hay algo reproduciéndose: `data-no-screensaver` lo frena.
+  return <div className="player player-native" data-no-screensaver aria-label={`Reproduciendo ${shownName}`} />
 }

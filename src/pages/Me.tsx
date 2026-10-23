@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { useMemo } from 'react'
 import { Link } from 'react-router-dom'
 import { ContinueCard } from '../components/ContinueCard'
 import { PosterCard } from '../components/PosterCard'
@@ -7,7 +7,8 @@ import { Theme2Icon, type Theme2IconName } from '../components/Theme2Icons'
 import { useTitle } from '../lib/hooks'
 import { localTitle } from '../lib/localTitles'
 import { formatStars, isHighStars } from '../lib/stars'
-import { continueWatching, hideFromContinue, progressStore, ratingsStore, useStore } from '../lib/store'
+import { continueWatching, progressStore, ratingsStore, useStore } from '../lib/store'
+import { useUndoHide } from '../lib/undoHide'
 import { HistoryGoal } from './goals/GoalLink'
 import { HistoryFeed, HistoryStats } from './history/HistoryFeed'
 import { MyListSection } from './MyList'
@@ -21,7 +22,6 @@ import './me.css'
 /** Cuántas entradas del historial se ven acá; el resto, en "Ver todo el historial". */
 const HISTORY_PREVIEW = 8
 const ROW_MAX = 20
-const UNDO_MS = 5000
 
 const detailLink = (e: { type: string; metaId: string; season?: number; videoId: string }) =>
   `/detail/${e.type}/${encodeURIComponent(e.metaId)}${e.season !== undefined ? `?season=${e.season}&video=${encodeURIComponent(e.videoId)}` : ''}`
@@ -143,41 +143,3 @@ function MeShortcuts() {
   )
 }
 
-/** "Eliminado de Seguir viendo · Deshacer" (igual que en Inicio). */
-function useUndoHide() {
-  const [undo, setUndo] = useState<{ name: string; ids: string[] }>()
-  const timer = useRef<ReturnType<typeof setTimeout>>(undefined)
-  useEffect(
-    () => () => {
-      clearTimeout(timer.current)
-    },
-    [],
-  )
-
-  const hide = useCallback((metaId: string, name: string) => {
-    const ids = Object.values(progressStore.get())
-      .filter((e) => e.metaId === metaId && !e.hidden)
-      .map((e) => e.videoId)
-    hideFromContinue(metaId)
-    setUndo({ name, ids })
-    clearTimeout(timer.current)
-    timer.current = setTimeout(() => setUndo(undefined), UNDO_MS)
-  }, [])
-
-  const restore = useCallback(() => {
-    if (!undo) return
-    progressStore.set((all) => {
-      const copy = { ...all }
-      for (const id of undo.ids) {
-        if (!copy[id]) continue
-        const { hidden: _hidden, ...rest } = copy[id]
-        copy[id] = rest
-      }
-      return copy
-    })
-    clearTimeout(timer.current)
-    setUndo(undefined)
-  }, [undo])
-
-  return { undo, hide, restore }
-}

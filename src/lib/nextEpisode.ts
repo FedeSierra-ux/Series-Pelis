@@ -2,8 +2,8 @@ import type { PlayState } from '../pages/Detail'
 import { getMeta, getStreams, prefetchMeta } from './addons'
 import { isDebridDownload, requestDebridDownload, torrentStateFor } from './debrid'
 import { addonsStore, lastSourceStore, progressStore, settingsStore, type LastSource, type SourceRules, type WatchEntry } from './store'
-import { lastSourceOf, rankStreams, type RankedStream, type TorrentServerArg } from './streamPicker'
-import { torrentServerReady } from './torrentServer'
+import { lastSourceOf, rankStreams, type RankedStream } from './streamPicker'
+import { torrentServerFor, torrentServerReady, type TorrentServer } from './torrentServer'
 import type { AddonStreams, InstalledAddon, Meta, Video } from './types'
 import { episodeNumber, releaseDate } from './upNext'
 
@@ -80,6 +80,8 @@ export function episodeToResume(videos: Video[], progress: Record<string, WatchE
  * Pide los streams de un video y devuelve el mejor según las reglas: termina cuando aparece la misma
  * fuente que antes (mismo bingeGroup), cuando respondieron todos o, si ya hay algo, tras una espera
  * corta por los addons lentos. Con `signal` se puede cancelar (devuelve `undefined`).
+ * El servidor de torrents se resuelve recién con los streams a la vista (`torrentServerFor`): en la PC, buscar
+ * Stremio Service dispara el permiso de red local de Chrome, y sin torrents en la lista no hace falta.
  */
 function pickStream(
   addons: InstalledAddon[],
@@ -87,11 +89,13 @@ function pickStream(
   videoId: string,
   rules: SourceRules,
   ref: LastSource | undefined,
-  server: TorrentServerArg,
   signal?: AbortSignal,
 ): Promise<RankedStream | undefined> {
   return new Promise<RankedStream | undefined>((resolve) => {
     let latest: AddonStreams[] = []
+    /** El servidor con el que se evaluó `latest` (se resuelve con la primera tanda). */
+    let server: TorrentServer | undefined
+    let update = 0
     let done = false
     let grace: ReturnType<typeof setTimeout> | undefined
     let cancel: (() => void) | undefined
@@ -104,19 +108,29 @@ function pickStream(
       signal?.removeEventListener('abort', onAbort)
       resolve(value)
     }
-    const finish = () => end(rankStreams(latest, rules, ref, server)[0])
+    const finish = () => {
+      // Si venció el plazo antes de evaluar una tanda, el servidor se resuelve recién acá.
+      const srv = server ? Promise.resolve(server) : torrentServerFor(latest.flatMap((g) => g.streams))
+      void srv.then((s) => end(rankStreams(latest, rules, ref, s)[0]))
+    }
     const onAbort = () => end(undefined)
     const timer = setTimeout(finish, TIMEOUT_MS)
     if (signal?.aborted) return onAbort()
     signal?.addEventListener('abort', onAbort)
     cancel = getStreams(addons, type, videoId, (groups) => {
-      latest = groups
-      const top = rankStreams(groups, rules, ref, server)[0]
-      // Mismo bingeGroup con enlace directo: no hay nada mejor que esperar (su addon ya respondió). Si es un
-      // torrent, un addon con debrid que todavía no respondió le ganaría: se espera como con el resto.
-      // v0.27: lo que TorBox todavía no tiene ("[TB download]") va por torrent: también se espera.
-      if ((top?.match === 'binge' && !!top.stream.url && !isDebridDownload(top.stream)) || groups.every((g) => !g.loading)) finish()
-      else if (top && !grace) grace = setTimeout(finish, GRACE_MS)
+      const seq = ++update
+      void torrentServerFor(groups.flatMap((g) => g.streams)).then((srv) => {
+        // Llegó otra tanda mientras se buscaba el servidor: vale la última.
+        if (done || seq !== update) return
+        server = srv
+        latest = groups
+        const top = rankStreams(groups, rules, ref, srv)[0]
+        // Mismo bingeGroup con enlace directo: no hay nada mejor que esperar (su addon ya respondió). Si es un
+        // torrent, un addon con debrid que todavía no respondió le ganaría: se espera como con el resto.
+        // v0.27: lo que TorBox todavía no tiene ("[TB download]") va por torrent: también se espera.
+        if ((top?.match === 'binge' && !!top.stream.url && !isDebridDownload(top.stream)) || groups.every((g) => !g.loading)) finish()
+        else if (top && !grace) grace = setTimeout(finish, GRACE_MS)
+      })
     })
     if (done) cancel()
   })
@@ -143,11 +157,10 @@ export async function findNextStream(state: PlayState): Promise<PlayState | unde
   if (!state.nextVideoId || !state.video) return undefined
   const addons = addonsStore.get()
   const { sourceRules: rules } = settingsStore.get()
-  const server = await torrentServerReady()
   const meta: Meta = await getMeta(addons, state.meta.type, state.meta.id)
   const next = locateNextEpisode(meta.videos, state.nextVideoId)
   if (!next) return undefined
-  const best = await pickStream(addons, state.meta.type, next.video.id, rules, referenceSource(state, addons), server)
+  const best = await pickStream(addons, state.meta.type, next.video.id, rules, referenceSource(state, addons))
   if (!acceptsPick(best, rules)) return undefined
   rememberSource(state.meta.id, best, rules)
   const found: PlayState = {
@@ -161,9 +174,13 @@ export async function findNextStream(state: PlayState): Promise<PlayState | unde
   }
   // v0.27: si TorBox todavía no lo tiene, el torrent se resuelve acá (y se le pide a TorBox que lo baje), así el
   // reproductor de Android pasa al episodio siguiente sin cerrarse.
-  if (isDebridDownload(best.stream) && server.url) {
-    requestDebridDownload(best.url)
-    return (await torrentStateFor(found, server, addons)) ?? found
+  if (isDebridDownload(best.stream)) {
+    // Acá sí hace falta el servidor de torrents de verdad (con la búsqueda de Stremio Service si corresponde).
+    const ready = await torrentServerReady()
+    if (ready.url) {
+      requestDebridDownload(best.url)
+      return (await torrentStateFor(found, ready, addons)) ?? found
+    }
   }
   return found
 }
@@ -185,7 +202,6 @@ export interface ResumeTarget {
 export async function findResumeStream(target: ResumeTarget, signal?: AbortSignal): Promise<PlayState | undefined> {
   const addons = addonsStore.get()
   const { sourceRules: rules } = settingsStore.get()
-  const server = await torrentServerReady()
   const meta: Meta = await getMeta(addons, target.type, target.metaId)
   if (signal?.aborted) return undefined
   const videos = meta.videos ?? []
@@ -201,7 +217,7 @@ export async function findResumeStream(target: ResumeTarget, signal?: AbortSigna
   if (target.type === 'series' && !video) return undefined
   const videoId = video?.id ?? meta.id
   const last = rules.rememberLast ? lastSourceStore.get()[meta.id] : undefined
-  const best = await pickStream(addons, meta.type ?? target.type, videoId, rules, last, server, signal)
+  const best = await pickStream(addons, meta.type ?? target.type, videoId, rules, last, signal)
   if (signal?.aborted || !acceptsPick(best, rules)) return undefined
   rememberSource(meta.id, best, rules)
   return {

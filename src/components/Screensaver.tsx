@@ -10,6 +10,8 @@ import { addonsStore, progressStore, settingsStore, useStore, watchlistStore } f
 import { hasTmdb, itemTitle, itemYear, LANG, peekTmdb, tmdbImg, type TmdbPage } from '../lib/tmdb'
 
 const SLIDE_MS = 12_000
+/** Cada cuánto, estando activo, se mira si apareció algo que no lo admite (un video que arrancó debajo). */
+const RECHECK_MS = 2000
 /** Después de cerrarlo, se ignoran los clics/teclas que siguen al que lo cerró (no ejecutan nada). */
 const SWALLOW_MS = 700
 /** Movimientos chicos del mouse (la mesa que vibra) no lo cierran. */
@@ -21,6 +23,10 @@ const AFTER_EVENTS = ['keyup', 'keypress', 'pointerup', 'mouseup', 'touchend', '
 /** ¿Hay un video reproduciéndose? (en el reproductor el protector solo sale con el video en pausa) */
 function videoPlaying() {
   return Array.from(document.querySelectorAll('video')).some((v) => !v.paused && !v.ended)
+}
+/** ¿Puede estar activo ahora? No con un video andando ni con una pantalla marcada `data-no-screensaver`. */
+function canIdle() {
+  return !videoPlaying() && !document.querySelector('[data-no-screensaver]')
 }
 
 async function collectSlides(): Promise<Slide[]> {
@@ -155,7 +161,7 @@ export function Screensaver() {
         moveFrom = undefined
         setActive(true)
       },
-      canIdle: () => !videoPlaying() && !document.querySelector('[data-no-screensaver]'),
+      canIdle,
     })
     timerRef.current = timer
 
@@ -210,6 +216,19 @@ export function Screensaver() {
     timerRef.current?.setTimeoutMs(screensaverMinutes * 60_000)
     if (screensaverMinutes === 0) setActive(false)
   }, [screensaverMinutes])
+
+  // Si mientras está activo arranca un video (una espera de torrent/TorBox que terminó) o aparece una pantalla
+  // que no lo admite, se cierra solo: sin tecla no hay `close`, y el video quedaba tapado. No es un cierre del
+  // usuario, así que no se avisa con SCREENSAVER_CLOSED (no tiene que volver "¿Quién está mirando?").
+  useEffect(() => {
+    if (!active) return
+    const t = setInterval(() => {
+      if (canIdle()) return
+      timerRef.current?.activity()
+      setActive(false)
+    }, RECHECK_MS)
+    return () => clearInterval(t)
+  }, [active])
 
   if (!active) return null
   // En pantalla completa solo se ve lo que está adentro del elemento a pantalla completa.

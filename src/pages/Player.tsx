@@ -70,6 +70,8 @@ const VOLUME_STEP = 0.1
 const SUB_CORNER_GAP = 16
 
 type Menu = 'subs' | 'audio' | 'sleep' | 'sources' | 'quick'
+/** Nombre accesible de cada menú del reproductor. */
+const MENU_LABELS: Record<Menu, string> = { subs: 'Subtítulos', audio: 'Idioma de audio', sleep: 'Temporizador para dormir', sources: 'Fuentes', quick: 'Ajustes rápidos' }
 type Sleep = { kind: 'off' } | { kind: 'time'; at: number; minutes?: number } | { kind: 'episode' }
 
 // sessionStorage puede estar bloqueado (modo privado en algunos navegadores de TV).
@@ -176,7 +178,7 @@ function PlayerChoice({ state, resume }: { state: PlayState; resume?: Resume }) 
       alive = false
     }
   }, [native])
-  if (native === undefined) return <div className="player player-native" />
+  if (native === undefined) return <div className="player player-native" data-no-screensaver />
   if (debrid && debridFail) {
     // Reintentar el mismo link: sin volver a pasar por el torrent (para eso está el otro botón).
     const retryDebrid = () => {
@@ -229,7 +231,7 @@ function PlayerChoice({ state, resume }: { state: PlayState; resume?: Resume }) 
       />
     )
   }
-  if (wantsLocal && (local === 'unknown' || local === 'checking')) return <div className="player player-native" />
+  if (wantsLocal && (local === 'unknown' || local === 'checking')) return <div className="player player-native" data-no-screensaver />
   // v0.30: en la app de Windows convierte su propio motor (AC3, DTS, 5.1 y demás que Chromium no reproduce).
   const converter = desktopTorrentBase() ?? (local === 'found' ? STREMIO_SERVER : undefined)
   const plan = media === undefined ? serverPlan(state.stream, state.playUrl, converter) : undefined
@@ -640,7 +642,9 @@ function PlayerView({
     if (el.playbackRate !== 1) el.playbackRate = 1
     const saved = progressStore.get()[videoId]
     // `resume.at === 0` es "sin posición" (se cambió de fuente antes de que cargara el video): vale lo guardado.
-    if (resume && resume.at > 0) el.currentTime = Math.min(resume.at, Math.max(0, el.duration - 1))
+    // Con `fromStart` ("Ver desde el principio") se arranca en 0 aunque haya progreso.
+    if (resume?.fromStart) el.currentTime = 0
+    else if (resume && resume.at > 0) el.currentTime = Math.min(resume.at, Math.max(0, el.duration - 1))
     else if (saved && !saved.watched && saved.position > RESUME_MIN_S && saved.position < el.duration - 30) {
       el.currentTime = saved.position
       setResumedFrom(saved.position)
@@ -823,7 +827,8 @@ function PlayerView({
     writeAutoCount(auto ? readAutoCount() + 1 : 0)
     persist()
     setNextLoading(true)
-    const next = settings.autoplayNext ? await findNextStream(state).catch(() => undefined) : undefined
+    // "Pasar solo" apagado solo frena el paso automático: si lo pide el usuario (N, ⏭, "Ver ahora"), se busca la fuente igual.
+    const next = auto && !settings.autoplayNext ? undefined : await findNextStream(state).catch(() => undefined)
     if (!aliveRef.current) return
     setNextLoading(false)
     if (next) {
@@ -890,7 +895,8 @@ function PlayerView({
   // Al cambiar de fuente se vuelve a poner el subtítulo (y el retraso) que estaba activo.
   useEffect(() => {
     if (!resume) return
-    flash(notice ?? resume.note ?? `Fuente: ${state.addonName}`)
+    // "Ver desde el principio" no es un cambio de fuente: sin el aviso "Fuente: …" (salvo que traiga una nota).
+    if (notice || resume.note || !resume.fromStart) flash(notice ?? resume.note ?? `Fuente: ${state.addonName}`)
     if (resume.sub !== undefined) subs.restore(resume.sub, resume.subDelay ?? 0, resume.subLabel)
   }, [])
 
@@ -1049,8 +1055,11 @@ function PlayerView({
     // la nueva fuente sigue desde donde se había quedado (o desde donde venía el cambio anterior).
     const loaded = Number.isFinite(el.duration) && el.currentTime >= 5
     const savedAt = resume?.at || progressStore.get()[videoId]?.position || 0
+    // Si todavía no cargó y se venía "desde el principio", la fuente nueva también arranca en 0.
+    const fromStart = !loaded && !!resume?.fromStart
     switchSource(pick, {
-      at: loaded ? el.currentTime : savedAt,
+      at: loaded ? el.currentTime : fromStart ? 0 : savedAt,
+      fromStart: fromStart || undefined,
       sub: subs.active,
       subLabel: subs.activeLabel(),
       subDelay: subs.delay,
@@ -1110,7 +1119,7 @@ function PlayerView({
       const key = e.key.length === 1 ? e.key.toLowerCase() : e.key
       // Modo scrub: OK (o Espacio) va al destino, Atrás vuelve a donde estaba.
       if (scrubRef.current) {
-        if (key === 'Enter' || key === ' ' || key === 'k' || key === 'MediaPlayPause') {
+        if (key === 'Enter' || key === ' ' || key === 'k' || key === 'MediaPlayPause' || key === 'MediaPlay' || key === 'MediaPause') {
           e.preventDefault()
           finishScrub(true)
           return
@@ -1155,11 +1164,26 @@ function PlayerView({
           e.preventDefault()
           togglePlay()
           return
+        // Controles con Play y Pausa separados (LG, Samsung, Sony, HDMI-CEC) y Stop.
+        case 'MediaPlay':
+          e.preventDefault()
+          if (videoRef.current?.paused) togglePlay()
+          return
+        case 'MediaPause':
+          e.preventDefault()
+          if (videoRef.current && !videoRef.current.paused) togglePlay()
+          return
+        case 'MediaStop':
+          e.preventDefault()
+          exit()
+          return
         case 'Enter':
           if (floating) return
           if (!controls || !focusedControl) {
             e.preventDefault()
-            if (!controls) showControls()
+            // En la TV, OK con los controles ocultos pausa (y los muestra), como dice la guía del control;
+            // en PC el primer Enter solo los muestra.
+            if (!controls && !tvMode) showControls()
             else togglePlay()
           }
           return
@@ -1349,6 +1373,21 @@ function PlayerView({
       ro.disconnect()
     }
   }, [liftForCorner, cornerKind])
+  // TV: al terminar una peli el foco va a "¿Qué te pareció?" (las estrellas o "Ahora no") o, si no está, a la
+  // esquina ("Más como esto"); si no, queda en <body> y las flechas no tienen de dónde salir.
+  const videoEnded = duration > 0 && time >= duration - 1
+  useEffect(() => {
+    if (!tvMode || !videoEnded || state.nextVideoId) return
+    const root = rootRef.current
+    const active = document.activeElement
+    if (active && active !== document.body && active.closest('.player-rate, .player-corner, .player-modal, .player-menu')) return
+    const target =
+      root?.querySelector<HTMLElement>('.player-rate [role="slider"]') ??
+      root?.querySelector<HTMLElement>('.player-rate button') ??
+      root?.querySelector<HTMLElement>('.player-corner .postplay-item') ??
+      root?.querySelector<HTMLElement>('.player-corner button')
+    target?.focus({ preventScroll: true })
+  }, [tvMode, videoEnded, state.nextVideoId])
   // Cuenta regresiva de la tarjeta del siguiente: con escena post-créditos, hasta el final del video.
   const nextLeft = plan.afterCredits ? duration - time : countdown
   const nextTotal = plan.afterCredits && nextAt !== undefined ? duration - nextAt : NEXT_COUNTDOWN_S
@@ -1423,7 +1462,7 @@ function PlayerView({
         visible={!playing && !buffering && time > 0 && !error && !menu && !askStill && !sleepFired && !scrub && !locked && !postPlayDue && !(duration > 0 && time >= duration - 1)}
       />
 
-      {buffering && !error && !askStill && !sleepFired && <div className="player-spinner" aria-label="Cargando" />}
+      {buffering && !error && !askStill && !sleepFired && <div className="player-spinner" role="status" aria-label="Cargando" />}
 
       {ripple && (
         <div key={ripple.key} className={`player-ripple player-ripple-${ripple.zone}`} aria-hidden>
@@ -1641,8 +1680,9 @@ function PlayerView({
       {menu && (
         <div
           className={`player-menu ${menu === 'sources' ? 'player-menu-wide' : ''} ${menu === 'quick' ? 'player-menu-quick' : ''}`}
-          role={menu === 'quick' ? 'group' : 'menu'}
-          aria-label={menu === 'quick' ? 'Ajustes rápidos' : undefined}
+          // Un grupo con las opciones como radios (ver `SubtitleMenu`, `SourcesMenu`): `role="menu"` pedía `menuitem`.
+          role="group"
+          aria-label={MENU_LABELS[menu]}
         >
           {menu === 'quick' && (
             <QuickSettings
@@ -1677,27 +1717,35 @@ function PlayerView({
             />
           )}
           {menu === 'subs' && <SubtitleMenu subs={subs} isSeries={!!video} onInteract={showControls} />}
-          {menu === 'audio' &&
-            audioTracks.map((t) => (
-              <button key={t.id} className={audioTrack === t.id ? 'active' : ''} onClick={() => selectAudio(t.id)}>
-                {t.name}
-              </button>
-            ))}
+          {menu === 'audio' && (
+            <div className="player-menu-group" role="radiogroup" aria-label="Idioma de audio">
+              {audioTracks.map((t) => (
+                <button key={t.id} role="radio" aria-checked={audioTrack === t.id} className={audioTrack === t.id ? 'active' : ''} onClick={() => selectAudio(t.id)}>
+                  {t.name}
+                </button>
+              ))}
+            </div>
+          )}
           {menu === 'sources' && <SourcesMenu state={state} onPick={changeSource} />}
           {menu === 'sleep' && (
             <>
               <span className="player-menu-title muted small">Temporizador</span>
-              <button className={sleep.kind === 'off' ? 'active' : ''} onClick={() => chooseSleep(0)}>
-                Desactivado
-              </button>
-              {[15, 30, 60].map((m) => (
-                <button key={m} className={sleep.kind === 'time' && sleep.minutes === m ? 'active' : ''} onClick={() => chooseSleep(m)}>
-                  {m} minutos
+              <div className="player-menu-group" role="radiogroup" aria-label="Temporizador para dormir">
+                <button role="radio" aria-checked={sleep.kind === 'off'} className={sleep.kind === 'off' ? 'active' : ''} onClick={() => chooseSleep(0)}>
+                  Desactivado
                 </button>
-              ))}
-              <button className={sleep.kind === 'episode' ? 'active' : ''} onClick={() => chooseSleep('episode')}>
-                Fin del episodio
-              </button>
+                {[15, 30, 60].map((m) => {
+                  const on = sleep.kind === 'time' && sleep.minutes === m
+                  return (
+                    <button key={m} role="radio" aria-checked={on} className={on ? 'active' : ''} onClick={() => chooseSleep(m)}>
+                      {m} minutos
+                    </button>
+                  )
+                })}
+                <button role="radio" aria-checked={sleep.kind === 'episode'} className={sleep.kind === 'episode' ? 'active' : ''} onClick={() => chooseSleep('episode')}>
+                  Fin del episodio
+                </button>
+              </div>
             </>
           )}
         </div>
@@ -1714,7 +1762,8 @@ function PlayerView({
           value={scrub ? scrub.target : time}
           aria-label="Posición"
           aria-valuetext={formatTime(scrub ? scrub.target : time)}
-          tabIndex={-1}
+          // En la TV la navegación espacial lo saltea a propósito; con teclado entra en el orden de Tab.
+          tabIndex={tvMode ? -1 : undefined}
           onChange={(e) => {
             const s = scrubRef.current
             if (s) {
@@ -1793,7 +1842,9 @@ function PlayerView({
             </button>
           )}
           {state.nextVideoId && (
-            <button onClick={() => goNext()} disabled={nextLoading} {...tip('Siguiente episodio')}>
+            // `aria-disabled` y no `disabled`: un botón deshabilitado pierde el foco y el OK del control remoto
+            // caía en el video (lo pausaba). `goNext` ya ignora un segundo pedido (`advancing`).
+            <button onClick={nextLoading ? undefined : () => goNext()} aria-disabled={nextLoading || undefined} {...tip('Siguiente episodio')}>
               {nextLoading ? '…' : <PlayerIcon name="next" />}
             </button>
           )}
