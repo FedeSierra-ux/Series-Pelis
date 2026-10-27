@@ -25,7 +25,8 @@ import { MergedCatalogRow } from './home/MergedCatalogRow'
 import { TmdbHero } from './home/TmdbHero'
 import { resumeLabel, useDirectPlay } from './home/useDirectPlay'
 import './home/home-v14.css'
-import { BecauseRow, Top10Row, TrendingWeekRow, useNowPlaying, useTrending, type Seed } from './home/TmdbRows'
+import { BecauseRow, TrendingWeekRow, useNowPlaying, type Seed } from './home/TmdbRows'
+import { MixTop10Row, PopularRow } from './home/PopularRows'
 import { CuratedRows } from './lists/CuratedRows'
 
 const ROW_LIMIT = 30
@@ -198,7 +199,6 @@ export function Home() {
   const { undo, hide, restore } = useUndoHide()
   // TMDB es opcional: sin key, Inicio queda igual que siempre.
   const tmdbKey = useTmdbKey()
-  const trendingDay = useTrending('day', tmdbKey)
   // Portada de Inicio: los estrenos en cines (más chica, no ocupa toda la parte de arriba).
   const nowPlaying = useNowPlaying(tmdbKey)
   const hidden = useHiddenIds()
@@ -222,12 +222,14 @@ export function Home() {
         heroSource && <Hero addon={heroSource.addon} catalog={heroSource.catalog} />
       )}
 
-      {/* v0.22.5: Seguir viendo y enseguida el Top 10 de hoy (pedido del usuario). */}
+      {/* v0.32: portada → Seguir viendo → Top 10 (películas y series) → populares → lo demás (pedido del usuario). */}
       <ContinueRow onHide={hide} />
+      <MixTop10Row tmdbOn={tmdbKey.length > 0} tmdbKey={tmdbKey} />
+      <PopularRow kind="movie" />
+      <PopularRow kind="series" />
 
       {tmdbKey && (
         <>
-          <Top10Row state={trendingDay} />
           <ForYouRow tmdbKey={tmdbKey} />
           {seeds.map((seed) => (
             <BecauseRow key={seed.metaId} seed={seed} tmdbKey={tmdbKey} />

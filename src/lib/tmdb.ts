@@ -163,6 +163,7 @@ export interface TmdbListItem {
   first_air_date?: string
   vote_average?: number
   genre_ids?: number[]
+  original_language?: string
   character?: string
   job?: string
   popularity?: number

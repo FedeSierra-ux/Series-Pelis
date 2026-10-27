@@ -8,7 +8,10 @@ import {
   exploreAllTo,
   GENRE_ROWS,
   genreMoreTo,
+  isAnime,
   isBrowseKind,
+  mixTop10,
+  top10Params,
   trendingPath,
   TV_NOISE,
   wantsGrid,
@@ -109,5 +112,28 @@ describe('wantsGrid / isBrowseKind', () => {
     expect(isBrowseKind('movie')).toBe(true)
     expect(isBrowseKind('series')).toBe(true)
     expect(isBrowseKind('anime')).toBe(false)
+  })
+})
+
+describe('Top 10 de Inicio (v0.32)', () => {
+  it('pide lo de las plataformas de Argentina sin la palabra clave anime', () => {
+    const p = top10Params('movie')
+    expect(p.watch_region).toBe('AR')
+    expect(p.with_watch_monetization_types).toBe('flatrate')
+    expect(p.without_keywords).toBe('210024')
+    expect(top10Params('series').without_genres).toBe(TV_NOISE)
+  })
+
+  it('reconoce la animación japonesa y deja lo demás', () => {
+    expect(isAnime({ genre_ids: [16, 35], original_language: 'ja' })).toBe(true)
+    expect(isAnime({ genre_ids: [16], original_language: 'en' })).toBe(false)
+    expect(isAnime({ genre_ids: [28], original_language: 'ja' })).toBe(false)
+  })
+
+  it('mezcla películas y series de a una, sin repetidos y hasta el tope', () => {
+    const mv = ['m1', 'm2', 'm3'].map((id) => ({ id }))
+    const tv = ['s1', 's2', 'm1'].map((id) => ({ id }))
+    expect(mixTop10(mv, tv).map((x) => x.id)).toEqual(['m1', 's1', 'm2', 's2', 'm3'])
+    expect(mixTop10(mv, tv, 3).map((x) => x.id)).toEqual(['m1', 's1', 'm2'])
   })
 })

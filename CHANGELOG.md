@@ -1,5 +1,16 @@
 # Changelog
 
+## [0.32.0] - 2026-10-27
+
+### Cambiado
+- **Inicio** (celular, PC y TV): portada → Seguir viendo → **Top 10** → **Películas populares** → **Series populares**
+  → lo demás (Para vos, Porque viste, Tendencias, listas y catálogos de los addons).
+- **Top 10 nuevo**: "Top 10 en Argentina", películas y series mezcladas, lo más popular en las plataformas de
+  Argentina (TMDB) y **sin anime** (palabra clave anime y animación japonesa). Sin TMDB, el "Popular" de Cinemeta
+  mezclado.
+- **Pantalla de carga de un torrent**, como Stremio: sin caja; el nombre del título, el fondo de la peli o serie
+  borroso moviéndose despacio y, abajo, peers, seeds, velocidad, bajado y red como números sueltos con su etiqueta.
+
 ## [0.31.1] - 2026-10-27
 
 ### Agregado
