@@ -624,6 +624,21 @@ npm run preview    # sirve dist/ en http://localhost:4173
     `dismissTrailer` evita que se reabra tras Escape. `portraitLogo()` (`focusBillboardData.ts`): logo de metahub
     vertical o cuadrado → nombre en texto. "Estreno" con `--on-accent`. `yearTotal()` (Tu año). `PosterCard rank`.
   - Sin probar en una TV real ni en la app de Android: lo del reproductor nativo y las teclas de medios.
+- v0.31.1 hecha (rama `claude/determined-albattani-ko8t39`): **estadísticas mientras carga un torrent** (pedido del
+  usuario, como Stremio) y diagnóstico de "se queda en Conectando con el torrent" (en su PC con la app de Windows no
+  conectaba nada; sin probar todavía en su PC). `lib/torrentStats.ts` (puro + test): `parseTorrentStats` (motor de
+  Windows o Stremio Service: `swarmSize` = encontrados), `addonSeeders` (el "👤 N" de Torrentio), `formatBytes`,
+  `statsView` (filas Peers/Seeds/Velocidad/Bajado/Red y `hint` pasados `STATS_HINT_AFTER_MS = 15 s` sin peers: red
+  bloqueada si DHT y trackers en 0, "nadie acepta la conexión" si hay encontrados, "otra fuente" si la red anda).
+  `StremioPrepare` sigue pidiendo `stats.json` también en "Preparando el video…"; `<dl class="player-prepare-stats">`
+  de ancho fijo. Se fue `torrentProgress`. Motor (`desktop-app/engine/torrents.js`): `stats.json` suma `found`
+  (`t._peersLength`), `seeds` (`countSeeds`: wires con todas las piezas), `swarmSeeds`/`swarmLeechers` (evento `update`
+  del cliente de trackers, enganchado envolviendo `t._startDiscovery` porque el primer `update` llega enseguida),
+  `trackers`/`trackersOk`, `dhtNodes` y `engineError`. **webtorrent destruye su cliente entero** si falla la DHT o el
+  puerto TCP: `getClient()` arma otro si `client.destroyed` y `open()` reabre los torrents muertos. El temporizador de
+  la metadata va con `unref`. Este entorno de Claude no tiene salida UDP/TCP para BitTorrent: no se puede probar con un
+  enjambre real (se probó con el tracker local de los tests y un motor falso en `scratchpad`). Registro de la app:
+  `%APPDATA%\Flix\logs`.
 - **Decisiones para la v0.17 (reemplazan el reparto del plan de abajo)**: addons y TorBox **iguales para todas las
   casas**, solo los cambia el admin (opción A). Ajustes generales (subtítulos, idiomas, autoplay, saltar intro, sin
   spoilers, reglas de fuentes) **iguales en toda la casa**; lo físico (modo TV, tamaño de la interfaz, protector,

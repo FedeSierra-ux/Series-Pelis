@@ -10,7 +10,6 @@ import {
   peerSources,
   serverPlan,
   splitServerUrl,
-  torrentProgress,
   type MediaCaps,
 } from './stremioServer'
 
@@ -142,12 +141,7 @@ describe('serverPlan', () => {
   })
 })
 
-describe('torrentProgress / formatSpeed / looksLikeStremio', () => {
-  it('stats.json', () => {
-    expect(torrentProgress({ peers: 12, downloadSpeed: 1048576 })).toEqual({ peers: 12, speed: 1048576 })
-    expect(torrentProgress(null)).toEqual({ peers: 0, speed: 0 })
-    expect(torrentProgress({ peers: 'x', downloadSpeed: -3 })).toEqual({ peers: 0, speed: 0 })
-  })
+describe('formatSpeed / looksLikeStremio', () => {
   it('velocidad', () => {
     expect(formatSpeed(850 * 1024)).toBe('850 KB/s')
     expect(formatSpeed(1.25 * 1024 * 1024)).toMatch(/^1,[23] MB\/s$/)

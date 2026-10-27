@@ -1,21 +1,20 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { fetchWithTimeout } from '../../lib/abort'
 import {
   browserMediaCaps,
   canPlayDirect,
   createBody,
-  formatSpeed,
   hlsUrl,
   markLocalStremioMissing,
   STREMIO_SERVER,
-  torrentProgress,
   transcodeId,
   type MediaProbe,
   type ServerPlan,
 } from '../../lib/stremioServer'
 import { desktopTorrentBase } from '../../lib/desktop'
 import { videoSubOptions, type VideoSubsSource } from '../../lib/embeddedSubs'
+import { addonSeeders, parseTorrentStats, statsView, type TorrentStats } from '../../lib/torrentStats'
 import type { PlayState } from '../Detail'
 import { EngineError } from './EngineError'
 
@@ -84,8 +83,11 @@ export function StremioPrepare({
 }) {
   const navigate = useNavigate()
   const [phase, setPhase] = useState<'connecting' | 'probing'>(plan.kind === 'torrent' ? 'connecting' : 'probing')
-  const [stats, setStats] = useState<{ peers: number; speed: number }>()
+  const [stats, setStats] = useState<TorrentStats>()
   const [failure, setFailure] = useState<Failure>()
+  // Para explicar por qué no conecta recién pasado un rato (v0.31.1). `tick` vuelve a dibujar aunque el motor no conteste.
+  const startedAt = useRef(Date.now())
+  const [, setTick] = useState(0)
 
   useEffect(() => {
     const ctrl = new AbortController()
@@ -110,15 +112,17 @@ export function StremioPrepare({
       return () => ctrl.abort()
     }
 
-    // Mientras se conecta: cuántos comparten y a qué velocidad baja.
+    // Mientras carga (al conectar y al preparar el video): peers, seeds, velocidad, bajado y estado de la red.
     const pollStats = async () => {
       try {
         const res = await fetchWithTimeout(`${plan.base}/${plan.hash}/stats.json`, { timeoutMs: 4000, signal: ctrl.signal })
-        if (res.ok && !ctrl.signal.aborted) setStats(torrentProgress(await res.json()))
+        if (res.ok && !ctrl.signal.aborted) setStats(parseTorrentStats(await res.json()))
       } catch {
         // Todavía no existe o el servidor está ocupado: el próximo intento.
       }
-      if (!ctrl.signal.aborted) statsTimer = setTimeout(pollStats, STATS_EVERY_MS)
+      if (ctrl.signal.aborted) return
+      setTick((n) => n + 1)
+      statsTimer = setTimeout(pollStats, STATS_EVERY_MS)
     }
     statsTimer = setTimeout(pollStats, STATS_EVERY_MS)
 
@@ -147,7 +151,6 @@ export function StremioPrepare({
         if (typeof body?.guessedFileIdx === 'number' && body.guessedFileIdx >= 0) fileIdx = body.guessedFileIdx
       }
       if (ctrl.signal.aborted) return
-      clearTimeout(statsTimer)
       setPhase('probing')
       const mediaUrl = `${plan.base}/${plan.hash}/${fileIdx ?? -1}`
       let url = mediaUrl
@@ -159,7 +162,9 @@ export function StremioPrepare({
       } catch {
         // Como Stremio Web: sin respuesta del formato se intenta directo (el reproductor avisa si no puede).
       }
-      if (!ctrl.signal.aborted) onReady(url, videoSubs)
+      if (ctrl.signal.aborted) return
+      clearTimeout(statsTimer)
+      onReady(url, videoSubs)
     }
     void run()
     return () => {
@@ -179,19 +184,29 @@ export function StremioPrepare({
     else navigate(`/detail/${state.meta.type}/${encodeURIComponent(state.meta.id)}`, { replace: true })
   }
   const title = phase === 'connecting' ? 'Conectando con el torrent…' : 'Preparando el video…'
-  const detail =
-    phase !== 'connecting'
-      ? undefined
-      : !stats || stats.peers === 0
-        ? 'Buscando quién lo comparte'
-        : `${stats.peers === 1 ? '1 persona lo comparte' : `${stats.peers} personas lo comparten`}${stats.speed > 0 ? ` · ${formatSpeed(stats.speed)}` : ''}`
+  const view = statsView(stats, { addonSeeds: addonSeeders(state.stream), elapsedMs: Date.now() - startedAt.current })
+  const searching = phase === 'connecting' && (!stats || stats.peers === 0)
   // Sin <video> todavía: `data-no-screensaver` para que el protector no tape el video cuando arranque.
+  // El título y la explicación se anuncian (`role="status"`); los números, que cambian cada segundo y medio, no.
   return (
     <div className="player player-native player-prepare" data-no-screensaver>
-      <div className="player-prepare-box" role="status" aria-live="polite">
+      <div className="player-prepare-box">
         <div className="player-spinner" aria-hidden="true" />
-        <strong>{title}</strong>
-        {detail && <span>{detail}</span>}
+        <div role="status" aria-live="polite" className="player-prepare-head">
+          <strong>{title}</strong>
+          {searching && <span>Buscando quién lo comparte</span>}
+          {view.hint && <p className="player-prepare-note">{view.hint}</p>}
+        </div>
+        {view.rows.length > 0 && (
+          <dl className="player-prepare-stats">
+            {view.rows.map((r) => (
+              <div key={r.label}>
+                <dt>{r.label}</dt>
+                <dd>{r.value}</dd>
+              </div>
+            ))}
+          </dl>
+        )}
         <button className="btn" onClick={exit} autoFocus data-autofocus>
           Volver
         </button>

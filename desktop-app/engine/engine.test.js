@@ -268,8 +268,24 @@ describe('motor de punta a punta', { timeout: 300_000 }, () => {
     assert.ok(stats, 'stats nunca respondió')
     assert.equal(typeof stats.peers, 'number')
     assert.equal(typeof stats.downloadSpeed, 'number')
+    // v0.31.1: lo que muestra la pantalla de carga.
+    assert.equal(typeof stats.found, 'number')
+    assert.equal(stats.trackers, 1)
+    assert.equal(stats.engineError, null)
 
     const r = await created
+    // Con la metadata: el tracker local contestó, vio al que siembra y el que siembra está conectado como seed.
+    let full
+    for (let i = 0; i < 50; i++) {
+      full = JSON.parse((await request(`${engine.base}/${infoHash}/stats.json`)).body.toString())
+      if (full.trackersOk >= 1 && full.seeds >= 1) break
+      await new Promise((res) => setTimeout(res, 100))
+    }
+    assert.equal(full.trackersOk, 1, JSON.stringify(full))
+    assert.ok(full.swarmSeeds >= 1, JSON.stringify(full))
+    assert.ok(full.peers >= 1 && full.found >= full.peers, JSON.stringify(full))
+    assert.ok(full.seeds >= 1, JSON.stringify(full))
+
     assert.equal(r.status, 200, r.body.toString())
     assert.equal(r.headers['access-control-allow-origin'], ORIGIN)
     const j = JSON.parse(r.body.toString())

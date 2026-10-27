@@ -5,7 +5,7 @@ import { episodeTags, guessFileIdx } from './files.js'
 import { capsFromQuery, chooseModes, jobArgs } from './hls.js'
 import { checkPublicUrl, isPrivateIp } from './net.js'
 import { audioRenditions, gridBoundaries, keyframeBoundaries, masterPlaylist, mediaPlaylist, scaledSize, segmentTimes } from './playlist.js'
-import { trackersFrom } from './torrents.js'
+import { countSeeds, trackersFrom } from './torrents.js'
 import { Lru, newToken, originAllowed, parseRange, parseRoute } from './util.js'
 
 const T = 'a'.repeat(32)
@@ -298,4 +298,13 @@ test('Lru', () => {
   l.set('c', 3)
   assert.deepEqual(out, ['b'])
   assert.equal(l.get('a'), 1)
+})
+
+test('countSeeds: solo los peers con todas las piezas, y 0 sin metadata', () => {
+  /** @param {boolean[]} bits */
+  const wire = (bits) => ({ peerPieces: { get: (/** @type {number} */ i) => !!bits[i] } })
+  const wires = [wire([true, true, true]), wire([true, false, true]), wire([true, true, true]), {}]
+  assert.equal(countSeeds(wires, 3), 2)
+  assert.equal(countSeeds(wires, 0), 0)
+  assert.equal(countSeeds([], 3), 0)
 })
