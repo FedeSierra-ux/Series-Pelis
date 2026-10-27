@@ -43,6 +43,29 @@ export function trackersFrom(sources, allowLocal = false) {
 }
 
 /**
+ * Peers conectados que tienen el torrent entero. Sin la metadata no se sabe cuántas piezas tiene: 0.
+ * @param {any[]} wires
+ * @param {number} pieces
+ */
+export function countSeeds(wires, pieces) {
+  if (!pieces) return 0
+  let seeds = 0
+  for (const w of wires) {
+    const have = w?.peerPieces
+    if (!have || typeof have.get !== 'function') continue
+    let all = true
+    for (let i = 0; i < pieces; i++) {
+      if (!have.get(i)) {
+        all = false
+        break
+      }
+    }
+    if (all) seeds++
+  }
+  return seeds
+}
+
+/**
  * @typedef {{
  *   hash: string,
  *   torrent: any,
@@ -50,8 +73,20 @@ export function trackersFrom(sources, allowLocal = false) {
  *   selected: number,
  *   lastUse: number,
  *   responses: Set<import('node:http').ServerResponse>,
+ *   swarm: Swarm,
+ *   watch?: ReturnType<typeof setInterval>,
  * }} Entry
  */
+
+/**
+ * Lo que dicen los trackers del enjambre (v0.31.1, para la pantalla de carga): seeds y leechers totales y qué
+ * trackers contestaron.
+ * @typedef {{ seeds: number, leechers: number, trackersOk: Set<string> }} Swarm
+ */
+
+/** Cada cuánto se mira si ya arrancó la búsqueda de peers (para escuchar a los trackers), y hasta cuándo. */
+const WATCH_EVERY_MS = 100
+const WATCH_MAX_MS = 60_000
 
 export class Torrents {
   /**
@@ -65,13 +100,22 @@ export class Torrents {
     this.trackers = new Map()
     /** @type {any} */
     this.client = null
+    /** Último error del cliente de torrents (se muestra en la pantalla de carga). @type {string | null} */
+    this.clientError = null
     this.closed = false
     this.sweep = setInterval(() => this.closeIdle(), 60_000)
     this.sweep.unref()
   }
 
   async getClient() {
+    // v0.31.1: webtorrent destruye el cliente entero si falla la DHT o el puerto TCP (un antivirus, otro programa
+    // en el puerto). Antes quedaba muerto hasta cerrar la app y ningún torrent encontraba a nadie: se arma otro.
+    if (this.client?.destroyed) {
+      this.opts.log('webtorrent: el cliente se cerró por un error, se arma de nuevo')
+      this.client = null
+    }
     if (!this.client) {
+      this.clientError = null
       // Recién cuando hace falta: así el firewall de Windows no pregunta hasta el primer torrent.
       const { default: WebTorrent } = await import('webtorrent')
       this.client = new WebTorrent({
@@ -82,7 +126,11 @@ export class Torrents {
         dht: this.opts.dht !== false,
         maxConns: 80,
       })
-      this.client.on('error', (/** @type {Error} */ err) => this.opts.log(`webtorrent: ${err.message}`))
+      const client = this.client
+      client.on('error', (/** @type {Error} */ err) => {
+        this.opts.log(`webtorrent: ${err.message}`)
+        if (this.client === client) this.clientError = err.message
+      })
     }
     return this.client
   }
@@ -96,6 +144,11 @@ export class Torrents {
     if (this.closed) throw new Error('motor cerrado')
     if (announce?.length) this.trackers.set(hash, announce)
     let e = this.entries.get(hash)
+    // Su torrent se cerró con un cliente que se cayó: se abre de nuevo con el cliente nuevo.
+    if (e?.torrent?.destroyed) {
+      this.remove(hash)
+      e = undefined
+    }
     if (!e) {
       const client = await this.getClient()
       if (this.closed) throw new Error('motor cerrado')
@@ -115,8 +168,17 @@ export class Torrents {
           torrent.once('error', (/** @type {Error} */ err) => reject(err))
         })
         ready.catch(() => {})
-        e = { hash, torrent, ready: /** @type {Promise<void>} */ (ready), selected: -1, lastUse: Date.now(), responses: new Set() }
+        e = {
+          hash,
+          torrent,
+          ready: /** @type {Promise<void>} */ (ready),
+          selected: -1,
+          lastUse: Date.now(),
+          responses: new Set(),
+          swarm: { seeds: -1, leechers: -1, trackersOk: new Set() },
+        }
         this.entries.set(hash, e)
+        this.watchTrackers(e)
         torrent.on('error', (/** @type {Error} */ err) => {
           this.opts.log(`torrent ${hash}: ${err.message}`)
           this.remove(hash)
@@ -141,23 +203,72 @@ export class Torrents {
     return { infoHash: hash, guessedFileIdx: guessFileIdx(files, guess && typeof guess === 'object' ? guess : false), files }
   }
 
+  /**
+   * Escucha a los trackers del torrent (seeds y leechers del enjambre, cuáles contestaron). Los trackers arrancan
+   * cuando webtorrent empieza a buscar peers (`_startDiscovery`, un instante después de `add`) y el primer `update`
+   * puede llegar enseguida: se engancha justo ahí. Por si una versión de webtorrent cambia eso, también se mira cada
+   * 100 ms (como mucho un minuto).
+   * @param {Entry} e
+   */
+  watchTrackers(e) {
+    const t = e.torrent
+    const started = Date.now()
+    let hooked = false
+    const hook = () => {
+      if (hooked) return
+      if (t.destroyed || Date.now() - started > WATCH_MAX_MS) return clearInterval(e.watch)
+      const tracker = t.discovery?.tracker
+      if (!tracker) return
+      hooked = true
+      clearInterval(e.watch)
+      tracker.on('update', (/** @type {{ announce?: string, complete?: number, incomplete?: number }} */ d) => {
+        if (typeof d?.announce === 'string') e.swarm.trackersOk.add(d.announce)
+        // Cada tracker ve una parte del enjambre: vale el que más ve.
+        if (Number.isFinite(d?.complete)) e.swarm.seeds = Math.max(e.swarm.seeds, Number(d.complete))
+        if (Number.isFinite(d?.incomplete)) e.swarm.leechers = Math.max(e.swarm.leechers, Number(d.incomplete))
+      })
+    }
+    const start = t._startDiscovery
+    if (typeof start === 'function') {
+      t._startDiscovery = function (/** @type {unknown[]} */ ...args) {
+        const out = start.apply(this, args)
+        hook()
+        return out
+      }
+    }
+    e.watch = setInterval(hook, WATCH_EVERY_MS)
+    e.watch.unref?.()
+    hook()
+  }
+
   /** `GET /<hash>/stats.json` (también mientras llega la metadata). @param {string} hash */
   stats(hash) {
     const e = this.entries.get(hash)
     if (!e) return null
     const t = e.torrent
     const file = e.selected >= 0 ? t.files?.[e.selected] : undefined
+    const wires = /** @type {any[]} */ (t.wires ?? [])
+    const dht = this.client?.dht
     return {
       infoHash: hash,
       name: t.name ?? null,
       peers: t.numPeers ?? 0,
-      unchoked: t.wires?.filter((/** @type {any} */ w) => !w.peerChoking).length ?? 0,
+      unchoked: wires.filter((w) => !w.peerChoking).length,
       downloadSpeed: t.downloadSpeed ?? 0,
       uploadSpeed: t.uploadSpeed ?? 0,
       downloaded: t.downloaded ?? 0,
       uploaded: t.uploaded ?? 0,
       ready: !!t.ready,
       streamProgress: file ? file.progress : 0,
+      // v0.31.1, para la pantalla de carga (como Stremio): encontrados, seeds y estado de la red.
+      found: typeof t._peersLength === 'number' ? t._peersLength : (t._peers?.size ?? 0),
+      seeds: countSeeds(wires, t.pieces?.length ?? 0),
+      swarmSeeds: e.swarm.seeds >= 0 ? e.swarm.seeds : null,
+      swarmLeechers: e.swarm.leechers >= 0 ? e.swarm.leechers : null,
+      trackers: (this.trackers.get(hash) ?? []).length,
+      trackersOk: e.swarm.trackersOk.size,
+      dhtNodes: dht && typeof dht.nodes?.count === 'function' ? dht.nodes.count() : null,
+      engineError: this.client?.destroyed || t.destroyed ? (this.clientError ?? 'el cliente de torrents se cerró') : null,
     }
   }
 
@@ -205,6 +316,7 @@ export class Torrents {
     const e = this.entries.get(hash)
     if (!e) return
     this.entries.delete(hash)
+    clearInterval(e.watch)
     // Las respuestas que esperan piezas quedarían colgadas para siempre.
     for (const r of e.responses) r.destroy()
     e.responses.clear()
@@ -239,6 +351,8 @@ function withTimeout(p, ms, msg) {
   let timer
   const t = new Promise((_, reject) => {
     timer = setTimeout(() => reject(Object.assign(new Error(msg), { code: 'ETIMEDOUT' })), ms)
+    // Un torrent que se cerró mientras esperaba la metadata no tiene que mantener vivo el proceso.
+    timer.unref?.()
   })
   return /** @type {Promise<T>} */ (Promise.race([p, t])).finally(() => clearTimeout(timer))
 }

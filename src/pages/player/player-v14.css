@@ -882,6 +882,43 @@ html[data-tv] .player-title span {
   margin-top: 12px;
 }
 
+/* v0.31.1: mientras carga un torrent, como Stremio: peers, seeds, velocidad, bajado y red. */
+.player-prepare-head {
+  display: grid;
+  justify-items: center;
+  gap: 10px;
+}
+.player-prepare-stats {
+  display: grid;
+  gap: 6px;
+  margin: 6px 0 0;
+  padding: 12px 18px;
+  /* Ancho fijo: si no, la caja salta cada vez que cambian los números. */
+  width: min(400px, 90vw);
+  box-sizing: border-box;
+  border-radius: var(--radius, 14px);
+  background: rgba(255, 255, 255, 0.06);
+  font-variant-numeric: tabular-nums;
+}
+.player-prepare-stats > div {
+  display: grid;
+  grid-template-columns: 6.5em 1fr;
+  gap: 12px;
+  text-align: left;
+}
+.player-prepare-stats dt {
+  color: rgba(255, 255, 255, 0.62);
+}
+.player-prepare-stats dd {
+  margin: 0;
+  color: #fff;
+}
+html[data-tv] .player-prepare-stats {
+  width: 620px;
+  gap: 8px;
+  padding: 16px 24px;
+}
+
 /* v0.30: "TorBox lo está bajando…" (navegador sin servidor de torrents), misma caja que la de arriba. */
 .player-prepare-box .player-prepare-note {
   max-width: 36ch;

@@ -152,14 +152,6 @@ export function hlsUrl(base: string, mediaUrl: string, caps: MediaCaps, id: stri
   return `${base.replace(/\/+$/, '')}/hlsv2/${encodeURIComponent(id)}/master.m3u8?${q.toString()}`
 }
 
-/** Lo que importa de `/<infoHash>/stats.json` mientras se conecta. */
-export function torrentProgress(stats: unknown): { peers: number; speed: number } {
-  const s = (stats ?? {}) as { peers?: unknown; downloadSpeed?: unknown }
-  const peers = typeof s.peers === 'number' && Number.isFinite(s.peers) ? Math.max(0, Math.round(s.peers)) : 0
-  const speed = typeof s.downloadSpeed === 'number' && Number.isFinite(s.downloadSpeed) ? Math.max(0, s.downloadSpeed) : 0
-  return { peers, speed }
-}
-
 /** Bytes por segundo → "850 KB/s" / "1,2 MB/s". */
 export function formatSpeed(bps: number): string {
   if (bps < 1024 * 1024) return `${Math.max(0, Math.round(bps / 1024))} KB/s`

@@ -18,7 +18,11 @@ API bajo `engine.base` (la misma que usa `src/pages/player/StremioPrepare.tsx` c
 
 - `POST /<infoHash>/create` body `{ torrent: { infoHash }, peerSearch: { sources: ['dht:<hash>', 'tracker:<url>'…], min, max }, guessFileIdx: false | { season?, episode? } }`
   → bloquea hasta tener la metadata → `200 { guessedFileIdx, files: [{ name, length }] }`.
-- `GET /<infoHash>/stats.json` → `{ peers, downloadSpeed }` (también antes de la metadata).
+- `GET /<infoHash>/stats.json` → `{ peers, downloadSpeed, downloaded, … }` (también antes de la metadata). Desde la
+  v0.31.1 suma, para la pantalla de carga: `found` (peers encontrados por trackers y DHT), `seeds` (conectados con el
+  torrent entero; 0 sin metadata), `swarmSeeds`/`swarmLeechers` (lo que informan los trackers; `null` si ninguno
+  contestó), `trackers`/`trackersOk` (cuántos hay y cuántos contestaron), `dhtNodes` (`null` sin DHT) y `engineError`
+  (el cliente de torrents se cayó; `null` si anda). Si el cliente se cae, el próximo `create` arma uno nuevo.
 - `GET|HEAD /<infoHash>/<fileIdx>` (fileIdx -1 = el video más grande) con `Range` → bytes del archivo (prioriza lo pedido).
 - `GET /hlsv2/probe?mediaURL=<url>` → `{ format: { name, duration }, streams: [{ index, track: 'video'|'audio'|'subtitle', codec, channels, language, title, default, forced, sdh }] }`
   (`format.name` = `format_name` de ffprobe, p. ej. `matroska,webm` / `mov,mp4,m4a,3gp,3g2,mj2`; `index` es el de

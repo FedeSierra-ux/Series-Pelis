@@ -1,5 +1,20 @@
 # Changelog
 
+## [0.31.1] - 2026-10-27
+
+### Agregado
+- **Mientras carga un torrent**, como en Stremio: cuántos **peers** hay conectados y encontrados, cuántos **seeds**
+  (conectados y en total según los trackers, o lo que dice el addon), la **velocidad de bajada**, cuánto se **bajó** y el
+  estado de la **red** (nodos DHT y trackers que contestaron). Se actualiza cada segundo y medio, también mientras dice
+  "Preparando el video…".
+- Si a los 15 segundos no hay nadie conectado, la pantalla dice por qué: que no llega nada de la red (el firewall o el
+  antivirus pueden estar bloqueando a Flix), que hay gente pero no acepta la conexión, o que nadie lo comparte.
+
+### Arreglado
+- **App de Windows**: si el motor de torrents se caía por un error de red (por ejemplo, un antivirus que bloquea el
+  puerto), quedaba muerto hasta cerrar la app y ningún torrent encontraba a nadie. Ahora se arma de nuevo solo al
+  probar otra vez, y la pantalla de carga muestra el error.
+
 ## [0.31.0] - 2026-10-23
 
 Auditoría completa de la app en PC y TV (funcional, accesibilidad, código y visual). Los cambios visuales se
