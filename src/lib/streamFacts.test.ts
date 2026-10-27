@@ -16,6 +16,8 @@ describe('streamFacts', () => {
       lang: 'Varios idiomas',
       latino: false,
       size: '61,2 GB',
+      seeds: 182,
+      lowSeeds: false,
       service: 'Real-Debrid',
       state: 'listo para ver',
       file: 'The.Matrix.1999.2160p.UHD.BluRay.REMUX.DV.HDR.HEVC.TrueHD.Atmos.7.1-FGT',
@@ -85,5 +87,15 @@ describe('sourceCounts', () => {
     })
     expect(sourceCounts({ ready: 1, torrents: 1, hidden: 3 })).toEqual({ lead: '1 lista para ver', rest: ['1 torrent sin debrid', '3 ocultas por tus filtros'] })
     expect(sourceCounts({ ready: 0, torrents: 0, hidden: 0 })).toEqual({ lead: 'Ninguna lista para ver', rest: [] })
+  })
+})
+
+describe('seeds (v0.33)', () => {
+  it('lee los seeds del addon y marca los pocos solo en torrents sin debrid', () => {
+    const torrent = { name: 'Torrentio\n1080p', title: 'Peli.2024.1080p\n👤 2 💾 1.4 GB', infoHash: 'a'.repeat(40) }
+    expect(streamFacts(torrent)).toMatchObject({ seeds: 2, lowSeeds: true })
+    expect(streamFacts({ ...torrent, title: 'Peli\n👤 1,250 💾 1.4 GB' })).toMatchObject({ seeds: 1250, lowSeeds: false })
+    expect(streamFacts({ name: '[RD+] Torrentio', title: 'Peli\n👤 2', url: 'https://x/y.mkv' }).lowSeeds).toBe(false)
+    expect(streamFacts({ name: 'Addon', url: 'https://x/y.mp4' }).seeds).toBeUndefined()
   })
 })

@@ -1,5 +1,21 @@
 # Changelog
 
+## [0.33.0] - 2026-10-27
+
+Cambios elegidos en la página de votos "Menús estilo Nuvio" y "Qué podemos agregar".
+
+### Agregado
+- **Seeds en la lista de fuentes**: cada fuente muestra cuántos seeds informa el addon; en los torrents sin debrid con
+  menos de 5, el número va en ámbar y avisa "Pocos seeds: puede tardar en arrancar".
+- **"Probar otra fuente"** en la pantalla de carga de un torrent: aparece a los 30 segundos si no se conectó nadie y
+  lleva a la lista de fuentes (la espera sigue mientras tanto).
+
+### Cambiado
+- **Audio y subtítulos en una tarjeta en el centro** del reproductor (en lugar de un menú pegado a la barra), se abra
+  desde CC o desde audio.
+- **Ajustes con interruptores**: las casillas pasan a ser filas de una tarjeta con un interruptor a la derecha y los
+  títulos de cada grupo quedan como rótulo chico.
+
 ## [0.32.0] - 2026-10-27
 
 ### Cambiado

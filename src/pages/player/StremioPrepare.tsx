@@ -31,6 +31,8 @@ const PROBE_TIMEOUT_MS = 45_000
 /** Un link directo (ya está en internet): si tarda más, se abre como siempre. */
 const DIRECT_PROBE_TIMEOUT_MS = 15_000
 const STATS_EVERY_MS = 1500
+/** v0.33: sin ningún peer pasado este tiempo, se ofrece pasar a otra fuente (sin cortar la espera). */
+export const OFFER_OTHER_SOURCE_MS = 30_000
 
 type Failure = 'server' | 'peers' | 'error'
 
@@ -189,6 +191,7 @@ export function StremioPrepare({
   const view = statsView(stats, { addonSeeds: addonSeeders(state.stream), elapsedMs: Date.now() - startedAt.current })
   const backdrop = backdropFor(state.meta.id, state.meta.background)
   const name = localTitle(state.meta.id, state.meta.name)
+  const offerOther = phase === 'connecting' && (stats?.peers ?? 0) === 0 && Date.now() - startedAt.current >= OFFER_OTHER_SOURCE_MS
   const searching = phase === 'connecting' && (!stats || stats.peers === 0)
   // Sin <video> todavía: `data-no-screensaver` para que el protector no tape el video cuando arranque.
   // El título y la explicación se anuncian (`role="status"`); los números, que cambian cada segundo y medio, no.
@@ -213,6 +216,12 @@ export function StremioPrepare({
               </div>
             ))}
           </dl>
+        )}
+        {offerOther && (
+          // Pasado el tiempo y sin nadie conectado: la misma pantalla de error, que ya trae "Elegir otra fuente".
+          <button className="btn btn-primary" onClick={() => setFailure('peers')}>
+            Probar otra fuente
+          </button>
         )}
         <button className="btn" onClick={exit} autoFocus data-autofocus>
           Volver

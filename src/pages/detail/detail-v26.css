@@ -115,6 +115,10 @@ html[data-tv] .d-read-more {
   border-color: var(--accent);
   color: var(--accent);
 }
+.sx-chip.sx-low {
+  border-color: var(--warn, #ffb454);
+  color: var(--warn, #ffb454);
+}
 .sx-src {
   color: var(--text-soft, var(--text));
   font-size: 0.95rem;

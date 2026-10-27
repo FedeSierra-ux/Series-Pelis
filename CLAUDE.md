@@ -646,6 +646,13 @@ npm run preview    # sirve dist/ en http://localhost:4173
   todas las pantallas. Carga del torrent estilo Stremio: sin caja, fondo borroso del título y números sueltos
   (`.player-prepare-bg`). **Pendiente**: el usuario quiere ver variantes de menús estilo **Nuvio** (página de
   votos, no implementar antes) y una auditoría de "qué agregar" (propuestas para votar).
+- v0.33.0 hecha (rama `claude/compassionate-gates-hpx3pp`): votos de la página "Votos de Flix v0.33" (artifact, colección
+  `decisiones`). **Sí**: tarjeta central de audio y subtítulos en el reproductor (`player-menu-card`; calidad y fuente
+  quedan en Fuentes), Ajustes con tarjetas e interruptores (CSS en `settings-layout.css`, siguen siendo checkboxes),
+  seeds en la lista de fuentes (`streamFacts.seeds`/`lowSeeds`, `LOW_SEEDS = 5`) y "Probar otra fuente" a los 30 s sin
+  peers (`OFFER_OTHER_SOURCE_MS` en `StremioPrepare`). **Después**: ocultar anime en toda la app, Top 10 con pestañas.
+  **No** (no volver a proponer): géneros ocultos por perfil, aviso de episodio nuevo, "marcar como visto" en Seguir viendo,
+  tráiler de fondo en la carga. Menú de navegación (riel): se deja como está.
 - **Decisiones para la v0.17 (reemplazan el reparto del plan de abajo)**: addons y TorBox **iguales para todas las
   casas**, solo los cambia el admin (opción A). Ajustes generales (subtítulos, idiomas, autoplay, saltar intro, sin
   spoilers, reglas de fuentes) **iguales en toda la casa**; lo físico (modo TV, tamaño de la interfaz, protector,

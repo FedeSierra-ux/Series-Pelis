@@ -981,3 +981,29 @@ html[data-tv] .player-prepare-name {
   max-width: 36ch;
   line-height: 1.45;
 }
+
+/* v0.33: audio y subtítulos en una tarjeta centrada (voto del usuario), no un menú pegado a la barra. */
+.player-menu.player-menu-card {
+  top: 50%;
+  left: 50%;
+  right: auto;
+  bottom: auto;
+  transform: translate(-50%, -50%);
+  width: min(560px, calc(100% - 2 * var(--gutter)));
+  max-height: min(72%, 560px);
+  padding: 14px 16px;
+  gap: 14px;
+  border-radius: var(--radius-lg, 24px);
+  box-shadow: 0 18px 60px rgba(0, 0, 0, 0.6);
+}
+.player-card-section {
+  display: grid;
+  gap: 4px;
+}
+.player-card-section + .player-card-section {
+  padding-top: 12px;
+  border-top: 1px solid var(--line, rgba(255, 255, 255, 0.12));
+}
+html[data-tv] .player-menu.player-menu-card {
+  width: min(760px, 80%);
+}
