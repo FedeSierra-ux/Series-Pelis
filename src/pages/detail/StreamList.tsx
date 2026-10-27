@@ -296,6 +296,7 @@ export function StreamList({ meta, video, nextVideoId }: { meta: Meta; video?: V
       f.audio && { k: 'audio', t: f.audio },
       f.lang && { k: 'lang', t: f.lang, cls: f.latino ? 'sx-lat' : undefined },
       f.size && { k: 'size', t: f.size },
+      f.seeds !== undefined && { k: 'seeds', t: `${f.seeds.toLocaleString('es-AR')} ${f.seeds === 1 ? 'seed' : 'seeds'}`, cls: f.lowSeeds ? 'sx-low' : undefined },
     ].filter((c): c is { k: string; t: string; cls?: string } => !!c)
     const service = [f.service, f.state, hiddenReason && f.service !== addon.manifest.name ? addon.manifest.name : undefined].filter(Boolean).join(' · ')
     // Sin etiquetas (un tráiler, un enlace suelto): el nombre que manda el addon, y el archivo al lado si hay (pc-05).
@@ -315,6 +316,7 @@ export function StreamList({ meta, video, nextVideoId }: { meta: Meta; video?: V
         {service && <span className="sx-src">{service}</span>}
         {file && <span className="sx-file">{file}</span>}
         {hiddenReason && <span className="stream-hidden-reason">{hiddenReason}</span>}
+        {f.lowSeeds && <span className="stream-warn">Pocos seeds: puede tardar en arrancar</span>}
         {p.reason && !twin && <span className="stream-warn">{p.reason}</span>}
         {twin && <span className="stream-hidden-reason">{isDebridDownload(twin.stream) ? 'Por TorBox: lo baja y arranca solo' : 'Por TorBox'}</span>}
         {/* Con la app de Windows o Stremio Service se convierte si hace falta (v0.29). */}

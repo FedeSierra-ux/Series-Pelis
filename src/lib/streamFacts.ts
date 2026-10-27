@@ -1,3 +1,4 @@
+import { addonSeeders } from './torrentStats'
 import { audioLangs, CACHED_MARKERS, isHdr, parseQuality, parseSize, streamText, type AudioLang } from './streamPicker'
 import type { Stream } from './types'
 
@@ -22,9 +23,16 @@ export interface StreamFacts {
   service?: string
   /** "listo para ver", "tiene que descargarse", "sin debrid". */
   state?: string
+  /** Seeds que informa el addon ("👤 123" de Torrentio). */
+  seeds?: number
+  /** Pocos seeds: puede tardar o no arrancar (v0.33). */
+  lowSeeds: boolean
   /** Primera línea del título (el nombre del archivo, sin el emoji de adelante). */
   file?: string
 }
+
+/** Con menos de esto, la fuente se marca como "pocos seeds". */
+export const LOW_SEEDS = 5
 
 const QUALITY_LABEL: Record<number, string> = { 2160: '4K', 1080: '1080p', 720: '720p', 480: '480p' }
 
@@ -95,6 +103,7 @@ export function streamFacts(s: Stream, addonName?: string): StreamFacts {
   if (torrent) state = 'sin debrid'
   else if (service && DOWNLOAD_RE.test(name)) state = 'tiene que descargarse'
   else if (service && CACHED_MARKERS.test(text)) state = 'listo para ver'
+  const seeds = addonSeeders(s)
   return {
     quality: q ? QUALITY_LABEL[q] : undefined,
     hdr: DOLBY_VISION_RE.test(text) ? 'Dolby Vision' : isHdr(s) ? 'HDR' : undefined,
@@ -103,6 +112,8 @@ export function streamFacts(s: Stream, addonName?: string): StreamFacts {
     size: size ? formatSize(size) : undefined,
     service: service ?? (torrent ? 'Torrent' : addonName),
     state,
+    seeds,
+    lowSeeds: seeds !== undefined && torrent && seeds < LOW_SEEDS,
     file: fileLine(s),
   }
 }

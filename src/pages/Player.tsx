@@ -1679,7 +1679,7 @@ function PlayerView({
 
       {menu && (
         <div
-          className={`player-menu ${menu === 'sources' ? 'player-menu-wide' : ''} ${menu === 'quick' ? 'player-menu-quick' : ''}`}
+          className={`player-menu ${menu === 'sources' ? 'player-menu-wide' : ''} ${menu === 'quick' ? 'player-menu-quick' : ''} ${menu === 'subs' || menu === 'audio' ? 'player-menu-card' : ''}`}
           // Un grupo con las opciones como radios (ver `SubtitleMenu`, `SourcesMenu`): `role="menu"` pedía `menuitem`.
           role="group"
           aria-label={MENU_LABELS[menu]}
@@ -1716,15 +1716,26 @@ function PlayerView({
               }
             />
           )}
-          {menu === 'subs' && <SubtitleMenu subs={subs} isSeries={!!video} onInteract={showControls} />}
-          {menu === 'audio' && (
-            <div className="player-menu-group" role="radiogroup" aria-label="Idioma de audio">
-              {audioTracks.map((t) => (
-                <button key={t.id} role="radio" aria-checked={audioTrack === t.id} className={audioTrack === t.id ? 'active' : ''} onClick={() => selectAudio(t.id)}>
-                  {t.name}
-                </button>
-              ))}
-            </div>
+          {/* v0.33: audio y subtítulos juntos en una tarjeta en el centro (voto del usuario), se abra desde CC o desde audio. */}
+          {(menu === 'subs' || menu === 'audio') && (
+            <>
+              {(menu === 'audio' || audioTracks.length > 1) && (
+                <section className="player-card-section" aria-label="Idioma de audio">
+                  <span className="player-menu-title muted small">Audio</span>
+                  <div className="player-menu-group" role="radiogroup" aria-label="Idioma de audio">
+                    {audioTracks.map((t) => (
+                      <button key={t.id} role="radio" aria-checked={audioTrack === t.id} className={audioTrack === t.id ? 'active' : ''} onClick={() => selectAudio(t.id)}>
+                        {t.name}
+                      </button>
+                    ))}
+                  </div>
+                </section>
+              )}
+              <section className="player-card-section" aria-label="Subtítulos">
+                <span className="player-menu-title muted small">Subtítulos</span>
+                <SubtitleMenu subs={subs} isSeries={!!video} onInteract={showControls} />
+              </section>
+            </>
           )}
           {menu === 'sources' && <SourcesMenu state={state} onPick={changeSource} />}
           {menu === 'sleep' && (
