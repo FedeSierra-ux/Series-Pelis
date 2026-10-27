@@ -74,6 +74,47 @@ export function argentinasParams(kind: BrowseKind, today: string): Record<string
   }
 }
 
+/** Palabra clave "anime" de TMDB (v0.32: el Top 10 de Inicio no lo quiere). */
+export const ANIME_KEYWORD = '210024'
+const ANIMATION = 16
+
+/** Animación japonesa: lo que TMDB no siempre marca con la palabra clave. */
+export const isAnime = (i: { genre_ids?: number[]; original_language?: string }) =>
+  i.original_language === 'ja' && !!i.genre_ids?.includes(ANIMATION)
+
+/**
+ * `/discover` del Top 10 de Inicio: lo más popular en las plataformas de Argentina (suscripción), sin anime
+ * ni noticieros/reality en las series.
+ */
+export function top10Params(kind: BrowseKind): Record<string, string | number | undefined> {
+  return {
+    language: 'es-MX',
+    page: 1,
+    sort_by: 'popularity.desc',
+    include_adult: 'false',
+    watch_region: 'AR',
+    with_watch_monetization_types: 'flatrate',
+    without_keywords: ANIME_KEYWORD,
+    'vote_count.gte': kind === 'movie' ? 200 : 50,
+    without_genres: kind === 'series' ? TV_NOISE : undefined,
+  }
+}
+
+/** Alterna películas y series (la primera, una película) hasta `n`, saltando los repetidos. */
+export function mixTop10<T extends { id: string }>(movies: readonly T[], series: readonly T[], n = 10): T[] {
+  const out: T[] = []
+  const seen = new Set<string>()
+  for (let i = 0; out.length < n && (i < movies.length || i < series.length); i++) {
+    for (const m of [movies[i], series[i]]) {
+      if (m && out.length < n && !seen.has(m.id)) {
+        seen.add(m.id)
+        out.push(m)
+      }
+    }
+  }
+  return out
+}
+
 export const discoverPath = (kind: BrowseKind) => `/discover/${tmdbKind(kind)}`
 
 /** Lo popular con IMDb ≥ 7, sin repetidos y en el orden en que vino. */

@@ -639,6 +639,13 @@ npm run preview    # sirve dist/ en http://localhost:4173
   la metadata va con `unref`. Este entorno de Claude no tiene salida UDP/TCP para BitTorrent: no se puede probar con un
   enjambre real (se probó con el tracker local de los tests y un motor falso en `scratchpad`). Registro de la app:
   `%APPDATA%\Flix\logs`.
+- v0.32.0 hecha (rama `claude/compassionate-gates-hpx3pp`): **Inicio** = portada → Seguir viendo → **Top 10 en Argentina**
+  (películas y series mezcladas, `loadTop10Mix` en `discover/browseData.ts`: TMDB `discover` con `watch_region=AR`,
+  `without_keywords=210024` + `isAnime`; sin TMDB, Cinemeta) → Películas populares → Series populares
+  (`home/PopularRows.tsx`) → Para vos / Porque viste / Tendencias / listas / catálogos. Pedido del usuario, vale en
+  todas las pantallas. Carga del torrent estilo Stremio: sin caja, fondo borroso del título y números sueltos
+  (`.player-prepare-bg`). **Pendiente**: el usuario quiere ver variantes de menús estilo **Nuvio** (página de
+  votos, no implementar antes) y una auditoría de "qué agregar" (propuestas para votar).
 - **Decisiones para la v0.17 (reemplazan el reparto del plan de abajo)**: addons y TorBox **iguales para todas las
   casas**, solo los cambia el admin (opción A). Ajustes generales (subtítulos, idiomas, autoplay, saltar intro, sin
   spoilers, reglas de fuentes) **iguales en toda la casa**; lo físico (modo TV, tamaño de la interfaz, protector,

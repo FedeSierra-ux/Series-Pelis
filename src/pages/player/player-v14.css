@@ -889,34 +889,91 @@ html[data-tv] .player-title span {
   gap: 10px;
 }
 .player-prepare-stats {
-  display: grid;
-  gap: 6px;
-  margin: 6px 0 0;
-  padding: 12px 18px;
-  /* Ancho fijo: si no, la caja salta cada vez que cambian los números. */
-  width: min(400px, 90vw);
-  box-sizing: border-box;
-  border-radius: var(--radius, 14px);
-  background: rgba(255, 255, 255, 0.06);
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 8px 28px;
+  margin: 10px 0 0;
+  padding: 0;
+  max-width: min(640px, 92vw);
   font-variant-numeric: tabular-nums;
+  text-shadow: 0 1px 8px rgba(0, 0, 0, 0.7);
 }
+/* Sin caja (como Stremio): el número arriba y la etiqueta chica abajo. */
 .player-prepare-stats > div {
   display: grid;
-  grid-template-columns: 6.5em 1fr;
-  gap: 12px;
-  text-align: left;
+  justify-items: center;
+  gap: 2px;
+  min-width: 5.5em;
+  text-align: center;
 }
 .player-prepare-stats dt {
-  color: rgba(255, 255, 255, 0.62);
+  order: 2;
+  font-size: 0.78rem;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: rgba(255, 255, 255, 0.6);
 }
 .player-prepare-stats dd {
+  order: 1;
   margin: 0;
+  font-size: 1.05rem;
   color: #fff;
 }
 html[data-tv] .player-prepare-stats {
-  width: 620px;
-  gap: 8px;
-  padding: 16px 24px;
+  max-width: 1100px;
+  gap: 12px 48px;
+}
+html[data-tv] .player-prepare-stats dd {
+  font-size: 1.5rem;
+}
+html[data-tv] .player-prepare-stats dt {
+  font-size: 1.1rem;
+}
+
+/* v0.32: fondo de la peli o serie (borroso y con un zoom lento) detrás de la carga, como Stremio. */
+.player-prepare {
+  position: relative;
+  overflow: hidden;
+}
+.player-prepare-bg {
+  position: absolute;
+  inset: -4%;
+  background-size: cover;
+  background-position: center;
+  filter: blur(14px) brightness(0.45);
+  animation: prepare-drift 24s ease-in-out infinite alternate;
+}
+.player-prepare-bg::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(ellipse at center, rgba(0, 0, 0, 0.1), rgba(0, 0, 0, 0.7));
+}
+.player-prepare-box {
+  position: relative;
+}
+.player-prepare-name {
+  font-size: 1.6rem;
+  font-weight: 700;
+  max-width: 24ch;
+  text-shadow: 0 2px 14px rgba(0, 0, 0, 0.8);
+}
+html[data-tv] .player-prepare-name {
+  font-size: 2.4rem;
+}
+@keyframes prepare-drift {
+  from {
+    transform: scale(1) translate3d(0, 0, 0);
+  }
+  to {
+    transform: scale(1.1) translate3d(-1.5%, -1%, 0);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .player-prepare-bg {
+    animation: none;
+  }
 }
 
 /* v0.30: "TorBox lo está bajando…" (navegador sin servidor de torrents), misma caja que la de arriba. */

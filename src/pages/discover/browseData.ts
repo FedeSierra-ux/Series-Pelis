@@ -1,7 +1,7 @@
 import { CINEMETA_ADDON, getCatalog } from '../../lib/addons'
-import { argentinasParams, cleanTrending, discoverPath, trendingPath, wellRated, type BrowseKind } from '../../lib/browseRows'
+import { argentinasParams, cleanTrending, discoverPath, isAnime, mixTop10, top10Params, trendingPath, wellRated, type BrowseKind } from '../../lib/browseRows'
 import { today } from '../../lib/discoverApi'
-import { tmdbCached, tmdbToPreview, type TmdbPage } from '../../lib/tmdb'
+import { tmdbCached, tmdbToPreview, type TmdbListItem, type TmdbPage } from '../../lib/tmdb'
 import type { MetaPreview } from '../../lib/types'
 
 // Pedidos de las filas de Películas y Series (v0.15). Todo pasa por la caché de siempre: al volver a
@@ -52,3 +52,30 @@ export async function loadWellRated(kind: BrowseKind): Promise<MetaPreview[]> {
 export const loadGenre = (kind: BrowseKind, genre: string) => cinemetaTop(kind, { genre })
 
 export const loadArgentinas = (kind: BrowseKind) => tmdbList(kind, argentinasParams(kind, today()))
+
+/** "Popular" de Cinemeta para las filas de Inicio (no hace falta TMDB). */
+export const loadPopular = (kind: BrowseKind) => cinemetaTop(kind)
+
+/**
+ * Top 10 de Inicio (v0.32): películas y series mezcladas, lo más visto en las plataformas de Argentina y sin
+ * anime. Sin TMDB (o si falla), el "Popular" de Cinemeta mezclado de la misma forma.
+ */
+export async function loadTop10Mix(tmdbOn: boolean): Promise<MetaPreview[]> {
+  if (tmdbOn) {
+    try {
+      const [mv, tv] = await Promise.all(
+        (['movie', 'series'] as const).map(async (kind) => {
+          const res = await tmdbCached<TmdbPage>(discoverPath(kind), top10Params(kind), 3 * HOUR)
+          const list = (res.results ?? []).filter((i: TmdbListItem) => !!i.poster_path && !isAnime(i))
+          return list.map((i) => tmdbToPreview(i, kind === 'movie' ? 'movie' : 'tv'))
+        }),
+      )
+      const mix = mixTop10(mv, tv)
+      if (mix.length >= 5) return mix
+    } catch {
+      // Seguimos con Cinemeta.
+    }
+  }
+  const [mv, tv] = await Promise.all([cinemetaTop('movie'), cinemetaTop('series')])
+  return mixTop10(mv, tv)
+}

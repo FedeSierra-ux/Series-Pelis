@@ -12,10 +12,12 @@ import {
   type MediaProbe,
   type ServerPlan,
 } from '../../lib/stremioServer'
+import { localTitle } from '../../lib/localTitles'
 import { desktopTorrentBase } from '../../lib/desktop'
 import { videoSubOptions, type VideoSubsSource } from '../../lib/embeddedSubs'
 import { addonSeeders, parseTorrentStats, statsView, type TorrentStats } from '../../lib/torrentStats'
 import type { PlayState } from '../Detail'
+import { backdropFor } from '../../components/ContinueCard'
 import { EngineError } from './EngineError'
 
 // v0.29: antes de abrir un torrent con el servidor de Stremio (Stremio Service en la PC) se hace lo mismo que
@@ -185,12 +187,17 @@ export function StremioPrepare({
   }
   const title = phase === 'connecting' ? 'Conectando con el torrent…' : 'Preparando el video…'
   const view = statsView(stats, { addonSeeds: addonSeeders(state.stream), elapsedMs: Date.now() - startedAt.current })
+  const backdrop = backdropFor(state.meta.id, state.meta.background)
+  const name = localTitle(state.meta.id, state.meta.name)
   const searching = phase === 'connecting' && (!stats || stats.peers === 0)
   // Sin <video> todavía: `data-no-screensaver` para que el protector no tape el video cuando arranque.
   // El título y la explicación se anuncian (`role="status"`); los números, que cambian cada segundo y medio, no.
   return (
     <div className="player player-native player-prepare" data-no-screensaver>
+      {/* v0.32: como Stremio, el fondo de la peli o serie moviéndose despacio mientras carga. */}
+      {backdrop && <div className="player-prepare-bg" style={{ backgroundImage: `url("${backdrop}")` }} aria-hidden="true" />}
       <div className="player-prepare-box">
+        {name && <div className="player-prepare-name">{name}</div>}
         <div className="player-spinner" aria-hidden="true" />
         <div role="status" aria-live="polite" className="player-prepare-head">
           <strong>{title}</strong>
