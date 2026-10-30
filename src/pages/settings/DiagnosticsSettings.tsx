@@ -38,7 +38,7 @@ export function DiagnosticsSettings() {
       </label>
       <p className="muted small">
         Cuando algo falla, la app le manda un aviso a quien administra el sitio para poder arreglarlo sin pedirte fotos de
-        la tele. Se manda: el mensaje del error, en qué pantalla pasó, la versión de la app, el tipo de dispositivo y
+        la tele. Se manda: el mensaje del error, en qué pantalla pasó, la versión de la app, el tipo de aparato y
         navegador, el tema, y solo el <strong>nombre del sitio</strong> de los addons o de la fuente involucrados (por
         ejemplo, “torrentio.strem.fun”).
       </p>

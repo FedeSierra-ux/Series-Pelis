@@ -4,8 +4,9 @@ import { backdropFor, ContinueCard, LandscapeCard } from '../components/Continue
 import { FocusBillboard } from '../components/FocusBillboard'
 import { PosterCard } from '../components/PosterCard'
 import { Row } from '../components/Row'
-import { visibleRows } from '../lib/catalogPrefs'
+import { duplicatesPopularRow, visibleRows } from '../lib/catalogPrefs'
 import { useCatalogRows, useRowShape } from '../lib/catalogRows'
+import { episodeLabel } from '../lib/format'
 import { displayYear } from '../lib/yearLabel'
 import { useCatalog, useTitle } from '../lib/hooks'
 import { catalogLabel, genreLabel } from '../lib/i18n'
@@ -159,8 +160,8 @@ function ContinueRow({ onHide }: { onHide: (metaId: string, name: string) => voi
             metaId={ep.metaId}
             type="series"
             name={ep.seriesName}
-            // Mismo formato que lo empezado ("T1 E3 · …").
-            subtitle={[ep.episode !== undefined ? `T${ep.season} E${ep.episode}` : '', ep.title].filter(Boolean).join(' · ')}
+            // Mismo formato que lo empezado ("T1 · E3 · …").
+            subtitle={[ep.episode !== undefined ? episodeLabel(ep.season, ep.episode) : '', ep.title].filter(Boolean).join(' · ')}
             backdrop={ep.thumbnail ?? backdropFor(ep.metaId)}
             poster={ep.poster}
             progress={ep.progress}
@@ -196,8 +197,10 @@ export function Home() {
   useTitle(undefined)
   const progress = useStore(progressStore)
   // Filas con lo elegido en el gestor de catálogos (orden, nombres, ocultas, fusionadas).
-  const catalogs = visibleRows(useCatalogRows(true)).filter((r) => !r.virtual)
-  const heroSource = (catalogs.find((c) => c.type === 'movie') ?? catalogs[0])?.sources[0]
+  const shown = visibleRows(useCatalogRows(true)).filter((r) => !r.virtual)
+  // "Popular" de Cinemeta ya sale arriba como "Películas/Series populares": no se repite entre los catálogos.
+  const catalogs = shown.filter((r) => !duplicatesPopularRow(r))
+  const heroSource = (shown.find((c) => c.type === 'movie') ?? shown[0])?.sources[0]
   const { undo, hide, restore } = useUndoHide()
   // TMDB es opcional: sin key, Inicio queda igual que siempre.
   const tmdbKey = useTmdbKey()
@@ -250,7 +253,7 @@ export function Home() {
         ),
       )}
 
-      {catalogs.length === 0 && (
+      {shown.length === 0 && (
         <div className="empty">
           No hay catálogos. <Link to="/settings">Agregá un addon</Link> para empezar.
         </div>

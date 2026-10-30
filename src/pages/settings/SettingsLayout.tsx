@@ -1,8 +1,8 @@
 import { Component, useEffect, useState, useSyncExternalStore, type MouseEvent, type ReactNode } from 'react'
 
 // Ajustes en dos columnas (v0.10, V5 de la auditoría): desde 1024 px, índice fijo a la izquierda
-// con la sección visible resaltada; en el celular, cada sección es un <details> plegable (la
-// primera abierta). Acá no hay lógica de ninguna sección: solo la estructura y el foco.
+// con la sección visible resaltada; en el celular, cada sección es un <details> plegable (las
+// cerradas de entrada y de a una por vez). Acá no hay lógica de ninguna sección: solo la estructura y el foco.
 
 /** Hasta este ancho, las secciones van plegadas; desde acá, índice + contenido. */
 export const WIDE_QUERY = '(min-width: 1024px)'
@@ -35,6 +35,17 @@ function isVisible(el: HTMLElement) {
   return r.width > 0 && r.height > 0
 }
 
+/** Celular: abrir una sección cierra las otras (con "Addons" abierto el resto quedaba a dos pantallas). Devuelve cuántas cerró. */
+function closeOtherSections(keep: HTMLDetailsElement): number {
+  let closed = 0
+  for (const d of document.querySelectorAll<HTMLDetailsElement>('details.settings-block[open]')) {
+    if (d === keep) continue
+    d.open = false
+    closed++
+  }
+  return closed
+}
+
 /**
  * Lleva a una sección. `focusFirst` (control remoto o teclado) pasa el foco al primer control de
  * la sección: así en la TV elegir del índice deja listo el ↓ para seguir dentro del contenido.
@@ -42,7 +53,11 @@ function isVisible(el: HTMLElement) {
 export function goToSection(id: string, focusFirst: boolean) {
   const el = document.getElementById(id)
   if (!el) return
-  if (el instanceof HTMLDetailsElement) el.open = true
+  if (el instanceof HTMLDetailsElement) {
+    // Primero se cierran las otras: así el scroll de abajo cuenta con el alto final de la página.
+    closeOtherSections(el)
+    el.open = true
+  }
   // `scroll-margin-top` en .settings-block deja lugar para la barra de arriba.
   el.scrollIntoView({ block: 'start' })
   if (!focusFirst) return
@@ -191,10 +206,10 @@ class SectionBoundary extends Component<{ title: string; children: ReactNode }, 
 }
 
 /**
- * Envoltorio de cada sección: ancla en PC/TV y <details> plegable en el celular. El `open` inicial
- * lo pone React una sola vez; después manda el usuario (abrir/cerrar no vuelve a renderizar).
+ * Envoltorio de cada sección: ancla en PC/TV y <details> plegable en el celular (cerrado de entrada: la sección de Addons,
+ * la más larga, empujaba a todas las demás; abrir una cierra las otras). El estado `open` lo maneja el navegador.
  */
-export function SettingsBlock({ id, title, wide, defaultOpen, children }: { id: string; title: string; wide: boolean; defaultOpen?: boolean; children: ReactNode }) {
+export function SettingsBlock({ id, title, wide, children }: { id: string; title: string; wide: boolean; children: ReactNode }) {
   if (wide) {
     return (
       <div className="settings-block" id={id}>
@@ -203,7 +218,15 @@ export function SettingsBlock({ id, title, wide, defaultOpen, children }: { id: 
     )
   }
   return (
-    <details className="settings-block" id={id} open={defaultOpen}>
+    <details
+      className="settings-block"
+      id={id}
+      onToggle={(e) => {
+        const el = e.currentTarget
+        // Al abrir a mano, las otras se cierran y, si había alguna arriba, esta se sube para no perderla de vista.
+        if (el.open && closeOtherSections(el) > 0) el.scrollIntoView({ block: 'start' })
+      }}
+    >
       <summary className="settings-summary">
         <h2 className="settings-summary-title">{title}</h2>
         <span className="settings-summary-caret" aria-hidden>

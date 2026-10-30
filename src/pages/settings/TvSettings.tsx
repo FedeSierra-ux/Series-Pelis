@@ -48,7 +48,7 @@ export function TvSettings() {
       <Choice label="Modo TV" value={settings.tvMode} options={TV_OPTIONS} onChange={(tvMode) => update({ tvMode })} />
       <p className="muted small">
         Muestra el teclado en pantalla para escribir con el control remoto (en Buscar y en los campos de texto).{' '}
-        {detected ? 'Este dispositivo parece una TV.' : 'Este dispositivo no parece una TV.'}
+        {detected ? 'Este aparato parece una TV.' : 'Este aparato no parece una TV.'}
       </p>
 
       <div className="hero-actions">

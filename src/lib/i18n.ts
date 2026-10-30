@@ -33,11 +33,11 @@ export const genreLabel = (g: string) => GENRES[g] ?? g
 
 /** Recursos del protocolo de addons de Stremio (lo que ofrece cada addon), para las etiquetas de Ajustes. */
 export const RESOURCE_LABEL: Record<string, string> = {
-  catalog: 'catálogos',
-  meta: 'info',
-  stream: 'streams',
-  subtitles: 'subtítulos',
-  addon_catalog: 'lista de addons',
+  catalog: 'Catálogos',
+  meta: 'Info',
+  stream: 'Fuentes',
+  subtitles: 'Subtítulos',
+  addon_catalog: 'Lista de addons',
 }
 
 /** Etiqueta en español de un recurso; uno que no conocemos queda como viene. */
@@ -46,7 +46,7 @@ export const resourceLabel = (r: string) => RESOURCE_LABEL[r] ?? r
 const CATALOG_NAMES: Record<string, string> = {
   Popular: 'Populares',
   New: 'Nuevas',
-  Featured: 'Mejor puntuadas',
+  Featured: 'Bien calificadas',
 }
 
 export const typeLabel = (type: string, plural = true) =>

@@ -1,5 +1,6 @@
 import { wholeHours } from './watchStats'
 import { dayStart, type DiaryEntry } from './diary'
+import type { Theme2IconName } from '../components/Theme2Icons'
 import type { Meta } from './types'
 
 // Metas anuales y logros, calculados con el diario. Lógica pura (el store es `goalsStore` en store.ts).
@@ -141,7 +142,8 @@ export function completedSeries(entries: DiaryEntry[], metas: Map<string, Meta>,
 
 export interface Achievement {
   id: string
-  icon: string
+  /** Ícono de línea del set de la app (`Theme2Icon`). */
+  icon: Theme2IconName
   title: string
   description: string
   current: number
@@ -195,7 +197,7 @@ export function computeAchievements(all: DiaryEntry[], year: number, completed: 
   const night = entries.find((d) => isNight(d.watchedAt))
   const series = completed.filter((c) => new Date(c.at).getFullYear() === year)
 
-  const count = (id: string, icon: string, title: string, description: string, list: DiaryEntry[], key: (d: DiaryEntry) => string, current: number, target: number): Achievement => ({
+  const count = (id: string, icon: Theme2IconName, title: string, description: string, list: DiaryEntry[], key: (d: DiaryEntry) => string, current: number, target: number): Achievement => ({
     id, icon, title, description, current: Math.min(current, target), target,
     unlockedAt: current >= target ? nthDistinct(list, key, target) : undefined,
   })
@@ -203,33 +205,33 @@ export function computeAchievements(all: DiaryEntry[], year: number, completed: 
   const byVideo = (d: DiaryEntry) => d.videoId
 
   return [
-    count('first-movie', '🎬', 'Primera peli del año', `Terminá una película en ${year}.`, movies, byMeta, movieCount, 1),
-    count('first-episode', '📺', 'Primer episodio del año', `Terminá un episodio en ${year}.`, episodes, byVideo, episodeCount, 1),
-    count('movies-10', '🍿', '10 pelis', '10 películas distintas en el año.', movies, byMeta, movieCount, 10),
-    count('movies-52', '🗓️', 'Una por semana', '52 películas distintas en el año.', movies, byMeta, movieCount, 52),
-    count('episodes-100', '💯', '100 episodios', '100 episodios en el año.', episodes, byVideo, episodeCount, 100),
+    count('first-movie', 'movie', 'Primera peli del año', `Terminá una película en ${year}.`, movies, byMeta, movieCount, 1),
+    count('first-episode', 'series', 'Primer episodio del año', `Terminá un episodio en ${year}.`, episodes, byVideo, episodeCount, 1),
+    count('movies-10', 'popcorn', '10 pelis', '10 películas distintas en el año.', movies, byMeta, movieCount, 10),
+    count('movies-52', 'calendar', 'Una por semana', '52 películas distintas en el año.', movies, byMeta, movieCount, 52),
+    count('episodes-100', 'target', '100 episodios', '100 episodios en el año.', episodes, byVideo, episodeCount, 100),
     {
-      id: 'double-feature', icon: '🎞️', title: 'Función doble', description: 'Dos películas el mismo día.',
+      id: 'double-feature', icon: 'double', title: 'Función doble', description: 'Dos películas el mismo día.',
       current: Math.min(double.max, 2), target: 2, unlockedAt: double.reachedAt,
     },
     {
-      id: 'marathon-5', icon: '🏃', title: 'Maratón', description: '5 episodios en un mismo día.',
+      id: 'marathon-5', icon: 'timer', title: 'Maratón', description: '5 episodios en un mismo día.',
       current: Math.min(marathon.max, 5), target: 5, unlockedAt: marathon.reachedAt,
     },
     {
-      id: 'streak-7', icon: '🔥', title: 'Racha de 7 días', description: 'Terminá algo 7 días seguidos.',
+      id: 'streak-7', icon: 'flame', title: 'Racha de 7 días', description: 'Terminá algo 7 días seguidos.',
       current: Math.min(streak.days, 7), target: 7, unlockedAt: streak.reachedAt[6],
     },
     {
-      id: 'streak-30', icon: '⚡', title: 'Un mes sin cortar', description: 'Terminá algo 30 días seguidos.',
+      id: 'streak-30', icon: 'bolt', title: 'Un mes sin cortar', description: 'Terminá algo 30 días seguidos.',
       current: Math.min(streak.days, 30), target: 30, unlockedAt: streak.reachedAt[29],
     },
     {
-      id: 'night-owl', icon: '🦉', title: 'Trasnochador', description: 'Terminá algo entre las 2 y las 5 de la mañana.',
+      id: 'night-owl', icon: 'moon', title: 'Trasnochador', description: 'Terminá algo entre las 2 y las 5 de la mañana.',
       current: night ? 1 : 0, target: 1, unlockedAt: night?.watchedAt,
     },
     {
-      id: 'series-complete', icon: '🏁', title: 'Serie terminada', description: 'Viste todos los episodios de una serie que ya terminó.',
+      id: 'series-complete', icon: 'flag', title: 'Serie terminada', description: 'Viste todos los episodios de una serie que ya terminó.',
       current: Math.min(series.length, 1), target: 1, unlockedAt: series[0]?.at,
       detail: series.length ? series.map((s) => s.name).join(', ') : undefined,
     },

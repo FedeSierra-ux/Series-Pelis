@@ -65,7 +65,7 @@ export function addonUrlProblem(url: string): string | undefined {
 export function importErrorText(err: unknown): string {
   const message = err instanceof Error ? err.message : String(err ?? '')
   if (err instanceof SyntaxError || /unexpected (token|end)|not valid json|json\.parse|unterminated/i.test(message)) {
-    return 'El archivo no es una copia válida: está incompleto o no es un JSON. Volvé a descargar la copia en el otro dispositivo.'
+    return 'El archivo no es una copia válida: está incompleto o no es un JSON. Volvé a descargar la copia en el otro aparato.'
   }
   if (err instanceof DOMException || /could not be read|notreadable|permission/i.test(message)) {
     return 'No se pudo leer el archivo. Probá elegirlo de nuevo.'

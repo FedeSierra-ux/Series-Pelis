@@ -1,5 +1,6 @@
 import { getMeta, metaKey } from './addons'
 import { peek } from './cache'
+import { episodeLabel } from './format'
 import { genreLabel } from './i18n'
 import type { WatchEntry } from './store'
 import type { InstalledAddon, Meta } from './types'
@@ -128,7 +129,7 @@ export function computeYearStats(progress: Record<string, WatchEntry>, year: num
     if (e.type === 'series' && e.watched) t.episodes++
     byTitle.set(e.metaId, t)
 
-    const label = e.season !== undefined ? `${e.name} T${e.season}E${e.episode ?? '?'}` : e.name
+    const label = e.season !== undefined ? `${e.name} ${episodeLabel(e.season, e.episode) || `T${e.season}`}` : e.name
     touch(dayIndex(e.updatedAt, year), label, secs)
     // El día que lo empezó también cuenta como día con actividad.
     if (e.firstWatchedAt && yearOf(e.firstWatchedAt) === year && dayIndex(e.firstWatchedAt, year) !== dayIndex(e.updatedAt, year)) {

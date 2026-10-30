@@ -119,7 +119,11 @@ function ErrorScreen({ error, componentStack }: { error: Error; componentStack: 
           Copiar detalle
         </button>
       </div>
-      <pre className="error-detail">{detail}</pre>
+      {/* El detalle técnico (nombre del error, navegador, stack) queda plegado: ya está "Copiar detalle" y el informe. */}
+      <details className="error-details">
+        <summary>Ver detalle</summary>
+        <pre className="error-detail">{detail}</pre>
+      </details>
     </div>
   )
 }

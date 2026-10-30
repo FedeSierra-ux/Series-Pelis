@@ -55,11 +55,17 @@
     opacity 0.18s ease-out,
     margin 0.18s ease-out;
 }
-.vol:hover .vol-slider,
 .vol:focus-within .vol-slider {
   width: 92px;
   margin: 0 10px 0 4px;
   opacity: 1;
+}
+@media (hover: hover) {
+  .vol:hover .vol-slider {
+    width: 92px;
+    margin: 0 10px 0 4px;
+    opacity: 1;
+  }
 }
 .vol-slider::-webkit-slider-thumb {
   -webkit-appearance: none;
@@ -91,14 +97,8 @@ html[data-tv] .vol {
 
 /* ---------- Ajustar / llenar / estirar (F17) ---------- */
 
-.controls-row .fit-label {
-  display: none;
-}
-@media (min-width: 1400px) {
-  .controls-row .fit-label {
-    display: inline;
-  }
-}
+/* visual-pc-16: solo el ícono (con la etiqueta «Imagen: Ajustar» al pasar el mouse). El texto «Ajustar» en PC ancha se
+   leía como «configurar» y competía con el engranaje de Ajustes rápidos, que llama a este control «Imagen». */
 
 /* ---------- Modo scrub (U24) ---------- */
 
@@ -276,10 +276,15 @@ html[data-tv] .next-thumb {
 .postplay-year {
   padding: 0 4px;
 }
-.postplay-item:hover img,
 .postplay-item:focus-visible img {
   outline: 3px solid var(--accent);
   outline-offset: 2px;
+}
+@media (hover: hover) {
+  .postplay-item:hover img {
+    outline: 3px solid var(--accent);
+    outline-offset: 2px;
+  }
 }
 .postplay-item:focus-visible {
   outline: none;
@@ -597,7 +602,7 @@ html[data-tv] .pause-cast {
   padding-left: calc(var(--gutter) + 63px);
 }
 
-/* code-04: los botones que se "deshabilitan" con el foco puesto ("Ver ahora", "Siguiente episodio",
+/* code-04: los botones que se "deshabilitan" con el foco puesto ("Reproducir", "Siguiente episodio",
    "Preparando…") usan `aria-disabled` para no soltar el foco del control remoto: se ven como `disabled`. */
 .player [aria-disabled='true'] {
   opacity: 0.4;
@@ -1009,4 +1014,65 @@ html[data-tv] .player-prepare-name {
 }
 html[data-tv] .player-menu.player-menu-card {
   width: min(760px, 80%);
+}
+
+/* ---------- v0.35: táctil ----------
+   visual-movil-19: la barra de progreso medía 6 px y la zona que respondía al dedo, ~28 px (el pulgar le erraba y el
+   toque iba al video, que muestra/oculta los controles). Ahora el <input> mide 44 px de alto con relleno arriba y
+   abajo (`--seek-pt` + `--seek-pb` + 6 = 44; más arriba que abajo, porque abajo está la fila de botones) y el fondo
+   solo en el contenido: se ve igual (6 px, con las puntas redondas) y los márgenes dejan el mismo lugar en la
+   maquetación. */
+@media (pointer: coarse) {
+  html:not([data-tv]) .player-controls .seekbar {
+    --seek-pt: 29px;
+    --seek-pb: 9px;
+    --seek-r: 3px;
+    box-sizing: border-box;
+    /* En bloque (era inline-block dentro de una línea): su lugar en la maquetación era 10 px de aire + 6 + 10 px. */
+    display: block;
+    height: 44px;
+    padding: var(--seek-pt) 0 var(--seek-pb);
+    background-clip: content-box;
+    /* Radios elípticos: al restarles el relleno, el fondo queda con puntas circulares de --seek-r. */
+    border-radius: var(--seek-r) var(--seek-r) var(--seek-r) var(--seek-r) / calc(var(--seek-pt) + var(--seek-r)) calc(var(--seek-pt) + var(--seek-r))
+      calc(var(--seek-pb) + var(--seek-r)) calc(var(--seek-pb) + var(--seek-r));
+    margin-top: calc(10px - var(--seek-pt));
+    margin-bottom: calc(10px - var(--seek-pb));
+  }
+  /* Al arrastrar la barra engorda de 6 a 8 px (antes con `height`). */
+  html:not([data-tv]) .is-scrubbing .player-controls .seekbar {
+    --seek-pt: 28px;
+    --seek-pb: 8px;
+    --seek-r: 4px;
+  }
+}
+/* visual-movil-18: celular apaisado de más de 760 px (844×390): la barra de escritorio daba botones de 44×36 px.
+   Altura de 44 px como en el celular vertical. La barra crece unos px: lo que se apoya en ella (esquina, menús,
+   sinopsis de la pausa) sigue a su alto real (`--controls-h`, lo mide Player.tsx) en vez de un número fijo. */
+@media (pointer: coarse) and (max-height: 500px) {
+  html:not([data-tv]) .controls-row button {
+    min-width: 44px;
+    min-height: 44px;
+  }
+  /* Abajo la fila de botones (de 44 px) llega a 5 px de la barra: la zona de la barra crece hacia arriba. */
+  html:not([data-tv]) .player-controls .seekbar {
+    --seek-pt: 33px;
+    --seek-pb: 5px;
+    margin-bottom: 0;
+  }
+  html:not([data-tv]) .is-scrubbing .player-controls .seekbar {
+    --seek-pt: 31px;
+    --seek-pb: 5px;
+  }
+  html:not([data-tv]) .player-corner,
+  html:not([data-tv]) .show-controls .player-corner {
+    bottom: calc(var(--controls-h, 108px) + 12px);
+  }
+  html:not([data-tv]) .player-menu:not(.player-menu-card) {
+    bottom: calc(var(--controls-h, 108px) + 4px);
+    max-height: calc(100% - var(--controls-h, 108px) - 56px);
+  }
+  html:not([data-tv]) .pause-cast {
+    padding-bottom: calc(var(--controls-h, 108px) + 12px);
+  }
 }

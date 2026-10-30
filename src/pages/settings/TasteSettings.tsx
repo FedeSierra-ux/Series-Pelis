@@ -36,7 +36,7 @@ function TitleRow({ id, type, name: savedName, poster, extra, action, onAction }
   )
 }
 
-/** Ajustes → Gustos y spoilers: modo sin spoilers, tu puntaje y la lista de "Ya no me interesa". */
+/** Ajustes → Gustos y spoilers: modo sin spoilers, tu puntaje y la lista de "No me interesa". */
 export function TasteSettings() {
   const settings = useStore(settingsStore)
   const ratings = useStore(ratingsStore)
@@ -102,9 +102,9 @@ export function TasteSettings() {
         </>
       )}
 
-      <h3>Ya no me interesa</h3>
+      <h3>No me interesa</h3>
       {hidden.length === 0 ? (
-        <p className="muted">Nada por ahora. Con “Ya no me interesa” en una ficha, ese título deja de aparecer en Inicio y en “Para vos”.</p>
+        <p className="muted">Nada por ahora. Con “No me interesa” en una ficha, ese título deja de aparecer en Inicio y en “Para vos”.</p>
       ) : (
         <ul className="taste-list">
           {hidden.map((e) => (

@@ -28,7 +28,8 @@
   --font-body: 'DM Sans', system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
   --font-display: 'Sora', 'DM Sans', system-ui, sans-serif;
   --focus-ring: 4px solid var(--accent);
-  --rail-w: 88px;
+  /* visual-movil-22: en apaisado con notch el riel suma la zona segura de la izquierda (en PC vale 0). */
+  --rail-w: calc(88px + env(safe-area-inset-left, 0px));
   --gutter: clamp(16px, 2.6vw, 40px);
   --nav-h: 0px;
   --cont-w: clamp(220px, 21vw, 360px);
@@ -167,13 +168,16 @@
   color: var(--muted);
   font-weight: 600;
 }
-[data-theme='2'] .tab:hover {
-  background: var(--bg-3);
-  color: var(--text);
+@media (hover: hover) {
+  [data-theme='2'] .tab:hover {
+    background: var(--bg-3);
+    color: var(--text);
+  }
 }
+/* Lo elegido es lavanda lleno con texto oscuro en todas las pantallas (igual que los chips de filtros y las pestañas de Buscar). */
 [data-theme='2'] .tab.active {
-  background: var(--tonal);
-  color: var(--accent);
+  background: var(--accent);
+  color: var(--on-accent);
   font-weight: 700;
 }
 /* v0.26: en el asistente la caja es --bg-2 como los chips: los idiomas sin elegir llevan contorno (si no,
@@ -183,8 +187,10 @@
   box-shadow: inset 0 0 0 1.5px var(--line);
   color: var(--text);
 }
-[data-theme='2'] .ob-box .tab:not(.active):hover {
-  background: var(--bg-3);
+@media (hover: hover) {
+  [data-theme='2'] .ob-box .tab:not(.active):hover {
+    background: var(--bg-3);
+  }
 }
 /* En el celular el foco arranca en la caja (no en el primer chip): sin anillo. */
 .ob-box:focus {
@@ -228,9 +234,10 @@
   flex-direction: column;
   align-items: center;
   gap: 4px;
-  padding: 18px 0 14px;
+  padding: 18px 0 14px env(safe-area-inset-left, 0px);
   background: var(--rail-bg);
   overflow-y: auto;
+  overscroll-behavior: contain;
   scrollbar-width: none;
 }
 .t2-rail::-webkit-scrollbar {
@@ -250,9 +257,13 @@
   cursor: pointer;
   transition: transform 0.15s ease;
 }
-.t2-profile:hover,
 .t2-profile:focus-visible {
   transform: scale(1.06);
+}
+@media (hover: hover) {
+  .t2-profile:hover {
+    transform: scale(1.06);
+  }
 }
 .t2-profile:focus-visible {
   outline-offset: 3px;
@@ -285,13 +296,19 @@
   border-radius: 16px;
   transition: background 0.15s, color 0.15s, transform 0.15s;
 }
-.t2-rail-link:hover,
 .t2-rail-link:focus-visible,
 .t2-rail-link.active {
   color: var(--text);
 }
-.t2-rail-link:hover .t2-pill {
-  background: var(--surface-2);
+@media (hover: hover) {
+  .t2-rail-link:hover {
+    color: var(--text);
+  }
+}
+@media (hover: hover) {
+  .t2-rail-link:hover .t2-pill {
+    background: var(--surface-2);
+  }
 }
 .t2-rail-link.active {
   font-weight: 700;
@@ -323,6 +340,8 @@
 .t2-main {
   margin-left: var(--rail-w);
   min-height: 100vh;
+  /* visual-movil-22: el notch de la derecha en apaisado (el de la izquierda lo cubre el riel). */
+  padding-right: env(safe-area-inset-right, 0px);
 }
 
 .t2-top,
@@ -389,10 +408,15 @@
   padding: 5px 12px;
   border-radius: 999px;
 }
-[data-theme='2'] .row-more:hover,
 [data-theme='2'] .row-more:focus-visible {
   color: var(--accent);
   background: var(--surface-1);
+}
+@media (hover: hover) {
+  [data-theme='2'] .row-more:hover {
+    color: var(--accent);
+    background: var(--surface-1);
+  }
 }
 /* Más aire arriba y abajo: el anillo de foco y la escala no se cortan. */
 [data-theme='2'] .row-scroller {
@@ -418,9 +442,13 @@ html[data-tv][data-theme='2'] .row-scroller {
   border-radius: 10px;
 }
 /* Al enfocarla o pasar el mouse se pinta entera: si no, el anillo y la escala quedan recortados. */
-[data-theme='2'] .poster-card:hover,
 [data-theme='2'] .poster-card:focus-visible {
   content-visibility: visible;
+}
+@media (hover: hover) {
+  [data-theme='2'] .poster-card:hover {
+    content-visibility: visible;
+  }
 }
 /* Al moverse con las flechas queda lugar para el anillo y el título de la tarjeta enfocada. */
 [data-theme='2'] .poster-card,
@@ -482,10 +510,15 @@ html[data-tv][data-theme='2'] .row-scroller {
   border: 0;
   background: rgba(11, 11, 16, 0.8);
 }
-[data-theme='2'] .poster-remove:hover,
 [data-theme='2'] .poster-remove:focus-visible {
   background: var(--accent);
   color: var(--on-accent);
+}
+@media (hover: hover) {
+  [data-theme='2'] .poster-remove:hover {
+    background: var(--accent);
+    color: var(--on-accent);
+  }
 }
 [data-theme='2'] .poster-remove:focus-visible {
   outline-offset: 2px;
@@ -560,8 +593,10 @@ html[data-tv][data-theme='2'] .row-scroller {
   color: var(--muted);
   font-size: 0.82rem;
 }
-.t2-cont:hover .t2-cont-img {
-  transform: scale(1.03);
+@media (hover: hover) {
+  .t2-cont:hover .t2-cont-img {
+    transform: scale(1.03);
+  }
 }
 .t2-cont:focus-visible {
   outline: none;
@@ -575,9 +610,13 @@ html[data-tv][data-theme='2'] .row-scroller {
 .t2-cont:focus-visible .t2-cont-title {
   color: var(--accent);
 }
-.t2-cont-wrap:hover .poster-remove,
 .t2-cont-wrap:focus-within .poster-remove {
   opacity: 1;
+}
+@media (hover: hover) {
+  .t2-cont-wrap:hover .poster-remove {
+    opacity: 1;
+  }
 }
 
 /* ---------- Páginas ---------- */
@@ -742,9 +781,13 @@ html[data-tv][data-theme='2'] .row-scroller {
   border-radius: var(--radius);
   background: var(--surface-1);
 }
-[data-theme='2'] .cal-item:hover,
 [data-theme='2'] .cal-item:focus-visible {
   background: var(--surface-2);
+}
+@media (hover: hover) {
+  [data-theme='2'] .cal-item:hover {
+    background: var(--surface-2);
+  }
 }
 [data-theme='2'] .cal-thumb {
   border-radius: 12px;
@@ -794,10 +837,15 @@ html[data-tv][data-theme='2'] .row-scroller {
 [data-theme='2'] .controls-row button {
   border-radius: 999px;
 }
-[data-theme='2'] .controls-row button:hover,
 [data-theme='2'] .controls-row button:focus-visible {
   background: rgba(255, 255, 255, 0.14);
   outline: none;
+}
+@media (hover: hover) {
+  [data-theme='2'] .controls-row button:hover {
+    background: rgba(255, 255, 255, 0.14);
+    outline: none;
+  }
 }
 [data-theme='2'] .controls-row button:focus-visible {
   outline: 4px solid var(--accent);
@@ -810,9 +858,13 @@ html[data-tv][data-theme='2'] .row-scroller {
   background: var(--accent);
   color: var(--on-accent);
 }
-[data-theme='2'] .controls-row .play-btn:hover,
 [data-theme='2'] .controls-row .play-btn:focus-visible {
   background: #d6c8ff;
+}
+@media (hover: hover) {
+  [data-theme='2'] .controls-row .play-btn:hover {
+    background: #d6c8ff;
+  }
 }
 [data-theme='2'] .controls-row button.active {
   color: var(--accent);
@@ -843,14 +895,22 @@ html[data-tv][data-theme='2'] .row-scroller {
 [data-theme='2'] .player-menu button {
   border-radius: 14px;
 }
-[data-theme='2'] .player-menu button:hover,
 [data-theme='2'] .player-menu button:focus-visible {
   background: var(--tonal);
   outline: 3px solid var(--accent);
   outline-offset: -3px;
 }
-[data-theme='2'] .player-menu button:hover:not(:focus-visible) {
-  outline: none;
+@media (hover: hover) {
+  [data-theme='2'] .player-menu button:hover {
+    background: var(--tonal);
+    outline: 3px solid var(--accent);
+    outline-offset: -3px;
+  }
+}
+@media (hover: hover) {
+  [data-theme='2'] .player-menu button:hover:not(:focus-visible) {
+    outline: none;
+  }
 }
 [data-theme='2'] .player-menu button.active {
   color: var(--accent);
@@ -879,11 +939,17 @@ html[data-tv][data-theme='2'] .row-scroller {
   background: rgba(28, 26, 34, 0.92);
   box-shadow: inset 0 0 0 2px rgba(255, 255, 255, 0.45);
 }
-[data-theme='2'] .btn.skip-btn:hover,
 [data-theme='2'] .btn.skip-btn:focus-visible {
   background: var(--accent);
   color: var(--on-accent);
   box-shadow: none;
+}
+@media (hover: hover) {
+  [data-theme='2'] .btn.skip-btn:hover {
+    background: var(--accent);
+    color: var(--on-accent);
+    box-shadow: none;
+  }
 }
 [data-theme='2'] .player-float .btn:focus-visible {
   outline: 4px solid var(--accent);
@@ -926,6 +992,22 @@ html[data-tv][data-theme='2'] .player-float .btn:focus {
     margin-right: auto;
     font-weight: 800;
     font-size: 18px;
+  }
+  /* visual-movil-09: el botón de perfil (36 px) y el enlace "Flix" (22 px de alto) con zona táctil de 44 px: el
+     pseudo-elemento sobresale lo justo, sin mover nada a la vista (la suma de los dos cabe en el hueco de 10 px). */
+  .t2-profile-sm,
+  .t2-brand {
+    position: relative;
+  }
+  .t2-profile-sm::after {
+    content: '';
+    position: absolute;
+    inset: -4px;
+  }
+  .t2-brand::after {
+    content: '';
+    position: absolute;
+    inset: -11px -6px;
   }
   .t2-round {
     display: grid;
@@ -1039,6 +1121,69 @@ html[data-tv][data-theme='2'] .player-float .btn:focus {
   [data-theme='2'] .controls-row .play-btn {
     min-width: 46px;
     height: 46px;
+  }
+}
+
+/* ---------- Celular apaisado (visual-movil-03 / 04) ----------
+   Un celular de lado tiene 360–430 px de alto: la cabecera de 64 px + la barra de 72 px dejaban 224 px de contenido
+   (en 740×360 la portada no mostraba ni el título ni «Reproducir»). Con puntero táctil y poca altura se usa siempre
+   el riel lateral, sin importar el ancho, y se achica para que entren los 7 destinos: sin rótulos a la vista (siguen
+   para el lector de pantalla), píldoras de 40 px y el perfil más chico. El contenido sigue con el diseño de celular. */
+@media (pointer: coarse) and (max-height: 500px) {
+  :root[data-theme='2']:not([data-tv]) {
+    --rail-w: calc(88px + env(safe-area-inset-left, 0px));
+  }
+  html:not([data-tv]) .t2-rail {
+    display: flex;
+    gap: 2px;
+    padding-top: 6px;
+    padding-bottom: 6px;
+  }
+  html:not([data-tv]) .t2-top,
+  html:not([data-tv]) .t2-tabs {
+    display: none;
+  }
+  html:not([data-tv]) .t2-app .t2-main {
+    padding-bottom: 0;
+  }
+  html:not([data-tv]) .t2-profile {
+    margin: 0 0 4px;
+  }
+  html:not([data-tv]) .t2-profile .pf-avatar {
+    width: 40px !important;
+    height: 40px !important;
+    font-size: 1.1rem !important;
+  }
+  html:not([data-tv]) .t2-rail-link {
+    gap: 0;
+    padding: 0;
+  }
+  html:not([data-tv]) .t2-rail-label {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
+  }
+  html:not([data-tv]) .t2-rail-spacer {
+    flex-basis: 2px;
+  }
+  html:not([data-tv]) .t2-pill {
+    height: 40px;
+  }
+  [data-theme='2']:not([data-tv]) .undo-toast {
+    bottom: calc(12px + env(safe-area-inset-bottom));
+    left: calc(var(--rail-w) + 12px);
+  }
+}
+@media (pointer: coarse) and (max-height: 370px) {
+  html:not([data-tv]) .t2-profile .pf-avatar {
+    width: 36px !important;
+    height: 36px !important;
+  }
+  html:not([data-tv]) .t2-pill {
+    height: 36px;
   }
 }
 
@@ -1207,9 +1352,7 @@ html[data-tv][data-theme='2'] .search-best-eyebrow {
   border-radius: 999px;
   padding: 7px 14px;
 }
-[data-theme='2'] .catalog-item-actions .btn-text[aria-pressed='false'] {
-  color: var(--muted);
-}
+/* visual-pc-11: "Apaisada" apagada va del mismo color que sus vecinos (en gris parecía deshabilitada); prendida lleva ✓ y el tonal. */
 
 /* ---------- v0.34 (auditoría de la TV) ---------- */
 

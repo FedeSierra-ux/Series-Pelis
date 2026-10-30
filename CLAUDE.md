@@ -688,6 +688,35 @@ npm run preview    # sirve dist/ en http://localhost:4173
     `data-route-focus`), `components/Spinner.tsx` (role=status), `lib/posterAria.ts` (nombre del póster con el título primero;
     el `title` vive en `.poster-title` y la portada fija lee `data-name`). axe marca `label-content-name-mismatch` en los
     pósters por ese orden: es consecuencia aceptada. Sin lector de pantalla real, TV real ni Alto contraste real de Windows.
+- v0.35.0 hecha (rama `ccr-a630843d-khuv21`): **segunda tanda de la auditoría de la v0.33** (47: visual, UI, celular/táctil y textos;
+  agentes E Inicio/ficha/pósters/textos, F Ajustes/Vos/perfiles, G celular apaisado/táctil/reproductor). Quedan la v0.36.0
+  (rendimiento y orden interno, 14) y la v0.37.0 (sacar el Tema 1). Mergeado el PR #61 de la v0.34 con un merge normal.
+  - **Celular apaisado** = `(pointer: coarse) and (max-height: 500px)` (el mismo corte que `PHONE_LANDSCAPE_QUERY`): riel lateral
+    aunque el ancho sea ≤760 px, sin cabecera ni barra inferior. La portada de Inicio usa ahí el diseño ancho (`hero.css`: el bloque
+    de celular vertical es `(max-width:760px) and (min-height:501px), (max-width:760px) and (pointer:fine)`). Lo nuevo de apaisado
+    va con `html:not([data-tv])`. El riel compacto no muestra rótulos (siguen para el lector de pantalla).
+  - **Táctil**: `components/touch-targets.css` da zona de 44 px con un `::before`/`::after` transparente (`inset: min(0px, calc((100% - 44px) / 2))`),
+    nunca agrandando lo visible; `.dt-tabs` recorta lo que sobresale (ahí va padding). **Todo `:hover` va dentro de
+    `@media (hover: hover)`**: una regla nueva con `:hover` suelto vuelve el hover pegajoso en el celular. La barra de progreso del reproductor usa
+    `--seek-pt`/`--seek-pb`. `pictureCueBottom`/`mergeCueBottom` (`subtitlePrefs.ts`) + `pages/player/usePictureCue.ts` anclan el
+    subtítulo al pie de la imagen en vertical; en apaisado la esquina y los menús siguen a `--controls-h`.
+  - **Ajustes/Vos**: las filas `label.check` seguidas se pegan por CSS (`--section-gap` + margen negativo), sin envolverlas. El
+    interruptor de Ajustes también lo usan `.ob-body label.check` y `label.settings-advanced-toggle`: una pantalla nueva que lo
+    quiera suma su selector en `settings-layout.css` y `a11y.css`. `.year-back` es la vuelta de todas las subpáginas (la TV la
+    oculta). `SettingsBlock` ya no tiene `defaultOpen`: en el celular abrir una sección cierra las otras (`closeOtherSections`).
+    `WhoIsWatching` usa `useCloseOnSystemBack` (entrada de historial con `state.spPicker`, solo si no es `auto`). `Achievement.icon`
+    es un `Theme2IconName`.
+  - **Pósters/imágenes/textos**: `components/SafeImg` + `lib/imgPlaceholder` (relleno con la inicial cuando una imagen falla), `lib/logoInset`
+    (alinea logos con aire a la izquierda), `duplicatesPopularRow` (Inicio no repite el "Popular" de Cinemeta; en el gestor de catálogos
+    esas filas siguen listadas), `clockTime` (hora **24 h**), `--label-top`/`--label-max` (etiqueta del póster en segundo renglón ≤1100 px).
+    Buscar: el teclado en pantalla **solo en modo TV**. **Glosario**: `T1 · E2`, Reparto, Reproducir (retomar = "Seguir viendo", "Ver ficha"
+    si solo abre la ficha), aparato, fuente (no "stream"), "esta compu", Bien calificadas, Idioma del audio, No me interesa, IMDb con punto
+    (filtro "7.5+"). `AppSettings` conserva "Continuar viendo" porque es el nombre de la fila de Amazon.
+  - **Decisiones**: `visual-pc-10` (b) no se hizo: los chips sin elegir del asistente conservan el contorno (decisión de la v0.26: sin él
+    parecían texto suelto). Pendientes que quedaron anotados (sin implementar): `.person-link` (Dirección/Elenco de 18 px) y el ✓ de
+    episodio a 44 px en celular; al cambiar de perfil desde el selector abierto en el celular queda una entrada de historial de más; el
+    estado vacío de Metas/Tu año es alto (~185 px); CSS sin uso `.not-interested` y la prop `alwaysToggle` de `KeyboardToggle`; la sección
+    "Siguiente episodio" de Ajustes aloja en modo avanzado el campo del servidor de streaming (conviene moverlo a "Reproductor").
 - **Decisiones para la v0.17 (reemplazan el reparto del plan de abajo)**: addons y TorBox **iguales para todas las
   casas**, solo los cambia el admin (opción A). Ajustes generales (subtítulos, idiomas, autoplay, saltar intro, sin
   spoilers, reglas de fuentes) **iguales en toda la casa**; lo físico (modo TV, tamaño de la interfaz, protector,

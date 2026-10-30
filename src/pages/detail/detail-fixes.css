@@ -49,6 +49,13 @@
 /* Estado de error de la ficha (título inexistente o sin cargar): botón para volver. */
 .detail-error-actions {
   display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
   gap: 10px;
-  padding: 0 var(--gutter) 16px;
+  margin-top: 10px;
+}
+.detail-error .detail-error-hint {
+  margin: 0;
+  padding: 0;
+  text-align: center;
 }

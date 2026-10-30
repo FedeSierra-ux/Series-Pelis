@@ -7,14 +7,14 @@ import { DetailIcon } from './DetailIcons'
 import { MoreMenu, type MoreItem } from './MoreMenu'
 
 // Botones de la portada de la ficha (v0.14, U16): un solo botón grande "▶ Reproducir / Continuar
-// T2 E4", una fila de íconos con rótulo chico (Mi lista, Calificar, Tráiler) y un ⋯ con lo que se usa
+// T2 · E4", una fila de íconos con rótulo chico (Mi lista, Calificar, Tráiler) y un ⋯ con lo que se usa
 // poco. Antes eran hasta 8 botones del mismo tamaño.
 
 const BACK_KEYS = new Set(['Escape', 'GoBack', 'BrowserBack', 'Backspace'])
 
 export interface PrimaryAction {
   label: string
-  /** Texto chico debajo ("quedan 23 min", "T1 E1 · Pilot"). */
+  /** Texto chico debajo ("quedan 23 min", "T1 · E1 · Pilot"). */
   sub?: string
   title?: string
   /** Buscando la fuente para reproducir directo. */
@@ -107,7 +107,7 @@ export function DetailActions({ title, tmdbId, primary, inList, onToggleList, on
             <span className="d-icon-circle">
               <DetailIcon name={inList ? 'check' : 'plus'} />
             </span>
-            <span className="d-icon-label">Mi lista</span>
+            <span className="d-icon-label">{inList ? 'En mi lista' : 'Mi lista'}</span>
           </button>
           <button
             ref={rateBtn}

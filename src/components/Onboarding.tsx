@@ -201,7 +201,7 @@ export function Onboarding() {
             Se puede cambiar después en Ajustes.
           </p>
           <h3>Idioma del audio</h3>
-          <p className="muted small">Si un stream trae varias pistas, se elige la primera de estas. Tocá para sumar o sacar; el número es el orden.</p>
+          <p className="muted small">Si una fuente trae varias pistas, se elige la primera de estas. Tocá para sumar o sacar; el número es el orden.</p>
           <LangChips label="Idiomas de audio preferidos" value={settings.audioLangs} onChange={(audioLangs) => update({ audioLangs })} />
           <h3>Subtítulos</h3>
           <LangChips label="Idiomas de subtítulos preferidos" value={settings.subtitleLangs} onChange={(subtitleLangs) => update({ subtitleLangs })} />

@@ -75,7 +75,7 @@ function toastText(s: AppUpdateState): string | undefined {
     case 'permission':
       return 'Dale permiso a Flix para instalar apps y volvé: la actualización sigue sola'
     case 'installer':
-      return 'Tocá "Instalar" para terminar'
+      return 'Tocá “Instalar” para terminar'
     case 'error':
       // Un error de la búsqueda automática no se muestra (sin internet, GitHub caído…): solo en Ajustes.
       return 'info' in s && s.info?.available ? s.message : undefined

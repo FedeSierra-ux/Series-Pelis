@@ -18,6 +18,26 @@
   justify-items: center;
   gap: 32px;
 }
+/* ✕ de arriba a la derecha (visual-movil-17): 44 px de zona táctil, a salvo de las muescas del celular. */
+.pf-close {
+  position: absolute;
+  top: max(10px, env(safe-area-inset-top, 0px));
+  right: max(10px, env(safe-area-inset-right, 0px));
+  display: grid;
+  place-items: center;
+  width: 44px;
+  height: 44px;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  background: var(--surface-1, var(--bg-2));
+  color: var(--text);
+  cursor: pointer;
+}
+html[data-tv] .pf-close {
+  width: 56px;
+  height: 56px;
+}
 .pf-title {
   margin: 0;
   font-family: var(--font-display);
@@ -99,13 +119,21 @@ html[data-tv] .pf-name {
   outline-offset: 2px;
   transition: outline-color 0.15s;
 }
-.pf-tile:hover .pf-tile-art,
 .pf-tile:focus-visible .pf-tile-art {
   transform: scale(1.06);
 }
-.pf-tile:hover .pf-avatar,
+@media (hover: hover) {
+  .pf-tile:hover .pf-tile-art {
+    transform: scale(1.06);
+  }
+}
 .pf-tile:focus-visible .pf-avatar {
   outline-color: var(--text);
+}
+@media (hover: hover) {
+  .pf-tile:hover .pf-avatar {
+    outline-color: var(--text);
+  }
 }
 .pf-tile:focus-visible .pf-avatar {
   outline-color: var(--accent);
@@ -118,10 +146,14 @@ html[data-tv] .pf-name {
   font-size: 1.05rem;
   font-weight: 600;
 }
-.pf-tile:hover .pf-name,
 .pf-tile:focus-visible .pf-name,
 .pf-tile[aria-current='true'] .pf-name {
   color: var(--text);
+}
+@media (hover: hover) {
+  .pf-tile:hover .pf-name {
+    color: var(--text);
+  }
 }
 
 /* Cuenta regresiva: un aro que se completa alrededor del perfil marcado. */
@@ -191,10 +223,15 @@ html[data-tv] .pf-name {
   font-size: 3rem;
   font-weight: 400;
 }
-.pf-add:hover .pf-add-icon,
 .pf-add:focus-visible .pf-add-icon {
   color: var(--text);
   border-color: var(--text);
+}
+@media (hover: hover) {
+  .pf-add:hover .pf-add-icon {
+    color: var(--text);
+    border-color: var(--text);
+  }
 }
 
 .pf-actions {
@@ -254,6 +291,11 @@ html[data-tv] .pf-name {
   padding: 0;
   font-weight: 600;
   font-size: 0.92rem;
+}
+/* El aro del color elegido (3 px + 6 px) sube sobre la muestra: el rótulo de un grupo necesita más aire que los 4 px
+   que dejaba la leyenda (visual-pc-15). */
+.pf-field > legend.pf-label {
+  margin-bottom: 14px;
 }
 .pf-field {
   display: grid;
@@ -327,9 +369,13 @@ html[data-tv] .pf-name {
   cursor: pointer;
   transition: transform 0.15s ease;
 }
-.pf-pick:hover,
 .pf-pick:focus-visible {
   transform: scale(1.08);
+}
+@media (hover: hover) {
+  .pf-pick:hover {
+    transform: scale(1.08);
+  }
 }
 .pf-pick img {
   width: 80%;
@@ -356,9 +402,13 @@ html[data-tv] .pf-name {
   background: var(--danger);
   color: #1a0b0b;
 }
-[data-theme='2'] .btn.pf-danger:hover,
 [data-theme='2'] .btn.pf-danger:focus-visible {
   background: #fca5a5;
+}
+@media (hover: hover) {
+  [data-theme='2'] .btn.pf-danger:hover {
+    background: #fca5a5;
+  }
 }
 
 /* v0.26: celular → Guardar / Cancelar / Borrar en una barra pegada abajo y personajes de 5 por fila.
@@ -442,10 +492,14 @@ html[data-tv] .pf-name {
   .pf-tile-art .pf-avatar {
     transition: none;
   }
-  .pf-tile:hover .pf-tile-art,
   .pf-tile:focus-visible .pf-tile-art {
     transform: none;
   }
+@media (hover: hover) {
+  .pf-tile:hover .pf-tile-art {
+      transform: none;
+    }
+}
 }
 
 /* Pantallas bajas (PC a 1280×720): con 42vh de avatares, "Guardar" nacía 7 px debajo del borde. */

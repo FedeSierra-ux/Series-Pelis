@@ -1,4 +1,6 @@
-// Textos de las tarjetas apaisadas de "Seguir viendo" (Tema 2): "T1 E3 · quedan 24 min".
+import { episodeLabel } from './format'
+
+// Textos de las tarjetas apaisadas de "Seguir viendo" (Tema 2): "T1 · E3 · quedan 24 min".
 
 /** "quedan 24 min" / "quedan 1 h 12 min"; vacío si no se sabe la duración. */
 export function remainingLabel(position: number, duration: number): string {
@@ -12,7 +14,7 @@ export function remainingLabel(position: number, duration: number): string {
 }
 
 export function continueSubtitle(e: { season?: number; episode?: number; position: number; duration: number }): string {
-  const ep = e.season !== undefined && e.episode !== undefined ? `T${e.season} E${e.episode}` : ''
+  const ep = e.season !== undefined && e.episode !== undefined ? episodeLabel(e.season, e.episode) : ''
   const left = remainingLabel(e.position, e.duration)
   return [ep, left].filter(Boolean).join(' · ') || 'Continuar'
 }

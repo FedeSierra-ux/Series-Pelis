@@ -13,6 +13,7 @@ import {
   splitLeadingVirtual,
   splitMerge,
   visibleRows,
+  duplicatesPopularRow,
   FORYOU_ROW_KEY,
   TRENDING_WEEK_ROW_KEY,
   type CatalogPrefs,
@@ -229,5 +230,24 @@ describe('filas propias de Inicio', () => {
 
   it('Descubrir (sin filas propias) no la ve', () => {
     expect(arrangeCatalogs(sources, DEFAULT_CATALOG_PREFS, label).some((r) => r.virtual)).toBe(false)
+  })
+})
+
+describe('duplicatesPopularRow (visual-pc-01)', () => {
+  const cinemeta = addon('com.linvo.cinemeta', [
+    { type: 'movie', id: 'top', name: 'Popular' },
+    { type: 'series', id: 'top', name: 'Popular' },
+    { type: 'movie', id: 'imdbRating', name: 'Featured' },
+  ])
+  const cs: CatalogSource[] = cinemeta.manifest.catalogs.map((catalog) => ({ addon: cinemeta, catalog }))
+  const rows = arrangeCatalogs(cs, undefined, label)
+
+  it('el "Popular" de Cinemeta ya está arriba como fila propia', () => {
+    expect(rows.filter(duplicatesPopularRow).map((r) => r.type)).toEqual(['movie', 'series'])
+    expect(rows.find((r) => r.sources[0].catalog.id === 'imdbRating')).toBeDefined()
+    expect(duplicatesPopularRow(rows.find((r) => r.sources[0].catalog.id === 'imdbRating')!)).toBe(false)
+  })
+  it('el "top" de otro addon sigue mostrándose', () => {
+    expect(arrangeCatalogs(sources, undefined, label).some(duplicatesPopularRow)).toBe(false)
   })
 })

@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { Advanced } from '../../components/Advanced'
 import { Picker } from '../../components/Picker'
 import { settingsStore, useStore, type SourceRules } from '../../lib/store'
+import { Choice } from './PlayerSettings'
 
 const QUALITY_OPTIONS: { value: SourceRules['preferredQuality']; label: string }[] = [
   { value: 'any', label: 'La mejor disponible' },
@@ -107,7 +108,7 @@ export function SourceSettings() {
         onSave={(preferKeywords) => setRules({ preferKeywords })}
       />
       <KeywordsField
-        label="Palabras que descartan un stream (separadas por coma)"
+        label="Palabras que descartan una fuente (separadas por coma)"
         placeholder="cam, hdts, telesync"
         value={rules.excludeKeywords}
         onSave={(excludeKeywords) => setRules({ excludeKeywords })}
@@ -139,14 +140,7 @@ export function SourceSettings() {
         </label>
       ))}
       <p className="muted small">HEVC y AV1 pesan menos, pero muchos televisores y navegadores no los reproducen.</p>
-      <span className="source-label">HDR / Dolby Vision</span>
-      <div className="chips" role="radiogroup" aria-label="HDR / Dolby Vision">
-        {HDR_OPTIONS.map(([value, label]) => (
-          <button key={value} role="radio" aria-checked={rules.hdr === value} className={`tab ${rules.hdr === value ? 'active' : ''}`} onClick={() => setRules({ hdr: value })}>
-            {label}
-          </button>
-        ))}
-      </div>
+      <Choice label="HDR / Dolby Vision" showLabel value={rules.hdr} options={HDR_OPTIONS} onChange={(hdr) => setRules({ hdr })} />
       <label className="check">
         <input type="checkbox" checked={rules.dedupe} onChange={(e) => setRules({ dedupe: e.target.checked })} />
         Ocultar repetidos (el mismo archivo en varios addons)

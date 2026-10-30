@@ -169,8 +169,8 @@ export function yearsLabel(from?: number, to?: number, now = new Date().getFullY
   return from ? `Desde ${from}` : `Hasta ${to}`
 }
 
-/** "7+", "7,5+" (coma decimal, como se escribe acá). */
-export const ratingLabel = (r: number) => `${String(r).replace('.', ',')}+`
+/** "7+", "7.5+": con punto, igual que el puntaje de IMDb de las insignias (sistema-27). */
+export const ratingLabel = (r: number) => `${String(r)}+`
 
 // ---------- Géneros ----------
 

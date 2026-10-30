@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { canShiftCueBox, cuePlacement, langTag, placeCue, safeCueBottom } from './subtitlePrefs'
+import { canShiftCueBox, cuePlacement, langTag, mergeCueBottom, pictureCueBottom, placeCue, safeCueBottom } from './subtitlePrefs'
 
 describe('langTag (srclang de la pista, a11y-12)', () => {
   it('traduce los códigos de 3 letras conocidos y deja los de 2', () => {
@@ -79,6 +79,38 @@ describe('safeCueBottom (zona segura de la TV, tv-07)', () => {
   it('algo en la esquina más arriba gana; nunca baja del 95 %', () => {
     expect(safeCueBottom(70, true)).toBe(70)
     expect(safeCueBottom(99, true)).toBe(95)
+  })
+})
+
+describe('pictureCueBottom (uso-11: subtítulo pegado a la imagen en el celular vertical)', () => {
+  const phone = { w: 390, h: 844 }
+  const wide = { w: 1920, h: 1080 }
+
+  it('16:9 en 390×844: termina en el pie de la imagen, apenas adentro (~62 % desde arriba, no ~100 %)', () => {
+    expect(pictureCueBottom(phone, wide, 'contain')).toBe(61.9)
+    // Con la caja del subtítulo en Chromium sube la caja entera: shift = 100 − final.
+    expect(cuePlacement(0, 0, 61.9, true)).toEqual({ line: undefined, shift: 38.1 })
+  })
+  it('un video más cuadrado deja una imagen más alta: el subtítulo baja', () => {
+    expect(pictureCueBottom(phone, { w: 1440, h: 1080 }, 'contain')).toBeGreaterThan(61.9)
+  })
+  it('no aplica apaisado, cuadrado, con Llenar / Estirar ni sin medidas', () => {
+    expect(pictureCueBottom({ w: 844, h: 390 }, wide, 'contain')).toBe(0)
+    expect(pictureCueBottom({ w: 500, h: 500 }, wide, 'contain')).toBe(0)
+    expect(pictureCueBottom(phone, wide, 'cover')).toBe(0)
+    expect(pictureCueBottom(phone, wide, 'fill')).toBe(0)
+    expect(pictureCueBottom(phone, { w: 0, h: 0 }, 'contain')).toBe(0)
+    expect(pictureCueBottom({ w: 0, h: 0 }, wide, 'contain')).toBe(0)
+  })
+  it('un video casi tan alto como la pantalla (poca banda negra) no cambia nada', () => {
+    expect(pictureCueBottom(phone, { w: 390, h: 800 }, 'contain')).toBe(0)
+  })
+  it('con algo en la esquina manda el que deja el subtítulo más arriba', () => {
+    expect(mergeCueBottom(0, 61.9)).toBe(61.9)
+    expect(mergeCueBottom(55, 0)).toBe(55)
+    expect(mergeCueBottom(55, 61.9)).toBe(55)
+    expect(mergeCueBottom(70, 61.9)).toBe(61.9)
+    expect(mergeCueBottom(0, 0)).toBe(0)
   })
 })
 

@@ -97,7 +97,7 @@ export function seasonStatus(seasonVideos: Video[], progress: Record<string, Wat
 
 /**
  * v0.26 (ficha-04): el episodio que muestra el panel de fuentes mientras no se eligió ninguno, con su título.
- * Es el mismo de "Reproducir T1 E1" / "Continuar": sin nada visto, el primero; si ya la terminaste, el primero
+ * Es el mismo de "Reproducir T1 · E1" / "Continuar": sin nada visto, el primero; si ya la terminaste, el primero
  * para volver a verla.
  */
 export function suggestedForPanel(

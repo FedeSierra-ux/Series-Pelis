@@ -50,10 +50,12 @@ export function CatalogManager() {
   return (
     <div className="page settings catalog-manager">
       <header className="page-header">
-        <h1>Catálogos</h1>
-        <Link to="/settings" className="btn btn-ghost">
-          ← Ajustes
-        </Link>
+        <div>
+          <Link to="/settings" className="year-back">
+            ← Ajustes
+          </Link>
+          <h1>Catálogos</h1>
+        </div>
       </header>
       <p className="muted catalog-manager-intro">
         Elegí qué filas ves en Inicio y en Películas/Series, en qué orden y con qué nombre. También podés juntar dos
@@ -249,7 +251,7 @@ function CatalogItem({
           <button className="btn btn-ghost btn-icon" data-move="down" disabled={last} onClick={() => onMove(1)} aria-label={`Bajar “${row.name}”`}>
             ↓
           </button>
-          <button className="btn btn-ghost btn-text" aria-pressed={!row.hidden} onClick={toggleHidden}>
+          <button className="btn btn-ghost btn-text" onClick={toggleHidden}>
             {row.hidden ? 'Mostrar' : 'Ocultar'}
           </button>
           <ShapeToggle rowKey={row.key} name={row.name} onStatus={onStatus} />

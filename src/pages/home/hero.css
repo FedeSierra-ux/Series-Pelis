@@ -306,8 +306,10 @@
   background: color-mix(in srgb, var(--text) 38%, transparent);
   transition: width 0.35s ease, background 0.2s;
 }
-.portada .portada-dot:hover .portada-dot-track {
-  background: color-mix(in srgb, var(--text) 65%, transparent);
+@media (hover: hover) {
+  .portada .portada-dot:hover .portada-dot-track {
+    background: color-mix(in srgb, var(--text) 65%, transparent);
+  }
 }
 .portada .portada-dot.is-active .portada-dot-track {
   width: 34px;
@@ -347,8 +349,10 @@
   color: var(--text);
   cursor: pointer;
 }
-.portada .portada-pause:hover {
-  background: color-mix(in srgb, var(--bg) 70%, transparent);
+@media (hover: hover) {
+  .portada .portada-pause:hover {
+    background: color-mix(in srgb, var(--bg) 70%, transparent);
+  }
 }
 .portada .portada-pause:focus-visible {
   outline: 3px solid var(--accent);
@@ -375,8 +379,10 @@
   cursor: pointer;
   animation: portada-arrow-in 0.2s ease both;
 }
-.portada .portada-arrow:hover {
-  background: color-mix(in srgb, var(--bg) 80%, transparent);
+@media (hover: hover) {
+  .portada .portada-arrow:hover {
+    background: color-mix(in srgb, var(--bg) 80%, transparent);
+  }
 }
 .portada .portada-arrow.is-prev {
   left: 14px;
@@ -480,9 +486,11 @@
   background-size: 200% 100%;
 }
 
-/* ---------- Celular: imagen arriba y el texto donde se funde ---------- */
+/* ---------- Celular: imagen arriba y el texto donde se funde ----------
+   No en el celular apaisado (puntero táctil y poca altura): ahí queda el diseño ancho, con el texto sobre la imagen
+   (visual-movil-03; el riel lateral también vuelve, ver theme2.css). */
 
-@media (max-width: 760px) {
+@media (max-width: 760px) and (min-height: 501px), (max-width: 760px) and (pointer: fine) {
   .portada {
     --portada-logo-h: 64px;
   }
@@ -544,8 +552,18 @@
   /* "Ver ahora" a lo ancho y los otros dos como íconos (el nombre sigue para los lectores de pantalla). */
   .portada .portada-actions {
     display: grid;
-    grid-template-columns: 1fr auto auto;
+    /* minmax(0, 1fr): con `1fr` a secas la columna no baja del ancho del texto y en 320 px "Más info" se salía 6 px. */
+    grid-template-columns: minmax(0, 1fr) auto auto;
     width: 100%;
+  }
+  .portada .portada-btn.is-play {
+    min-width: 0;
+    padding-inline: 16px;
+  }
+  .portada .portada-btn.is-play > span {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
   }
   .portada .portada-btn,
   .portada--compact .portada-btn,
@@ -594,6 +612,49 @@
   .portada.portada-skeleton,
   .portada.portada--full.portada-skeleton {
     min-height: 460px;
+  }
+}
+
+/* ---------- Celular apaisado: la portada de Inicio entra en la pantalla (visual-movil-03) ---------- */
+
+@media (pointer: coarse) and (max-height: 500px) {
+  html:not([data-tv]) .portada.portada--compact {
+    --portada-logo-h: 44px;
+    margin: 8px var(--gutter) 8px;
+    min-height: clamp(220px, calc(100dvh - 24px), 340px);
+  }
+  html:not([data-tv]) .portada--compact .portada-main {
+    padding: 20px 24px 18px;
+  }
+  html:not([data-tv]) .portada--compact .portada-content {
+    gap: 8px;
+  }
+  html:not([data-tv]) .portada--compact .portada-desc {
+    -webkit-line-clamp: 2;
+    font-size: 0.9rem;
+  }
+  html:not([data-tv]) .portada--compact .portada-cast {
+    display: none;
+  }
+  html:not([data-tv]) .portada--compact .portada-btn {
+    height: 44px;
+  }
+  /* Los indicadores ocupan la mitad del ancho: «Mi lista» y «Más info» pasan a ícono (el nombre queda para los
+     lectores de pantalla), como en el celular vertical. */
+  html:not([data-tv]) .portada--compact .portada-actions {
+    flex-wrap: nowrap;
+  }
+  html:not([data-tv]) .portada--compact .portada-btn.is-ghost {
+    width: 44px;
+    padding: 0;
+  }
+  html:not([data-tv]) .portada--compact .portada-btn-label {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
   }
 }
 

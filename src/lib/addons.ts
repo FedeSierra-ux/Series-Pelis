@@ -248,7 +248,7 @@ export async function fetchManifest(url: string, opts?: { strict?: boolean }): P
   const manifest = cleanManifest(raw)
   if (opts?.strict) {
     if (!str((raw as Record<string, unknown>).name)?.trim()) throw new Error('El manifest no tiene nombre: no parece el de un addon de Stremio.')
-    if (manifest.resources.length === 0) throw new Error('El manifest no ofrece ningún recurso (catálogos, fichas o streams): el addon no haría nada.')
+    if (manifest.resources.length === 0) throw new Error('El manifest no ofrece ningún recurso (catálogos, fichas o fuentes): el addon no haría nada.')
   }
   return manifest
 }

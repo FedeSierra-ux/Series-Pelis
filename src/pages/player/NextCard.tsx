@@ -1,11 +1,12 @@
 import { useEffect, useState } from 'react'
 import { getMeta } from '../../lib/addons'
+import { episodeLabel } from '../../lib/format'
 import { episodeNumber } from '../../lib/upNext'
 import { addonsStore, progressStore, settingsStore, useStore } from '../../lib/store'
 import type { Video } from '../../lib/types'
 import type { PlayState } from '../Detail'
 
-// Tarjeta del siguiente episodio (U25): miniatura, "T1 E5 · Título" y una barra que se llena con la
+// Tarjeta del siguiente episodio (U25): miniatura, "T1 · E5 · Título" y una barra que se llena con la
 // cuenta regresiva. Los datos salen de la ficha, que ya está en caché.
 
 interface Props {
@@ -20,11 +21,11 @@ interface Props {
   onCancel: () => void
 }
 
-/** "T1 E5 · Título" (sin título si el addon no lo manda). */
+/** "T1 · E5 · Título" (sin título si el addon no lo manda). */
 export function nextEpisodeTitle(video: Pick<Video, 'season' | 'episode' | 'number' | 'title' | 'name'> | undefined): string {
   if (!video) return ''
   const ep = episodeNumber(video as Video)
-  const code = video.season !== undefined && ep !== undefined ? `T${video.season} E${ep}` : ''
+  const code = video.season !== undefined && ep !== undefined ? episodeLabel(video.season, ep) : ''
   const title = (video.title ?? video.name ?? '').trim()
   return [code, title].filter(Boolean).join(' · ')
 }
@@ -78,7 +79,7 @@ export function NextCard({ state, loading, autoplay, secondsLeft, total, onPlay,
         <div className="next-card-actions">
           {/* `aria-disabled` y no `disabled`: con el foco puesto, `disabled` lo soltaba y el OK del control caía en el video. */}
           <button className="btn btn-primary btn-small" onClick={loading ? undefined : onPlay} aria-disabled={loading || undefined} autoFocus>
-            Ver ahora
+            Reproducir
           </button>
           <button className="btn btn-small" onClick={onCancel}>
             Cancelar

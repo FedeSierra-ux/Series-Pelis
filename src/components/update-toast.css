@@ -32,6 +32,12 @@
     bottom: calc(76px + env(safe-area-inset-bottom, 0px));
   }
 }
+/* Celular apaisado: no hay barra de pestañas abajo. */
+@media (pointer: coarse) and (max-height: 500px) {
+  html:not([data-tv]) .update-toast {
+    bottom: calc(12px + env(safe-area-inset-bottom, 0px));
+  }
+}
 @keyframes update-toast-in {
   from {
     opacity: 0;

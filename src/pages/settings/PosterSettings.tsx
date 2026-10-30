@@ -38,7 +38,7 @@ export function PosterSettings() {
       </label>
       <p className="muted small">
         El tráiler aparece a los 2 segundos con el mouse o el control remoto. No se reproduce en celulares, con “reducir
-        movimiento” ni con ahorro de datos{saveDataOn() ? ' (ahora está activado en este dispositivo)' : ''}. Con el mouse,
+        movimiento” ni con ahorro de datos{saveDataOn() ? ' (ahora está activado en este aparato)' : ''}. Con el mouse,
         tocá “Activar sonido”; con el teclado, la tecla M. Este mismo ajuste apaga el tráiler de fondo de la ficha.
       </p>
     </section>

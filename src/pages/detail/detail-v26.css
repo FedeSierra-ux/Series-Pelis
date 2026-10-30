@@ -211,13 +211,17 @@ html[data-tv] .sx-empty .sx-empty-thumb {
   opacity: 0.55;
   transition: opacity 0.15s;
 }
-.episode.watched:hover .episode-text,
-.episode.watched:hover .episode-thumb,
 .episode.watched:focus-within .episode-text,
 .episode.watched:focus-within .episode-thumb,
 .episode.watched.selected .episode-text,
 .episode.watched.selected .episode-thumb {
   opacity: 1;
+}
+@media (hover: hover) {
+  .episode.watched:hover .episode-text,
+  .episode.watched:hover .episode-thumb {
+    opacity: 1;
+  }
 }
 @media (prefers-reduced-motion: reduce) {
   .episode.watched .episode-text,
@@ -376,4 +380,51 @@ html[data-tv] .detail-local-name {
 }
 html[data-tv] .detail-original {
   font-size: 1.05rem;
+}
+
+/* ---------- visual-movil-02: celular apaisado, «Reproducir» en la primera pantalla ----------
+   Con 360–430 px de alto la portada (68–168 px de arriba + logo de 130 + chips + sinopsis + créditos) llenaba toda la
+   pantalla y las acciones quedaban abajo. Solo layout: sin póster repetido, logo y sinopsis más chicos, créditos
+   fuera (el reparto sigue en su lugar más abajo) y «Reproducir» con los íconos al lado. */
+@media (pointer: coarse) and (max-height: 500px) {
+  html:not([data-tv])[data-theme='2'] .detail-hero,
+  html:not([data-tv])[data-theme='2'] .detail-hero.has-bg {
+    padding-top: 56px;
+    padding-bottom: 18px;
+  }
+  html:not([data-tv]) .detail-hero.has-bg .detail-poster {
+    display: none;
+  }
+  html:not([data-tv]) .detail-hero .detail-head {
+    min-height: 0;
+  }
+  html:not([data-tv]) .detail-hero .detail-info {
+    gap: 8px;
+  }
+  html:not([data-tv]) .detail-title .detail-logo {
+    max-height: 56px;
+    max-width: min(60%, 320px);
+  }
+  html:not([data-tv]) .detail-hero .detail-original,
+  html:not([data-tv]) .detail-hero .credits {
+    display: none;
+  }
+  html:not([data-tv]) .detail-desc.is-clamped {
+    -webkit-line-clamp: 2;
+    line-clamp: 2;
+  }
+  html:not([data-tv]) .detail-hero .d-actions {
+    min-height: 0;
+    margin-top: 0;
+  }
+  html:not([data-tv]) .detail-hero .d-actions-row {
+    gap: 8px 16px;
+  }
+  html:not([data-tv]) .detail-hero .btn.d-play {
+    flex: 0 0 auto;
+    min-height: 48px;
+  }
+  html:not([data-tv]) .detail-hero .d-icons {
+    width: auto;
+  }
 }

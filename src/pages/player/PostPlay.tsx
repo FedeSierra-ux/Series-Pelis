@@ -28,7 +28,7 @@ interface Props {
   due: boolean
   onOpen: (pick: PostPlayPick) => void
   onClose: () => void
-  /** Enfocar el primer título al aparecer (en la TV, como "Ver ahora" en la tarjeta del siguiente). */
+  /** Enfocar el primer título al aparecer (en la TV, como "Reproducir" en la tarjeta del siguiente). */
   autoFocus?: boolean
   /** Lo que va en la esquina si no hay recomendaciones (sin TMDB): el botón "Saltar créditos". */
   children?: ReactNode

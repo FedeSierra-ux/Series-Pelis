@@ -258,7 +258,7 @@ function DiscoverGrid() {
       )}
       {clientFiltering && (
         <p className="discover-note muted small">
-          Este catálogo no sabe filtrar ni ordenar: se aplica sobre lo que se va cargando (hasta {MAX_CLIENT_PAGES} páginas).
+          Este catálogo no ordena ni filtra por sí solo: lo hacemos sobre lo que ya cargamos (hasta {MAX_CLIENT_PAGES} páginas), así que puede faltar algo.
           {tmdbOn ? ' Con “Explorar todo (TMDB)” el filtro es completo.' : ''}
         </p>
       )}

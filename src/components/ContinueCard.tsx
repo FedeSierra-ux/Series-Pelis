@@ -1,5 +1,6 @@
 import { memo, useState, type KeyboardEvent, type MouseEvent } from 'react'
 import { Link } from 'react-router-dom'
+import { SafeImg } from './SafeImg'
 import { prefetchMeta } from '../lib/addons'
 import { useLocalTitle } from '../lib/localTitles'
 import { continueSubtitle } from '../lib/remaining'
@@ -7,7 +8,7 @@ import { addonsStore, type WatchEntry } from '../lib/store'
 import { useNearOnce } from '../lib/titleArt'
 import './rows.css'
 
-// Tarjeta apaisada de "Seguir viendo" del Tema 2: fondo 16:9, título, "T1 E3 · quedan 24 min"
+// Tarjeta apaisada de "Seguir viendo" del Tema 2: fondo 16:9, título, "T1 · E3 · quedan 24 min"
 // y la barra de progreso. Con el Tema 1 se sigue usando PosterCard.
 
 /** Fondo 16:9 de un título: el que trae la meta o, para ids de IMDb, el de metahub. */
@@ -140,7 +141,7 @@ export const LandscapeCard = memo(function LandscapeCard({
       >
         <div className={`t2-cont-img${broken ? ' is-poster' : ''}`}>
           {src ? (
-            <img src={src} alt="" loading="lazy" decoding="async" onError={() => !broken && poster && setBroken(true)} />
+            <SafeImg src={src} shape={broken ? 'poster' : 'wide'} label={name} alt="" loading="lazy" decoding="async" onError={() => !broken && poster && setBroken(true)} />
           ) : (
             <div className="poster-fallback">{name}</div>
           )}

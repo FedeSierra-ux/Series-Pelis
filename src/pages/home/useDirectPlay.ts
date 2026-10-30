@@ -68,20 +68,20 @@ export function useDirectPlay() {
 }
 
 /**
- * Texto del botón principal de la portada: "Continuar" si la peli quedó a medias o si la serie ya se
+ * Texto del botón principal de la portada: "Seguir viendo" si la peli quedó a medias o si la serie ya se
  * empezó (sigue por el episodio que corresponde); si no, "Reproducir".
  */
-export function resumeLabel(metaId: string, type: string, progress: Record<string, WatchEntry>): 'Continuar' | 'Reproducir' {
+export function resumeLabel(metaId: string, type: string, progress: Record<string, WatchEntry>): 'Seguir viendo' | 'Reproducir' {
   const entries = Object.values(progress).filter((e) => e.metaId === metaId)
-  if (type === 'series') return entries.length > 0 ? 'Continuar' : 'Reproducir'
-  return continueWatching(Object.fromEntries(entries.map((e) => [e.videoId, e]))).length > 0 ? 'Continuar' : 'Reproducir'
+  if (type === 'series') return entries.length > 0 ? 'Seguir viendo' : 'Reproducir'
+  return continueWatching(Object.fromEntries(entries.map((e) => [e.videoId, e]))).length > 0 ? 'Seguir viendo' : 'Reproducir'
 }
 
 /**
  * uso-02: el rótulo del botón principal de la portada. Con el modo manual y sin una fuente recordada del título, el botón
  * no reproduce (lleva a la ficha, a las fuentes): dice «Elegir fuente» (ver `playsDirect`). Si no, `resumeLabel`.
  */
-export function useResumeLabel(): (metaId: string, type: string, progress: Record<string, WatchEntry>) => 'Continuar' | 'Reproducir' | 'Elegir fuente' {
+export function useResumeLabel(): (metaId: string, type: string, progress: Record<string, WatchEntry>) => 'Seguir viendo' | 'Reproducir' | 'Elegir fuente' {
   const { sourceRules } = useStore(settingsStore)
   const lastSources = useStore(lastSourceStore)
   return (metaId, type, progress) => (playsDirect(sourceRules, lastSources[metaId]) ? resumeLabel(metaId, type, progress) : 'Elegir fuente')

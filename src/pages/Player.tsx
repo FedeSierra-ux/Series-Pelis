@@ -19,7 +19,7 @@ import { setReturnVideo } from '../lib/returnVideo'
 import { currentPlatform } from '../lib/platform'
 import { getSegments, imdbIdOf, type Segment, type Segments } from '../lib/segments'
 import { progressStore, rememberTracks, RESUME_MIN_S, saveProgress, settingsStore, trackPrefsStore, useStore } from '../lib/store'
-import { audioPrefs, guessAudioLang, lang3, langRank, safeCueBottom, subtitleClasses } from '../lib/subtitlePrefs'
+import { audioPrefs, guessAudioLang, lang3, langRank, mergeCueBottom, safeCueBottom, subtitleClasses } from '../lib/subtitlePrefs'
 import { useTvMode } from '../lib/tv'
 import type { PlayState } from './Detail'
 import './player/player-fixes.css'
@@ -43,6 +43,7 @@ import {
 } from './player/controlBar'
 import { SubtitleMenu } from './player/SubtitleMenu'
 import { useMediaSession, usePictureInPicture, useWakeLock } from './player/useMediaSession'
+import { usePictureCueBottom } from './player/usePictureCue'
 import { useSubtitles } from './player/useSubtitles'
 import type { VideoSubsSource } from '../lib/embeddedSubs'
 import { launchUrl } from './player/externalLaunch'
@@ -81,7 +82,7 @@ const SUB_CORNER_GAP = 16
 
 type Menu = 'subs' | 'audio' | 'sleep' | 'sources' | 'quick'
 /** Nombre accesible de cada menú del reproductor. */
-const MENU_LABELS: Record<Menu, string> = { subs: 'Subtítulos', audio: 'Idioma de audio', sleep: 'Temporizador para dormir', sources: 'Fuentes', quick: 'Ajustes rápidos' }
+const MENU_LABELS: Record<Menu, string> = { subs: 'Subtítulos', audio: 'Idioma del audio', sleep: 'Temporizador para dormir', sources: 'Fuentes', quick: 'Ajustes rápidos' }
 type Sleep = { kind: 'off' } | { kind: 'time'; at: number; minutes?: number } | { kind: 'episode' }
 
 // sessionStorage puede estar bloqueado (modo privado en algunos navegadores de TV).
@@ -326,6 +327,8 @@ function PlayerView({
   const [duration, setDuration] = useState(0)
   const [controls, setControls] = useState(true)
   const [error, setError] = useState<string>()
+  /** Código técnico del error (solo va en el informe, no se muestra). */
+  const [errorCode, setErrorCode] = useState<string>()
   // Con error, los controles se ocultan: la lista de fuentes se abre dentro de la tarjeta.
   const [errorSources, setErrorSources] = useState(false)
   const [toast, setToast] = useState<string>()
@@ -441,6 +444,8 @@ function PlayerView({
   // Pantalla angosta con controles y algo en la esquina: % desde arriba donde tiene que terminar el subtítulo
   // (lo calcula un efecto más abajo, donde se sabe qué hay en la esquina). En PC/TV o sin controles queda en 0.
   const [cueBottom, setCueBottom] = useState(0)
+  // Celular vertical: el subtítulo al pie de la imagen y no del borde de la pantalla (uso-11).
+  const pictureBottom = usePictureCueBottom(videoRef, rootRef, fit)
   const subs = useSubtitles({
     videoRef,
     hlsRef,
@@ -450,7 +455,7 @@ function PlayerView({
     closeMenu: () => setMenu(null),
     controlsClear,
     // En la TV el subtítulo respeta la zona segura de abajo aun sin controles (tv-07).
-    cueBottom: safeCueBottom(cueBottom, tvMode),
+    cueBottom: safeCueBottom(mergeCueBottom(cueBottom, pictureBottom), tvMode),
     videoSubs,
   })
   const pip = usePictureInPicture(videoRef)
@@ -490,7 +495,7 @@ function PlayerView({
       import('hls.js').then(({ default: HlsLib }) => {
         if (disposed) return
         if (!HlsLib.isSupported()) {
-          setError('Este navegador no soporta streams HLS')
+          setError('Este navegador no puede reproducir esta fuente. Probá otra o abrila en un reproductor externo.')
           return
         }
         const hls = new HlsLib({ enableWorker: true, startFragPrefetch: true })
@@ -538,12 +543,14 @@ function PlayerView({
             hls.recoverMediaError()
             return
           }
-          setError(`Error de reproducción (${data.details})`)
+          // El código de hls.js (p. ej. manifestParsingError) no le sirve a quien mira: va solo en el informe.
+          setErrorCode(data.details)
+          setError('No se pudo reproducir. Probá otra fuente.')
         })
         start()
       }).catch(() => {
         // Sin red justo al abrir, o el pedazo de la app con hls.js no estaba guardado (PWA recién actualizada).
-        if (!disposed) setError('No se pudo cargar el reproductor de streams HLS. Revisá la conexión y probá de nuevo, o elegí otra fuente.')
+        if (!disposed) setError('No se pudo cargar el reproductor. Revisá la conexión y probá de nuevo, o elegí otra fuente.')
       })
     } else {
       el.src = url
@@ -847,7 +854,7 @@ function PlayerView({
     writeAutoCount(auto ? readAutoCount() + 1 : 0)
     persist()
     setNextLoading(true)
-    // "Pasar solo" apagado solo frena el paso automático: si lo pide el usuario (N, ⏭, "Ver ahora"), se busca la fuente igual.
+    // "Pasar solo" apagado solo frena el paso automático: si lo pide el usuario (N, ⏭, "Reproducir"), se busca la fuente igual.
     const next = auto && !settings.autoplayNext ? undefined : await findNextStream(state).catch(() => undefined)
     if (!aliveRef.current) return
     setNextLoading(false)
@@ -1053,7 +1060,7 @@ function PlayerView({
         flash(
           result === 'opened'
             ? `Abriendo ${launch.label}…`
-            : `No encontré ${launch.label} en esta compu.${copied ? ' El enlace ya está copiado: pegalo en tu reproductor' : ''}`,
+            : `No encontramos ${launch.label} en esta compu.${copied ? ' El enlace ya está copiado: pegalo en tu reproductor' : ''}`,
         ),
       )
       return
@@ -1496,8 +1503,8 @@ function PlayerView({
         onError={() =>
           setError(
             state.stream.behaviorHints?.notWebReady
-              ? 'El navegador no puede reproducir este formato (MKV/HEVC). Probá otro stream o abrilo en un reproductor externo.'
-              : 'No se pudo reproducir este stream. Puede haber expirado o no ser compatible con el navegador.',
+              ? 'El navegador no puede reproducir este formato (MKV/HEVC). Probá otra fuente o abrilo en un reproductor externo.'
+              : 'No se pudo reproducir esta fuente. Puede haber expirado o no ser compatible con el navegador.',
           )
         }
       />
@@ -1606,7 +1613,7 @@ function PlayerView({
               )}
               <ReportButton
                 kind="player"
-                error={error}
+                error={errorCode ? `${error} (${errorCode})` : error}
                 addons={state.addonUrl ? [state.addonUrl] : []}
                 stream={{
                   url: state.playUrl,
@@ -1773,9 +1780,9 @@ function PlayerView({
           {(menu === 'subs' || menu === 'audio') && (
             <>
               {(menu === 'audio' || audioTracks.length > 1) && (
-                <section className="player-card-section" aria-label="Idioma de audio">
+                <section className="player-card-section" aria-label="Idioma del audio">
                   <span className="player-menu-title muted small">Audio</span>
-                  <div className="player-menu-group" role="radiogroup" aria-label="Idioma de audio">
+                  <div className="player-menu-group" role="radiogroup" aria-label="Idioma del audio">
                     {audioTracks.map((t) => (
                       <button key={t.id} role="radio" aria-checked={audioTrack === t.id} className={audioTrack === t.id ? 'active' : ''} onClick={() => selectAudio(t.id)}>
                         {t.name}
@@ -1865,7 +1872,7 @@ function PlayerView({
             <PlayerIcon name="cc" />
           </button>
           {audioTracks.length > 1 && (
-            <button onClick={(e) => toggleMenu('audio', e)} {...tip('Idioma de audio')} aria-expanded={menu === 'audio'}>
+            <button onClick={(e) => toggleMenu('audio', e)} {...tip('Idioma del audio')} aria-expanded={menu === 'audio'}>
               Audio
             </button>
           )}
@@ -1929,7 +1936,6 @@ function PlayerView({
             className={`fit-btn ${fit !== 'contain' ? 'active' : ''}`}
           >
             <PlayerIcon name="fit" />
-            <span className="fit-label">{FIT_LABELS[fit]}</span>
           </button>
           <button
             onClick={(e) => toggleMenu('quick', e)}

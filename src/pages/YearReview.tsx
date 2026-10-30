@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { EmptyState } from '../components/EmptyState'
+import { SafeImg } from '../components/SafeImg'
 import { smallPoster } from '../lib/format'
 import { useAddons, useTitle } from '../lib/hooks'
 import { useLocalTitle } from '../lib/localTitles'
@@ -14,7 +15,7 @@ function TitleRow({ t, extra }: { t: TitleStat; extra?: string }) {
   const name = useLocalTitle(t.metaId, t.name, { type: t.type })
   return (
     <Link to={`/detail/${t.type}/${encodeURIComponent(t.metaId)}`} className="year-title">
-      <img src={smallPoster(t.metaId, t.poster)} alt="" loading="lazy" decoding="async" />
+      <SafeImg src={smallPoster(t.metaId, t.poster)} label={name} alt="" loading="lazy" decoding="async" />
       <span className="year-title-text">
         <strong>{name}</strong>
         <span className="muted small">

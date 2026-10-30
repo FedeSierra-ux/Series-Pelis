@@ -2,7 +2,7 @@ import { useMemo } from 'react'
 import { Link } from 'react-router-dom'
 import { useEpisodeSpoilers } from '../components/Spoiler'
 import { EmptyState } from '../components/EmptyState'
-import { episodeLabel, smallPoster } from '../lib/format'
+import { clockTime, episodeLabel, smallPoster } from '../lib/format'
 import { useTitle } from '../lib/hooks'
 import { useLocalTitle } from '../lib/localTitles'
 import { useNearOnce } from '../lib/titleArt'
@@ -37,7 +37,7 @@ function groupByDay(items: EpisodeItem[], today: number) {
 function CalendarItem({ it, spoil }: { it: EpisodeItem; spoil?: boolean }) {
   const now = Date.now()
   const aired = it.released <= now
-  const time = it.hasTime ? new Date(it.released).toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit' }) : undefined
+  const time = it.hasTime ? clockTime(it.released) : undefined
   const img = it.thumbnail ?? smallPoster(it.metaId, it.poster)
   // Nombre de la serie en español (v0.28), pedido cuando la fila se acerca a la pantalla; los títulos de
   // episodio siguen en idioma original.
@@ -89,8 +89,11 @@ export function Calendar() {
     <div className="page">
       <header className="page-header">
         <div>
+          <Link to="/me" className="year-back">
+            ← Vos
+          </Link>
           <h1>Calendario</h1>
-          <p className="muted small cal-sub">
+          <p className="muted cal-sub">
             Episodios de las series que viste o tenés en Mi lista: los próximos 60 días y la última semana.
           </p>
         </div>
