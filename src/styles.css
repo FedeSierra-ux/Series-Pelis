@@ -188,7 +188,7 @@ select option {
   gap: 6px;
 }
 /* v0.26: rótulo visible de un grupo de chips de Ajustes (Choice con `showLabel`: Tamaño, Color, Fondo…). */
-[data-theme='2'] .choice-label {
+:root .choice-label {
   display: block;
   margin: 14px 0 8px;
   font-size: var(--fs-sm);
@@ -1885,7 +1885,7 @@ html[data-tv] .year-back {
 /* v0.26 (explorar-10): persona en el celular: foto chica al lado del nombre, la bio a todo el ancho y más
    corta (5 renglones) y "Leer más" alineado con el texto. */
 @media (max-width: 760px) {
-  [data-theme='2'] .person-head {
+  :root .person-head {
     display: grid;
     grid-template-columns: 104px minmax(0, 1fr);
     column-gap: 16px;
@@ -1893,39 +1893,39 @@ html[data-tv] .year-back {
     align-items: start;
     margin-bottom: 24px;
   }
-  [data-theme='2'] .person-info {
+  :root .person-info {
     display: contents;
   }
-  [data-theme='2'] .person-photo {
+  :root .person-photo {
     grid-row: 1 / span 3;
     width: 104px;
   }
-  [data-theme='2'] .person-info h1 {
+  :root .person-info h1 {
     grid-column: 2;
     font-size: 1.55rem;
     line-height: 1.1;
     margin: 0;
   }
-  [data-theme='2'] .person-info > .chip,
-  [data-theme='2'] .person-info > .credits {
+  :root .person-info > .chip,
+  :root .person-info > .credits {
     grid-column: 2;
     justify-self: start;
     margin: 0;
   }
-  [data-theme='2'] .person-info > .credits {
+  :root .person-info > .credits {
     font-size: var(--fs-sm);
   }
-  [data-theme='2'] .person-info > :not(h1):not(.chip):not(.credits) {
+  :root .person-info > :not(h1):not(.chip):not(.credits) {
     grid-column: 1 / -1;
   }
-  [data-theme='2'] .person-bio {
+  :root .person-bio {
     color: var(--text-soft);
   }
-  [data-theme='2'] .person-bio.clamped {
+  :root .person-bio.clamped {
     max-height: 7.75em;
   }
-  /* Con .person-info delante: le gana a [data-theme='2'] .btn-small (theme2.css, que carga después). */
-  [data-theme='2'] .person-info > .person-more {
+  /* Con .person-info delante: le gana a :root .btn-small (theme2.css, que carga después). */
+  :root .person-info > .person-more {
     margin-top: -10px;
     padding-inline: 0;
     justify-self: start;
@@ -3105,34 +3105,34 @@ html[data-tv] .top10-rank {
 /* v0.26: la tarjeta de la meta a todo el ancho; los presets con forma de botón (antes tenían el mismo fondo que
    la tarjeta y parecían texto suelto) y los logros nuevos sin el anillo extra (en la TV se confundía con el foco:
    el chip "¡Nuevo!" ya alcanza). */
-[data-theme='2'] .goal-card {
+:root .goal-card {
   max-width: none;
 }
-[data-theme='2'] .goal-card .goal-presets .tab {
+:root .goal-card .goal-presets .tab {
   background: var(--bg-3);
   box-shadow: inset 0 0 0 1px var(--line);
   color: var(--text);
 }
 @media (hover: hover) {
-  [data-theme='2'] .goal-card .goal-presets .tab:hover {
+  :root .goal-card .goal-presets .tab:hover {
     background: var(--tonal);
   }
 }
-[data-theme='2'] .goal-card .goal-presets .tab.active,
-[data-theme='2'] .goal-card .goal-presets .tab[aria-pressed='true'] {
+:root .goal-card .goal-presets .tab.active,
+:root .goal-card .goal-presets .tab[aria-pressed='true'] {
   background: var(--accent);
   color: var(--on-accent);
   box-shadow: none;
 }
-[data-theme='2'] .achievement.on {
+:root .achievement.on {
   border-color: color-mix(in srgb, var(--accent) 40%, var(--line));
 }
 @supports not (color: color-mix(in srgb, red 50%, transparent)) {
-  [data-theme='2'] .achievement.on {
+  :root .achievement.on {
     border-color: rgb(111, 100, 140); /* el acento al 40 % sobre --line */
   }
 }
-[data-theme='2'] .achievement.new {
+:root .achievement.new {
   box-shadow: none;
 }
 
@@ -3407,13 +3407,13 @@ html[data-tv] .top10-rank {
 }
 /* v0.26 (explorar-05): mismo fundido que la fila de géneros (filters.css .fb-genres) y la etiqueta "Listas"
    con más peso, alineada a los chips. */
-[data-theme='2'] .curated-strip {
+:root .curated-strip {
   -webkit-mask-image: linear-gradient(90deg, #000 calc(100% - 72px), transparent);
   mask-image: linear-gradient(90deg, #000 calc(100% - 72px), transparent);
   padding-right: 72px;
   scroll-padding-inline: 0 72px;
 }
-[data-theme='2'] .curated-strip-label {
+:root .curated-strip-label {
   color: var(--text-soft);
   font-weight: 700;
   margin-right: 4px;
@@ -3691,21 +3691,21 @@ button.chip-link {
 }
 /* v0.26: en el celular el texto va a todo el ancho (ícono + contenido) y el botón baja debajo, alineado al texto. */
 @media (max-width: 700px) {
-  [data-theme='2'] .addon-explorer .addon-item {
+  :root .addon-explorer .addon-item {
     display: grid;
     grid-template-columns: 44px minmax(0, 1fr);
     align-items: start;
     gap: 10px 14px;
   }
-  [data-theme='2'] .addon-explorer .addon-actions {
+  :root .addon-explorer .addon-actions {
     grid-column: 2;
     justify-content: flex-start;
   }
-  [data-theme='2'] .addon-explorer .addon-actions .btn {
+  :root .addon-explorer .addon-actions .btn {
     min-height: 40px;
     padding: 8px 20px;
   }
-  [data-theme='2'] .addon-explorer .addon-installed {
+  :root .addon-explorer .addon-installed {
     padding: 0;
   }
 }

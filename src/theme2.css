@@ -1,10 +1,14 @@
 /* ---------- v0.6 tema 2 ---------- */
 
-/* Tema 2 ("Sala oscura" + "Tonal" + "TV"): todo cuelga de <html data-theme="2">, así que con el
-   Tema 1 este archivo no hace nada. Las pantallas nuevas que usen las variables (--bg-2, --accent,
-   --radius, --font-display…) heredan el tema solas. Se carga después de styles.css. */
+/* Tema 2 ("Sala oscura" + "Tonal" + "TV"): el único diseño (el Tema 1 se sacó en la v0.11). Las pantallas
+   nuevas que usen las variables (--bg-2, --accent, --radius, --font-display…) heredan el tema solas. Se carga
+   después de styles.css.
+   Los selectores arrancan con `:root` y no con `[data-theme='2']` (v0.37): una pseudo-clase pesa lo mismo que un
+   atributo, así que cada regla sigue ganándole a la base y a los CSS de cada pantalla exactamente igual que antes.
+   Por eso el bloque de variables va con `:root:root` (antes `:root[data-theme='2']`, peso 0,2,0) y el de la TV con
+   `html[data-tv]:root`. Si algún día se quiere bajar el peso, hay que hacerlo regla por regla. */
 
-:root[data-theme='2'] {
+:root:root {
   --bg: #0b0b10;
   --bg-2: #1c1a22;
   --bg-3: #2a2732;
@@ -58,41 +62,41 @@
   --logo-halo-in: filter 180ms ease-out;
 }
 
-[data-theme='2'] body {
+:root body {
   font-family: var(--font-body);
 }
-[data-theme='2'] h1,
-[data-theme='2'] h2,
-[data-theme='2'] h3,
-[data-theme='2'] .t2-brand {
+:root h1,
+:root h2,
+:root h3,
+:root .t2-brand {
   font-family: var(--font-display);
   letter-spacing: -0.01em;
 }
-[data-theme='2'] h1 {
+:root h1 {
   font-weight: 800;
 }
-[data-theme='2'] h2,
-[data-theme='2'] h3 {
+:root h2,
+:root h3 {
   font-weight: 700;
 }
-[data-theme='2'] input[type='checkbox'],
-[data-theme='2'] input[type='radio'],
-[data-theme='2'] input[type='range'] {
+:root input[type='checkbox'],
+:root input[type='radio'],
+:root input[type='range'] {
   accent-color: var(--accent);
 }
-[data-theme='2'] ::selection {
+:root ::selection {
   background: var(--tonal);
 }
 
 /* Foco para el control remoto: anillo grueso en el color de acento. */
-[data-theme='2'] :focus-visible {
+:root :focus-visible {
   outline: var(--focus-ring);
   outline-offset: var(--focus-offset);
 }
 
 /* ---------- Botones, campos, pestañas y chips (tonal) ---------- */
 
-[data-theme='2'] .btn {
+:root .btn {
   border: 0;
   padding: 11px 20px;
   background: var(--surface-2);
@@ -101,54 +105,54 @@
   backdrop-filter: none;
   transition: background 0.15s, transform 0.15s;
 }
-[data-theme='2'] .btn:focus-visible {
+:root .btn:focus-visible {
   background: var(--tonal);
 }
 /* Los realces de :hover van solo con mouse: en pantallas táctiles quedan pegados después de tocar. */
 @media (hover: hover) {
-  [data-theme='2'] .btn:hover {
+  :root .btn:hover {
     background: var(--tonal);
   }
 }
-[data-theme='2'] .btn-primary {
+:root .btn-primary {
   background: var(--accent);
   color: var(--on-accent);
 }
-[data-theme='2'] .btn-primary:focus-visible {
+:root .btn-primary:focus-visible {
   background: #d6c8ff;
 }
 @media (hover: hover) {
-  [data-theme='2'] .btn-primary:hover {
+  :root .btn-primary:hover {
     background: #d6c8ff;
   }
 }
-[data-theme='2'] .btn-ghost {
+:root .btn-ghost {
   background: transparent;
   padding: 8px 12px;
 }
-[data-theme='2'] .btn-ghost:focus-visible {
+:root .btn-ghost:focus-visible {
   background: var(--surface-2);
 }
 @media (hover: hover) {
-  [data-theme='2'] .btn-ghost:hover {
+  :root .btn-ghost:hover {
     background: var(--surface-2);
   }
 }
-[data-theme='2'] .btn-small {
+:root .btn-small {
   padding: 7px 14px;
 }
-[data-theme='2'] .btn:focus-visible {
+:root .btn:focus-visible {
   transform: scale(1.04);
 }
 
-[data-theme='2'] input[type='search'],
-[data-theme='2'] input[type='url'],
-[data-theme='2'] input[type='text'],
-[data-theme='2'] input[type='password'],
-[data-theme='2'] input[type='email'],
-[data-theme='2'] input[type='number'],
-[data-theme='2'] input[type='tel'],
-[data-theme='2'] select {
+:root input[type='search'],
+:root input[type='url'],
+:root input[type='text'],
+:root input[type='password'],
+:root input[type='email'],
+:root input[type='number'],
+:root input[type='tel'],
+:root select {
   font: inherit;
   color: var(--text);
   background-color: var(--bg-2);
@@ -158,26 +162,26 @@
 }
 /* El número de la meta: misma píldora, centrado y en negrita (el `font: inherit` de arriba le sacaba el peso).
    La tarjeta de metas ya es --bg-2: el campo sube un tono para que se vea (igual que en Ajustes y el login). */
-[data-theme='2'] .goal-stepper input {
+:root .goal-stepper input {
   background-color: var(--bg-3);
   font-weight: 700;
   padding-inline: 8px;
 }
-[data-theme='2'] input:focus-visible,
-[data-theme='2'] select:focus-visible {
+:root input:focus-visible,
+:root select:focus-visible {
   border-color: transparent;
   outline: var(--focus-ring-sm);
   outline-offset: 2px;
 }
 /* El desplegable es una tarjeta, no una píldora: así se distingue de los campos de texto. */
-[data-theme='2'] select {
+:root select {
   border-radius: var(--radius);
   background-color: var(--bg-2);
   padding-right: 44px;
   background-position: right 16px center;
 }
 
-[data-theme='2'] .tab {
+:root .tab {
   border: 0;
   padding: 9px 18px;
   background: var(--bg-2);
@@ -185,26 +189,26 @@
   font-weight: 700;
 }
 @media (hover: hover) {
-  [data-theme='2'] .tab:hover {
+  :root .tab:hover {
     background: var(--bg-3);
     color: var(--text);
   }
 }
 /* Lo elegido es lavanda lleno con texto oscuro en todas las pantallas (igual que los chips de filtros y las pestañas de Buscar). */
-[data-theme='2'] .tab.active {
+:root .tab.active {
   background: var(--accent);
   color: var(--on-accent);
   font-weight: 700;
 }
 /* v0.26: en el asistente la caja es --bg-2 como los chips: los idiomas sin elegir llevan contorno (si no,
    "Portugués" parecía texto suelto). */
-[data-theme='2'] .ob-box .tab:not(.active) {
+:root .ob-box .tab:not(.active) {
   background: transparent;
   box-shadow: inset 0 0 0 1.5px var(--line);
   color: var(--text);
 }
 @media (hover: hover) {
-  [data-theme='2'] .ob-box .tab:not(.active):hover {
+  :root .ob-box .tab:not(.active):hover {
     background: var(--bg-3);
   }
 }
@@ -213,27 +217,27 @@
   outline: none;
 }
 
-[data-theme='2'] .chip {
+:root .chip {
   background: transparent;
   border: 1px solid var(--outline);
   border-radius: 8px;
   padding: 3px 10px;
 }
-[data-theme='2'] .chip.small {
+:root .chip.small {
   padding: 1px 8px;
 }
 
-[data-theme='2'] code {
+:root code {
   background: var(--bg-3);
 }
-[data-theme='2'] .empty a,
-[data-theme='2'] .streams-empty a {
+:root .empty a,
+:root .streams-empty a {
   color: var(--accent);
 }
-[data-theme='2'] .error-box {
+:root .error-box {
   border-radius: var(--radius);
 }
-[data-theme='2'] .spinner {
+:root .spinner {
   border-top-color: var(--accent);
 }
 
@@ -369,7 +373,7 @@
 
 /* La portada de Inicio, Películas y Series está en src/pages/home/hero.css (.portada). Lo de acá
    queda para el esqueleto de la ficha (.hero) y para .hero-shade / .hero-meta / .hero-actions. */
-[data-theme='2'] .hero {
+:root .hero {
   margin: 12px var(--gutter) 8px;
   min-height: clamp(380px, 66vh, 660px);
   align-items: flex-end;
@@ -378,32 +382,32 @@
   background-color: var(--surface-1);
   background-position: center 20%;
 }
-[data-theme='2'] .hero-shade {
+:root .hero-shade {
   background: linear-gradient(to top, var(--bg) 2%, rgba(var(--bg-rgb), 0.55) 45%, rgba(var(--bg-rgb), 0.15)),
     linear-gradient(to right, rgba(var(--bg-rgb), 0.88), transparent 65%);
 }
-[data-theme='2'] .hero-actions {
+:root .hero-actions {
   gap: 10px;
 }
 
 /* Chips de la portada y la ficha: IMDb amarillo, el resto con borde. */
-[data-theme='2'] .hero-meta {
+:root .hero-meta {
   gap: 8px;
   font-size: var(--fs-sm);
   color: var(--text);
 }
-[data-theme='2'] .hero-meta > span {
+:root .hero-meta > span {
   padding: 4px 10px;
   border-radius: 8px;
   border: 1px solid var(--outline);
 }
-[data-theme='2'] .hero-meta > .imdb {
+:root .hero-meta > .imdb {
   gap: 5px;
   border-color: transparent;
   background: var(--imdb);
   color: #000;
 }
-[data-theme='2'] .hero-meta > .imdb b {
+:root .hero-meta > .imdb b {
   padding: 0;
   background: none;
   font-size: inherit;
@@ -411,103 +415,103 @@
 
 /* ---------- Filas y pósters ---------- */
 
-[data-theme='2'] .row {
+:root .row {
   margin: 22px 0 6px;
 }
-[data-theme='2'] .row-header h2 {
+:root .row-header h2 {
   font-size: clamp(1.05rem, 1.5vw, 1.3rem);
 }
-[data-theme='2'] .row-more {
+:root .row-more {
   color: var(--accent);
   font-weight: 700;
   font-size: var(--fs-sm);
   padding: 5px 12px;
   border-radius: 999px;
 }
-[data-theme='2'] .row-more:focus-visible {
+:root .row-more:focus-visible {
   color: var(--accent);
   background: var(--surface-1);
 }
 @media (hover: hover) {
-  [data-theme='2'] .row-more:hover {
+  :root .row-more:hover {
     color: var(--accent);
     background: var(--surface-1);
   }
 }
 /* Más aire arriba y abajo: el anillo de foco y la escala no se cortan. */
-[data-theme='2'] .row-scroller {
+:root .row-scroller {
   gap: 18px;
   /* Arriba, lugar para el anillo (5 + 5 px) y la escala de la tarjeta enfocada (~17 px; 19 en la TV).
      El margen negativo compensa (cae en el margen de abajo del título): la fila no se corre. */
   padding: 24px var(--gutter) 20px;
   margin-top: -10px;
 }
-html[data-tv][data-theme='2'] .row-scroller {
+html[data-tv]:root .row-scroller {
   padding-top: 30px;
   margin-top: -16px;
 }
-[data-theme='2'] .grid {
+:root .grid {
   gap: 26px 18px;
 }
 
-[data-theme='2'] .poster-img {
+:root .poster-img {
   border-radius: 20px;
 }
 /* El radio de la tarjeta recorta (content-visibility pinta "contenido"): chico, para no comerse el texto. */
-[data-theme='2'] .poster-card {
+:root .poster-card {
   border-radius: 10px;
 }
 /* Al enfocarla o pasar el mouse se pinta entera: si no, el anillo y la escala quedan recortados. */
-[data-theme='2'] .poster-card:focus-visible {
+:root .poster-card:focus-visible {
   content-visibility: visible;
 }
 @media (hover: hover) {
-  [data-theme='2'] .poster-card:hover {
+  :root .poster-card:hover {
     content-visibility: visible;
   }
 }
 /* Al moverse con las flechas queda lugar para el anillo y el título de la tarjeta enfocada. */
-[data-theme='2'] .poster-card,
-[data-theme='2'] .cast-card,
+:root .poster-card,
+:root .cast-card,
 .t2-cont {
   scroll-margin-block: 40px;
 }
-[data-theme='2'] .poster-card:focus-visible {
+:root .poster-card:focus-visible {
   outline: none;
 }
 @media (hover: hover) {
-  [data-theme='2'] .poster-card:hover .poster-img {
+  :root .poster-card:hover .poster-img {
     transform: scale(1.04);
   }
 }
-[data-theme='2'] .poster-card:focus-visible .poster-img {
+:root .poster-card:focus-visible .poster-img {
   outline: var(--focus-ring-lg);
   outline-offset: 5px;
   transform: scale(1.05);
   box-shadow: var(--shadow-lift);
 }
-[data-theme='2'] .poster-title {
+:root .poster-title {
   font-weight: 700;
 }
 /* El anillo (5 px + 5 px de separación) taparía el título: lo corremos un poco al enfocar. */
-[data-theme='2'] .poster-info,
+:root .poster-info,
 .t2-cont-title,
 .t2-cont-sub {
   transition: transform 0.18s ease;
 }
-[data-theme='2'] .poster-card:focus-visible .poster-info,
+:root .poster-card:focus-visible .poster-info,
 .t2-cont:focus-visible .t2-cont-title,
 .t2-cont:focus-visible .t2-cont-sub {
   transform: translateY(12px);
 }
-[data-theme='2'] .poster-card:focus-visible .poster-title {
+:root .poster-card:focus-visible .poster-title {
   color: var(--accent);
 }
-[data-theme='2'] .badge-watched {
+:root .badge-watched {
   background: var(--accent);
   color: var(--on-accent);
 }
-[data-theme='2'] .progress-bar {
+:root .progress-bar {
   left: 10px;
   right: 10px;
   bottom: 9px;
@@ -515,58 +519,58 @@ html[data-tv][data-theme='2'] .row-scroller {
   border-radius: 3px;
   background: rgba(255, 255, 255, 0.3);
 }
-[data-theme='2'] .progress-bar > div {
+:root .progress-bar > div {
   border-radius: 3px;
   background: var(--accent);
 }
-[data-theme='2'] .progress-bar.inline {
+:root .progress-bar.inline {
   height: 4px;
 }
-[data-theme='2'] .poster-remove {
+:root .poster-remove {
   border: 0;
   background: rgba(var(--bg-rgb), 0.8);
 }
-[data-theme='2'] .poster-remove:focus-visible {
+:root .poster-remove:focus-visible {
   background: var(--accent);
   color: var(--on-accent);
 }
 @media (hover: hover) {
-  [data-theme='2'] .poster-remove:hover {
+  :root .poster-remove:hover {
     background: var(--accent);
     color: var(--on-accent);
   }
 }
-[data-theme='2'] .poster-remove:focus-visible {
+:root .poster-remove:focus-visible {
   outline-offset: 2px;
 }
 
 /* Top 10: número con borde en el tono de acento. */
-[data-theme='2'] .top10-rank {
+:root .top10-rank {
   font-family: var(--font-display);
   -webkit-text-stroke-color: rgba(196, 176, 255, 0.7);
 }
 /* v0.26: celular → borde más opaco (el tamaño es el de todas las pantallas, en styles.css). */
 @media (max-width: 760px) {
-  [data-theme='2'] .top10-rank {
+  :root .top10-rank {
     -webkit-text-stroke-color: color-mix(in srgb, var(--accent) 95%, transparent);
   }
   @supports not (color: color-mix(in srgb, red 50%, transparent)) {
-    [data-theme='2'] .top10-rank {
+    :root .top10-rank {
       -webkit-text-stroke-color: rgba(var(--accent-rgb), 0.95);
     }
   }
 }
 /* v0.26: esqueleto del Top 10 (Top10Row): el lugar del número en contorno, sin corrimiento al cargar.
    El relleno queda en --bg (como el número de verdad): transparente dejaba ver los trazos internos de la fuente. */
-[data-theme='2'] .top10-rank.is-skel {
+:root .top10-rank.is-skel {
   -webkit-text-stroke-color: var(--line);
 }
 /* Los esqueletos no son tarjetas: sin agrandarse al pasar el mouse. */
-[data-theme='2'] .skeleton-card {
+:root .skeleton-card {
   pointer-events: none;
 }
 /* La barrita va dentro del renglón del título (PosterSkeleton), así el esqueleto mide lo mismo que la tarjeta. */
-[data-theme='2'] .skeleton-card .poster-title .skeleton-line {
+:root .skeleton-card .poster-title .skeleton-line {
   display: inline-block;
   vertical-align: middle;
 }
@@ -642,10 +646,10 @@ html[data-tv][data-theme='2'] .row-scroller {
 
 /* ---------- Páginas ---------- */
 
-[data-theme='2'] .page-header h1 {
+:root .page-header h1 {
   font-size: clamp(1.5rem, 2.6vw, 2.1rem);
 }
-[data-theme='2'] .search-input {
+:root .search-input {
   height: 56px;
   padding: 14px 22px 14px 52px !important;
   font-size: 1.1rem !important;
@@ -653,21 +657,21 @@ html[data-tv][data-theme='2'] .row-scroller {
     url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='20' height='20' viewBox='0 0 24 24' fill='none' stroke='%23a8a3b3' stroke-width='2' stroke-linecap='round'%3E%3Ccircle cx='11' cy='11' r='7'/%3E%3Cpath d='M20 20l-4-4'/%3E%3C/svg%3E")
     no-repeat 20px center;
 }
-[data-theme='2'] .search-group h2 {
+:root .search-group h2 {
   font-size: var(--fs-lg);
 }
 
 /* Historial */
-[data-theme='2'] .stats b {
+:root .stats b {
   font-family: var(--font-display);
 }
-[data-theme='2'] .history-item {
+:root .history-item {
   border-radius: var(--radius);
   background: var(--surface-1);
 }
 
 /* Ajustes: cada sección es una tarjeta tonal; adentro todo sube un tono. */
-[data-theme='2'] .settings-section {
+:root .settings-section {
   padding: 22px 24px;
   margin-bottom: 20px;
   border-radius: 24px;
@@ -677,18 +681,18 @@ html[data-tv][data-theme='2'] .row-scroller {
   --tonal: #463d63;
   --line: #45404f;
 }
-[data-theme='2'] .addon-item {
+:root .addon-item {
   border-radius: var(--radius);
 }
-[data-theme='2'] .addon-logo {
+:root .addon-logo {
   border-radius: 12px;
 }
-[data-theme='2'] .sub-preview {
+:root .sub-preview {
   border-radius: var(--radius);
 }
 
 /* Ficha */
-[data-theme='2'] .detail-hero {
+:root .detail-hero {
   margin: 20px var(--gutter) 8px;
   padding: 44px 44px 36px;
   border-radius: var(--radius-lg);
@@ -700,141 +704,141 @@ html[data-tv][data-theme='2'] .row-scroller {
   /* a11y-07: la sinopsis llegaba a ~73 % del ancho, donde la sombra bajaba a 0,45: sobre fondos claros (chaqueta
      amarilla de Breaking Bad, Forrest Gump…) quedaba a 1,7–3,5:1. La sombra se sostiene hasta el 62 % y el texto
      se angosta (56ch): medido con los píxeles reales, el peor tramo de la sinopsis queda arriba de 4,5:1. */
-  [data-theme='2'] .detail-hero .hero-shade {
+  :root .detail-hero .hero-shade {
     background: linear-gradient(90deg, var(--bg) 0%, rgba(var(--bg-rgb), 0.92) 42%, rgba(var(--bg-rgb), 0.84) 62%, rgba(var(--bg-rgb), 0.35) 86%, rgba(var(--bg-rgb), 0.1)),
       linear-gradient(0deg, rgba(var(--bg-rgb), 0.85) 0%, rgba(var(--bg-rgb), 0) 40%);
   }
-  [data-theme='2'] .detail-desc,
-  [data-theme='2'] .detail-tagline {
+  :root .detail-desc,
+  :root .detail-tagline {
     max-width: 56ch;
   }
 }
-[data-theme='2'] .detail-poster {
+:root .detail-poster {
   border-radius: 20px;
 }
-[data-theme='2'] .detail-desc,
-[data-theme='2'] .detail-tagline {
+:root .detail-desc,
+:root .detail-tagline {
   color: var(--text-soft);
 }
-[data-theme='2'] .season-tabs {
+:root .season-tabs {
   padding: 10px 6px 18px;
 }
-[data-theme='2'] .episode {
+:root .episode {
   border: 2px solid transparent;
   border-radius: var(--radius);
   background: var(--surface-1);
 }
-[data-theme='2'] .episode.selected {
+:root .episode.selected {
   border-color: var(--accent);
   background: var(--surface-2);
 }
-[data-theme='2'] .episode-main {
+:root .episode-main {
   border-radius: 16px;
 }
-[data-theme='2'] .episode-thumb {
+:root .episode-thumb {
   border-radius: 12px;
 }
-[data-theme='2'] .episode-check {
+:root .episode-check {
   border-color: var(--outline);
 }
-[data-theme='2'] .episode-check.on {
+:root .episode-check.on {
   background: var(--accent);
   border-color: var(--accent);
   color: var(--on-accent);
 }
-[data-theme='2'] .episode-streams {
+:root .episode-streams {
   border-radius: 24px;
   background: var(--surface-1);
 }
-[data-theme='2'] .stream-item {
+:root .stream-item {
   border: 2px solid transparent;
   border-radius: 16px;
   background: var(--surface-2);
 }
-[data-theme='2'] .stream-item:focus-visible {
+:root .stream-item:focus-visible {
   border-color: var(--accent);
   background: var(--tonal);
 }
 @media (hover: hover) {
-  [data-theme='2'] .stream-item:hover {
+  :root .stream-item:hover {
     border-color: var(--accent);
     background: var(--tonal);
   }
 }
-[data-theme='2'] .stream-item:focus-visible {
+:root .stream-item:focus-visible {
   outline-offset: 2px;
 }
-[data-theme='2'] .stream-item.recommended {
+:root .stream-item.recommended {
   border-color: rgba(196, 176, 255, 0.55);
 }
-[data-theme='2'] .stream-badge {
+:root .stream-badge {
   background: var(--accent);
   color: var(--on-accent);
 }
-[data-theme='2'] .auto-play-banner {
+:root .auto-play-banner {
   border-radius: var(--radius);
   background: rgba(196, 176, 255, 0.12);
   border-color: rgba(196, 176, 255, 0.5);
 }
-[data-theme='2'] .tmdb-notice {
+:root .tmdb-notice {
   border-radius: var(--radius);
   border-color: transparent;
 }
-[data-theme='2'] .cast-card:focus-visible .cast-photo {
+:root .cast-card:focus-visible .cast-photo {
   outline: var(--focus-ring-lg);
   outline-offset: var(--focus-offset);
 }
-[data-theme='2'] .cast-card:focus-visible .cast-name {
+:root .cast-card:focus-visible .cast-name {
   color: var(--accent);
 }
-[data-theme='2'] .providers-logos img {
+:root .providers-logos img {
   border-radius: 12px;
 }
-[data-theme='2'] .person-photo {
+:root .person-photo {
   border-radius: 20px;
 }
 
 /* Calendario y Tu año */
-[data-theme='2'] .cal-item {
+:root .cal-item {
   border-radius: var(--radius);
   background: var(--surface-1);
 }
-[data-theme='2'] .cal-item:focus-visible {
+:root .cal-item:focus-visible {
   background: var(--surface-2);
 }
 @media (hover: hover) {
-  [data-theme='2'] .cal-item:hover {
+  :root .cal-item:hover {
     background: var(--surface-2);
   }
 }
-[data-theme='2'] .cal-thumb {
+:root .cal-thumb {
   border-radius: 12px;
 }
-[data-theme='2'] .cal-badge {
+:root .cal-badge {
   background: var(--tonal);
   color: var(--accent);
 }
-[data-theme='2'] .year-hero {
+:root .year-hero {
   border: 0;
   border-radius: var(--radius-lg);
   background: radial-gradient(120% 140% at 0% 0%, rgba(196, 176, 255, 0.32), transparent 55%),
     radial-gradient(120% 140% at 100% 100%, rgba(58, 51, 80, 0.9), transparent 60%), var(--surface-1);
 }
-[data-theme='2'] .year-big,
-[data-theme='2'] .year-kpis dd {
+:root .year-big,
+:root .year-kpis dd {
   font-family: var(--font-display);
   font-weight: 800;
 }
-[data-theme='2'] .year-card {
+:root .year-card {
   border: 0;
   border-radius: 24px;
   background: var(--surface-1);
 }
-[data-theme='2'] .year-bar {
+:root .year-bar {
   background: var(--surface-2);
 }
 
-[data-theme='2'] .undo-toast {
+:root .undo-toast {
   border: 0;
   background: var(--surface-2);
 }
@@ -848,146 +852,146 @@ html[data-tv][data-theme='2'] .row-scroller {
 
 /* ---------- Reproductor ---------- */
 
-[data-theme='2'] .player-title strong,
-[data-theme='2'] .player-dim h2 {
+:root .player-title strong,
+:root .player-dim h2 {
   font-family: var(--font-display);
 }
-[data-theme='2'] .controls-row button {
+:root .controls-row button {
   border-radius: 999px;
 }
-[data-theme='2'] .controls-row button:focus-visible {
+:root .controls-row button:focus-visible {
   background: rgba(255, 255, 255, 0.14);
   outline: none;
 }
 @media (hover: hover) {
-  [data-theme='2'] .controls-row button:hover {
+  :root .controls-row button:hover {
     background: rgba(255, 255, 255, 0.14);
     outline: none;
   }
 }
-[data-theme='2'] .controls-row button:focus-visible {
+:root .controls-row button:focus-visible {
   outline: var(--focus-ring);
   outline-offset: 2px;
 }
-[data-theme='2'] .controls-row .play-btn {
+:root .controls-row .play-btn {
   min-width: 52px;
   height: 52px;
   padding: 0 16px;
   background: var(--accent);
   color: var(--on-accent);
 }
-[data-theme='2'] .controls-row .play-btn:focus-visible {
+:root .controls-row .play-btn:focus-visible {
   background: #d6c8ff;
 }
 @media (hover: hover) {
-  [data-theme='2'] .controls-row .play-btn:hover {
+  :root .controls-row .play-btn:hover {
     background: #d6c8ff;
   }
 }
-[data-theme='2'] .controls-row button.active {
+:root .controls-row button.active {
   color: var(--accent);
 }
-[data-theme='2'] .seekbar {
+:root .seekbar {
   background: linear-gradient(to right, var(--accent) var(--pct), rgba(255, 255, 255, 0.25) var(--pct));
 }
-[data-theme='2'] .seekbar::-webkit-slider-thumb {
+:root .seekbar::-webkit-slider-thumb {
   width: 18px;
   height: 18px;
   background: var(--accent);
   box-shadow: 0 0 0 4px rgba(196, 176, 255, 0.3);
 }
-[data-theme='2'] .seekbar::-moz-range-thumb {
+:root .seekbar::-moz-range-thumb {
   width: 18px;
   height: 18px;
   background: var(--accent);
 }
-[data-theme='2'] .seekbar:focus-visible {
+:root .seekbar:focus-visible {
   outline-offset: 6px;
 }
-[data-theme='2'] .player-menu {
+:root .player-menu {
   padding: 8px;
   border-radius: 22px;
   background: rgba(28, 26, 34, 0.97);
   box-shadow: var(--shadow-2);
 }
-[data-theme='2'] .player-menu button {
+:root .player-menu button {
   border-radius: 14px;
 }
-[data-theme='2'] .player-menu button:focus-visible {
+:root .player-menu button:focus-visible {
   background: var(--tonal);
   outline: var(--focus-ring-sm);
   outline-offset: var(--focus-inset);
 }
 @media (hover: hover) {
-  [data-theme='2'] .player-menu button:hover {
+  :root .player-menu button:hover {
     background: var(--tonal);
     outline: var(--focus-ring-sm);
     outline-offset: var(--focus-inset);
   }
 }
 @media (hover: hover) {
-  [data-theme='2'] .player-menu button:hover:not(:focus-visible) {
+  :root .player-menu button:hover:not(:focus-visible) {
     outline: none;
   }
 }
-[data-theme='2'] .player-menu button.active {
+:root .player-menu button.active {
   color: var(--accent);
 }
-[data-theme='2'] .player-toast,
-[data-theme='2'] .next-card,
-[data-theme='2'] .seek-preview,
-[data-theme='2'] .player-rate,
-[data-theme='2'] .player-chip {
+:root .player-toast,
+:root .next-card,
+:root .seek-preview,
+:root .player-rate,
+:root .player-chip {
   border: 0;
   background: rgba(28, 26, 34, 0.95);
 }
-[data-theme='2'] .next-card {
+:root .next-card {
   border-radius: 22px;
 }
-[data-theme='2'] .player-toast.player-note {
+:root .player-toast.player-note {
   border-radius: 18px;
 }
-[data-theme='2'] .seek-preview {
+:root .seek-preview {
   border-radius: 14px;
 }
-[data-theme='2'] .seek-preview-video {
+:root .seek-preview-video {
   border-radius: 10px;
 }
-[data-theme='2'] .btn.skip-btn {
+:root .btn.skip-btn {
   background: rgba(28, 26, 34, 0.92);
   box-shadow: inset 0 0 0 2px rgba(255, 255, 255, 0.45);
 }
-[data-theme='2'] .btn.skip-btn:focus-visible {
+:root .btn.skip-btn:focus-visible {
   background: var(--accent);
   color: var(--on-accent);
   box-shadow: none;
 }
 @media (hover: hover) {
-  [data-theme='2'] .btn.skip-btn:hover {
+  :root .btn.skip-btn:hover {
     background: var(--accent);
     color: var(--on-accent);
     box-shadow: none;
   }
 }
-[data-theme='2'] .player-float .btn:focus-visible {
+:root .player-float .btn:focus-visible {
   outline: var(--focus-ring);
   outline-offset: 3px;
 }
-html[data-tv][data-theme='2'] .player-float .btn:focus {
+html[data-tv]:root .player-float .btn:focus {
   outline: var(--focus-ring);
   outline-offset: 3px;
 }
-[data-theme='2'] .player-spinner {
+:root .player-spinner {
   border-top-color: var(--accent);
 }
-[data-theme='2'] .player-drop {
+:root .player-drop {
   border-radius: var(--radius-lg);
 }
 
 /* ---------- Celular ---------- */
 
 @media (max-width: 760px) {
-  :root[data-theme='2'] {
+  :root:root {
     --rail-w: 0px;
     --nav-h: 0px;
     --gutter: 16px;
@@ -1078,7 +1082,7 @@ html[data-tv][data-theme='2'] .player-float .btn:focus {
   .t2-app .t2-main {
     padding-bottom: calc(84px + env(safe-area-inset-bottom));
   }
-  [data-theme='2'] .undo-toast {
+  :root .undo-toast {
     bottom: calc(86px + env(safe-area-inset-bottom));
     /* v0.26: a todo el ancho y en hasta 2 líneas: el nombre del título ya no se corta. */
     left: 12px;
@@ -1089,7 +1093,7 @@ html[data-tv][data-theme='2'] .player-float .btn:focus {
     padding: 10px 8px 10px 16px;
     animation-name: toast-in-up;
   }
-  [data-theme='2'] .undo-toast > span {
+  :root .undo-toast > span {
     white-space: normal;
     display: -webkit-box;
     -webkit-box-orient: vertical;
@@ -1099,44 +1103,44 @@ html[data-tv][data-theme='2'] .player-float .btn:focus {
   }
 
   /* Esqueleto de la ficha y sombra de su portada (imagen arriba, texto abajo). */
-  [data-theme='2'] .hero {
+  :root .hero {
     margin: 0 12px 6px;
     border-radius: 22px;
     min-height: 470px;
   }
-  [data-theme='2'] .hero-shade {
+  :root .hero-shade {
     background: linear-gradient(to bottom, rgba(var(--bg-rgb), 0) 110px, var(--bg) 290px);
   }
-  [data-theme='2'] .hero-meta {
+  :root .hero-meta {
     font-size: 0.78rem;
     gap: 6px;
   }
-  [data-theme='2'] .hero-meta > span {
+  :root .hero-meta > span {
     padding: 3px 8px;
   }
 
-  [data-theme='2'] .poster-img {
+  :root .poster-img {
     border-radius: 16px;
   }
-  [data-theme='2'] .t2-cont-img,
-  [data-theme='2'] .t2-cont {
+  :root .t2-cont-img,
+  :root .t2-cont {
     border-radius: 18px;
   }
-  [data-theme='2'] .row-scroller {
+  :root .row-scroller {
     gap: 12px;
   }
-  [data-theme='2'] .row {
+  :root .row {
     margin-top: 18px;
   }
 
-  [data-theme='2'] .detail-hero {
+  :root .detail-hero {
     margin: 4px 16px 8px;
     padding: 110px 18px 22px;
   }
-  [data-theme='2'] .settings-section {
+  :root .settings-section {
     padding: 18px 16px;
   }
-  [data-theme='2'] .controls-row .play-btn {
+  :root .controls-row .play-btn {
     min-width: 46px;
     height: 46px;
   }
@@ -1148,7 +1152,7 @@ html[data-tv][data-theme='2'] .player-float .btn:focus {
    el riel lateral, sin importar el ancho, y se achica para que entren los 7 destinos: sin rótulos a la vista (siguen
    para el lector de pantalla), píldoras de 40 px y el perfil más chico. El contenido sigue con el diseño de celular. */
 @media (pointer: coarse) and (max-height: 500px) {
-  :root[data-theme='2']:not([data-tv]) {
+  :root:root:not([data-tv]) {
     --rail-w: calc(88px + env(safe-area-inset-left, 0px));
   }
   html:not([data-tv]) .t2-rail {
@@ -1190,7 +1194,7 @@ html[data-tv][data-theme='2'] .player-float .btn:focus {
   html:not([data-tv]) .t2-pill {
     height: 40px;
   }
-  [data-theme='2']:not([data-tv]) .undo-toast {
+  :root:not([data-tv]) .undo-toast {
     bottom: calc(12px + env(safe-area-inset-bottom));
     left: calc(var(--rail-w) + 12px);
   }
@@ -1208,7 +1212,7 @@ html[data-tv][data-theme='2'] .player-float .btn:focus {
 /* ---------- Modo TV (html[data-tv]): riel más ancho, píldoras y controles grandes ---------- */
 
 @media (min-width: 761px) {
-  html[data-tv][data-theme='2'] {
+  html[data-tv]:root {
     --rail-w: 104px;
   }
   html[data-tv] .t2-rail {
@@ -1239,41 +1243,41 @@ html[data-tv][data-theme='2'] .player-float .btn:focus {
     height: 26px;
   }
 }
-html[data-tv][data-theme='2'] .hero-meta {
+html[data-tv]:root .hero-meta {
   font-size: var(--fs-base);
 }
-html[data-tv][data-theme='2'] .row-more {
+html[data-tv]:root .row-more {
   font-size: var(--fs-base);
 }
-html[data-tv][data-theme='2'] .btn-small {
+html[data-tv]:root .btn-small {
   padding: 10px 18px;
 }
 
 /* ---------- v0.10 pantallas ---------- */
 
 /* "Quitar" / "Restablecer": en el Tema 2 el botón pisaba el color de .danger y quedaba blanco. */
-[data-theme='2'] .btn.danger {
+:root .btn.danger {
   color: var(--danger);
 }
 
 /* Ajustes en dos columnas: índice con píldoras tonales. */
-[data-theme='2'] .settings-index-link {
+:root .settings-index-link {
   border-left: 0;
   border-radius: 999px;
 }
-[data-theme='2'] .settings-index-link.active {
+:root .settings-index-link.active {
   background: var(--tonal);
   color: var(--accent);
 }
 
 /* Catálogos: "Apaisada" prendida se ve marcada (tonal + acento + ✓), también con el foco o el mouse encima. */
-[data-theme='2'] .catalog-shape-toggle[aria-pressed='true'],
-[data-theme='2'] .catalog-shape-toggle[aria-pressed='true']:focus-visible {
+:root .catalog-shape-toggle[aria-pressed='true'],
+:root .catalog-shape-toggle[aria-pressed='true']:focus-visible {
   background: var(--tonal);
   color: var(--accent);
 }
 @media (hover: hover) {
-  [data-theme='2'] .catalog-shape-toggle[aria-pressed='true']:hover {
+  :root .catalog-shape-toggle[aria-pressed='true']:hover {
     background: var(--tonal);
     color: var(--accent);
   }
@@ -1284,15 +1288,15 @@ html[data-tv][data-theme='2'] .btn-small {
 }
 @media (max-width: 1023px) {
   /* En el celular la tarjeta tonal es el plegable, no la sección de adentro. */
-  [data-theme='2'] .settings-block {
+  :root .settings-block {
     border: 0;
     border-radius: 24px;
     background: var(--surface-1);
   }
-  [data-theme='2'] .settings-summary {
+  :root .settings-summary {
     border-radius: 24px;
   }
-  [data-theme='2'] .settings-block > .settings-section {
+  :root .settings-block > .settings-section {
     margin: 0;
     padding: 0 18px 20px;
     border-radius: 0;
@@ -1301,19 +1305,19 @@ html[data-tv][data-theme='2'] .btn-small {
 }
 
 /* Buscar: lo de la búsqueda anterior queda atenuado mientras llegan los resultados nuevos (no vuelve a esqueletos). */
-[data-theme='2'] .is-stale {
+:root .is-stale {
   opacity: 0.45;
   transition: opacity 0.2s;
 }
 /* Esqueleto de persona: mismo alto que la tarjeta real (foto + nombre + rol). */
-[data-theme='2'] .cast-skeleton .skeleton-line {
+:root .cast-skeleton .skeleton-line {
   height: 12px;
   margin: 2px 0;
 }
-[data-theme='2'] .cast-skeleton .skeleton-line:first-of-type {
+:root .cast-skeleton .skeleton-line:first-of-type {
   margin-top: 3px;
 }
-[data-theme='2'] .cast-skeleton .skeleton-line + .skeleton-line {
+:root .cast-skeleton .skeleton-line + .skeleton-line {
   width: 55%;
 }
 
@@ -1321,7 +1325,7 @@ html[data-tv][data-theme='2'] .btn-small {
   .t2-profile {
     transition: none;
   }
-  :root[data-theme='2'] {
+  :root:root {
     --logo-halo-in: none;
   }
 }
@@ -1330,42 +1334,42 @@ html[data-tv][data-theme='2'] .btn-small {
 
 /* visual-07: piso tipográfico en la TV (se mira a 3 metros). Medido en 1080p: el badge de IMDb de los pósters
    tenía 14 px (la palabra "IMDb", 11), "Estreno" 14, "Recomendado" 15, "Continuar" 16 y "quedan 2 min" 17.
-   Con `html[data-tv][data-theme='2']` gana sobre los estilos de cada pantalla (que cargan después). PC no cambia. */
-html[data-tv][data-theme='2'] .poster-rating {
+   Con `html[data-tv]:root` gana sobre los estilos de cada pantalla (que cargan después). PC no cambia. */
+html[data-tv]:root .poster-rating {
   font-size: 0.86rem;
   padding: 3px 8px 3px 3px;
 }
-html[data-tv][data-theme='2'] .poster-rating b {
+html[data-tv]:root .poster-rating b {
   font-size: 0.82em;
   padding: 3px 5px;
 }
-html[data-tv][data-theme='2'] .poster-label {
+html[data-tv]:root .poster-label {
   font-size: 0.82rem;
   padding: 4px 10px;
 }
-html[data-tv][data-theme='2'] .stream-badge,
-html[data-tv][data-theme='2'] .ep-badge,
-html[data-tv][data-theme='2'] .t2-cont-badge,
-html[data-tv][data-theme='2'] .diary-wday {
+html[data-tv]:root .stream-badge,
+html[data-tv]:root .ep-badge,
+html[data-tv]:root .t2-cont-badge,
+html[data-tv]:root .diary-wday {
   font-size: 0.82rem;
 }
-html[data-tv][data-theme='2'] .chip.small {
+html[data-tv]:root .chip.small {
   font-size: 0.86rem;
 }
-html[data-tv][data-theme='2'] .t2-cont-sub,
-html[data-tv][data-theme='2'] .d-play-sub,
-html[data-tv][data-theme='2'] .ep-left,
-html[data-tv][data-theme='2'] .search-tab-count,
-html[data-tv][data-theme='2'] .search-best-eyebrow {
+html[data-tv]:root .t2-cont-sub,
+html[data-tv]:root .d-play-sub,
+html[data-tv]:root .ep-left,
+html[data-tv]:root .search-tab-count,
+html[data-tv]:root .search-best-eyebrow {
   font-size: 0.9rem;
 }
 
 /* visual-10: Ajustes → Catálogos. "Ocultar · Apaisada · Renombrar · Fusionar…" leían como texto suelto (sobre todo
    en la TV): con un contorno fino, el de los chips sin elegir, se ve que son botones. */
-[data-theme='2'] .catalog-item-actions {
+:root .catalog-item-actions {
   gap: 8px;
 }
-[data-theme='2'] .catalog-item-actions .btn-text {
+:root .catalog-item-actions .btn-text {
   box-shadow: inset 0 0 0 1.5px var(--line);
   border-radius: 999px;
   padding: 7px 14px;
@@ -1382,7 +1386,7 @@ html[data-tv] {
   --tv-safe-y: 5vh;
 }
 @media (min-width: 761px) {
-  html[data-tv][data-theme='2'] .t2-rail {
+  html[data-tv]:root .t2-rail {
     padding-top: max(22px, var(--tv-safe-y));
     padding-bottom: max(14px, var(--tv-safe-y));
   }
@@ -1463,21 +1467,21 @@ html[data-tv] .portada .portada-actions {
 /* tv-12: en la TV el episodio elegido y el enfocado no se confunden. El elegido: relleno sutil con el acento (sin borde;
    lleva «Elegido» en la miniatura). El enfocado: el anillo rodea toda la fila (también el ✓), no solo `.episode-main`.
    Sin :has() (WebViews viejos de TV) queda como estaba. */
-html[data-tv][data-theme='2'] .episode.selected {
+html[data-tv]:root .episode.selected {
   border-color: transparent;
   background: color-mix(in srgb, var(--accent) 14%, var(--surface-2));
 }
 @supports not (color: color-mix(in srgb, red 50%, transparent)) {
-  html[data-tv][data-theme='2'] .episode.selected {
+  html[data-tv]:root .episode.selected {
     background: rgb(63, 58, 79); /* el acento al 14 % sobre --surface-2 */
   }
 }
 @supports selector(:has(*)) {
-  html[data-tv][data-theme='2'] .episode:has(.episode-main:focus-visible) {
+  html[data-tv]:root .episode:has(.episode-main:focus-visible) {
     outline: var(--focus-ring);
     outline-offset: 2px;
   }
-  html[data-tv][data-theme='2'] .episode-main:focus-visible {
+  html[data-tv]:root .episode-main:focus-visible {
     outline: none;
   }
 }
