@@ -1,0 +1,38 @@
+/* v0.35 (visual-movil-11): zonas táctiles de 44 px donde el control se ve más chico.
+   Con el dedo (pointer: coarse) cada control suma un ::before transparente que sobresale del borde: no cambia nada
+   de lo que se ve ni de la maquetación (no es padding). Con mouse y en la TV no aplica. */
+
+@media (pointer: coarse) {
+  html:not([data-tv]) :is(.row-more, .d-read-more, .chip-link, .season-mark, .bh-explore, .portada-dot, .portada-pause) {
+    position: relative;
+  }
+  /* Las pestañas de la ficha van en un contenedor con scroll horizontal (recortaría lo que sobresale): ahí es padding. */
+  html:not([data-tv]) .dt-tab {
+    padding-top: 14px;
+    padding-bottom: 12px;
+  }
+  html:not([data-tv]) .row-more {
+    z-index: 1;
+  }
+  html:not([data-tv]) :is(.row-more, .d-read-more, .chip-link, .season-mark, .bh-explore, .portada-dot, .portada-pause)::before {
+    content: '';
+    position: absolute;
+    /* Se centra y se completa hasta 44 px de alto como mínimo (con min-height no se puede achicar un inset). */
+    left: -6px;
+    right: -6px;
+    top: 50%;
+    height: max(100%, 44px);
+    transform: translateY(-50%);
+  }
+  /* El de la pausa y los puntos de la portada también a lo ancho (32 y 24 px). */
+  html:not([data-tv]) .portada-pause::before {
+    left: 50%;
+    right: auto;
+    width: 44px;
+    transform: translate(-50%, -50%);
+  }
+  html:not([data-tv]) .portada-dot::before {
+    left: -2px;
+    right: -2px;
+  }
+}

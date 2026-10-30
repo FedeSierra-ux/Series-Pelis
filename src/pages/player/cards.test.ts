@@ -4,10 +4,10 @@ import { postPlayPicks } from './PostPlay'
 
 describe('tarjeta del siguiente episodio', () => {
   it('"T1 E5 · Título"', () => {
-    expect(nextEpisodeTitle({ season: 1, episode: 5, title: 'Gray Matter' })).toBe('T1 E5 · Gray Matter')
+    expect(nextEpisodeTitle({ season: 1, episode: 5, title: 'Gray Matter' })).toBe('T1 · E5 · Gray Matter')
     // Algunos addons solo mandan `number` y `name`.
-    expect(nextEpisodeTitle({ season: 2, number: 3, name: 'Bit by a Dead Bee' })).toBe('T2 E3 · Bit by a Dead Bee')
-    expect(nextEpisodeTitle({ season: 1, episode: 5 })).toBe('T1 E5')
+    expect(nextEpisodeTitle({ season: 2, number: 3, name: 'Bit by a Dead Bee' })).toBe('T2 · E3 · Bit by a Dead Bee')
+    expect(nextEpisodeTitle({ season: 1, episode: 5 })).toBe('T1 · E5')
     expect(nextEpisodeTitle(undefined)).toBe('')
   })
 

@@ -178,9 +178,9 @@ export function PlayerSettings() {
         <span className="sub-preview-text">Así se van a ver los subtítulos</span>
       </div>
 
-      <h3>Idioma de audio preferido</h3>
+      <h3>Idioma del audio</h3>
       <LangChips label="Idiomas de audio preferidos" value={settings.audioLangs} onChange={(audioLangs) => update({ audioLangs, langsChosen: true })} />
-      <p className="muted small">Solo sirve en streams con varias pistas de audio.</p>
+      <p className="muted small">Solo sirve en fuentes con varias pistas de audio.</p>
 
 
       <Advanced>

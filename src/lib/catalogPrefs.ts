@@ -177,6 +177,19 @@ function row(key: string, type: string, defaultName: string, sources: CatalogSou
 export const visibleRows = (rows: CatalogRowDef[]) => rows.filter((r) => !r.hidden)
 
 /**
+ * ¿Es el "Popular" de Cinemeta que Inicio ya muestra como "Películas populares" / "Series populares"
+ * (`PopularRow`)? Esa fila propia trae los mismos títulos en el mismo orden: Inicio no repite el catálogo
+ * (visual-pc-01). Sigue en Descubrir y en el gestor; una fila fusionada es del usuario y no se toca.
+ */
+export const duplicatesPopularRow = (row: CatalogRowDef): boolean =>
+  !row.merged &&
+  !row.virtual &&
+  row.sources.length === 1 &&
+  row.sources[0].addon.manifest.id === 'com.linvo.cinemeta' &&
+  row.sources[0].catalog.id === 'top' &&
+  (row.sources[0].catalog.type === 'movie' || row.sources[0].catalog.type === 'series')
+
+/**
  * Reparte las filas de Inicio: las virtuales que quedaron arriba de todos los catálogos van después de
  * "Seguir viendo" (`lead`); el resto, en su lugar entre los catálogos de los addons (`rest`).
  */

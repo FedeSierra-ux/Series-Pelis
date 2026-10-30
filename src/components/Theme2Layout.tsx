@@ -8,6 +8,7 @@ import { openProfilePicker } from '../lib/profiles'
 import { useActiveProfile } from '../lib/profileSwitch'
 import { Theme2Icon, type Theme2IconName } from './Theme2Icons'
 import './layout-v14.css'
+import './touch-targets.css'
 
 // Estructura del Tema 2: riel lateral con íconos en PC/TV y, en el celular, cabecera chica
 // arriba + barra de pestañas abajo. Las dos cosas están siempre en el DOM y el CSS muestra

@@ -21,10 +21,24 @@
   display: none;
 }
 
+/* La versión va pegada al título, no en el otro extremo de la pantalla (visual-pc-18). */
+.settings-page > .page-header {
+  justify-content: flex-start;
+  align-items: baseline;
+  gap: 4px 16px;
+}
+
 /* PC y TV: índice fijo. */
 @media (min-width: 1024px) {
   .settings-layout {
     grid-template-columns: minmax(200px, 14rem) minmax(0, 880px);
+  }
+  /* En pantallas anchas (1920 dejaba ~640 px vacíos a la derecha) el conjunto índice + contenido se centra, y el
+     título queda alineado con el índice (visual-pc-18). */
+  .settings-page > .page-header,
+  .settings-page > .settings-layout {
+    max-width: 1160px;
+    margin-inline: auto;
   }
   .settings-index {
     display: block;
@@ -55,11 +69,16 @@
     font-weight: 600;
     line-height: 1.3;
   }
-  .settings-index-link:hover,
   .settings-index-link:focus-visible {
     color: var(--text);
     background: var(--bg-2);
   }
+@media (hover: hover) {
+  .settings-index-link:hover {
+      color: var(--text);
+      background: var(--bg-2);
+    }
+}
   .settings-index-link.active {
     color: var(--text);
     background: var(--bg-2);
@@ -129,33 +148,51 @@
 /* ---------- v0.33 Ajustes con tarjetas y interruptores (voto del usuario: "Tarjetas agrupadas") ----------
    Los títulos de cada grupo quedan como rótulo chico y las casillas pasan a ser filas de una tarjeta con un
    interruptor a la derecha. Las casillas siguen siendo <input type="checkbox">: teclado, foco y lectores igual. */
-.settings-section > h3 {
+.settings-section > h3,
+.settings-section > .adv-group > h3 {
+  /* `.adv-group` (display: contents) también cuenta: "¿Seguís viendo?" y "Vista previa al adelantar" van adentro. */
   font-size: 0.78rem;
   letter-spacing: 0.08em;
   text-transform: uppercase;
   color: var(--muted);
 }
-.settings-section label.check {
-  justify-content: space-between;
-  gap: 16px;
+.settings-section label.check,
+.ob-body label.check {
   margin: 0;
   padding: 14px 18px;
   background: var(--bg-2);
-  border-bottom: 1px solid var(--line);
+}
+/* El asistente (la caja ya es --bg-2) y la barra de "opciones avanzadas" usan el mismo interruptor que Ajustes
+   (visual-pc-10): fila con el texto a la izquierda y el interruptor a la derecha. */
+.ob-body label.check {
+  background: var(--bg-3);
+}
+.settings-section label.check,
+.ob-body label.check,
+label.settings-advanced-toggle {
+  justify-content: space-between;
+  gap: 16px;
+  border-radius: var(--radius-sm, 12px);
   cursor: pointer;
 }
-/* Primera y última fila de un grupo: las esquinas redondeadas de la tarjeta. */
-.settings-section label.check:not(.check + .check) {
-  border-top-left-radius: var(--radius-sm, 12px);
-  border-top-right-radius: var(--radius-sm, 12px);
+label.settings-advanced-toggle {
+  padding: 14px 18px;
 }
-.settings-section label.check:not(:has(+ .check)) {
-  border-bottom: 0;
-  border-bottom-left-radius: var(--radius-sm, 12px);
-  border-bottom-right-radius: var(--radius-sm, 12px);
-  margin-bottom: 8px;
+/* Filas seguidas = una sola tarjeta con rayitas entre las filas (sin el hueco de la columna: margen negativo igual a
+   `--section-gap`). Una fila sola queda como tarjeta redonda entera. Vale aunque la tarjeta esté en medio de un
+   `.adv-group` (los hermanos son los mismos). */
+.settings-section label.check + label.check {
+  margin-top: calc(-1 * var(--section-gap, 12px));
+  border-top: 1px solid var(--line);
+  border-top-left-radius: 0;
+  border-top-right-radius: 0;
 }
-.settings-section label.check input[type='checkbox'] {
+.settings-section label.check:has(+ label.check) {
+  border-bottom-left-radius: 0;
+  border-bottom-right-radius: 0;
+}
+:is(.settings-section, .ob-body) label.check input[type='checkbox'],
+label.settings-advanced-toggle input[type='checkbox'] {
   order: 2;
   flex: none;
   appearance: none;
@@ -168,7 +205,8 @@
   cursor: pointer;
   transition: background 0.15s;
 }
-.settings-section label.check input[type='checkbox']::after {
+:is(.settings-section, .ob-body) label.check input[type='checkbox']::after,
+label.settings-advanced-toggle input[type='checkbox']::after {
   content: '';
   position: absolute;
   top: 3px;
@@ -179,16 +217,20 @@
   background: #fff;
   transition: transform 0.15s;
 }
-.settings-section label.check input[type='checkbox']:checked {
+:is(.settings-section, .ob-body) label.check input[type='checkbox']:checked,
+label.settings-advanced-toggle input[type='checkbox']:checked {
   background: var(--accent);
 }
-.settings-section label.check input[type='checkbox']:checked::after {
+:is(.settings-section, .ob-body) label.check input[type='checkbox']:checked::after,
+label.settings-advanced-toggle input[type='checkbox']:checked::after {
   transform: translateX(18px);
   background: var(--on-accent, #1f0f4d);
 }
 @media (prefers-reduced-motion: reduce) {
-  .settings-section label.check input[type='checkbox'],
-  .settings-section label.check input[type='checkbox']::after {
+  :is(.settings-section, .ob-body) label.check input[type='checkbox'],
+  label.settings-advanced-toggle input[type='checkbox'],
+  :is(.settings-section, .ob-body) label.check input[type='checkbox']::after,
+  label.settings-advanced-toggle input[type='checkbox']::after {
     transition: none;
   }
 }

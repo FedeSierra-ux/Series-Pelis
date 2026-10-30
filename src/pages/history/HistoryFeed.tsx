@@ -1,8 +1,9 @@
 import { useCallback, useEffect, useId, useMemo, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { EmptyState } from '../../components/EmptyState'
+import { SafeImg } from '../../components/SafeImg'
 import { UserStars } from '../../components/StarRating'
-import { episodeLabel, formatTime, smallPoster } from '../../lib/format'
+import { clockTime, episodeLabel, formatTime, smallPoster } from '../../lib/format'
 import { groupHistory } from '../../lib/historyGroups'
 import { typeLabel } from '../../lib/i18n'
 import { localTitle, useLocalTitle, useTitlesVersion } from '../../lib/localTitles'
@@ -41,6 +42,8 @@ export function historyLink(filter: HistoryFilter, query: string): string {
 export function HistoryStats({ className = 'stats' }: { className?: string }) {
   const progress = useStore(progressStore)
   const s = useMemo(() => watchStats(Object.values(progress)), [progress])
+  // Sin nada visto, los tres contadores en cero son ruido: el estado vacío ya lo dice (visual-movil-21).
+  if (s.movies === 0 && s.episodes === 0 && s.seconds === 0) return null
   const [movies, moviesWord] = splitCount(plural(s.movies, 'película', 'películas'))
   const [episodes, episodesWord] = splitCount(plural(s.episodes, 'episodio', 'episodios'))
   return (
@@ -283,7 +286,7 @@ function HistoryItem({ e, onRemove }: { e: WatchEntry; onRemove: (e: WatchEntry,
   return (
     <li ref={ref} className="diary-item history-item">
       <Link to={link} className="diary-link">
-        <img src={smallPoster(e.metaId, e.poster)} alt="" loading="lazy" decoding="async" />
+        <SafeImg src={smallPoster(e.metaId, e.poster)} label={name} alt="" loading="lazy" decoding="async" />
         <div className="diary-text">
           <strong>{name}</strong>
           <span className="muted small">
@@ -292,7 +295,7 @@ function HistoryItem({ e, onRemove }: { e: WatchEntry; onRemove: (e: WatchEntry,
           </span>
           <span className="small diary-meta">
             <span>{e.watched ? '✓ Visto' : e.duration ? `${formatTime(e.position)} de ${formatTime(e.duration)}` : 'Empezado'}</span>
-            <span className="muted">{new Date(e.updatedAt).toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit' })}</span>
+            <span className="muted">{clockTime(e.updatedAt)}</span>
           </span>
           {!e.watched && pct > 0 && (
             <div className="progress-bar inline">

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { seasonCount, seriesYear } from './format'
+import { clockTime, seasonCount, seriesYear } from './format'
 
 describe('seasonCount', () => {
   it('cuenta temporadas distintas sin los especiales', () => {
@@ -33,5 +33,13 @@ describe('seriesYear', () => {
     expect(seriesYear('2011–2019', 8)).toBe('2011–2019')
     expect(seriesYear('2010', 1)).toBe('2010')
     expect(seriesYear(undefined, 1)).toBeUndefined()
+  })
+})
+
+describe('clockTime', () => {
+  it('hora en 24 h, sin "p. m."', () => {
+    expect(clockTime(new Date(2026, 0, 1, 20, 5))).toBe('20:05')
+    expect(clockTime(new Date(2026, 0, 1, 8, 5).getTime())).toBe('08:05')
+    expect(clockTime(new Date(2026, 0, 1, 0, 30))).toBe('00:30')
   })
 })

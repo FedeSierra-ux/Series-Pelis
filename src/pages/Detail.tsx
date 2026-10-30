@@ -2,8 +2,9 @@ import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } fro
 import { Link, useLocation, useNavigate, useNavigationType, useParams, useSearchParams } from 'react-router-dom'
 import { GenreChips, PeopleLinks, tmdbPeopleIndex } from '../components/DetailTags'
 import { ImdbRating } from '../components/Rating'
+import { SafeImg } from '../components/SafeImg'
 import { SpoilerText, useEpisodeSpoilers } from '../components/Spoiler'
-import { ErrorBox } from '../components/Status'
+import { Theme2Icon } from '../components/Theme2Icons'
 import { CastRow, hasMoreLikeThis, MoreLikeThis, SagaBlock, TmdbSections } from '../components/TmdbExtras'
 import { TrailerPlayer } from '../components/TrailerPlayer'
 import { offlineMessage } from '../lib/online'
@@ -12,6 +13,7 @@ import { useMeta, useTitle, useTmdbDetails } from '../lib/hooks'
 import { trailerKeyFromMeta } from '../lib/hoverTrailer'
 import { typeLabel } from '../lib/i18n'
 import { useLocalTitle, useOriginalTitle } from '../lib/localTitles'
+import { useLogoInset } from '../lib/logoInset'
 import { useLogoTone } from '../lib/logoTone'
 import { useRating } from '../lib/ratings'
 import { remainingLabel } from '../lib/remaining'
@@ -53,6 +55,7 @@ import { detailNames, logoCaption, type DetailNames } from './detail/detailNames
 import { isYtId } from './detail/trailers'
 import { NARROW_QUERY, useMediaQuery } from './detail/useMediaQuery'
 import { ReadMore } from './detail/ReadMore'
+import '../components/empty-state.css'
 import './detail/detail-fixes.css'
 import './detail/detail-v14.css'
 import './detail/detail-v26.css'
@@ -90,23 +93,37 @@ function DetailBack() {
   )
 }
 
-/** Error de la ficha (no cargó o el título no existe): "Reintentar" (si puede servir) y "Volver". */
+/** ¿El error dice que el título no existe? (el addon lo dijo, o el servidor respondió 404: "Reintentar" no sirve). */
+const isNotFoundMessage = (message: string) => message === META_NOT_FOUND || /respondió 404/.test(message)
+
+/**
+ * Error de la ficha, con el mismo formato que los estados vacíos (ícono, título, una línea de ayuda y botones):
+ * "No encontramos este título" (sin "Reintentar", que no sirve) o "No se pudo cargar" con el motivo (visual-pc-06).
+ */
 function DetailError({ message, onRetry, children }: { message: string; onRetry?: () => void; children?: ReactNode }) {
   const back = useGoBack()
+  const notFound = isNotFoundMessage(message)
   return (
-    <div className="page">
-      <h1 className="d-sr-only">No se pudo abrir la ficha</h1>
-      <ErrorBox message={message} />
-      {children}
-      <div className="detail-error-actions">
-        {onRetry && (
-          <button className="btn btn-primary" onClick={onRetry} data-autofocus>
-            Reintentar
+    <div className="page" role="alert">
+      <div className="empty-state detail-error">
+        <span className="empty-state-icon" aria-hidden>
+          <Theme2Icon name="search" size={28} />
+        </span>
+        <h1 className="empty-state-title">{notFound ? 'No encontramos este título' : 'No se pudo cargar la ficha'}</h1>
+        <p className="empty-state-text">
+          {notFound ? 'Puede que el enlace esté mal o que el título ya no exista.' : message}
+        </p>
+        {children}
+        <div className="detail-error-actions">
+          {onRetry && !notFound && (
+            <button className="btn btn-primary" onClick={onRetry} data-autofocus>
+              Reintentar
+            </button>
+          )}
+          <button className={`btn${onRetry && !notFound ? '' : ' btn-primary'}`} onClick={back} data-autofocus={!onRetry || notFound || undefined}>
+            Volver
           </button>
-        )}
-        <button className="btn" onClick={back} data-autofocus={!onRetry || undefined}>
-          Volver
-        </button>
+        </div>
       </div>
     </div>
   )
@@ -165,7 +182,7 @@ function TmdbOnlyDetail({ details: d, type, tmdbType }: { details: TmdbDetails; 
         <DetailBack />
         <div className="hero-shade" />
         <div className="detail-head">
-          {poster && <img className="detail-poster" src={poster} alt="" />}
+          {poster && <SafeImg className="detail-poster" src={poster} alt="" label={title} />}
           <div className="detail-info">
             <DetailTitle names={names} logo={logo} logoLang={logoLanguage(d, logoPath)} />
             {d.tagline && <p className="detail-tagline">{d.tagline}</p>}
@@ -198,7 +215,26 @@ const NOT_FOUND = META_NOT_FOUND
 /** Logo del título; un logo oscuro (Severance) lleva halo claro para leerse sobre la portada (`lib/logoTone`). */
 function DetailLogo({ src, alt, onError }: { src: string; alt: string; onError?: () => void }) {
   const tone = useLogoTone(src)
-  return <img className="detail-logo" {...tone} src={src} alt={alt} onError={onError} />
+  // visual-pc-05: si el PNG trae aire transparente a la izquierda, se corre para que la tinta alinee con el texto.
+  const inset = useLogoInset(src)
+  return (
+    <img
+      className="detail-logo"
+      {...tone}
+      ref={(el) => {
+        tone.ref(el)
+        inset.ref(el)
+      }}
+      style={inset.style}
+      src={src}
+      alt={alt}
+      onLoad={(e) => {
+        tone.onLoad(e)
+        inset.onLoad()
+      }}
+      onError={onError}
+    />
+  )
 }
 
 /** v0.26 (ficha-02): un título en texto (sin logo) de más de 40 letras va con la letra un poco más chica. */
@@ -237,8 +273,8 @@ function DetailTitle({ names, cinemeta, logo, logoLang, onLogoError }: { names: 
 const reducedMotion = () => typeof matchMedia === 'function' && matchMedia('(prefers-reduced-motion: reduce)').matches
 /** Cuánto espera el pedido de foco de las fuentes (los addons lentos tardan hasta ~15 s). */
 const CLAIM_MAX_MS = 20000
-/** "T2 E4" para el botón principal. */
-const shortEp = (v: Video) => `T${v.season ?? 0} E${episodeNumber(v) ?? '?'}`
+/** "T2 · E4" para el botón principal. */
+const shortEp = (v: Video) => `T${v.season ?? 0} · E${episodeNumber(v) ?? '?'}`
 
 function DetailPage({ type, id, onRetry }: { type: string; id: string; onRetry: () => void }) {
   const [params, setParams] = useSearchParams()
@@ -367,7 +403,7 @@ function DetailPage({ type, id, onRetry }: { type: string; id: string; onRetry: 
 
   if (loading && !meta) return detailSkeleton
   if (error === NOT_FOUND && !meta) return <DetailError message={NOT_FOUND} />
-  if (error && !meta) return <DetailError message={offlineMessage('esta ficha no está guardada') ?? `No se pudo cargar: ${error}`} onRetry={onRetry} />
+  if (error && !meta) return <DetailError message={offlineMessage('esta ficha no está guardada') ?? error} onRetry={onRetry} />
   // Cinemeta responde con una ficha vacía para ids que no existen (`tt0000000`).
   if (!meta || !meta.name) return <DetailError message={NOT_FOUND} />
 
@@ -488,7 +524,7 @@ function DetailPage({ type, id, onRetry }: { type: string; id: string; onRetry: 
         label: !direct
           ? `Elegir fuente ${shortEp(ep)}`
           : continueEp
-            ? `${seriesProgress ? 'Continuar' : 'Reproducir'} ${shortEp(ep)}`
+            ? `${seriesProgress ? 'Seguir viendo' : 'Reproducir'} ${shortEp(ep)}`
             : `Volver a ver ${shortEp(ep)}`,
         sub: midway ? remainingLabel(w.position, w.duration) : epTitle,
         title: `${episodeLabel(ep.season, episodeNumber(ep))}${epTitle ? ` · ${epTitle}` : ''}`,
@@ -497,7 +533,7 @@ function DetailPage({ type, id, onRetry }: { type: string; id: string; onRetry: 
     }
   } else {
     primary = {
-      label: !direct ? 'Elegir fuente' : movieStarted ? 'Continuar' : 'Reproducir',
+      label: !direct ? 'Elegir fuente' : movieStarted ? 'Seguir viendo' : 'Reproducir',
       sub: movieStarted ? remainingLabel(movieProgress.position, movieProgress.duration) : undefined,
       title: movieStarted
         ? `Te quedaste en ${formatTime(movieProgress.position)} de ${formatTime(movieProgress.duration)} · ${relativeDate(movieProgress.updatedAt)}`
@@ -640,7 +676,7 @@ function DetailPage({ type, id, onRetry }: { type: string; id: string; onRetry: 
         {trailerKey && backdropAllowed && <HeroTrailer ytId={trailerKey} title={names.name} suspended={!!trailer} />}
         <div className="hero-shade" />
         <div className="detail-head">
-          {meta.poster && <img className="detail-poster" src={meta.poster} alt="" />}
+          {meta.poster && <SafeImg className="detail-poster" src={meta.poster} alt="" label={names.name} />}
           <div className="detail-info">
             <DetailTitle names={names} cinemeta={name} logo={logo} logoLang={logoLang} onLogoError={() => setLogoFailed(true)} />
             {tmdb?.tagline && <p className="detail-tagline">{tmdb.tagline}</p>}
@@ -661,7 +697,7 @@ function DetailPage({ type, id, onRetry }: { type: string; id: string; onRetry: 
             {(meta.director?.length || (meta.cast?.length && !hasTmdbCast)) ? (
               <dl className="credits">
                 {meta.director?.length ? (<><dt>Dirección</dt><dd><PeopleLinks names={meta.director} index={peopleIndex} /></dd></>) : null}
-                {meta.cast?.length && !hasTmdbCast ? (<><dt>Elenco</dt><dd><PeopleLinks names={meta.cast.slice(0, 6)} index={peopleIndex} /></dd></>) : null}
+                {meta.cast?.length && !hasTmdbCast ? (<><dt>Reparto</dt><dd><PeopleLinks names={meta.cast.slice(0, 6)} index={peopleIndex} /></dd></>) : null}
               </dl>
             ) : null}
             <DetailActions

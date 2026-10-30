@@ -52,8 +52,10 @@
   background: var(--bg-2);
   font-size: 0.9rem;
 }
-.fb .picker-btn:hover {
-  background: var(--bg-3);
+@media (hover: hover) {
+  .fb .picker-btn:hover {
+    background: var(--bg-3);
+  }
 }
 .fb .picker-btn.is-set {
   border-color: transparent;
@@ -91,8 +93,10 @@
   cursor: pointer;
   transition: background 0.15s;
 }
-.fb-more:hover {
-  background: var(--bg-3);
+@media (hover: hover) {
+  .fb-more:hover {
+    background: var(--bg-3);
+  }
 }
 .fb-more.fb-on {
   border-color: var(--accent);
@@ -131,9 +135,11 @@
   cursor: pointer;
   transition: background 0.15s, color 0.15s;
 }
-.fb-chip:hover {
-  background: var(--bg-3);
-  color: var(--text);
+@media (hover: hover) {
+  .fb-chip:hover {
+    background: var(--bg-3);
+    color: var(--text);
+  }
 }
 .fb-chip[aria-pressed='true'] {
   background: var(--accent);
@@ -189,8 +195,10 @@
   color: var(--text);
   cursor: pointer;
 }
-.fb-scroll:hover {
-  background: var(--tonal);
+@media (hover: hover) {
+  .fb-scroll:hover {
+    background: var(--tonal);
+  }
 }
 .fb-scroll-prev {
   left: -4px;
@@ -230,15 +238,21 @@
   cursor: pointer;
   transition: background 0.15s;
 }
-.fb-active-chip:hover {
-  background: var(--bg-3);
+@media (hover: hover) {
+  .fb-active-chip:hover {
+    background: var(--bg-3);
+  }
 }
 .fb-active-chip > .fb-icon:last-child {
   color: var(--muted);
 }
-.fb-active-chip:hover > .fb-icon:last-child,
 .fb-active-chip:focus-visible > .fb-icon:last-child {
   color: var(--text);
+}
+@media (hover: hover) {
+  .fb-active-chip:hover > .fb-icon:last-child {
+    color: var(--text);
+  }
 }
 .fb-active-chip img {
   width: 22px;
@@ -258,9 +272,11 @@
   font-weight: 700;
   cursor: pointer;
 }
-.fb-clear:hover,
-.fb-link:hover {
-  text-decoration: underline;
+@media (hover: hover) {
+  .fb-clear:hover,
+  .fb-link:hover {
+    text-decoration: underline;
+  }
 }
 
 /* ---------- Panel: lateral en PC/TV, hoja desde abajo en el celular ---------- */
@@ -313,8 +329,10 @@
   color: var(--text);
   cursor: pointer;
 }
-.fb-icon-btn:hover {
-  background: var(--tonal);
+@media (hover: hover) {
+  .fb-icon-btn:hover {
+    background: var(--tonal);
+  }
 }
 .fb-panel-body {
   flex: 1;
@@ -351,9 +369,11 @@
 .fb-panel .picker-btn {
   background: var(--bg-3);
 }
-.fb-panel .fb-chip:hover,
-.fb-panel .picker-btn:hover {
-  background: var(--tonal);
+@media (hover: hover) {
+  .fb-panel .fb-chip:hover,
+  .fb-panel .picker-btn:hover {
+    background: var(--tonal);
+  }
 }
 .fb-panel .fb-chip[aria-pressed='true'] {
   background: var(--accent);
@@ -403,8 +423,10 @@
   cursor: pointer;
   transition: background 0.15s, border-color 0.15s;
 }
-.fb-provider:hover {
-  background: var(--tonal);
+@media (hover: hover) {
+  .fb-provider:hover {
+    background: var(--tonal);
+  }
 }
 .fb-provider[aria-pressed='true'] {
   border-color: var(--accent);

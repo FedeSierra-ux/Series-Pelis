@@ -7,6 +7,7 @@ import { loadYearMetas } from '../lib/stats'
 import { diaryStore, goalsStore, progressStore, useStore } from '../lib/store'
 import type { Meta } from '../lib/types'
 import { EmptyState } from '../components/EmptyState'
+import { Theme2Icon } from '../components/Theme2Icons'
 import { GoalBars, METRIC_LABEL, useYearGoal } from './goals/GoalBars'
 
 // Metas anuales ("52 pelis en 2026") y logros que se desbloquean con el diario.
@@ -159,7 +160,7 @@ export function Goals() {
                 aria-label={`${a.title}. ${a.description} ${status}${a.detail ? `. ${a.detail}` : ''}`}
               >
                 <span className="achievement-icon" aria-hidden>
-                  {a.icon}
+                  <Theme2Icon name={a.icon} size={26} />
                 </span>
                 <span className="achievement-text">
                   <strong>

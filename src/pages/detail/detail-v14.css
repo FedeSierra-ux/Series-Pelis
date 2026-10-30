@@ -34,6 +34,7 @@
 /* ---------- Botón principal + fila de íconos ---------- */
 
 .d-actions {
+  position: relative;
   display: flex;
   flex-direction: column;
   gap: 12px;
@@ -156,12 +157,20 @@
 }
 
 /* Las estrellas al tocar "Calificar". */
+/* visual-pc-07: flotan encima de los botones (como el menú ⋯): antes empujaban la portada 72 px y movían el póster.
+   Arriba y no abajo porque la portada recorta lo que se sale por abajo. */
 .d-rate {
-  align-self: flex-start;
+  position: absolute;
+  bottom: 100%;
+  left: 0;
+  z-index: 30;
+  max-width: 100%;
+  margin-bottom: 8px;
   padding: 10px 16px;
   border-radius: var(--radius);
-  background: rgba(11, 11, 16, 0.7);
+  background: var(--surface-1, var(--bg-2));
   border: 1px solid var(--outline, var(--line));
+  box-shadow: 0 14px 36px rgba(0, 0, 0, 0.55);
 }
 .d-rate .star-rating {
   min-height: 0;
@@ -200,9 +209,13 @@
   text-decoration: none;
   cursor: pointer;
 }
-.d-menu-item:hover,
 .d-menu-item:focus-visible {
   background: var(--tonal, var(--bg-3));
+}
+@media (hover: hover) {
+  .d-menu-item:hover {
+    background: var(--tonal, var(--bg-3));
+  }
 }
 .d-menu .d-menu-item:focus-visible {
   outline: 3px solid var(--accent);
@@ -261,10 +274,15 @@
   color: #fff;
   cursor: pointer;
 }
-.ht-ctrl:hover,
 .ht-ctrl:focus-visible {
   background: rgba(11, 11, 16, 0.85);
   border-color: #fff;
+}
+@media (hover: hover) {
+  .ht-ctrl:hover {
+    background: rgba(11, 11, 16, 0.85);
+    border-color: #fff;
+  }
 }
 /* La sombra y el texto quedan arriba del video. */
 .detail-hero .hero-shade,
@@ -311,8 +329,10 @@
   border-radius: 3px 3px 0 0;
   background: transparent;
 }
-.dt-tab:hover {
-  color: var(--text);
+@media (hover: hover) {
+  .dt-tab:hover {
+    color: var(--text);
+  }
 }
 .dt-tab.active {
   color: var(--text);

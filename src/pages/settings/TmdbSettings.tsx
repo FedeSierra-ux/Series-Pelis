@@ -21,7 +21,7 @@ export function TmdbSettings() {
     const ok = await testTmdbKey(key)
     setBusy(false)
     if (!ok) {
-      setMsg({ ok: false, text: 'TMDB rechazó la key. Revisá que sea la "API Key" o el "API Read Access Token".' })
+      setMsg({ ok: false, text: 'TMDB rechazó la key. Revisá que sea la “API Key” o el “API Read Access Token”.' })
       return
     }
     settingsStore.set((s) => ({ ...s, tmdbKey: key }))

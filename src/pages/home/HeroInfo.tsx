@@ -36,7 +36,7 @@ export function HeroIcon({ name, size = 22 }: { name: HeroIconName; size?: numbe
   )
 }
 
-/** "Más info" abre la ficha sin la cuenta regresiva del modo automático (eso es "Ver ahora"). */
+/** "Más info" abre la ficha sin la cuenta regresiva del modo automático (eso es "Reproducir"). */
 const INFO_STATE: DetailLocationState = { noAuto: true }
 
 export interface HeroInfoProps {
@@ -63,7 +63,7 @@ export interface HeroInfoProps {
   list: { inList: boolean; busy?: boolean; unavailable?: boolean; onToggle: () => void }
   /**
    * Botón principal "▶ Reproducir" / "Continuar": reproduce directo (busca la fuente sin pasar por la
-   * ficha). Sin esto, el botón es "Ver ahora" y abre la ficha. El enlace sigue apuntando a la ficha
+   * ficha). Sin esto, el botón es "Ver ficha" y abre la ficha. El enlace sigue apuntando a la ficha
    * (abrir en otra pestaña, y es a donde va si no encuentra nada reproducible).
    */
   play?: { label: string; busy?: boolean; onPlay: () => void }
@@ -152,7 +152,7 @@ export function HeroInfo({ eyebrow, title, logo, titleReady = true, rating, fact
           }}
         >
           {play?.busy ? <span className="portada-btn-spinner" aria-hidden /> : <HeroIcon name="play" />}
-          <span>{play ? (play.busy ? 'Buscando fuente…' : play.label) : 'Ver ahora'}</span>
+          <span>{play ? (play.busy ? 'Buscando fuente…' : play.label) : 'Ver ficha'}</span>
         </Link>
         {/* aria-disabled en vez de disabled: así el control remoto no pierde el foco mientras resuelve. */}
         <button

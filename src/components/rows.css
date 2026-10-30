@@ -94,9 +94,23 @@ html[data-tv][data-theme='2'] .row-sub {
   position: static;
   text-decoration: none;
 }
-.t2-cont-wrap:hover .t2-cont-action,
+/* visual-movil-07: con el dedo, ⓘ y ✕ de 40 px y 10 px entre sí (eran 30 px y 6 px: un toque corrido quitaba el título). */
+@media (pointer: coarse) {
+  .t2-cont-actions {
+    gap: 10px;
+  }
+  .t2-cont-actions .poster-remove {
+    width: 40px;
+    height: 40px;
+  }
+}
 .t2-cont-wrap:focus-within .t2-cont-action {
   opacity: 1;
+}
+@media (hover: hover) {
+  .t2-cont-wrap:hover .t2-cont-action {
+    opacity: 1;
+  }
 }
 
 .t2-cont-badge {
@@ -134,10 +148,15 @@ html[data-tv][data-theme='2'] .row-sub {
 .t2-cont-play svg {
   margin-left: 3px;
 }
-.t2-cont:hover .t2-cont-play,
 .t2-cont:focus-visible .t2-cont-play {
   opacity: 1;
   transform: translate(-50%, -50%) scale(1);
+}
+@media (hover: hover) {
+  .t2-cont:hover .t2-cont-play {
+    opacity: 1;
+    transform: translate(-50%, -50%) scale(1);
+  }
 }
 @media (hover: none) {
   .t2-cont-play {

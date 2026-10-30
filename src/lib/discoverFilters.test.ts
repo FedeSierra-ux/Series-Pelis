@@ -115,9 +115,9 @@ describe('panel "Filtros" y chips', () => {
     expect(yearsLabel(undefined, 1980, 2026)).toBe('Hasta 1980')
   })
 
-  it('puntaje con coma decimal', () => {
+  it('puntaje con punto decimal, como las insignias de IMDb', () => {
     expect(ratingLabel(7)).toBe('7+')
-    expect(ratingLabel(7.5)).toBe('7,5+')
+    expect(ratingLabel(7.5)).toBe('7.5+')
   })
 })
 

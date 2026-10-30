@@ -22,6 +22,12 @@
     scroll-padding-bottom: calc(72px + env(safe-area-inset-bottom) + 16px);
   }
 }
+@media (pointer: coarse) and (max-height: 500px) {
+  /* Celular apaisado: sin barra de pestañas (riel lateral), alcanza con un poco de aire. */
+  html:not([data-tv]) {
+    scroll-padding-bottom: 16px;
+  }
+}
 html:not([data-tv]):has(.fb) {
   scroll-padding-top: 72px;
 }
@@ -41,7 +47,8 @@ html:not([data-tv]):has(.fb) {
   ) {
   border-color: var(--control-edge);
 }
-.settings-section label.check input[type='checkbox']:not(:checked) {
+:is(.settings-section, .ob-body) label.check input[type='checkbox']:not(:checked),
+label.settings-advanced-toggle input[type='checkbox']:not(:checked) {
   box-shadow: inset 0 0 0 1px var(--control-edge);
 }
 
@@ -78,23 +85,27 @@ html:not([data-tv]):has(.fb) {
    las reglas de cada pantalla. */
 @media (forced-colors: active) {
   /* Interruptor: contorno ButtonText y pulgar ButtonText; encendido, Highlight con el pulgar HighlightText. */
-  .settings-section label.check input[type='checkbox'] {
+  :is(.settings-section, .ob-body) label.check input[type='checkbox'],
+  label.settings-advanced-toggle input[type='checkbox'] {
     forced-color-adjust: none;
     background: Canvas !important;
     border: 2px solid ButtonText;
     box-shadow: none !important;
   }
-  .settings-section label.check input[type='checkbox']::after {
+  :is(.settings-section, .ob-body) label.check input[type='checkbox']::after,
+  label.settings-advanced-toggle input[type='checkbox']::after {
     forced-color-adjust: none;
     top: 2px;
     left: 2px;
     background: ButtonText !important;
   }
-  .settings-section label.check input[type='checkbox']:checked {
+  :is(.settings-section, .ob-body) label.check input[type='checkbox']:checked,
+  label.settings-advanced-toggle input[type='checkbox']:checked {
     background: Highlight !important;
     border-color: Highlight;
   }
-  .settings-section label.check input[type='checkbox']:checked::after {
+  :is(.settings-section, .ob-body) label.check input[type='checkbox']:checked::after,
+  label.settings-advanced-toggle input[type='checkbox']:checked::after {
     transform: translateX(18px);
     background: HighlightText !important;
   }

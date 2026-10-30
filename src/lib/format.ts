@@ -10,6 +10,10 @@ export function formatTime(totalSeconds: number): string {
 export const episodeLabel = (season?: number, episode?: number) =>
   season !== undefined && episode !== undefined ? `T${season} · E${episode}` : ''
 
+/** Hora del día en 24 h ("20:05"), igual que el reloj del protector: es-AR por defecto daría "08:05 p. m." (sistema-27). */
+export const clockTime = (ts: number | Date) =>
+  new Date(ts).toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit', hourCycle: 'h23' })
+
 const rtf = new Intl.RelativeTimeFormat('es', { numeric: 'auto' })
 
 export function relativeDate(ts: number): string {

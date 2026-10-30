@@ -1,5 +1,55 @@
 # Changelog
 
+## [0.35.0] - 2026-10-30
+
+Segunda tanda de los arreglos de la auditoría completa de la v0.33: visual, UI, celular y táctil, y textos (47
+hallazgos aprobados en la página de votos). Quedan para la v0.36 (rendimiento y orden interno) y la v0.37 (sacar el
+Tema 1 del CSS).
+
+### Corregido
+- **Celular apaisado**: siempre el riel lateral (sin cabecera ni barra de pestañas) y más compacto, así entran los 7
+  destinos y "Ajustes" ya no queda fuera de pantalla. La portada de Inicio y la de Películas/Series entran en la
+  pantalla, y la ficha muestra el título y "Elegir fuente" / "Reproducir" sin scrollear (a 740×360 antes se veía solo
+  el fondo).
+- **El asistente inicial ya no deja "Empezar" fuera de pantalla** en apaisado ni en 320×568: el botón queda fijo abajo y
+  solo scrollea el contenido.
+- **Hover pegado en el celular**: las 81 reglas `:hover` sueltas van solo con mouse (`@media (hover: hover)`); un chip
+  tocado y quitado ya no queda resaltado. **Zonas seguras del notch** y sin recarga al arrastrar en la app instalada.
+- **Objetivos táctiles de 44 px** (sin agrandar lo que se ve) en el botón de perfil, el logo, "← Vos", "Ver todo",
+  "Leer más", chips, "Marcar temporada…", los controles de la portada, los botones y selectores de Ajustes y los pasos
+  de Metas. ⓘ y ✕ de Seguir viendo de 40 px y más separados.
+- **Reproductor en celular**: la barra de progreso tiene zona táctil de 44 px (era ~28), los botones miden 44 px también
+  en apaisado de más de 760 px, y en vertical el subtítulo queda pegado al pie de la imagen y no contra el borde.
+- **Selector de perfiles con ✕ y con el "Atrás" del sistema** (antes retrocedía de pantalla). El aro del color elegido
+  del editor de perfil ya no pisa el rótulo.
+- **Ajustes**: las filas de interruptores seguidas forman una sola tarjeta (sin la raya suelta ni el hueco de 20 px), un
+  solo estilo de título de grupo y de rótulo de control, el contenido se centra en pantallas anchas y en el celular
+  arranca con todas las secciones cerradas (abrir una cierra las otras: "Addons" medía 1545 px).
+- **Catálogos**: "Apaisada" apagado ya no parece deshabilitado y "Ocultar" deja de decir que está pulsado. Las etiquetas
+  de los addons van con mayúscula ("Catálogos", "Info", "Fuentes").
+- **Inicio ya no repite "Populares"** (el "Popular" de Cinemeta duplicaba "Películas/Series populares").
+- **Imágenes que fallan** (ficha, episodios, Seguir viendo, Historial, Tu año): rectángulo oscuro con la inicial en vez
+  del ícono roto del navegador.
+- **Insignias de IMDb más legibles** (puntaje 12 px, "IMDb" 9–10 px) y **"Estreno" completo en el celular** (baja bajo
+  el puntaje cuando el póster es angosto). La portada del celular en 320 px ya no recorta "Más info" y el título del
+  póster ya no se oscurece con la sombra del hover.
+- **Ficha**: la pantalla de error usa el formato de los estados vacíos (sin "Reintentar" en un 404), "Calificar" flota
+  sin mover la portada y los logos de metahub con margen se alinean con el texto.
+- **Historial vacío** sin contadores en cero. **Buscar** sin el botón "Teclado" fuera de la TV.
+- **Controles del modal de tráiler** con fondo oscuro, legibles sobre cualquier fotograma.
+
+### Cambiado
+- **Lo elegido se ve igual en toda la app** (lavanda lleno con texto oscuro) y los desplegables ya no llevan el borde
+  lavanda permanente. El asistente y "Mostrar opciones avanzadas" usan el mismo interruptor que Ajustes.
+- **Vos vacío más compacto**: Mi lista y "Lo que viste" son dos tiras en vez de dos tarjetas grandes. Calendario y
+  Catálogos tienen la misma vuelta ("← Vos" / "← Ajustes") que Historial, Tu año y Metas (en la TV se saca: Atrás ya lo
+  hace). **Metas**: los logros usan íconos de línea en vez de emojis.
+- **Textos unificados**: `T1 · E2`, Reparto, Reproducir (retomar = "Seguir viendo", "Ver ficha" si solo abre la ficha),
+  aparato, fuente (no "stream"), Idioma del audio, "No me interesa", "Siguiente episodio" (antes "Reproducción"), hora en
+  24 h, filtro "7.5+", comillas curvas y "…". Los errores del reproductor ya no muestran código técnico.
+- **Reproductor**: el botón de encuadre es solo un ícono con tooltip ("Imagen: Ajustar"); «Ajustar» se leía como
+  «configurar».
+
 ## [0.34.0] - 2026-10-30
 
 Primera tanda de los arreglos de la auditoría completa de la v0.33 (página de votos "Auditoría de Flix v0.33"):

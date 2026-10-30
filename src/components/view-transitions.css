@@ -12,6 +12,12 @@
     view-transition-name: sp-rail;
   }
 }
+@media (pointer: coarse) and (max-height: 500px) {
+  /* Celular apaisado: el riel también queda quieto. */
+  html:not([data-tv]) .t2-rail {
+    view-transition-name: sp-rail;
+  }
+}
 @media (max-width: 760px) {
   .t2-tabs {
     view-transition-name: sp-tabs;

@@ -375,7 +375,7 @@ export function Search() {
             tabIndex={tv ? -1 : undefined}
             data-nav-skip={tv || undefined}
             // En el celular el largo se cortaba ("…o “Dar"): uno corto (v0.26, explorar-09).
-            placeholder={narrow ? 'Peli, serie o actor' : tmdbOn ? 'Película, serie, actor… o “Darín y Francella”' : 'Película, serie, actor...'}
+            placeholder={narrow ? 'Peli, serie o actor' : tmdbOn ? 'Película, serie, actor… o “Darín y Francella”' : 'Película, serie, actor…'}
             aria-label="Buscar"
             value={text}
             onChange={(e) => change(e.target.value)}
@@ -402,7 +402,7 @@ export function Search() {
       <KeyboardToggle
         value={text}
         onChange={change}
-        alwaysToggle
+        // visual-pc-19: solo en modo TV (en PC y celular está el teclado del aparato).
         openInTv
         doneLabel="Buscar"
         label="Teclado para buscar"

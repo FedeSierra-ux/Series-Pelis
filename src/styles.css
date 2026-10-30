@@ -39,6 +39,13 @@ body {
   overflow-x: hidden;
 }
 
+/* visual-movil-23: en la app instalada, arrastrar hacia abajo desde arriba no recarga la página (se perdía el estado). */
+@media (display-mode: standalone) {
+  html {
+    overscroll-behavior-y: contain;
+  }
+}
+
 a {
   color: inherit;
   text-decoration: none;
@@ -238,6 +245,10 @@ select option {
   font-size: 0.78rem;
   gap: 4px;
 }
+/* visual-pc-04: la palabra "IMDb" de las insignias chicas (episodios, debajo del póster) a 10 px, no 9,4. */
+.imdb-sm b {
+  font-size: 0.8em;
+}
 
 /* ---------- Layout ---------- */
 
@@ -277,10 +288,15 @@ select option {
   font-weight: 600;
   white-space: nowrap;
 }
-.nav-link:hover,
 .nav-link:focus-visible {
   color: var(--text);
   background: rgba(255, 255, 255, 0.08);
+}
+@media (hover: hover) {
+  .nav-link:hover {
+    color: var(--text);
+    background: rgba(255, 255, 255, 0.08);
+  }
 }
 .nav-link.active {
   color: var(--text);
@@ -420,9 +436,13 @@ select option {
   font-size: 0.9rem;
   padding: 4px 8px;
 }
-.row-more:hover,
 .row-more:focus-visible {
   color: var(--text);
+}
+@media (hover: hover) {
+  .row-more:hover {
+    color: var(--text);
+  }
 }
 .row-notice {
   margin: 0 var(--gutter);
@@ -493,9 +513,13 @@ select option {
   outline: none;
 }
 /* content-visibility recorta el anillo y la escala: al enfocarla se pinta entera (igual que Tema 2). */
-.poster-card:hover,
 .poster-card:focus-visible {
   content-visibility: visible;
+}
+@media (hover: hover) {
+  .poster-card:hover {
+    content-visibility: visible;
+  }
 }
 .poster-card:focus-visible .poster-img {
   outline: 4px solid #fff;
@@ -519,6 +543,9 @@ select option {
   flex-direction: column;
   gap: 3px;
   min-height: 36px;
+  /* visual-pc-17: encima de la sombra del póster ampliado (el .poster-img con transform se pinta sobre el pie). */
+  position: relative;
+  z-index: 1;
 }
 .poster-title {
   font-weight: 600;
@@ -769,9 +796,13 @@ select option {
   font-weight: 900;
   cursor: pointer;
 }
-.episode-check:hover,
 .episode-check:focus-visible {
   color: var(--muted);
+}
+@media (hover: hover) {
+  .episode-check:hover {
+    color: var(--muted);
+  }
 }
 .episode-check.on {
   background: var(--ok);
@@ -894,7 +925,9 @@ select option {
   margin-bottom: 40px;
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  /* Lo usa settings-layout.css para pegar las filas de interruptores seguidas (margen negativo = este valor). */
+  --section-gap: 12px;
+  gap: var(--section-gap);
 }
 .settings-section h2 {
   font-size: 1.3rem;
@@ -1045,12 +1078,17 @@ select option {
   font-weight: 700;
   cursor: pointer;
 }
-.controls-row button:hover,
 .controls-row button:focus-visible,
-.player-menu button:hover,
 .player-menu button:focus-visible {
   background: rgba(255, 255, 255, 0.18);
   outline: 2px solid #fff;
+}
+@media (hover: hover) {
+  .controls-row button:hover,
+  .player-menu button:hover {
+    background: rgba(255, 255, 255, 0.18);
+    outline: 2px solid #fff;
+  }
 }
 .play-btn {
   font-size: 1.3rem;
@@ -1353,6 +1391,18 @@ html[data-tv] .player-error-sources button {
   .goal-stepper .btn {
     min-width: 44px;
   }
+  /* visual-movil-12: botones y selectores de Ajustes y los pasos de Metas de 36–40 px. Zona táctil de 44 px con un
+     pseudo-elemento que sobresale lo que falta (arriba/abajo y a los costados), sin agrandar el botón a la vista. */
+  .settings-section :is(.btn, .picker-btn),
+  .goal-stepper .btn {
+    position: relative;
+  }
+  .settings-section :is(.btn, .picker-btn)::after,
+  .goal-stepper .btn::after {
+    content: '';
+    position: absolute;
+    inset: min(0px, calc((100% - 44px) / 2));
+  }
 }
 
 /* ---------- v0.2 fuentes ---------- */
@@ -1432,15 +1482,25 @@ html[data-tv] .player-error-sources button {
   opacity: 0;
   transition: opacity 0.15s, background 0.15s;
 }
-.poster-card-wrap:hover .poster-remove,
 .poster-card-wrap:focus-within .poster-remove {
   opacity: 1;
 }
-.poster-remove:hover,
+@media (hover: hover) {
+  .poster-card-wrap:hover .poster-remove {
+    opacity: 1;
+  }
+}
 .poster-remove:focus-visible {
   opacity: 1;
   background: var(--accent-2);
   border-color: transparent;
+}
+@media (hover: hover) {
+  .poster-remove:hover {
+    opacity: 1;
+    background: var(--accent-2);
+    border-color: transparent;
+  }
 }
 .poster-remove:focus-visible {
   outline-offset: 2px;
@@ -1494,7 +1554,8 @@ html[data-tv] .player-error-sources button {
 
 .cal-sub {
   margin: 6px 0 0;
-  max-width: 560px;
+  max-width: 70ch;
+  font-size: 1rem;
 }
 .cal-section {
   margin-bottom: 32px;
@@ -1532,9 +1593,13 @@ html[data-tv] .player-error-sources button {
   min-width: 0;
   transition: background 0.15s;
 }
-.cal-item:hover,
 .cal-item:focus-visible {
   background: var(--bg-3);
+}
+@media (hover: hover) {
+  .cal-item:hover {
+    background: var(--bg-3);
+  }
 }
 .cal-thumb {
   flex: 0 0 auto;
@@ -1578,15 +1643,26 @@ html[data-tv] .player-error-sources button {
 
 /* ---------- Tu año ---------- */
 
+/* "← Vos" / "← Ajustes": la vuelta de las subpáginas (Historial, Tu año, Metas, Calendario, Catálogos). El padding da una
+   zona de 44 px de alto y el margen negativo la deja donde estaba (visual-movil-10, a11y-18). */
 .year-back {
   display: inline-block;
   color: var(--muted);
   font-size: 0.9rem;
-  margin-bottom: 4px;
+  padding: 13px 12px;
+  margin: -13px -12px -9px;
 }
-.year-back:hover,
+/* En la TV, Atrás ya hace eso (como el botón de la ficha, v0.22.4) y era el primer foco de la pantalla (tv-10). */
+html[data-tv] .year-back {
+  display: none;
+}
 .year-back:focus-visible {
   color: var(--text);
+}
+@media (hover: hover) {
+  .year-back:hover {
+    color: var(--text);
+  }
 }
 .year-hero {
   display: flex;
@@ -1667,6 +1743,19 @@ html[data-tv] .player-error-sources button {
   text-transform: uppercase;
   letter-spacing: 0.06em;
 }
+/* Un estado vacío dentro de una tarjeta de Tu año / Metas: su título va en frase como los demás vacíos, y sin tarjeta
+   propia ni 32 px de aire a cada lado (visual-pc-14). */
+.year-card .empty-state {
+  margin: 0 auto;
+  padding: 12px 16px 8px;
+  background: transparent;
+}
+.year-card .empty-state-title {
+  font-size: 1.25rem;
+  color: var(--text);
+  text-transform: none;
+  letter-spacing: 0;
+}
 .year-bars,
 .year-titles {
   list-style: none;
@@ -1706,9 +1795,13 @@ html[data-tv] .player-error-sources button {
   margin: -4px;
   border-radius: 10px;
 }
-.year-title:hover,
 .year-title:focus-visible {
   background: var(--bg-3);
+}
+@media (hover: hover) {
+  .year-title:hover {
+    background: var(--bg-3);
+  }
 }
 .year-title img {
   flex: 0 0 auto;
@@ -2509,9 +2602,13 @@ html[data-tv] .top10-rank {
   text-align: left;
   cursor: pointer;
 }
-.stream-hidden-toggle:hover,
 .stream-hidden-toggle:focus-visible {
   color: var(--text);
+}
+@media (hover: hover) {
+  .stream-hidden-toggle:hover {
+    color: var(--text);
+  }
 }
 .stream-hidden .stream-item {
   opacity: 0.75;
@@ -2523,10 +2620,6 @@ html[data-tv] .top10-rank {
 .stream-hidden-reason {
   grid-column: 1 / -1;
   font-size: 0.75rem;
-  color: var(--muted);
-}
-.source-label {
-  font-size: 0.9rem;
   color: var(--muted);
 }
 
@@ -2685,10 +2778,15 @@ html[data-tv] .top10-rank {
   text-align: left;
   cursor: pointer;
 }
-.spoiler-reveal:hover,
 .spoiler-reveal:focus-visible {
   color: var(--text);
   border-color: var(--muted);
+}
+@media (hover: hover) {
+  .spoiler-reveal:hover {
+    color: var(--text);
+    border-color: var(--muted);
+  }
 }
 
 /* Reproductor: "¿Qué te pareció?" al final de la peli o del último episodio. */
@@ -2754,9 +2852,6 @@ html[data-tv] .top10-rank {
 }
 
 /* Ajustes → Gustos y spoilers */
-.taste-settings .check + .check {
-  margin-top: 8px;
-}
 .taste-list {
   list-style: none;
   margin: 8px 0;
@@ -2831,7 +2926,8 @@ html[data-tv] .top10-rank {
   background: var(--poster-badge-bg);
   color: var(--poster-badge-fg);
   font-weight: 800;
-  font-size: clamp(0.64rem, calc(var(--poster-w) * 0.058), 0.8rem);
+  /* visual-pc-04: el puntaje a 12 px en PC (póster de ~187 px) y 11 px como mínimo en el celular; "IMDb" a 9–10 px. */
+  font-size: clamp(0.6875rem, calc(var(--poster-w) * 0.064), 0.8rem);
   line-height: 1;
   font-variant-numeric: tabular-nums;
   box-shadow: 0 1px 6px rgba(0, 0, 0, 0.45);
@@ -2842,7 +2938,7 @@ html[data-tv] .top10-rank {
   background: var(--imdb);
   color: #000;
   font-weight: 900;
-  font-size: 0.78em;
+  font-size: 0.82em;
   letter-spacing: -0.02em;
   line-height: 1;
   padding: 2px 4px;
@@ -2852,9 +2948,9 @@ html[data-tv] .top10-rank {
 /* Etiquetas: una sola por póster, arriba a la izquierda (el ✓ de "vista" va a la derecha). */
 .poster-label {
   position: absolute;
-  top: 8px;
+  top: var(--label-top, 8px);
   left: 8px;
-  max-width: calc(100% - 46px);
+  max-width: var(--label-max, calc(100% - 46px));
   overflow: hidden;
   white-space: nowrap;
   text-overflow: ellipsis;
@@ -2945,8 +3041,10 @@ html[data-tv] .top10-rank {
   cursor: pointer;
   user-select: none;
 }
-.ht-sound:hover {
-  background: var(--accent-fill);
+@media (hover: hover) {
+  .ht-sound:hover {
+    background: var(--accent-fill);
+  }
 }
 .ht-info {
   display: grid;
@@ -2974,13 +3072,27 @@ html[data-tv] .top10-rank {
 
 @media (max-width: 760px) {
   .poster-label {
-    top: 6px;
+    top: var(--label-top, 6px);
     left: 6px;
     padding: 2px 6px;
   }
   /* Con el puntaje de IMDb a la derecha (que no se mueve), la etiqueta se corta antes de tocarlo. */
   .poster-card:has(.poster-corner) .poster-label {
-    max-width: calc(100% - 76px);
+    max-width: var(--label-max, calc(100% - 76px));
+  }
+}
+/* visual-movil-06: con el póster angosto (celular, tablet y ventanas chicas) "Estreno" ya no entra a la izquierda
+   de la insignia de IMDb y se cortaba como "Estr…": la etiqueta baja a un segundo renglón, abajo del puntaje de IMDb
+   (a la izquierda; el ✓ de "vista" queda a la derecha). Las apaisadas son anchas y las de "Seguir viendo" con ✕ no
+   llevan la insignia arriba: siguen como estaban. */
+@media (max-width: 1100px), (pointer: coarse) and (max-height: 500px) {
+  .poster-card:not(.is-landscape):has(.poster-corner) {
+    --label-top: 30px;
+    --label-max: calc(100% - 38px);
+  }
+  .poster-card-wrap .poster-card:has(.poster-corner) {
+    --label-top: initial;
+    --label-max: initial;
   }
 }
 
@@ -3062,9 +3174,13 @@ html[data-tv] .top10-rank {
   padding: 8px;
   border-radius: var(--radius);
 }
-.diary-link:hover,
 .diary-link:focus-visible {
   background: var(--bg-3);
+}
+@media (hover: hover) {
+  .diary-link:hover {
+    background: var(--bg-3);
+  }
 }
 .diary-link img {
   flex: none;
@@ -3277,12 +3393,20 @@ html[data-tv] .top10-rank {
   box-shadow: 0 0 0 2px var(--accent-2);
 }
 .achievement-icon {
-  font-size: 2rem;
-  line-height: 1;
+  flex: none;
+  display: grid;
+  place-items: center;
+  width: 46px;
+  height: 46px;
+  border-radius: 50%;
+  background: color-mix(in srgb, var(--accent) 18%, transparent);
+  color: var(--accent);
 }
+/* Bloqueado: el mismo ícono, atenuado y sin el acento. */
 .achievement:not(.on) .achievement-icon {
-  filter: grayscale(1);
-  opacity: 0.45;
+  background: var(--bg-3);
+  color: var(--muted);
+  opacity: 0.7;
 }
 .achievement-text {
   flex: 1;
@@ -3324,14 +3448,16 @@ html[data-tv] .top10-rank {
   box-shadow: inset 0 0 0 1px var(--line);
   color: var(--text);
 }
-[data-theme='2'] .goal-card .goal-presets .tab:hover {
-  background: var(--tonal);
+@media (hover: hover) {
+  [data-theme='2'] .goal-card .goal-presets .tab:hover {
+    background: var(--tonal);
+  }
 }
 [data-theme='2'] .goal-card .goal-presets .tab.active,
 [data-theme='2'] .goal-card .goal-presets .tab[aria-pressed='true'] {
-  background: var(--tonal);
-  color: var(--accent);
-  box-shadow: inset 0 0 0 1px var(--accent);
+  background: var(--accent);
+  color: var(--on-accent);
+  box-shadow: none;
 }
 [data-theme='2'] .achievement.on {
   border-color: color-mix(in srgb, var(--accent) 40%, var(--line));
@@ -3417,12 +3543,17 @@ html[data-tv] .top10-rank {
   padding: 8px 12px;
   color: var(--muted);
 }
-.recent-query:hover,
 .recent-query:focus-visible,
-.recent-remove:hover,
 .recent-remove:focus-visible {
   background: var(--bg-3);
   color: var(--text);
+}
+@media (hover: hover) {
+  .recent-query:hover,
+  .recent-remove:hover {
+    background: var(--bg-3);
+    color: var(--text);
+  }
 }
 
 /* Buscar: personas y "juntos" */
@@ -3442,10 +3573,15 @@ html[data-tv] .top10-rank {
   background: var(--bg-2);
   border: 1px solid var(--line);
 }
-.together-banner:hover,
 .together-banner:focus-visible {
   border-color: var(--accent);
   background: var(--bg-3);
+}
+@media (hover: hover) {
+  .together-banner:hover {
+    border-color: var(--accent);
+    background: var(--bg-3);
+  }
 }
 .together-banner > span:last-child {
   margin-left: auto;
@@ -3482,12 +3618,13 @@ html[data-tv] .top10-rank {
   font-size: 0.9rem;
   cursor: pointer;
 }
-.picker-btn:hover,
 .picker-btn:focus-visible {
   background: var(--bg-3);
 }
-.picker-btn.is-set {
-  border-color: var(--accent);
+@media (hover: hover) {
+  .picker-btn:hover {
+    background: var(--bg-3);
+  }
 }
 .picker-label {
   color: var(--muted);
@@ -3543,10 +3680,15 @@ html[data-tv] .top10-rank {
   text-align: left;
   cursor: pointer;
 }
-.picker-opt:hover,
 .picker-opt:focus-visible {
   background: var(--bg-3);
   outline-offset: -3px;
+}
+@media (hover: hover) {
+  .picker-opt:hover {
+    background: var(--bg-3);
+    outline-offset: -3px;
+  }
 }
 .picker-opt[aria-selected='true'] {
   color: var(--accent);
@@ -3612,10 +3754,15 @@ html[data-tv] .top10-rank {
   cursor: pointer;
   transition: background 0.15s;
 }
-.chip-link:hover,
 .chip-link:focus-visible {
   background: rgba(255, 255, 255, 0.2);
   border-color: var(--accent);
+}
+@media (hover: hover) {
+  .chip-link:hover {
+    background: rgba(255, 255, 255, 0.2);
+    border-color: var(--accent);
+  }
 }
 button.chip-link {
   font: inherit;
@@ -3681,9 +3828,13 @@ button.chip-link {
   text-decoration-color: rgba(255, 255, 255, 0.3);
   text-underline-offset: 3px;
 }
-.person-link:hover,
 .person-link:focus-visible {
   text-decoration-color: currentColor;
+}
+@media (hover: hover) {
+  .person-link:hover {
+    text-decoration-color: currentColor;
+  }
 }
 /* Persona: "Buscar con otra persona…" y página /together */
 .together-open {
@@ -3724,10 +3875,15 @@ button.chip-link {
   text-align: left;
   cursor: pointer;
 }
-.together-result:hover,
 .together-result:focus-visible {
   background: var(--bg-3);
   outline-offset: -3px;
+}
+@media (hover: hover) {
+  .together-result:hover {
+    background: var(--bg-3);
+    outline-offset: -3px;
+  }
 }
 .together-result .cast-photo {
   width: 40px;
@@ -4142,11 +4298,17 @@ input[type='password']:focus-visible {
   text-overflow: ellipsis;
   white-space: nowrap;
 }
-.osk-key:hover,
 .osk-key:focus-visible {
   background: var(--accent-fill);
   border-color: var(--accent-fill);
   color: var(--on-accent);
+}
+@media (hover: hover) {
+  .osk-key:hover {
+    background: var(--accent-fill);
+    border-color: var(--accent-fill);
+    color: var(--on-accent);
+  }
 }
 .osk-key.active {
   border-color: var(--accent);
@@ -4206,7 +4368,9 @@ input[type='password']:focus-visible {
 .ob-box {
   width: min(100%, 680px);
   max-height: calc(100dvh - 32px);
-  overflow-y: auto;
+  /* visual-movil-01: solo scrollea el contenido (.ob-body); «Empezar» queda fijo abajo, a la vista aunque la
+     pantalla sea baja (celular apaisado, 320×568). */
+  overflow: hidden;
   display: flex;
   flex-direction: column;
   gap: 18px;
@@ -4220,6 +4384,21 @@ input[type='password']:focus-visible {
   display: flex;
   flex-direction: column;
   gap: 12px;
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  /* Margen negativo + relleno: el anillo de foco de los chips no se corta con el overflow. */
+  margin: -4px;
+  padding: 4px;
+}
+/* Pantallas bajas: el contenido scrollea, y un degradé abajo avisa que hay más (el relleno deja ver el final entero). */
+@media (max-height: 640px) {
+  .ob-body {
+    padding-bottom: 24px;
+    -webkit-mask-image: linear-gradient(to bottom, #000 calc(100% - 28px), transparent);
+    mask-image: linear-gradient(to bottom, #000 calc(100% - 28px), transparent);
+  }
 }
 .ob-body h2 {
   font-size: 1.4rem;
@@ -4233,6 +4412,7 @@ input[type='password']:focus-visible {
   line-height: 1.5;
 }
 .ob-actions {
+  flex: none;
   display: flex;
   flex-wrap: wrap;
   align-items: center;
@@ -4448,6 +4628,12 @@ html[data-tv] .ob-body label.check input[type='checkbox']:checked::after {
   gap: 10px;
   margin: 18px 0;
 }
+.error-details summary {
+  cursor: pointer;
+  color: var(--muted);
+  font-size: 0.9rem;
+  margin-bottom: 8px;
+}
 .error-detail {
   background: var(--bg-2);
   border: 1px solid var(--line);
@@ -4535,10 +4721,15 @@ html[data-tv] .ob-body label.check input[type='checkbox']:checked::after {
   padding: 10px 14px;
   cursor: pointer;
 }
-.player-error-sources button:hover,
 .player-error-sources button:focus-visible {
   background: rgba(255, 255, 255, 0.18);
   outline: 2px solid #fff;
+}
+@media (hover: hover) {
+  .player-error-sources button:hover {
+    background: rgba(255, 255, 255, 0.18);
+    outline: 2px solid #fff;
+  }
 }
 .player-error-sources button.active {
   color: var(--accent);
@@ -4681,9 +4872,13 @@ html[data-tv] .ob-body label.check input[type='checkbox']:checked::after {
   border-radius: 14px;
   background: var(--bg-3);
 }
-.nav-sheet-link:hover,
 .nav-sheet-link:focus-visible {
   color: var(--text);
+}
+@media (hover: hover) {
+  .nav-sheet-link:hover {
+    color: var(--text);
+  }
 }
 .nav-sheet-link.active {
   color: var(--text);

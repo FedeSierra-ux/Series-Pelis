@@ -116,3 +116,12 @@ describe('completedSeries', () => {
     expect(completedSeries(list, new Map(), at(2026, 10, 1))).toEqual([])
   })
 })
+
+describe('íconos de los logros (visual-pc-14)', () => {
+  it('son nombres del set de íconos de línea de la app, sin emojis, y no se repiten', () => {
+    const icons = computeAchievements([], 2026).map((a) => a.icon as string)
+    expect(icons).toHaveLength(11)
+    for (const icon of icons) expect(icon).toMatch(/^[a-z]+$/)
+    expect(new Set(icons).size).toBe(icons.length)
+  })
+})

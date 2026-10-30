@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { Link } from 'react-router-dom'
 import { backdropFor } from '../../components/ContinueCard'
 import { ImdbRating } from '../../components/Rating'
+import { useLogoInset } from '../../lib/logoInset'
 import { displayYear } from '../../lib/yearLabel'
 import { typeLabel } from '../../lib/i18n'
 import { useLocalTitle } from '../../lib/localTitles'
@@ -13,7 +14,7 @@ import type { MetaPreview } from '../../lib/types'
 import { HeroIcon } from '../home/HeroInfo'
 
 // v0.14 (U14): el mejor resultado de "Todo", destacado como en Prime o Max: fondo, logo (o el nombre),
-// año y tipo, IMDb, "Ver ahora" (la ficha, como en la portada) y Mi lista.
+// año y tipo, IMDb, "Ver ficha" (la ficha, como en la portada) y Mi lista.
 
 const logoFor = (m: MetaPreview) => m.logo ?? (m.id.startsWith('tt') ? `https://images.metahub.space/logo/medium/${m.id}/img` : undefined)
 
@@ -46,6 +47,8 @@ export function BestResult({ meta }: { meta: SearchMeta }) {
   const bg = [backdropFor(meta.id, meta.background), meta.poster].find((u) => u && !brokenBg.includes(u))
   const logo = logoFor(meta)
   const showLogo = logo && logo !== brokenLogo ? logo : undefined
+  // visual-pc-05: el aire transparente del PNG a la izquierda no deja alinear el logo con el resto.
+  const inset = useLogoInset(showLogo)
   const to = `/detail/${meta.type}/${encodeURIComponent(meta.id)}`
   const year = displayYear(meta)
   return (
@@ -56,7 +59,7 @@ export function BestResult({ meta }: { meta: SearchMeta }) {
       <div className="search-best-body">
         <span className="search-best-eyebrow">Mejor resultado</span>
         <h2 id="search-best-title" className={`search-best-title${showLogo ? ' has-logo' : ''}`}>
-          {showLogo ? <img src={showLogo} alt={name} onError={() => setBrokenLogo(showLogo)} /> : name}
+          {showLogo ? <img ref={inset.ref} style={inset.style} src={showLogo} alt={name} onLoad={inset.onLoad} onError={() => setBrokenLogo(showLogo)} /> : name}
         </h2>
         <p className="search-best-facts">
           <ImdbRating value={meta.imdbRating} />
@@ -66,7 +69,7 @@ export function BestResult({ meta }: { meta: SearchMeta }) {
         <div className="search-best-actions">
           <Link to={to} className="search-best-btn is-play">
             <HeroIcon name="play" />
-            <span>Ver ahora</span>
+            <span>Ver ficha</span>
           </Link>
           <button
             type="button"

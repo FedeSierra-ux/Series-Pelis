@@ -24,10 +24,15 @@
   cursor: pointer;
   transition: background 0.15s, color 0.15s;
 }
-.voice-btn:hover,
 .voice-btn:focus-visible {
   background: var(--surface-2, var(--bg-3));
   color: var(--text);
+}
+@media (hover: hover) {
+  .voice-btn:hover {
+    background: var(--surface-2, var(--bg-3));
+    color: var(--text);
+  }
 }
 .voice-btn:focus-visible {
   outline: var(--focus-ring, 3px solid var(--accent));
@@ -93,8 +98,10 @@
   cursor: pointer;
   transition: background 0.15s, color 0.15s;
 }
-.search-tab:hover {
-  color: var(--text);
+@media (hover: hover) {
+  .search-tab:hover {
+    color: var(--text);
+  }
 }
 .search-tab.active {
   background: var(--accent-fill, var(--accent));
@@ -305,9 +312,13 @@
   color: var(--text);
   transition: background 0.15s;
 }
-.search-trending-item:hover,
 .search-trending-item:focus-visible {
   background: var(--surface-1, var(--bg-2));
+}
+@media (hover: hover) {
+  .search-trending-item:hover {
+    background: var(--surface-1, var(--bg-2));
+  }
 }
 .search-trending-item:focus-visible {
   outline-offset: 2px;
@@ -382,10 +393,15 @@
   font-size: 0.9rem;
   font-weight: 600;
 }
-[data-theme='2'] .chip.search-genre-chip:hover,
 [data-theme='2'] .chip.search-genre-chip:focus-visible {
   background: var(--bg-3);
   color: var(--text);
+}
+@media (hover: hover) {
+  [data-theme='2'] .chip.search-genre-chip:hover {
+    background: var(--bg-3);
+    color: var(--text);
+  }
 }
 @media (pointer: coarse), (max-width: 760px) {
   [data-theme='2'] .chip.search-genre-chip {
@@ -397,10 +413,15 @@ html[data-tv][data-theme='2'] .chip.search-genre-chip {
   padding: 0 24px;
   font-size: 1.1rem;
 }
-.search-genre-chip:hover,
 .search-genre-chip:focus-visible {
   background: var(--tonal, var(--bg-3));
   color: var(--text);
+}
+@media (hover: hover) {
+  .search-genre-chip:hover {
+    background: var(--tonal, var(--bg-3));
+    color: var(--text);
+  }
 }
 
 @media (max-width: 1100px) {

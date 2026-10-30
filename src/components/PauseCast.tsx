@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import { getMeta } from '../lib/addons'
+import { episodeLabel } from '../lib/format'
 import { localTitle } from '../lib/localTitles'
 import { spanishName } from '../lib/localTitlesStore'
 import { addonsStore } from '../lib/store'
@@ -120,7 +121,7 @@ export function PauseCast({ imdbId, type, season, episode, videoId, visible }: P
   }, [visible])
 
   const isEpisode = season !== undefined && episode !== undefined
-  const label = isEpisode ? `T${season} E${episode}${info?.title ? ` · ${info.title}` : ''}` : info?.title
+  const label = isEpisode ? `${episodeLabel(season, episode)}${info?.title ? ` · ${info.title}` : ''}` : info?.title
   const overview = info?.overview?.trim()
   if (!people?.length && !overview && !label) return null
   return (

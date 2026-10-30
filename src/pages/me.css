@@ -27,6 +27,8 @@
 }
 .me-sub {
   margin: 4px 0 0;
+  max-width: 70ch;
+  font-size: 1rem;
 }
 
 /* Las filas (Seguir viendo, Mi lista…) van de borde a borde, como en Inicio (gana a `[data-theme='2'] .row`). */
@@ -42,7 +44,7 @@
   /* auto-fit: con pantalla ancha (TV) las tarjetas se estiran en vez de dejar columnas vacías y cortar los textos. */
   grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
   gap: 12px;
-  margin-bottom: 20px;
+  margin-bottom: 32px;
 }
 .me-tile {
   position: relative;
@@ -56,9 +58,13 @@
   color: var(--text);
   transition: background 0.15s, transform 0.15s;
 }
-.me-tile:hover,
 .me-tile:focus-visible {
   background: var(--tonal, var(--bg-3));
+}
+@media (hover: hover) {
+  .me-tile:hover {
+    background: var(--tonal, var(--bg-3));
+  }
 }
 .me-tile:focus-visible {
   transform: scale(1.03);
@@ -142,9 +148,49 @@
   }
 }
 
-/* v0.26: los estados vacíos de Vos (Mi lista, Lo que viste) más bajos: son dos seguidos con la cuenta nueva. */
+/* v0.26: los estados vacíos de Vos (Mi lista, Lo que viste) más bajos: son dos seguidos con la cuenta nueva.
+   v0.35 (visual-pc-12): en vez de dos tarjetas de 270 px, una tira (ícono · título y texto · botón) de ~90 px cada una. */
 [data-theme='2'] .me-page .empty-state {
-  padding-block: 22px;
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  grid-template-areas: 'icon title action' 'icon text action';
+  align-items: center;
+  gap: 2px 18px;
+  max-width: none;
+  margin: 0;
+  padding: 18px 22px;
+  text-align: left;
+}
+[data-theme='2'] .me-page .empty-state-icon {
+  grid-area: icon;
+  width: 48px;
+  height: 48px;
+  margin: 0;
+}
+[data-theme='2'] .me-page .empty-state-title {
+  grid-area: title;
+  font-size: 1.1rem;
+  align-self: end;
+}
+[data-theme='2'] .me-page .empty-state-text {
+  grid-area: text;
+  font-size: 0.95rem;
+  align-self: start;
+}
+[data-theme='2'] .me-page .empty-state-action {
+  grid-area: action;
+  margin: 0;
+}
+@media (max-width: 560px) {
+  [data-theme='2'] .me-page .empty-state {
+    grid-template-columns: auto minmax(0, 1fr);
+    grid-template-areas: 'icon title' 'icon text' 'action action';
+    row-gap: 2px;
+  }
+  [data-theme='2'] .me-page .empty-state-action {
+    justify-self: start;
+    margin-top: 12px;
+  }
 }
 
 /* ---------- Lo que viste ---------- */

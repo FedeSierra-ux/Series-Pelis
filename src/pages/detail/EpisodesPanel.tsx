@@ -2,6 +2,7 @@ import { useEffect, useRef, type ReactNode, type RefObject } from 'react'
 import { Picker } from '../../components/Picker'
 import { UndoToast, useUndoToast } from '../../components/UndoToast'
 import { ImdbRating } from '../../components/Rating'
+import { SafeImg } from '../../components/SafeImg'
 import { remainingLabel } from '../../lib/remaining'
 import { RESUME_MIN_S, restoreWatchSnapshot, setWatched, setWatchedMany, snapshotWatch, type WatchEntry } from '../../lib/store'
 import { useTvMode } from '../../lib/tv'
@@ -164,7 +165,7 @@ export function EpisodesPanel(p: Props) {
                   onClick={() => p.onSelect(v)}
                 >
                   <div className={`episode-thumb${spoil ? ' spoiler-blur' : ''}`}>
-                    {v.thumbnail && <img src={v.thumbnail} alt="" loading="lazy" decoding="async" />}
+                    {v.thumbnail && <SafeImg src={v.thumbnail} shape="wide" alt="" loading="lazy" decoding="async" />}
                     {badge && <span className={`ep-badge${badge === 'Siguiente' ? ' next' : ''}`}>{badge}</span>}
                     {started && (
                       <div className="progress-bar">
@@ -236,7 +237,7 @@ export function EpisodesPanel(p: Props) {
                     <div
                       className={`sx-empty-thumb${p.hideSpoiler(panelEp.video) && panelEp.video.id !== p.first?.id ? ' spoiler-blur' : ''}`}
                     >
-                      <img src={panelEp.video.thumbnail} alt="" loading="lazy" decoding="async" />
+                      <SafeImg src={panelEp.video.thumbnail} shape="wide" alt="" loading="lazy" decoding="async" />
                     </div>
                   )}
                   <button
@@ -247,7 +248,7 @@ export function EpisodesPanel(p: Props) {
                       p.onSelect(panelEp.video)
                     }}
                   >
-                    Ver fuentes de este episodio
+                    Ver fuentes
                   </button>
                   <p className="sx-hint">O elegí cualquier episodio de la lista.</p>
                 </div>

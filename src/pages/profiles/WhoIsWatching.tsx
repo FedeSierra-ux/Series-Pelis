@@ -18,6 +18,44 @@ export const AUTO_ENTER_S = 10
 
 type Editing = { profile?: Profile } | undefined
 
+/** Capas con "Atrás" del sistema montadas ahora (0 o 1; 2 solo un instante, en desarrollo). */
+let live = 0
+
+/**
+ * "Atrás" del sistema (el gesto o el botón del celular) cierra la capa en vez de retroceder de pantalla (visual-movil-17):
+ * al abrirse suma una entrada al historial con la misma URL y, al llegar el `popstate`, `onBack` decide. Devuelve `true`
+ * si dio un paso adentro de la capa (del editor a la grilla…) y entonces la entrada se vuelve a sumar. Si la capa se
+ * cierra por otro camino (✕, Escape, elegir el perfil de ahora), saca la entrada que sumó.
+ */
+function useCloseOnSystemBack(enabled: boolean, onBack: () => boolean) {
+  const backRef = useRef(onBack)
+  backRef.current = onBack
+  useEffect(() => {
+    if (!enabled) return
+    const marked = () => !!(history.state as { spPicker?: boolean } | null)?.spPicker
+    const mark = () => history.pushState({ ...(history.state as object | null), spPicker: true }, '')
+    live++
+    // En desarrollo el efecto se monta, se desmonta y se vuelve a montar enseguida: no se suma dos veces.
+    if (!marked()) mark()
+    let popped = false
+    const onPop = () => {
+      // Una entrada nuestra (no es el "Atrás" de nadie): se ignora.
+      if (marked()) return
+      if (backRef.current()) mark()
+      else popped = true
+    }
+    window.addEventListener('popstate', onPop)
+    return () => {
+      live--
+      window.removeEventListener('popstate', onPop)
+      // Si la capa se cerró por otro camino (✕, Escape, elegir el perfil de ahora) se saca la entrada que sumó, salvo que
+      // otra capa se haya montado en el medio.
+      setTimeout(() => {
+        if (live === 0 && !popped && marked()) history.back()
+      }, 0)
+    }
+  }, [enabled])
+}
 /**
  * "¿Quién está mirando?" (v0.18). Con `auto` (la TV al abrir o después del protector) cuenta 10 s y entra
  * con el perfil marcado; cualquier tecla reinicia la cuenta. "Administrar perfiles" deja crear, editar y borrar.
@@ -61,7 +99,12 @@ export function WhoIsWatching({ auto, startManaging = false, onClose }: { auto: 
   const choose = (id: string) => {
     markProfilePicked()
     if (id === activeProfileId()) onClose()
-    else void switchProfile(id)
+    else {
+      // Cambiar de perfil recarga la página: que la entrada de la capa no quede marcada en el historial.
+      const { spPicker, ...rest } = (history.state ?? {}) as { spPicker?: boolean }
+      if (spPicker) history.replaceState(rest, '')
+      void switchProfile(id)
+    }
   }
 
   // Al abrir (y al volver del editor), el foco va al perfil actual.
@@ -88,6 +131,24 @@ export function WhoIsWatching({ auto, startManaging = false, onClose }: { auto: 
     }, 250)
     return () => clearInterval(timer)
   }, [counting, round])
+
+  // "Atrás": del editor a la grilla, de administrar a elegir, y si no, sigue con el perfil de ahora.
+  // Devuelve `true` si se quedó abierta (dio un paso adentro).
+  const goBack = (): boolean => {
+    if (editing) {
+      setEditing(undefined)
+      return true
+    }
+    if (manage && !startManaging) {
+      setManage(false)
+      return true
+    }
+    markProfilePicked()
+    onClose()
+    return false
+  }
+  // Con `auto` (la TV al abrir o tras el protector) no: ahí no hay a dónde volver y la tecla Atrás ya la maneja `onKeyDown`.
+  useCloseOnSystemBack(!auto, goBack)
 
   const onKeyDown = (e: KeyboardEvent<HTMLDivElement>) => {
     if (counting) setRound((r) => r + 1)
@@ -116,15 +177,9 @@ export function WhoIsWatching({ auto, startManaging = false, onClose }: { auto: 
       }
       return
     }
-    // "Atrás": del editor a la grilla, de administrar a elegir, y si no, sigue con el perfil de ahora.
     e.preventDefault()
     e.stopPropagation()
-    if (editing) setEditing(undefined)
-    else if (manage && !startManaging) setManage(false)
-    else {
-      markProfilePicked()
-      onClose()
-    }
+    goBack()
   }
 
   const focusedName = profiles.find((p) => p.id === focused)?.name
@@ -135,6 +190,20 @@ export function WhoIsWatching({ auto, startManaging = false, onClose }: { auto: 
           <ProfileEditor profile={editing.profile} defaultColor={nextColor(profiles)} takenAvatars={profiles.map((p) => p.avatar)} onClose={() => setEditing(undefined)} />
         ) : (
           <>
+            {/* Solo cuando se abrió a mano (celular, PC o la TV con el control): al arrancar la TV no hay a dónde volver. */}
+            {!auto && (
+              <button
+                type="button"
+                className="pf-close"
+                aria-label="Cerrar"
+                onClick={() => {
+                  markProfilePicked()
+                  onClose()
+                }}
+              >
+                <Theme2Icon name="close" size={22} />
+              </button>
+            )}
             <h1 id="pf-title" className="pf-title">
               {manage ? 'Administrar perfiles' : '¿Quién está mirando?'}
             </h1>

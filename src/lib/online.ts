@@ -23,5 +23,5 @@ export function useOnline(): boolean {
  * `what` es la frase completa, ej. "esta ficha no está guardada".
  */
 export function offlineMessage(what: string): string | undefined {
-  return isOnline() ? undefined : `Sin conexión: ${what} en este dispositivo. Probá de nuevo cuando vuelva internet.`
+  return isOnline() ? undefined : `Sin conexión: ${what} en este aparato. Probá de nuevo cuando vuelva internet.`
 }

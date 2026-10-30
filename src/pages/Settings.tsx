@@ -204,14 +204,14 @@ function PlaybackSection() {
       if (res.ok && !settings.streamingServerUrl && !engine && !desktop && local === 'off') settingsStore.set((s) => ({ ...s, streamingServerUrl: server }))
       if (res.ok && local !== 'off') void ensureLocalStremio(true)
     } catch {
-      setTest('No responde. ¿Está Stremio abierto en esta PC?')
+      setTest('No responde. ¿Está Stremio abierto en esta compu?')
     }
   }
 
 
   return (
     <section className="settings-section">
-      <h2>Reproducción</h2>
+      <h2>Siguiente episodio</h2>
       <label className="check">
         <input
           type="checkbox"
@@ -333,7 +333,7 @@ function DataSection() {
       <p className="muted">
         {inHouse
           ? 'Tus datos se sincronizan con la casa (ver “Casa”). Igual podés bajar una copia para guardarla aparte.'
-          : 'El historial, “Mi lista” y los addons se guardan en este navegador. Con una copia los pasás a otro dispositivo.'}
+          : 'El historial, “Mi lista” y los addons se guardan en este navegador. Con una copia los pasás a otro aparato.'}
       </p>
       <div className="hero-actions">
         <button className="btn" onClick={download}>
@@ -423,7 +423,7 @@ const ALL_SECTIONS: SettingsSectionDef[] = [
   { id: 'stremio', title: 'Importar desde Stremio', element: <StremioImport /> },
   { id: 'tmdb', title: 'TMDB', element: <TmdbSettings /> },
   { id: 'posters', title: 'Pósters', element: <PosterSettings /> },
-  { id: 'playback', title: 'Reproducción', element: <PlaybackSection /> },
+  { id: 'playback', title: 'Siguiente episodio', element: <PlaybackSection /> },
   { id: 'player', title: 'Reproductor', element: <PlayerSettings /> },
   { id: 'sources', title: 'Elección de fuente', element: <SourceSettings /> },
   { id: 'taste', title: 'Gustos y spoilers', element: <TasteSettings /> },
@@ -466,7 +466,7 @@ export function Settings() {
   }, [hash])
 
   return (
-    <div className={`page settings${showAdvanced ? ' show-advanced' : ''}`}>
+    <div className={`page settings settings-page${showAdvanced ? ' show-advanced' : ''}`}>
       <header className="page-header">
         <h1>Ajustes</h1>
         <span className="muted small">Versión {__APP_VERSION__}</span>
@@ -485,8 +485,8 @@ export function Settings() {
             <input type="checkbox" checked={showAdvanced} onChange={(e) => settingsStore.set((s) => ({ ...s, showAdvanced: e.target.checked }))} />
             Mostrar opciones avanzadas
           </label>
-          {SECTIONS.map((s, i) => (
-            <SettingsBlock key={s.id} id={s.id} title={s.title} wide={wide} defaultOpen={i === 0}>
+          {SECTIONS.map((s) => (
+            <SettingsBlock key={s.id} id={s.id} title={s.title} wide={wide}>
               {s.element}
             </SettingsBlock>
           ))}

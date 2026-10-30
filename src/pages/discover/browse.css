@@ -109,11 +109,17 @@
   font-weight: 600;
   backdrop-filter: blur(6px);
 }
-.bh-explore:hover,
 .bh-explore:focus-visible {
   border-color: var(--accent);
   color: var(--accent);
   outline: none;
+}
+@media (hover: hover) {
+  .bh-explore:hover {
+    border-color: var(--accent);
+    color: var(--accent);
+    outline: none;
+  }
 }
 
 .bh-controls {
@@ -135,11 +141,17 @@
   color: #fff;
   cursor: pointer;
 }
-.bh-ctrl:hover,
 .bh-ctrl:focus-visible {
   background: rgba(11, 11, 16, 0.85);
   border-color: #fff;
   outline: none;
+}
+@media (hover: hover) {
+  .bh-ctrl:hover {
+    background: rgba(11, 11, 16, 0.85);
+    border-color: #fff;
+    outline: none;
+  }
 }
 
 .browse-rows {
@@ -215,10 +227,15 @@ html[data-tv] .row-more-card {
   line-height: 1;
   color: var(--accent);
 }
-.row-more-card:hover .poster-img,
 .row-more-card:focus-visible .poster-img {
   color: var(--text);
   border-color: var(--accent);
+}
+@media (hover: hover) {
+  .row-more-card:hover .poster-img {
+    color: var(--text);
+    border-color: var(--accent);
+  }
 }
 
 /* Pantallas bajas: la portada no tapa media pantalla fija. */
@@ -259,6 +276,13 @@ html[data-tv] .row-more-card {
   }
   .row-more-card {
     display: block;
+  }
+}
+
+/* visual-movil-03: celular apaisado, la portada más baja para que se vea la primera fila (en 740×360 era solo portada). */
+@media (pointer: coarse) and (max-height: 500px) {
+  html:not([data-tv]) .browse-hero {
+    height: clamp(170px, 52vh, 240px);
   }
 }
 

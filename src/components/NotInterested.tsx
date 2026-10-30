@@ -6,7 +6,7 @@ import { useStore } from '../lib/store'
 const UNDO_MS = 6000
 
 /**
- * "Ya no me interesa" sin el botón: el estado, el cambio y el aviso con "Deshacer". Lo usa el menú ⋯
+ * "No me interesa": el estado, el cambio y el aviso con "Deshacer". Lo usa el menú ⋯
  * de la ficha (el aviso va afuera del menú, así no desaparece cuando el menú se cierra).
  */
 export function useNotInterested(title: RatedTitle, tmdbId?: number) {
@@ -52,26 +52,4 @@ export function useNotInterested(title: RatedTitle, tmdbId?: number) {
   )
 
   return { marked, toggle, toast: toastEl }
-}
-
-/**
- * "Ya no me interesa": saca el título de "Para vos" y de las filas de Inicio. Tocándolo de nuevo
- * se deshace; también se gestiona en Ajustes → Gustos.
- */
-export function NotInterestedButton({ title, tmdbId }: { title: RatedTitle; tmdbId?: number }) {
-  const { marked, toggle, toast } = useNotInterested(title, tmdbId)
-  return (
-    <>
-      <button
-        type="button"
-        className={`btn not-interested${marked ? ' on' : ''}`}
-        aria-pressed={marked}
-        onClick={toggle}
-        title={marked ? 'Volver a recomendarlo' : 'Sacarlo de las recomendaciones y de Inicio'}
-      >
-        {marked ? '⊘ No me interesa' : '⊘ Ya no me interesa'}
-      </button>
-      {toast}
-    </>
-  )
 }

@@ -198,6 +198,31 @@ export function safeCueBottom(bottom: number, tv: boolean): number {
   return bottom > 0 ? Math.min(bottom, safe) : safe
 }
 
+/** Alto mínimo de banda negra (en % de la pantalla) para que valga la pena pegar el subtítulo a la imagen. */
+const PICTURE_MIN_BAND_PCT = 8
+
+/**
+ * uso-11: celular vertical. Con un video 16:9 la imagen ocupa el centro (~220 px de alto en 390×844) y la caja de
+ * subtítulos es toda la pantalla: el texto quedaba contra el borde de abajo, a ~280 px de la imagen. Esto da el `bottom`
+ * de `cuePlacement` (% desde arriba donde termina el subtítulo): el pie de la imagen, apenas adentro (4 % de su alto).
+ * 0 = no aplica: pantalla apaisada o cuadrada, imagen que llena el alto (Llenar / Estirar, o un video casi tan
+ * alto como la pantalla) o sin medidas del video todavía.
+ */
+export function pictureCueBottom(box: { w: number; h: number }, video: { w: number; h: number }, fit: string): number {
+  if (fit !== 'contain' || !(box.w > 0) || !(box.h > 0) || !(video.w > 0) || !(video.h > 0)) return 0
+  if (box.h <= box.w) return 0
+  const picH = Math.min(box.h, (box.w * video.h) / video.w)
+  const band = ((box.h - picH) / 2 / box.h) * 100
+  if (band < PICTURE_MIN_BAND_PCT) return 0
+  const end = (box.h + picH) / 2 - picH * 0.04
+  return Math.floor((end / box.h) * 1000) / 10
+}
+
+/** Junta dos `bottom` de `cuePlacement` (0 = ninguno): si hay los dos, manda el que deja el subtítulo más arriba. */
+export function mergeCueBottom(a: number, b: number): number {
+  return a > 0 && b > 0 ? Math.min(a, b) : Math.max(a, b)
+}
+
 let shiftsBox: boolean | undefined
 /**
  * ¿Se puede mover la caja de los subtítulos con CSS (`video::-webkit-media-text-track-container`)? Chromium

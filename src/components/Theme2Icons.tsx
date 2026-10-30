@@ -64,6 +64,37 @@ const PATHS = {
       <path d="M8 5H5a3 3 0 0 0 3 5M16 5h3a3 3 0 0 1-3 5M12 13v4M8 21h8M9 21l1-4h4l1 4" />
     </>
   ),
+  close: <path d="M6 6l12 12M18 6L6 18" />,
+  // Logros de Metas (visual-pc-14): en vez de emojis, que cambian de aspecto según el sistema.
+  popcorn: (
+    <>
+      <path d="M6 11l1.4 10h9.2L18 11z" />
+      <path d="M8.5 11V8.2a2.6 2.6 0 0 1 0-4.7 3 3 0 0 1 7 0 2.6 2.6 0 0 1 0 4.7V11" />
+    </>
+  ),
+  target: (
+    <>
+      <circle cx="12" cy="12" r="9" />
+      <circle cx="12" cy="12" r="5" />
+      <circle cx="12" cy="12" r="1" fill="currentColor" />
+    </>
+  ),
+  double: (
+    <>
+      <rect x="3" y="9" width="13" height="12" rx="2" />
+      <path d="M8 9V6a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v7a2 2 0 0 1-2 2h-3" />
+    </>
+  ),
+  timer: (
+    <>
+      <circle cx="12" cy="13" r="8" />
+      <path d="M12 9v4l2.5 2M9 2h6" />
+    </>
+  ),
+  flame: <path d="M12 22c4 0 7-2.8 7-7 0-3-1.8-5-3.5-7-.5 2-1.5 3-2.5 3 0-3-1.5-6-4-8-.5 3-4 6-4 12 0 4.2 3 7 7 7z" />,
+  bolt: <path d="M13 2L4 14h7l-1 8 9-12h-7z" />,
+  moon: <path d="M21 13A9 9 0 1 1 11 3a7 7 0 0 0 10 10z" />,
+  flag: <path d="M5 22V3M5 4h12l-2 4 2 4H5" />,
   // "Más" (⋯) de la barra inferior y del menú de cada catálogo.
   more: (
     <>
