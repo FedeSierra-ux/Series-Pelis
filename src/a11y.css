@@ -1,5 +1,5 @@
 /* ---------- v0.34 accesibilidad transversal (auditoría de la v0.33) ----------
-   Se carga al final (main.tsx), después de styles.css y theme2.css. Cada bloque dice qué hallazgo resuelve. */
+   Se carga al final (main.tsx), después de styles.css (que ya trae el Tema 2). Cada bloque dice qué hallazgo resuelve. */
 
 :root[data-theme='2'] {
   /* a11y-12: el borde de los controles (campos de texto, interruptor apagado). El --outline de siempre da 1,9:1
