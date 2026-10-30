@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom'
 import { AuthApiError, listDevices, logout, revokeDevice, useAuth, type DeviceInfo } from '../../lib/auth'
 import { flushCloudSync, useSyncStatus } from '../../lib/cloudSync'
 import '../auth/auth.css'
+import { Spinner } from '../../components/Spinner'
 
 export const authErrorText = (err: unknown) => (err instanceof AuthApiError ? err.message : 'No se pudo conectar. Probá de nuevo.')
 
@@ -81,7 +82,7 @@ export function DeviceList({ house, onChange }: { house?: string; onChange?: () 
   }
 
   if (error) return <p className="error-text">{error}</p>
-  if (!devices) return <div className="spinner" />
+  if (!devices) return <Spinner />
   if (!devices.length) return <p className="muted small">Ningún aparato entró todavía.</p>
   return (
     <ul className="house-list">

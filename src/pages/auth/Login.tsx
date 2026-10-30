@@ -4,6 +4,7 @@ import { QrCode } from '../../components/QrCode'
 import { AuthApiError, joinHouse, pairPoll, pairStart, setupAdmin, type PairStart } from '../../lib/auth'
 import { useTvMode } from '../../lib/tv'
 import './auth.css'
+import { Spinner } from '../../components/Spinner'
 
 const errText = (err: unknown) => (err instanceof AuthApiError ? err.message : 'No se pudo conectar. Probá de nuevo.')
 
@@ -65,7 +66,7 @@ function PairCode({ tv }: { tv: boolean }) {
       </div>
     )
   }
-  if (!pair) return <div className="spinner" />
+  if (!pair) return <Spinner />
   const link = `${location.origin}/vincular#${pair.code}`
   return (
     <div className="login-pair">

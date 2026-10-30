@@ -14,6 +14,7 @@ import { loadThemeFonts } from './lib/theme'
 import { syncTvAttr } from './lib/tv'
 import './styles.css'
 import './theme2.css'
+import './a11y.css'
 
 // App de Android TV: el botón Atrás del control llega por acá (en el navegador no hace nada).
 initNative()

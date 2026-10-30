@@ -653,6 +653,41 @@ npm run preview    # sirve dist/ en http://localhost:4173
   peers (`OFFER_OTHER_SOURCE_MS` en `StremioPrepare`). **Después**: ocultar anime en toda la app, Top 10 con pestañas.
   **No** (no volver a proponer): géneros ocultos por perfil, aviso de episodio nuevo, "marcar como visto" en Seguir viendo,
   tráiler de fondo en la carga. Menú de navegación (riel): se deja como está.
+- v0.34.0 hecha (rama `ccr-a630843d-khuv21`): **auditoría completa de la v0.33** (6 auditores: visual PC, visual celular/tablet,
+  TV con teclado, uso simulado con addon falso, accesibilidad, consistencia/rendimiento/textos; 125 hallazgos → 109
+  únicos; página de votos "Auditoría de Flix v0.33", colección `decisiones`). El usuario votó **Sí a 107** (106 + tv-09) y
+  **NO a `a11y-03` ("Saltar al contenido") y `a11y-05` (apagar atajos de una tecla): no volver a proponerlos**.
+  **Plan acordado en 4 versiones, un PR por vez** (se mergea uno antes de arrancar el siguiente): v0.34.0 funcional (45:
+  TV, reproductor, datos/Ajustes, accesibilidad), v0.35.0 visual/UI, celular/táctil y textos (47; listas del plan en
+  la sesión: `visual-pc-*`, `visual-movil-*`, `sistema-11/25/26/27/28`, `uso-11`), v0.36.0 rendimiento y orden interno (14:
+  `sistema-01/02/04/05/07/08/09/10/12/15/18/20`, `visual-pc-02`, `visual-movil-15`; en `sistema-10` el usuario eligió
+  **agregar respaldo `rgba()`** en unos 12 scrims críticos, no solo documentar el piso) y v0.37.0 **sacar el Tema 1 de
+  `styles.css`** (`sistema-06`, aparte y al final, para poder revertirlo). Hecho con 4 agentes en worktrees (A TV, B
+  reproductor, C datos, D accesibilidad); ojo: los worktrees nacen en una base vieja, hay que resetearlos al HEAD.
+  - **TV**: `StreamList` acepta `claimFocus`/`onClaimDone` (la ficha lo activa desde el botón principal de las series y
+    desde OK en un episodio en la TV; cualquier tecla o puntero antes lo suelta). `spatialNav.ts`: `data-nav-up/right/down/left`
+    en el elemento enfocado = selector del destino de esa flecha (`navOverride`). El índice de Ajustes no se abandona con ↑/↓.
+    `playsDirect(rules, last)` (`nextEpisode.ts`) es la única regla de "¿Reproducir reproduce o muestra fuentes?" (rótulo
+    "Elegir fuente"). Zona segura: `--tv-safe-x/y` (5vw/5vh) en `theme2.css` bajo `html[data-tv]`; `placeCard` acepta `bounds`;
+    `justRestored()` (`focusMemory.ts`) frena el tráiler flotante tras restaurar el foco. El riel de la TV **sigue sin zona
+    segura horizontal** (x=4; ensancharlo es un cambio de diseño aparte). `:has()` se usa dentro de `@supports`.
+  - **Reproductor**: la ref `viaMouse` de `Player.tsx` (clic/toque la prende; Tab y flechas la apagan) decide si el foco es "de
+    teclado": **no usar `:focus-visible` para eso** (Chromium lo prende con cualquier tecla). Con foco de teclado en `BAR_SELECTOR`
+    los controles no se ocultan (salvo en la TV). Espacio sobre un botón de la barra/menú/cartel lo activa (K pausa).
+    `endedBack` = "Volver" al terminar sin siguiente. `safeCueBottom`/`TV_SAFE_PCT` (`subtitlePrefs.ts`).
+  - **Datos**: `lib/settingsModel.ts` `cleanSettings(raw, base)` valida ajustes al importar, hidratar y bajar de la casa:
+    **un ajuste nuevo = una línea en `FIELDS`** (un test vigila que estén todos); `DEFAULT_SETTINGS` se exporta de `store.ts`.
+    `SectionBoundary` aísla cada sección de Ajustes. `components/UndoToast.tsx` (aviso "X · Deshacer"); `clearHistory`
+    (solo historial y diario del perfil activo, **no toca Mi lista**), `resetSettings` (conserva `KEPT_ON_RESET`: key de TMDB y
+    las marcas de la casa, para que no reaparezca el asistente en otros aparatos), `snapshotWatch`/`restoreWatchSnapshot`,
+    `removeAddon`/`restoreAddon`. `searchTerm()` cambia `/` y `\` por espacio en la búsqueda (el 404 con `%2F` se vio solo en
+    el Chromium del entorno de pruebas; con curl da 200). `installAddon` rechaza manifests sin nombre o sin recursos.
+  - **Accesibilidad**: `src/a11y.css` (se carga **al final** en `main.tsx`: `--control-edge`, `scroll-padding-bottom`,
+    placeholder, vistos atenuados y `@media (forced-colors: active)`; un estado de selección nuevo va también en su lista
+    `:is(...)`), `components/RouteAnnouncer.tsx` + `lib/routeAnnounce.ts` (foco al `<h1>` solo en PUSH, fuera de la TV;
+    `data-route-focus`), `components/Spinner.tsx` (role=status), `lib/posterAria.ts` (nombre del póster con el título primero;
+    el `title` vive en `.poster-title` y la portada fija lee `data-name`). axe marca `label-content-name-mismatch` en los
+    pósters por ese orden: es consecuencia aceptada. Sin lector de pantalla real, TV real ni Alto contraste real de Windows.
 - **Decisiones para la v0.17 (reemplazan el reparto del plan de abajo)**: addons y TorBox **iguales para todas las
   casas**, solo los cambia el admin (opción A). Ajustes generales (subtítulos, idiomas, autoplay, saltar intro, sin
   spoilers, reglas de fuentes) **iguales en toda la casa**; lo físico (modo TV, tamaño de la interfaz, protector,

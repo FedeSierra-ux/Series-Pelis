@@ -637,9 +637,16 @@ html[data-tv][data-theme='2'] .row-scroller {
 /* En la ficha el texto va a la izquierda: sombra más larga para que no quede sobre caras. En el
    celular sigue la sombra vertical de abajo (el texto va debajo de la imagen). */
 @media (min-width: 761px) {
+  /* a11y-07: la sinopsis llegaba a ~73 % del ancho, donde la sombra bajaba a 0,45: sobre fondos claros (chaqueta
+     amarilla de Breaking Bad, Forrest Gump…) quedaba a 1,7–3,5:1. La sombra se sostiene hasta el 62 % y el texto
+     se angosta (56ch): medido con los píxeles reales, el peor tramo de la sinopsis queda arriba de 4,5:1. */
   [data-theme='2'] .detail-hero .hero-shade {
-    background: linear-gradient(90deg, var(--bg) 0%, rgba(11, 11, 16, 0.92) 42%, rgba(11, 11, 16, 0.35) 78%, rgba(11, 11, 16, 0.1)),
+    background: linear-gradient(90deg, var(--bg) 0%, rgba(11, 11, 16, 0.92) 42%, rgba(11, 11, 16, 0.84) 62%, rgba(11, 11, 16, 0.35) 86%, rgba(11, 11, 16, 0.1)),
       linear-gradient(0deg, rgba(11, 11, 16, 0.85) 0%, rgba(11, 11, 16, 0) 40%);
+  }
+  [data-theme='2'] .detail-desc,
+  [data-theme='2'] .detail-tagline {
+    max-width: 56ch;
   }
 }
 [data-theme='2'] .detail-poster {

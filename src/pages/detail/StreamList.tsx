@@ -17,6 +17,7 @@ import { createRecentSet } from './autoPlayed'
 import { episodeNumber } from './episodes'
 import { pendingNames, safeGroups } from './safeData'
 import { streamOrder } from './streamOrder'
+import { Spinner } from '../../components/Spinner'
 
 export interface PlayState {
   stream: Stream
@@ -433,7 +434,7 @@ export function StreamList({ meta, video, nextVideoId, claimFocus, onClaimDone }
           <section key={g.addon.transportUrl} className="stream-group">
             <h3>
               {g.addon.manifest.name}
-              {g.loading && <span className="spinner" aria-label="Cargando" />}
+              {g.loading && <Spinner as="span" label="Cargando…" />}
             </h3>
             {g.error && <p className="muted small">{isOnline() ? `No respondió: ${g.error}` : 'Sin conexión: no se pueden buscar fuentes.'}</p>}
             {!g.loading && !g.error && g.streams.length === 0 && <p className="muted small">Sin resultados.</p>}

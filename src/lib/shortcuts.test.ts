@@ -31,6 +31,11 @@ describe('SHORTCUT_GROUPS', () => {
     expect(player.shortcuts.some((s) => /velocidad/i.test(s.description))).toBe(false)
   })
 
+  it('"En toda la app" dice que las flechas mueven el foco entre pósters (a11y-22)', () => {
+    const global = SHORTCUT_GROUPS.find((g) => g.id === 'global')!
+    expect(global.shortcuts.some((s) => s.keys.includes('Flechas') && /pósters/.test(s.description))).toBe(true)
+  })
+
   it('la ayuda lista todos los destinos de "G + letra"', () => {
     const global = SHORTCUT_GROUPS.find((g) => g.id === 'global')!
     for (const letter of Object.keys(GOTO_TARGETS)) {

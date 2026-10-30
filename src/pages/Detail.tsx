@@ -573,6 +573,7 @@ function DetailPage({ type, id, onRetry }: { type: string; id: string; onRetry: 
               started={seriesProgress}
               first={firstEp}
               tmdbId={tmdb?.id}
+              originalLang={tmdb?.original_language}
               hideSpoiler={(v) => hideEpisodeSpoiler({ metaId: id, videoId: v.id, season: v.season, episode: episodeNumber(v) })}
               watchBase={watchBase}
               inlineStreams={inlineStreams}
@@ -653,7 +654,8 @@ function DetailPage({ type, id, onRetry }: { type: string; id: string; onRetry: 
             <GenreChips type={type} tmdbGenres={tmdb?.genres} names={meta.genre ?? meta.genres} />
             {description && (
               <SpoilerText key={id} hidden={hideSynopsis}>
-                <ReadMore key={description} className="detail-desc" text={description} />
+                {/* Sin la de TMDB (español) queda la de Cinemeta, en inglés: el lector la pronuncia con su voz (a11y-16). */}
+                <ReadMore key={description} className="detail-desc" text={description} lang={tmdb?.overview ? undefined : 'en'} />
               </SpoilerText>
             )}
             {(meta.director?.length || (meta.cast?.length && !hasTmdbCast)) ? (

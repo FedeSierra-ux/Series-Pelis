@@ -221,6 +221,8 @@ export function trackFocus() {
   document.addEventListener('focusin', (e) => {
     const t = e.target
     if (!(t instanceof Element) || !t.closest(CONTAINER)) return
+    // El foco que lleva el aviso de pantalla nueva al título (`RouteAnnouncer`) no es un lugar al que volver.
+    if (t.hasAttribute('data-route-focus')) return
     lastFocus = describeElement(t)
     lastRow = rowKeyOf(t)
     lastNth = lastFocus ? Math.max(0, findAll(lastFocus).indexOf(t as HTMLElement)) : 0

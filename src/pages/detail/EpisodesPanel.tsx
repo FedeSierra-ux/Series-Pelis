@@ -50,6 +50,8 @@ interface Props {
   first?: Video
   /** Id de la serie en TMDB: con eso, la sinopsis de los episodios va en español (ficha-11). */
   tmdbId?: number
+  /** Idioma original de la serie (TMDB): los títulos de Cinemeta van en inglés salvo en las series en español (a11y-16). */
+  originalLang?: string
   hideSpoiler: (v: Video) => boolean
   watchBase: WatchBase
   /** Celular: las fuentes van dentro de la lista, debajo del episodio elegido. */
@@ -171,7 +173,7 @@ export function EpisodesPanel(p: Props) {
                     )}
                   </div>
                   <div className="episode-text">
-                    <span className="episode-title">
+                    <span className="episode-title" lang={p.originalLang === 'es' ? undefined : 'en'}>
                       {episodeNumber(v)}. {title}
                     </span>
                     <span className="muted small">
@@ -192,7 +194,9 @@ export function EpisodesPanel(p: Props) {
                           Sin spoilers · {touch ? 'tocalo' : 'elegilo'} para ver la sinopsis
                         </span>
                       ) : (
-                        <span className="episode-desc">{overview}</span>
+                        <span className="episode-desc" lang={overviews.has(v.id) ? undefined : 'en'}>
+                          {overview}
+                        </span>
                       ))}
                   </div>
                 </button>

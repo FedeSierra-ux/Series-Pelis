@@ -2,6 +2,7 @@ import { useEffect, useState, type FormEvent } from 'react'
 import { createHouse, deleteHouse, inviteLink, listHouses, renameHouse, revokeInvite, rotateInvite, useAuth, type HouseInfo } from '../../lib/auth'
 import { authErrorText, DeviceList } from './HouseSettings'
 import '../auth/auth.css'
+import { Spinner } from '../../components/Spinner'
 
 /** Enlace de invitación con "Copiar" (si el portapapeles no deja, el texto queda seleccionable). */
 function InviteBox({ code }: { code: string }) {
@@ -221,7 +222,7 @@ export function HousesSettings() {
         </p>
       )}
       {!houses ? (
-        !error && <div className="spinner" />
+        !error && <Spinner />
       ) : (
         <ul className="house-list">
           {houses.map((h) => (

@@ -12,6 +12,7 @@ import { useLogoTone } from '../lib/logoTone'
 import { addonsStore, settingsStore, useStore } from '../lib/store'
 import { cardBackdrop, useNearOnce, useTitleLogo } from '../lib/titleArt'
 import { portraitLogo } from './focusBillboardData'
+import { posterAriaLabel } from '../lib/posterAria'
 import { imdbFromTmdb, parseTmdbId } from '../lib/tmdb'
 import type { MetaPreview } from '../lib/types'
 import { ImdbRating, PosterRating } from './Rating'
@@ -86,23 +87,38 @@ export const PosterCard = memo(function PosterCard({ meta, progress, watched, su
     if (e.currentTarget.matches(':focus-visible') && !justRestored()) armTrailer({ anchor: e.currentTarget, meta, via: 'focus' })
   }
 
+  // a11y-10: el nombre accesible arranca con el título y dice qué es ("Carrie, película, 2026, IMDb 7,8, Estreno,
+  // Puesto 2"); lo visual (puesto, etiqueta, puntaje, año) queda `aria-hidden` para que no se lea dos veces.
+  const info = subtitle ?? (landscape ? landInfo(meta) : displayYear(meta))
+  const ariaLabel = posterAriaLabel({
+    name,
+    type: meta.type,
+    info,
+    rating: posterRating === 'off' ? undefined : meta.imdbRating,
+    // "Top 10" con el puesto dicho sería repetir.
+    label: posterLabel && !(posterLabel === 'top10' && rank !== undefined) ? LABEL_TEXT[posterLabel] : undefined,
+    watched,
+    rank,
+  })
+
   const card = (
     <Link
       to={to ?? `/detail/${meta.type}/${encodeURIComponent(meta.id)}`}
       ref={linkRef}
       data-focus-id={meta.id}
+      data-name={name}
       className={landscape ? 'poster-card is-landscape' : `poster-card shape-${meta.posterShape ?? 'poster'}`}
-      // Apaisada: el nombre está en el logo, así que no se repite abajo (sí para el lector de pantalla).
-      aria-label={landscape ? [rankText(rank), name, landInfo(meta)].filter(Boolean).join(', ') : undefined}
+      aria-label={ariaLabel}
       onMouseEnter={prefetch}
       onMouseMove={onMove}
       onMouseLeave={(e) => disarmTrailer(e.currentTarget, 'mouse')}
       onFocus={onFocus}
       onBlur={(e) => disarmTrailer(e.currentTarget, 'focus')}
       onTouchStart={prefetch}
-      title={name}
+      // Con `aria-label`, un `title` igual al nombre se leería de nuevo como descripción: en las de póster va en el
+      // renglón del título (el tooltip que sirve cuando el nombre queda cortado).
+      title={landscape ? name : undefined}
     >
-      {rank !== undefined && !landscape && <span className="sp-sr-only">{rankText(rank)}, </span>}
       <div className="poster-img" ref={imgRef}>
         {src && src !== brokenSrc ? (
           <img
@@ -139,10 +155,14 @@ export const PosterCard = memo(function PosterCard({ meta, progress, watched, su
             )}
           </div>
         )}
-        {posterLabel && <span className={`poster-label poster-label-${posterLabel}`}>{LABEL_TEXT[posterLabel]}</span>}
+        {posterLabel && (
+          <span className={`poster-label poster-label-${posterLabel}`} aria-hidden>
+            {LABEL_TEXT[posterLabel]}
+          </span>
+        )}
         {/* Arriba a la derecha: el puntaje y, debajo, el ✓ de "vista". */}
         {((posterRating === 'on' && meta.imdbRating) || watched) && (
-          <span className="poster-corner">
+          <span className="poster-corner" aria-hidden>
             {posterRating === 'on' && <PosterRating value={meta.imdbRating} />}
             {watched && <span className="badge-watched" title="Vista">✓</span>}
           </span>
@@ -153,10 +173,14 @@ export const PosterCard = memo(function PosterCard({ meta, progress, watched, su
           </div>
         )}
       </div>
-      <div className="poster-info">
-        {!landscape && <span className="poster-title">{name}</span>}
+      <div className="poster-info" aria-hidden>
+        {!landscape && (
+          <span className="poster-title" title={name}>
+            {name}
+          </span>
+        )}
         <span className="poster-sub">
-          {subtitle ?? (landscape ? landInfo(meta) : displayYear(meta))}
+          {info}
           {posterRating === 'below' && <ImdbRating value={meta.imdbRating} size="sm" />}
         </span>
       </div>
@@ -215,9 +239,4 @@ export function PosterSkeleton({ landscape }: { landscape?: boolean }) {
       </div>
     </div>
   )
-}
-
-/** "Puesto 3" para el nombre accesible de la fila Top 10. */
-function rankText(rank: number | undefined): string | undefined {
-  return rank === undefined ? undefined : `Puesto ${rank}`
 }

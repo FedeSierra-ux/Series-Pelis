@@ -40,6 +40,8 @@ export const SHORTCUT_GROUPS: ShortcutGroup[] = [
     shortcuts: [
       { keys: ['/'], description: 'Ir a Buscar' },
       { keys: ['?'], description: 'Mostrar u ocultar esta ayuda' },
+      // a11y-22: en PC las flechas también mueven el foco (no hace falta tabular los pósters de a uno).
+      { keys: ['Flechas'], description: 'Moverse entre pósters, filas y botones' },
       ...Object.entries(GOTO_TARGETS).map(([letter, t]) => ({
         keys: [`G ${letter.toUpperCase()}`],
         description: `Ir a ${t.label}`,

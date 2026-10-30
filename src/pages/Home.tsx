@@ -105,6 +105,7 @@ function Hero({ addon, catalog }: { addon: InstalledAddon; catalog: CatalogDef }
         facts={[displayYear({ id: meta.id, type, releaseInfo: meta.releaseInfo }) ?? '', type === 'movie' ? 'Película' : type === 'series' ? 'Serie' : ''].filter(Boolean)}
         genres={genres}
         overview={meta.description}
+        overviewLang="en"
         to={`/detail/${type}/${encodeURIComponent(meta.id)}`}
         list={{ inList: !!watchlist[meta.id], onToggle: () => toggleWatchlist({ ...meta, type }) }}
         play={{
