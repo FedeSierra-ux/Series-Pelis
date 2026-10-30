@@ -1,5 +1,21 @@
 # Changelog
 
+## [0.37.0] - 2026-10-30
+
+Última tanda de la auditoría completa de la v0.33: sacar el Tema 1 del CSS (`sistema-06`, con el CSS muerto de `sistema-14`).
+No cambia nada a la vista: se compararon los estilos computados de todos los elementos y capturas, antes y después de cada paso, en PC,
+celular, celular apaisado y TV (0 diferencias sin explicar). Va en tres commits separados para poder revertir cada paso por su cuenta.
+
+### Cambiado
+- **Se sacó el Tema 1 de `styles.css`**: 215 declaraciones que el Tema 2 pisaba siempre, el menú de la barra del Tema 1 (`.nav*`,
+  `.nav-sheet*`, `.nav-bottom`), cinco clases sin uso (`.stream-name`, `.stream-title`, `.year-kicker`, `.diary-badge`, `.diary-more`) y la
+  portada `full` (`.portada--full`, `.portada-cast` y sus ramas en `TmdbHero`/`HeroCarousel`/`HeroInfo`). Casi 400 declaraciones menos: el
+  CSS del build baja de 214 a 199 KB (de 39,0 a 36,9 KB comprimido).
+- **El Tema 2 ya no cuelga de `[data-theme='2']`**: sus selectores arrancan con `:root`, que pesa lo mismo (el bloque de variables con
+  `:root:root` y el de la TV con `html[data-tv]:root`), así que ninguna regla gana ni pierde contra otra.
+- **Un solo archivo base**: `theme2.css` se fundió dentro de `src/styles.css` (primero la base, después el bloque del Tema 2, misma
+  cascada). El CSS que genera el build queda igual byte a byte.
+
 ## [0.36.0] - 2026-10-30
 
 Tercera tanda de los arreglos de la auditoría completa de la v0.33: rendimiento de carga y orden interno (14

@@ -23,7 +23,7 @@ import { History } from './pages/History'
 import { Me } from './pages/Me'
 import { Home } from './pages/Home'
 import { Search } from './pages/Search'
-// El CSS de Ajustes queda en el CSS inicial aunque la página sea lazy: un CSS cargado después de a11y.css/theme2.css
+// El CSS de Ajustes queda en el CSS inicial aunque la página sea lazy: un CSS cargado después de styles.css/a11y.css
 // cambiaría la cascada (v0.36: en el celular corría 12 px la lista de secciones).
 import './pages/settings/settings-layout.css'
 import { ProfileGate } from './pages/profiles/ProfileGate'

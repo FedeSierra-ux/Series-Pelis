@@ -22,8 +22,6 @@ interface Props {
   slides: HeroSlide[]
   index: number
   onIndex: (index: number) => void
-  /** `compact`: banner redondeado de Inicio (carrusel estilo Disney+). `full`: Películas / Series, de borde a borde (Netflix). */
-  variant: 'compact' | 'full'
   /** Nombre del carrusel para los lectores de pantalla. */
   label: string
   /** Lo del título visible (logo, datos, sinopsis, botones). */
@@ -61,7 +59,7 @@ function useOnScreen(ref: React.RefObject<HTMLElement | null>) {
  * Con el control remoto los indicadores son botones comunes: ←/→ los recorre `spatialNav` y al
  * enfocar uno se muestra ese título; desde el primero, ← sigue hacia los botones, sin trabar nada.
  */
-export function HeroCarousel({ slides, index, onIndex, variant, label, children, row }: Props) {
+export function HeroCarousel({ slides, index, onIndex, label, children, row }: Props) {
   const ref = useRef<HTMLElement>(null)
   const onScreen = useOnScreen(ref)
   const reduced = useMediaQuery(REDUCED_MOTION_QUERY)
@@ -124,7 +122,7 @@ export function HeroCarousel({ slides, index, onIndex, variant, label, children,
   return (
     <section
       ref={ref}
-      className={`portada portada--${variant}${running ? '' : ' is-held'}${row ? ' has-row' : ''}`}
+      className={`portada portada--compact${running ? '' : ' is-held'}${row ? ' has-row' : ''}`}
       aria-roledescription="carrusel"
       aria-label={label}
       onPointerEnter={(e) => e.pointerType === 'mouse' && setHover(true)}
@@ -155,7 +153,7 @@ export function HeroCarousel({ slides, index, onIndex, variant, label, children,
         <div className="portada-shade" />
       </div>
 
-      {multi && variant === 'compact' && (
+      {multi && (
         // Solo con mouse (el teclado y el control remoto usan los indicadores): fuera del orden de foco.
         <>
           <button type="button" className="portada-arrow is-prev" tabIndex={-1} aria-label="Anterior" onMouseDown={noFocus} onClick={() => go(current - 1)}>

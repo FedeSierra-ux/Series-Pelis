@@ -1,7 +1,7 @@
 /* ---------- v0.10 Ajustes en dos columnas (V5) ----------
    Desde 1024 px: índice fijo a la izquierda + contenido a la derecha (ancho cómodo de lectura).
    Hasta 1023 px: cada sección es un <details> plegable con el título en el resumen.
-   Todo con variables para heredar el Tema 2 (los retoques de ese tema están en theme2.css). */
+   Todo con variables para heredar el Tema 2 (los retoques de ese tema están en el bloque del Tema 2 de styles.css). */
 
 .settings-layout {
   display: grid;
