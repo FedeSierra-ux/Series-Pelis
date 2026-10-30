@@ -10,16 +10,22 @@ import { hydrateStores } from './lib/store'
 import { initProfileWatch } from './lib/profileSwitch'
 import { watchProfileChange } from './lib/profiles'
 import { probeServerTmdb } from './lib/tmdb'
-import { loadThemeFonts } from './lib/theme'
+import { dropThemeMirror } from './lib/theme'
 import { syncTvAttr } from './lib/tv'
+// Fuentes empaquetadas, estáticas (v0.36, sistema-04): van en el CSS inicial y no en una cascada de `import()`.
+// Los mismos pesos que antes: DM Sans 400/500/700 y Sora 700/800.
+import '@fontsource/dm-sans/latin-400.css'
+import '@fontsource/dm-sans/latin-500.css'
+import '@fontsource/dm-sans/latin-700.css'
+import '@fontsource/sora/latin-700.css'
+import '@fontsource/sora/latin-800.css'
 import './styles.css'
 import './theme2.css'
 import './a11y.css'
 
 // App de Android TV: el botón Atrás del control llega por acá (en el navegador no hace nada).
 initNative()
-// Sora y DM Sans (van empaquetadas): se piden enseguida, en paralelo con IndexedDB.
-loadThemeFonts()
+dropThemeMirror()
 // ¿El sitio trae TMDB (secreto en Cloudflare)? En paralelo: no frena el arranque.
 void probeServerTmdb()
 // ¿El sitio acepta informes de errores (KV REPORTS en Cloudflare)? Igual: en paralelo.

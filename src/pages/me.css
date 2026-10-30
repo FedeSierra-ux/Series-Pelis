@@ -28,7 +28,7 @@
 .me-sub {
   margin: 4px 0 0;
   max-width: 70ch;
-  font-size: 1rem;
+  font-size: var(--fs-base);
 }
 
 /* Las filas (Seguir viendo, Mi lista…) van de borde a borde, como en Inicio (gana a `[data-theme='2'] .row`). */
@@ -91,7 +91,7 @@
 }
 .me-tile-text strong {
   font-family: var(--font-display, inherit);
-  font-size: 1rem;
+  font-size: var(--fs-base);
 }
 .me-tile-text span {
   color: var(--muted);
@@ -129,7 +129,7 @@
     gap: 14px 8px;
   }
   [data-theme='2'] .me-list > .grid .poster-title {
-    font-size: 0.85rem;
+    font-size: var(--fs-sm);
   }
   [data-theme='2'] .me-list > .grid .poster-sub {
     font-size: 0.75rem;
@@ -140,7 +140,7 @@
   [data-theme='2'] .me-list > .grid .user-stars.on-poster {
     top: calc(150cqw - 30px);
     left: 6px;
-    font-size: 0.72rem;
+    font-size: var(--fs-2xs);
     padding: 2px 7px;
   }
   [data-theme='2'] .me-list > .grid .poster-rating {
@@ -169,7 +169,7 @@
 }
 [data-theme='2'] .me-page .empty-state-title {
   grid-area: title;
-  font-size: 1.1rem;
+  font-size: var(--fs-lg);
   align-self: end;
 }
 [data-theme='2'] .me-page .empty-state-text {
@@ -293,7 +293,7 @@ html[data-tv] .me-tile {
   min-height: 92px;
 }
 html[data-tv] .me-tile-text strong {
-  font-size: 1.1rem;
+  font-size: var(--fs-lg);
 }
 
 @media (prefers-reduced-motion: reduce) {

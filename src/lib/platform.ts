@@ -1,6 +1,8 @@
 // Detección del sistema y de "estoy en una TV". Lógica pura (sin `window`) para poder probarla;
 // `currentPlatform()` junta los datos reales del navegador.
 
+import { matchesNow } from './media'
+
 export type Os = 'android' | 'ios' | 'mac' | 'windows' | 'linux' | 'other'
 
 export interface PlatformInfo {
@@ -50,13 +52,7 @@ export function detectPlatform(info: PlatformInfo): Platform {
   return { os, tv: uaTv || noPointer, fireTv }
 }
 
-const media = (q: string) => {
-  try {
-    return typeof matchMedia === 'function' && matchMedia(q).matches
-  } catch {
-    return false
-  }
-}
+const media = matchesNow
 
 let memo: Platform | undefined
 

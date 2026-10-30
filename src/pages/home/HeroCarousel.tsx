@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState, type AnimationEvent, type KeyboardEvent, type PointerEvent, type ReactNode } from 'react'
-import { useMediaQuery } from '../detail/useMediaQuery'
+import { useMediaQuery } from '../../lib/media'
+import { REDUCED_MOTION_QUERY } from '../../lib/mediaQueries'
 import { HeroIcon } from './HeroInfo'
 import './hero.css'
 
@@ -63,7 +64,7 @@ function useOnScreen(ref: React.RefObject<HTMLElement | null>) {
 export function HeroCarousel({ slides, index, onIndex, variant, label, children, row }: Props) {
   const ref = useRef<HTMLElement>(null)
   const onScreen = useOnScreen(ref)
-  const reduced = useMediaQuery('(prefers-reduced-motion: reduce)')
+  const reduced = useMediaQuery(REDUCED_MOTION_QUERY)
   const [hover, setHover] = useState(false)
   const [focusIn, setFocusIn] = useState(false)
   const [userPaused, setUserPaused] = useState(false)
@@ -75,11 +76,16 @@ export function HeroCarousel({ slides, index, onIndex, variant, label, children,
   const multi = count > 1
   const running = multi && !reduced && !userPaused && !hover && !focusIn && onScreen
 
-  // Fondos montados: los vistos y el siguiente (así ya está descargado cuando le toca).
-  const [seen, setSeen] = useState(() => new Set([0, 1]))
+  // Fondos montados: los vistos y el siguiente (así ya está descargado cuando le toca). v0.36 (sistema-02): el
+  // siguiente se monta recién cuando llegó el fondo del actual (o falló), así no compite con el LCP en redes lentas.
+  const [seen, setSeen] = useState(() => new Set([0]))
+  const [settled, setSettled] = useState<ReadonlySet<number>>(() => new Set())
   useEffect(() => {
-    setSeen((s) => (s.has(current) && s.has(next) ? s : new Set([...s, current, next])))
-  }, [current, next])
+    // Un slide sin fondo no tiene nada que esperar.
+    const want = settled.has(current) || !slides[current]?.backdrop ? [current, next] : [current]
+    setSeen((s) => (want.every((i) => s.has(i)) ? s : new Set([...s, ...want])))
+  }, [current, next, settled, slides])
+  const markSettled = (i: number) => setSettled((s) => (s.has(i) ? s : new Set([...s, i])))
 
   const go = (i: number) => onIndex(((i % count) + count) % count)
 
@@ -141,6 +147,8 @@ export function HeroCarousel({ slides, index, onIndex, variant, label, children,
               decoding="async"
               draggable={false}
               fetchPriority={i === current ? 'high' : 'low'}
+              onLoad={() => markSettled(i)}
+              onError={() => markSettled(i)}
             />
           ) : null,
         )}

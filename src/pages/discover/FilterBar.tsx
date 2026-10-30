@@ -19,6 +19,8 @@ import {
   type SortKey,
 } from '../../lib/discoverFilters'
 import { catalogLabel, genreLabel } from '../../lib/i18n'
+import { useMediaQuery } from '../../lib/media'
+import { NARROW_QUERY } from '../../lib/mediaQueries'
 import type { CatalogDef, InstalledAddon } from '../../lib/types'
 import { FilterIcon } from './FilterIcons'
 import { FilterPanel } from './FilterPanel'
@@ -52,21 +54,6 @@ interface Props {
 }
 
 const TMDB_VALUE = 'tmdb'
-/** Mismo corte que `filters.css`: hasta acá "Ordenar" se va de la barra al panel. */
-const NARROW = '(max-width: 760px)'
-
-function useNarrow(): boolean {
-  const [narrow, setNarrow] = useState(() => typeof matchMedia === 'function' && matchMedia(NARROW).matches)
-  useEffect(() => {
-    if (typeof matchMedia !== 'function') return
-    const mq = matchMedia(NARROW)
-    const on = () => setNarrow(mq.matches)
-    on()
-    mq.addEventListener('change', on)
-    return () => mq.removeEventListener('change', on)
-  }, [])
-  return narrow
-}
 const catalogValue = (o: CatalogOption) => o.rowKey ?? `${o.addon.transportUrl}|${o.catalog.id}`
 
 export function FilterBar({ type, filters, options, selected, useTmdb, tmdbOn, keywordLabel, onChange }: Props) {
@@ -84,7 +71,8 @@ export function FilterBar({ type, filters, options, selected, useTmdb, tmdbOn, k
   const active = panelFilters(effective)
   // En PC el botón "Ordenar" ya muestra el orden elegido (resaltado): no se repite como chip ni cuenta
   // en "Filtros". En el celular ese botón no está, así que ahí sí va el chip.
-  const narrow = useNarrow()
+  // Mismo corte que `filters.css`: hasta acá "Ordenar" se va de la barra al panel.
+  const narrow = useMediaQuery(NARROW_QUERY)
   const chips = narrow ? active : active.filter((k) => k !== 'sort')
   const clearChips = () => (narrow ? clearPanel(filters) : { ...clearPanel(filters), sort: filters.sort })
   const ratingSource = useTmdb ? 'TMDB' : 'IMDb'

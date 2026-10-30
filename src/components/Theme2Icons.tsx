@@ -1,3 +1,5 @@
+import { GLYPHS, IconSvg } from './Icon'
+
 // Íconos de línea (mismo trazo que el boceto del Tema 2). Heredan el color del texto, así que
 // sirven también en el menú del Tema 1 y en los estados vacíos.
 
@@ -64,7 +66,7 @@ const PATHS = {
       <path d="M8 5H5a3 3 0 0 0 3 5M16 5h3a3 3 0 0 1-3 5M12 13v4M8 21h8M9 21l1-4h4l1 4" />
     </>
   ),
-  close: <path d="M6 6l12 12M18 6L6 18" />,
+  close: GLYPHS.close,
   // Logros de Metas (visual-pc-14): en vez de emojis, que cambian de aspecto según el sistema.
   popcorn: (
     <>
@@ -134,20 +136,5 @@ const PATHS = {
 export type Theme2IconName = keyof typeof PATHS
 
 export function Theme2Icon({ name, size = 22 }: { name: Theme2IconName; size?: number }) {
-  return (
-    <svg
-      width={size}
-      height={size}
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth={2}
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      aria-hidden="true"
-      focusable="false"
-    >
-      {PATHS[name]}
-    </svg>
-  )
+  return <IconSvg size={size}>{PATHS[name]}</IconSvg>
 }

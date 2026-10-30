@@ -3,7 +3,7 @@
   position: fixed;
   left: 50%;
   bottom: max(20px, env(safe-area-inset-bottom, 0px));
-  z-index: 70;
+  z-index: var(--z-notice);
   display: flex;
   align-items: center;
   flex-wrap: wrap;
@@ -12,15 +12,15 @@
   max-width: min(560px, calc(100vw - 32px));
   padding: 14px 18px;
   border: 1px solid var(--line);
-  border-radius: var(--radius-lg, 20px);
+  border-radius: var(--radius-lg);
   background: var(--bg-2);
   color: var(--text);
   box-shadow: 0 12px 40px rgba(0, 0, 0, 0.45);
   transform: translateX(-50%);
-  animation: update-toast-in 0.25s ease-out;
+  animation: toast-in 0.25s ease-out;
 }
 .update-toast-text {
-  font-weight: 600;
+  font-weight: 700;
 }
 .update-toast-actions {
   display: flex;
@@ -36,16 +36,6 @@
 @media (pointer: coarse) and (max-height: 500px) {
   html:not([data-tv]) .update-toast {
     bottom: calc(12px + env(safe-area-inset-bottom, 0px));
-  }
-}
-@keyframes update-toast-in {
-  from {
-    opacity: 0;
-    transform: translate(-50%, 12px);
-  }
-  to {
-    opacity: 1;
-    transform: translate(-50%, 0);
   }
 }
 @media (prefers-reduced-motion: reduce) {

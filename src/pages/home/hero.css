@@ -6,6 +6,7 @@
 
 .portada {
   --portada-ink: var(--bg);
+  --portada-ink-rgb: var(--bg-rgb); /* el mismo color como r, g, b (respaldo de color-mix) */
   --portada-logo-h: clamp(64px, 12vh, 130px);
   --portada-soft: var(--text-soft, var(--text));
   position: relative;
@@ -51,6 +52,13 @@
     linear-gradient(90deg, var(--portada-ink) 0%, color-mix(in srgb, var(--portada-ink) 78%, transparent) 26%, color-mix(in srgb, var(--portada-ink) 20%, transparent) 58%, transparent 78%),
     linear-gradient(0deg, color-mix(in srgb, var(--portada-ink) 70%, transparent) 0%, transparent 38%);
 }
+@supports not (color: color-mix(in srgb, red 50%, transparent)) {
+  .portada .portada-shade {
+    background:
+      linear-gradient(90deg, var(--portada-ink) 0%, rgba(var(--portada-ink-rgb), 0.78) 26%, rgba(var(--portada-ink-rgb), 0.2) 58%, transparent 78%),
+      linear-gradient(0deg, rgba(var(--portada-ink-rgb), 0.7) 0%, transparent 38%);
+  }
+}
 
 /* ---- Cuerpo: texto a la izquierda, indicadores a la derecha ---- */
 
@@ -86,10 +94,15 @@
   border-radius: 999px;
   background: color-mix(in srgb, var(--accent) 22%, transparent);
   color: var(--accent);
-  font-size: 0.72rem;
+  font-size: var(--fs-2xs);
   font-weight: 700;
   letter-spacing: 0.08em;
   text-transform: uppercase;
+}
+@supports not (color: color-mix(in srgb, red 50%, transparent)) {
+  .portada .portada-eyebrow {
+    background: rgba(var(--accent-rgb), 0.22);
+  }
 }
 
 /* Lugar fijo para el título: el logo llega después que el texto y así no empuja nada. */
@@ -104,6 +117,11 @@
   line-height: 1.05;
   letter-spacing: -0.02em;
   text-shadow: 0 2px 18px color-mix(in srgb, var(--bg) 70%, transparent);
+}
+@supports not (color: color-mix(in srgb, red 50%, transparent)) {
+  .portada .portada-title {
+    text-shadow: 0 2px 18px rgba(var(--bg-rgb), 0.7);
+  }
 }
 .portada .portada-title > span {
   display: -webkit-box;
@@ -138,7 +156,7 @@
   align-items: center;
   margin: 0;
   font-size: 0.95rem;
-  font-weight: 600;
+  font-weight: 700;
   color: var(--portada-soft);
 }
 .portada .portada-facts > span + span::before {
@@ -160,8 +178,8 @@
 .portada .portada-genres {
   margin: -6px 0 0;
   color: var(--muted);
-  font-size: 0.9rem;
-  font-weight: 600;
+  font-size: var(--fs-md);
+  font-weight: 700;
 }
 
 .portada .portada-desc {
@@ -175,6 +193,11 @@
   -webkit-line-clamp: 3;
   -webkit-box-orient: vertical;
   overflow: hidden;
+}
+@supports not (color: color-mix(in srgb, red 50%, transparent)) {
+  .portada .portada-desc {
+    text-shadow: 0 1px 3px rgba(var(--bg-rgb), 0.6);
+  }
 }
 
 /* Reparto: fotos redondas con el nombre al lado. */
@@ -191,7 +214,7 @@
   align-items: center;
   gap: 8px;
   font-size: 0.88rem;
-  font-weight: 600;
+  font-weight: 700;
   color: var(--portada-soft);
 }
 .portada .portada-cast img {
@@ -218,9 +241,9 @@
   height: 50px;
   padding: 0 24px;
   border: 0;
-  border-radius: var(--radius-sm, 10px);
+  border-radius: var(--radius-sm);
   font: inherit;
-  font-size: 1rem;
+  font-size: var(--fs-base);
   font-weight: 700;
   white-space: nowrap;
   text-decoration: none;
@@ -240,8 +263,18 @@
   .portada .portada-btn.is-play:hover {
     background: color-mix(in srgb, var(--text) 82%, transparent);
   }
+  @supports not (color: color-mix(in srgb, red 50%, transparent)) {
+    .portada .portada-btn.is-play:hover {
+      background: rgba(var(--text-rgb), 0.82);
+    }
+  }
   .portada .portada-btn.is-ghost:hover {
     background: color-mix(in srgb, var(--text) 32%, transparent);
+  }
+  @supports not (color: color-mix(in srgb, red 50%, transparent)) {
+    .portada .portada-btn.is-ghost:hover {
+      background: rgba(var(--text-rgb), 0.32);
+    }
   }
 }
 .portada .portada-btn.is-ghost {
@@ -249,8 +282,18 @@
   color: var(--text);
   backdrop-filter: blur(12px);
 }
+@supports not (color: color-mix(in srgb, red 50%, transparent)) {
+  .portada .portada-btn.is-ghost {
+    background: rgba(var(--text-rgb), 0.2);
+  }
+}
 .portada .portada-btn.is-ghost:focus-visible {
   background: color-mix(in srgb, var(--text) 32%, transparent);
+}
+@supports not (color: color-mix(in srgb, red 50%, transparent)) {
+  .portada .portada-btn.is-ghost:focus-visible {
+    background: rgba(var(--text-rgb), 0.32);
+  }
 }
 .portada .portada-btn.is-ghost.is-on svg {
   color: var(--accent);
@@ -263,7 +306,7 @@
   transform: scale(0.97);
 }
 .portada .portada-btn:focus-visible {
-  outline: var(--focus-ring, 3px solid var(--accent));
+  outline: var(--focus-ring);
   outline-offset: 3px;
 }
 
@@ -283,6 +326,11 @@
   border-radius: 999px;
   background: color-mix(in srgb, var(--bg) 40%, transparent);
   backdrop-filter: blur(8px);
+}
+@supports not (color: color-mix(in srgb, red 50%, transparent)) {
+  .portada .portada-dots {
+    background: rgba(var(--bg-rgb), 0.4);
+  }
 }
 /* 24 px de ancho y alto para tocarlos bien (WCAG 2.5.8); lo que se ve es la rayita de adentro. */
 .portada .portada-dot {
@@ -306,9 +354,19 @@
   background: color-mix(in srgb, var(--text) 38%, transparent);
   transition: width 0.35s ease, background 0.2s;
 }
+@supports not (color: color-mix(in srgb, red 50%, transparent)) {
+  .portada .portada-dot-track {
+    background: rgba(var(--text-rgb), 0.38);
+  }
+}
 @media (hover: hover) {
   .portada .portada-dot:hover .portada-dot-track {
     background: color-mix(in srgb, var(--text) 65%, transparent);
+  }
+  @supports not (color: color-mix(in srgb, red 50%, transparent)) {
+    .portada .portada-dot:hover .portada-dot-track {
+      background: rgba(var(--text-rgb), 0.65);
+    }
   }
 }
 .portada .portada-dot.is-active .portada-dot-track {
@@ -334,7 +392,7 @@
   }
 }
 .portada .portada-dot:focus-visible {
-  outline: 3px solid var(--accent);
+  outline: var(--focus-ring-sm);
   outline-offset: 0;
 }
 .portada .portada-pause {
@@ -349,13 +407,23 @@
   color: var(--text);
   cursor: pointer;
 }
+@supports not (color: color-mix(in srgb, red 50%, transparent)) {
+  .portada .portada-pause {
+    background: rgba(var(--bg-rgb), 0.45);
+  }
+}
 @media (hover: hover) {
   .portada .portada-pause:hover {
     background: color-mix(in srgb, var(--bg) 70%, transparent);
   }
+  @supports not (color: color-mix(in srgb, red 50%, transparent)) {
+    .portada .portada-pause:hover {
+      background: rgba(var(--bg-rgb), 0.7);
+    }
+  }
 }
 .portada .portada-pause:focus-visible {
-  outline: 3px solid var(--accent);
+  outline: var(--focus-ring-sm);
   outline-offset: 2px;
 }
 
@@ -379,9 +447,19 @@
   cursor: pointer;
   animation: portada-arrow-in 0.2s ease both;
 }
+@supports not (color: color-mix(in srgb, red 50%, transparent)) {
+  .portada .portada-arrow {
+    background: rgba(var(--bg-rgb), 0.55);
+  }
+}
 @media (hover: hover) {
   .portada .portada-arrow:hover {
     background: color-mix(in srgb, var(--bg) 80%, transparent);
+  }
+  @supports not (color: color-mix(in srgb, red 50%, transparent)) {
+    .portada .portada-arrow:hover {
+      background: rgba(var(--bg-rgb), 0.8);
+    }
   }
 }
 .portada .portada-arrow.is-prev {
@@ -408,9 +486,14 @@
   --portada-logo-h: clamp(56px, 10vh, 108px);
   margin: 22px var(--gutter) 8px;
   min-height: clamp(390px, calc(48vh + 70px), 550px);
-  border-radius: var(--radius-lg, var(--radius));
+  border-radius: var(--radius-lg);
   overflow: hidden;
   box-shadow: 0 18px 40px -24px color-mix(in srgb, var(--bg) 90%, transparent);
+}
+@supports not (color: color-mix(in srgb, red 50%, transparent)) {
+  .portada.portada--compact {
+    box-shadow: 0 18px 40px -24px rgba(var(--bg-rgb), 0.9);
+  }
 }
 .portada--compact .portada-main {
   padding: clamp(24px, 3vw, 40px) clamp(24px, 3.2vw, 48px) clamp(22px, 3vw, 36px);
@@ -450,6 +533,14 @@
     linear-gradient(90deg, var(--portada-ink) 0%, color-mix(in srgb, var(--portada-ink) 80%, transparent) 24%, color-mix(in srgb, var(--portada-ink) 25%, transparent) 52%, transparent 72%),
     linear-gradient(0deg, var(--bg) 0%, color-mix(in srgb, var(--bg) 85%, transparent) 14%, color-mix(in srgb, var(--bg) 30%, transparent) 34%, transparent 52%),
     linear-gradient(180deg, color-mix(in srgb, var(--bg) 55%, transparent) 0%, transparent 18%);
+}
+@supports not (color: color-mix(in srgb, red 50%, transparent)) {
+  .portada--full .portada-shade {
+    background:
+      linear-gradient(90deg, var(--portada-ink) 0%, rgba(var(--portada-ink-rgb), 0.8) 24%, rgba(var(--portada-ink-rgb), 0.25) 52%, transparent 72%),
+      linear-gradient(0deg, var(--bg) 0%, rgba(var(--bg-rgb), 0.85) 14%, rgba(var(--bg-rgb), 0.3) 34%, transparent 52%),
+      linear-gradient(180deg, rgba(var(--bg-rgb), 0.55) 0%, transparent 18%);
+  }
 }
 /* La parte de arriba tiene su alto (la imagen respira sobre el logo) y el Top 10 se suma abajo. */
 .portada--full .portada-main {
@@ -508,6 +599,11 @@
   .portada--full .portada-shade {
     background: linear-gradient(180deg, transparent 0%, transparent 42%, color-mix(in srgb, var(--portada-ink) 70%, transparent) 76%, var(--portada-ink) 100%);
   }
+  @supports not (color: color-mix(in srgb, red 50%, transparent)) {
+    .portada .portada-shade, .portada--full .portada-shade {
+      background: linear-gradient(180deg, transparent 0%, transparent 42%, rgba(var(--portada-ink-rgb), 0.7) 76%, var(--portada-ink) 100%);
+    }
+  }
   .portada .portada-main,
   .portada--compact .portada-main,
   .portada--full .portada-main {
@@ -530,7 +626,7 @@
     max-width: 78%;
   }
   .portada .portada-facts {
-    font-size: 0.85rem;
+    font-size: var(--fs-sm);
   }
   .portada .portada-genres {
     font-size: 0.82rem;
@@ -540,7 +636,7 @@
     -webkit-line-clamp: 3;
   }
   .portada .portada-cast li {
-    font-size: 0.8rem;
+    font-size: var(--fs-xs);
   }
   .portada .portada-cast img {
     width: 26px;
@@ -591,6 +687,7 @@
   /* Inicio: tarjeta redondeada; el texto va sobre el color de la tarjeta. */
   .portada.portada--compact {
     --portada-ink: var(--bg-2);
+    --portada-ink-rgb: var(--bg-2-rgb);
     --portada-img-h: 64cqw;
     margin: 6px 12px 6px;
     min-height: 0;
@@ -631,7 +728,7 @@
   }
   html:not([data-tv]) .portada--compact .portada-desc {
     -webkit-line-clamp: 2;
-    font-size: 0.9rem;
+    font-size: var(--fs-md);
   }
   html:not([data-tv]) .portada--compact .portada-cast {
     display: none;
@@ -669,7 +766,7 @@ html[data-tv] .portada .portada-arrow {
 html[data-tv] .portada .portada-btn {
   height: 62px;
   padding: 0 34px;
-  font-size: 1.2rem;
+  font-size: var(--fs-xl);
 }
 html[data-tv] .portada .portada-btn.is-play {
   padding: 0 40px 0 30px;
@@ -680,11 +777,16 @@ html[data-tv] .portada--full .portada-content {
   max-width: min(900px, 58%);
 }
 html[data-tv] .portada .portada-btn:focus-visible {
-  outline-offset: 4px;
+  outline-offset: var(--focus-offset);
   box-shadow: 0 10px 30px -8px color-mix(in srgb, var(--bg) 80%, transparent);
 }
+@supports not (color: color-mix(in srgb, red 50%, transparent)) {
+  html[data-tv] .portada .portada-btn:focus-visible {
+    box-shadow: 0 10px 30px -8px rgba(var(--bg-rgb), 0.8);
+  }
+}
 html[data-tv] .portada .portada-facts {
-  font-size: 1.1rem;
+  font-size: var(--fs-lg);
 }
 html[data-tv] .portada .portada-genres {
   font-size: 1.05rem;
@@ -693,7 +795,7 @@ html[data-tv] .portada .portada-desc {
   font-size: 1.15rem;
 }
 html[data-tv] .portada .portada-cast li {
-  font-size: 1rem;
+  font-size: var(--fs-base);
 }
 html[data-tv] .portada .portada-cast img {
   width: 42px;

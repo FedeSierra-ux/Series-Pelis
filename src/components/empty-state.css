@@ -8,7 +8,7 @@
   max-width: 440px;
   margin: 32px auto;
   padding: 36px 24px 32px;
-  border-radius: var(--radius-lg, 20px);
+  border-radius: var(--radius-lg);
   background: var(--bg-2);
   text-align: center;
 }
@@ -22,6 +22,11 @@
   background: color-mix(in srgb, var(--accent) 18%, transparent);
   color: var(--accent);
 }
+@supports not (color: color-mix(in srgb, red 50%, transparent)) {
+  .empty-state-icon {
+    background: rgba(var(--accent-rgb), 0.18);
+  }
+}
 .empty-state-title {
   /* Un texto largo sin espacios (el eco de la búsqueda) no se sale de la tarjeta. */
   overflow-wrap: anywhere;
@@ -33,7 +38,7 @@
 .empty-state-text {
   overflow-wrap: anywhere;
   margin: 0;
-  font-size: 1rem;
+  font-size: var(--fs-base);
   line-height: 1.5;
   color: var(--muted);
 }

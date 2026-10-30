@@ -13,11 +13,51 @@
   --imdb: #f5c518;
   --ok: #22c55e;
   --danger: #f87171;
+  --danger-rgb: 248, 113, 113; /* respaldo de color-mix(), ver theme2.css */
   --radius-sm: 8px;
   --radius: 12px;
   --gutter: clamp(16px, 4vw, 56px);
   --poster-w: clamp(120px, 13vw, 190px);
   --nav-h: 64px;
+  /* Escala de capas (sistema-08). De abajo para arriba; cada token es un nivel y los valores internos
+     de un componente (1 a 6, o -1 para el fondo) se escriben a mano porque solo compiten dentro de él.
+     Los números son los de siempre: lo único que cambió es el aviso de sin conexión (15 → 19, para que
+     la portada fija no lo tape) y el modal del tráiler (1000 → 990, así nunca empata con el protector).
+     El protector va al tope y no tapa un modal porque cada modal lleva `data-no-screensaver`. */
+  --z-bar: 16; /* barra de filtros pegajosa */
+  --z-hero: 18; /* portada fija de Películas/Series */
+  --z-banner: 19; /* aviso de sin conexión: sobre la portada, bajo el riel */
+  --z-rail: 20; /* riel lateral / cabecera del celular y bloqueo del reproductor */
+  --z-nav: 30; /* pestañas, barra inferior y globitos de la ficha */
+  --z-toast: 40; /* aviso "Deshacer" */
+  --z-panel: 50; /* panel de filtros */
+  --z-layer: 60; /* tráiler al pasar por un póster, selector de perfil y hoja "Más" del celular */
+  --z-notice: 70; /* aviso de actualización */
+  --z-player: 100;
+  --z-modal: 200; /* asistente inicial */
+  --z-hints: 205; /* guía de la TV */
+  --z-help: 210; /* ayuda de atajos */
+  --z-menu: 900; /* menú "Más" de la ficha */
+  --z-profiles: 950; /* "¿Quién está mirando?" */
+  --z-trailer: 990; /* tráiler en pantalla grande */
+  --z-system: 1000; /* protector de pantalla */
+  /* Tamaños de letra (sistema-15): los 8 más usados, con su valor de siempre. Quedan escritos a mano 0,78 / 0,82 / 0,92 /
+     0,95 / 1,05 rem y los clamp(): son casi iguales a estos, pero unificarlos se vería, es una decisión de diseño aparte.
+     El piso de la TV (final de theme2.css) y a11y.css usan valores propios a propósito. */
+  --fs-2xs: 0.72rem;
+  --fs-xs: 0.8rem;
+  --fs-sm: 0.85rem;
+  --fs-md: 0.9rem;
+  --fs-base: 1rem;
+  --fs-lg: 1.1rem;
+  --fs-xl: 1.2rem;
+  --fs-2xl: 1.5rem;
+  /* Sombras que se repetían: 1 = menús y poster al pasar el mouse, 2 = póster grande de la ficha y menú del reproductor,
+     3 = ventanas (asistente, atajos), lift = póster o tarjeta enfocados. */
+  --shadow-1: 0 10px 30px rgba(0, 0, 0, 0.6);
+  --shadow-2: 0 20px 50px rgba(0, 0, 0, 0.6);
+  --shadow-3: 0 30px 80px rgba(0, 0, 0, 0.5);
+  --shadow-lift: 0 20px 44px rgba(0, 0, 0, 0.75);
   color-scheme: dark;
 }
 
@@ -105,7 +145,7 @@ code {
   background: rgba(255, 255, 255, 0.08);
   color: var(--text);
   font: inherit;
-  font-weight: 600;
+  font-weight: 700;
   cursor: pointer;
   white-space: nowrap;
   transition: background 0.15s, transform 0.15s;
@@ -146,7 +186,7 @@ code {
 }
 .btn-small {
   padding: 6px 12px;
-  font-size: 0.85rem;
+  font-size: var(--fs-sm);
 }
 .danger {
   color: var(--danger);
@@ -210,18 +250,18 @@ select option {
 [data-theme='2'] .choice-label {
   display: block;
   margin: 14px 0 8px;
-  font-size: 0.85rem;
-  font-weight: 600;
+  font-size: var(--fs-sm);
+  font-weight: 700;
   color: var(--muted);
 }
 .chip {
-  font-size: 0.8rem;
+  font-size: var(--fs-xs);
   padding: 3px 10px;
   border-radius: 999px;
   background: rgba(255, 255, 255, 0.1);
 }
 .chip.small {
-  font-size: 0.72rem;
+  font-size: var(--fs-2xs);
   padding: 2px 8px;
 }
 
@@ -235,7 +275,7 @@ select option {
 .imdb b {
   background: var(--imdb);
   color: #000;
-  font-weight: 900;
+  font-weight: 800;
   border-radius: 4px;
   padding: 1px 5px;
   font-size: 0.75em;
@@ -255,13 +295,13 @@ select option {
 .nav {
   position: sticky;
   top: 0;
-  z-index: 20;
+  z-index: var(--z-rail);
   height: var(--nav-h);
   display: flex;
   align-items: center;
   gap: 24px;
   padding: 0 var(--gutter);
-  background: linear-gradient(to bottom, rgba(11, 11, 16, 0.96), rgba(11, 11, 16, 0.8));
+  background: linear-gradient(to bottom, rgba(var(--bg-rgb), 0.96), rgba(var(--bg-rgb), 0.8));
   backdrop-filter: blur(12px);
   border-bottom: 1px solid rgba(255, 255, 255, 0.04);
 }
@@ -270,7 +310,7 @@ select option {
   align-items: center;
   gap: 10px;
   font-weight: 800;
-  font-size: 1.1rem;
+  font-size: var(--fs-lg);
 }
 .nav-links {
   display: flex;
@@ -285,7 +325,7 @@ select option {
   padding: 8px 14px;
   border-radius: 999px;
   color: var(--muted);
-  font-weight: 600;
+  font-weight: 700;
   white-space: nowrap;
 }
 .nav-link:focus-visible {
@@ -303,7 +343,7 @@ select option {
   background: rgba(255, 255, 255, 0.12);
 }
 .nav-icon {
-  font-size: 1rem;
+  font-size: var(--fs-base);
 }
 
 .main {
@@ -398,8 +438,8 @@ select option {
 .hero-shade {
   position: absolute;
   inset: 0;
-  background: linear-gradient(to top, var(--bg) 2%, rgba(11, 11, 16, 0.55) 45%, rgba(11, 11, 16, 0.15)),
-    linear-gradient(to right, rgba(11, 11, 16, 0.85), transparent 65%);
+  background: linear-gradient(to top, var(--bg) 2%, rgba(var(--bg-rgb), 0.55) 45%, rgba(var(--bg-rgb), 0.15)),
+    linear-gradient(to right, rgba(var(--bg-rgb), 0.85), transparent 65%);
 }
 .hero-meta {
   display: flex;
@@ -433,7 +473,7 @@ select option {
 }
 .row-more {
   color: var(--muted);
-  font-size: 0.9rem;
+  font-size: var(--fs-md);
   padding: 4px 8px;
 }
 .row-more:focus-visible {
@@ -450,7 +490,7 @@ select option {
   border: 1px dashed var(--line);
   border-radius: var(--radius);
   color: var(--muted);
-  font-size: 0.9rem;
+  font-size: var(--fs-md);
 }
 .row-scroller {
   display: flex;
@@ -475,7 +515,7 @@ select option {
   flex-direction: column;
   gap: 8px;
   border-radius: var(--radius);
-  outline-offset: 4px;
+  outline-offset: var(--focus-offset);
   /* No renderizamos las tarjetas fuera de pantalla: scroll más fluido en TVs lentas. */
   content-visibility: auto;
   contain-intrinsic-size: var(--poster-w) calc(var(--poster-w) * 1.5 + 44px);
@@ -501,12 +541,12 @@ select option {
 }
 .poster-card:focus-visible .poster-img {
   transform: scale(1.05);
-  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.6);
+  box-shadow: var(--shadow-1);
 }
 @media (hover: hover) {
   .poster-card:hover .poster-img {
     transform: scale(1.05);
-    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.6);
+    box-shadow: var(--shadow-1);
   }
 }
 .poster-card:focus-visible {
@@ -548,8 +588,8 @@ select option {
   z-index: 1;
 }
 .poster-title {
-  font-weight: 600;
-  font-size: 0.9rem;
+  font-weight: 700;
+  font-size: var(--fs-md);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -569,8 +609,8 @@ select option {
   border-radius: 50%;
   background: var(--ok);
   color: #000;
-  font-weight: 900;
-  font-size: 0.8rem;
+  font-weight: 800;
+  font-size: var(--fs-xs);
 }
 .progress-bar {
   position: absolute;
@@ -632,7 +672,7 @@ select option {
   aspect-ratio: 2 / 3;
   object-fit: cover;
   border-radius: var(--radius);
-  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.6);
+  box-shadow: var(--shadow-2);
   flex-shrink: 0;
 }
 .detail-info {
@@ -643,7 +683,7 @@ select option {
 }
 .detail-info h1 {
   font-size: clamp(1.7rem, 4vw, 3rem);
-  font-weight: 900;
+  font-weight: 800;
 }
 .detail-logo {
   max-width: min(420px, 80%);
@@ -661,8 +701,8 @@ select option {
 /* En la ficha el texto es largo: la sombra de la izquierda llega más lejos para que no se lea
    sobre caras o zonas claras del fondo. */
 .detail-hero .hero-shade {
-  background: linear-gradient(to top, var(--bg) 2%, rgba(11, 11, 16, 0.4) 40%, rgba(11, 11, 16, 0.1)),
-    linear-gradient(to right, rgba(11, 11, 16, 0.94) 0%, rgba(11, 11, 16, 0.86) 45%, rgba(11, 11, 16, 0.3) 78%, transparent);
+  background: linear-gradient(to top, var(--bg) 2%, rgba(var(--bg-rgb), 0.4) 40%, rgba(var(--bg-rgb), 0.1)),
+    linear-gradient(to right, rgba(var(--bg-rgb), 0.94) 0%, rgba(var(--bg-rgb), 0.86) 45%, rgba(var(--bg-rgb), 0.3) 78%, transparent);
 }
 .detail-info .credits {
   max-width: 62ch;
@@ -685,7 +725,7 @@ select option {
   grid-template-columns: auto 1fr;
   gap: 4px 12px;
   margin: 0;
-  font-size: 0.9rem;
+  font-size: var(--fs-md);
 }
 .credits dt {
   color: var(--muted);
@@ -700,7 +740,7 @@ select option {
 }
 .movie-streams h2,
 .episode-streams h2 {
-  font-size: 1.2rem;
+  font-size: var(--fs-xl);
   margin-bottom: 12px;
 }
 .season-tabs {
@@ -773,10 +813,10 @@ select option {
   min-width: 0;
 }
 .episode-title {
-  font-weight: 600;
+  font-weight: 700;
 }
 .episode-desc {
-  font-size: 0.85rem;
+  font-size: var(--fs-sm);
   color: var(--muted);
   display: -webkit-box;
   -webkit-line-clamp: 2;
@@ -793,7 +833,7 @@ select option {
   border: 2px solid var(--line);
   background: none;
   color: transparent;
-  font-weight: 900;
+  font-weight: 800;
   cursor: pointer;
 }
 .episode-check:focus-visible {
@@ -821,7 +861,7 @@ select option {
 
 .streams-status {
   margin-bottom: 8px;
-  font-size: 0.9rem;
+  font-size: var(--fs-md);
 }
 .streams-empty {
   padding: 16px 0;
@@ -877,7 +917,7 @@ select option {
 }
 .stream-name {
   font-weight: 700;
-  font-size: 0.85rem;
+  font-size: var(--fs-sm);
   white-space: pre-line;
 }
 .stream-title {
@@ -915,7 +955,7 @@ select option {
 }
 .stats b {
   color: var(--text);
-  font-size: 1.2rem;
+  font-size: var(--fs-xl);
 }
 
 /* ---------- Ajustes ---------- */
@@ -933,7 +973,7 @@ select option {
   font-size: 1.3rem;
 }
 .settings-section h3 {
-  font-size: 1rem;
+  font-size: var(--fs-base);
   margin-top: 8px;
 }
 .settings-section p {
@@ -1011,7 +1051,7 @@ select option {
   position: fixed;
   inset: 0;
   background: #000;
-  z-index: 100;
+  z-index: var(--z-player);
   cursor: none;
 }
 .player.show-controls {
@@ -1209,7 +1249,7 @@ select option {
     gap: 10px;
     /* backdrop-filter crea un bloque contenedor y el menú fijo de abajo quedaría pegado arriba. */
     backdrop-filter: none;
-    background: rgba(11, 11, 16, 0.96);
+    background: rgba(var(--bg-rgb), 0.96);
   }
   .brand span {
     display: none;
@@ -1221,10 +1261,10 @@ select option {
     right: 0;
     bottom: 0;
     justify-content: space-around;
-    background: rgba(11, 11, 16, 0.97);
+    background: rgba(var(--bg-rgb), 0.97);
     border-top: 1px solid var(--line);
     padding: 6px 4px max(6px, env(safe-area-inset-bottom));
-    z-index: 30;
+    z-index: var(--z-nav);
   }
   .nav-link {
     flex: 1;
@@ -1262,7 +1302,7 @@ select option {
     flex-wrap: wrap;
   }
   .time {
-    font-size: 0.85rem;
+    font-size: var(--fs-sm);
   }
   .controls-row button {
     padding: 8px 10px;
@@ -1295,52 +1335,52 @@ html[data-tv] {
   --poster-w: 240px;
 }
 html[data-tv] .poster-title {
-  font-size: 1rem;
+  font-size: var(--fs-base);
 }
 html[data-tv] .poster-sub,
 html[data-tv] .imdb-sm {
-  font-size: 0.9rem;
+  font-size: var(--fs-md);
 }
 html[data-tv] .row-header h2 {
-  font-size: 1.5rem;
+  font-size: var(--fs-2xl);
 }
 html[data-tv] .row-more {
-  font-size: 1rem;
+  font-size: var(--fs-base);
   padding: 6px 12px;
 }
 html[data-tv] .page-header h1 {
   font-size: 2rem;
 }
 html[data-tv] .small {
-  font-size: 0.9rem;
+  font-size: var(--fs-md);
 }
 html[data-tv] .chip {
-  font-size: 0.85rem;
+  font-size: var(--fs-sm);
   padding: 4px 12px;
 }
 html[data-tv] .chip.small {
-  font-size: 0.8rem;
+  font-size: var(--fs-xs);
   padding: 3px 10px;
 }
 /* Pestañas y chips de filtros: se eligen con el control remoto, tienen que verse y enfocarse bien. */
 html[data-tv] .tab,
 html[data-tv] .goal-presets .tab {
-  font-size: 1rem;
+  font-size: var(--fs-base);
   padding: 12px 20px;
 }
 html[data-tv] .btn {
-  font-size: 1.1rem;
+  font-size: var(--fs-lg);
   padding: 12px 24px;
 }
 html[data-tv] .btn-small {
-  font-size: 1rem;
+  font-size: var(--fs-base);
   padding: 10px 18px;
 }
 html[data-tv] .btn-ghost {
   padding: 10px 14px;
 }
 html[data-tv] .episode-desc {
-  font-size: 1rem;
+  font-size: var(--fs-base);
 }
 html[data-tv] .episode-thumb {
   flex-basis: clamp(140px, 12vw, 220px);
@@ -1361,7 +1401,7 @@ html[data-tv] select {
 /* Tarjeta de error del reproductor: más ancha y con letra y botones grandes. */
 html[data-tv] .player-error p {
   max-width: 720px;
-  font-size: 1.2rem;
+  font-size: var(--fs-xl);
 }
 html[data-tv] .player-error-card {
   width: min(760px, 100%);
@@ -1446,7 +1486,7 @@ html[data-tv] .player-error-sources button {
   max-width: 520px;
 }
 .source-field span {
-  font-size: 0.9rem;
+  font-size: var(--fs-md);
   color: var(--muted);
 }
 
@@ -1473,10 +1513,10 @@ html[data-tv] .player-error-sources button {
   padding: 0;
   border-radius: 50%;
   border: 1px solid rgba(255, 255, 255, 0.25);
-  background: rgba(11, 11, 16, 0.78);
+  background: rgba(var(--bg-rgb), 0.78);
   color: var(--text);
   font: inherit;
-  font-size: 0.8rem;
+  font-size: var(--fs-xs);
   font-weight: 700;
   cursor: pointer;
   opacity: 0;
@@ -1518,7 +1558,7 @@ html[data-tv] .player-error-sources button {
   left: 50%;
   bottom: 24px;
   transform: translateX(-50%);
-  z-index: 40;
+  z-index: var(--z-toast);
   display: flex;
   align-items: center;
   gap: 14px;
@@ -1555,7 +1595,7 @@ html[data-tv] .player-error-sources button {
 .cal-sub {
   margin: 6px 0 0;
   max-width: 70ch;
-  font-size: 1rem;
+  font-size: var(--fs-base);
 }
 .cal-section {
   margin-bottom: 32px;
@@ -1634,8 +1674,8 @@ html[data-tv] .player-error-sources button {
   background: rgba(139, 92, 246, 0.35);
   padding: 1px 8px;
   border-radius: 999px;
-  font-size: 0.72rem;
-  font-weight: 600;
+  font-size: var(--fs-2xs);
+  font-weight: 700;
 }
 .cal-skeleton .skeleton-line {
   margin: 3px 0;
@@ -1648,7 +1688,7 @@ html[data-tv] .player-error-sources button {
 .year-back {
   display: inline-block;
   color: var(--muted);
-  font-size: 0.9rem;
+  font-size: var(--fs-md);
   padding: 13px 12px;
   margin: -13px -12px -9px;
 }
@@ -1686,14 +1726,14 @@ html[data-tv] .year-back {
 }
 .year-big {
   font-size: clamp(3.2rem, 11vw, 6rem);
-  font-weight: 900;
+  font-weight: 800;
   line-height: 1;
   letter-spacing: -0.04em;
   font-variant-numeric: tabular-nums;
 }
 .year-big-label {
   font-size: clamp(1rem, 1.8vw, 1.25rem);
-  font-weight: 600;
+  font-weight: 700;
   color: #e4e4ec;
 }
 .year-kpis {
@@ -1709,7 +1749,7 @@ html[data-tv] .year-back {
 }
 .year-kpis dt {
   color: var(--muted);
-  font-size: 0.8rem;
+  font-size: var(--fs-xs);
 }
 .year-kpis dd {
   margin: 0;
@@ -1737,7 +1777,7 @@ html[data-tv] .year-back {
   margin-bottom: 16px;
 }
 .year-card h2 {
-  font-size: 0.85rem;
+  font-size: var(--fs-sm);
   font-weight: 700;
   color: var(--muted);
   text-transform: uppercase;
@@ -1769,7 +1809,7 @@ html[data-tv] .year-back {
   display: flex;
   justify-content: space-between;
   gap: 8px;
-  font-weight: 600;
+  font-weight: 700;
   font-size: 0.92rem;
   margin-bottom: 4px;
 }
@@ -1823,7 +1863,7 @@ html[data-tv] .year-back {
   text-overflow: ellipsis;
 }
 .year-kicker {
-  font-size: 0.72rem;
+  font-size: var(--fs-2xs);
   font-weight: 700;
   color: var(--accent);
   text-transform: uppercase;
@@ -2083,8 +2123,8 @@ html[data-tv] .player-float .btn:focus {
   white-space: nowrap;
 }
 .cast-name {
-  font-weight: 600;
-  font-size: 0.85rem;
+  font-weight: 700;
+  font-size: var(--fs-sm);
 }
 .cast-character {
   color: var(--muted);
@@ -2120,8 +2160,8 @@ html[data-tv] .player-float .btn:focus {
   gap: 16px 32px;
 }
 .providers-group h3 {
-  font-size: 0.85rem;
-  font-weight: 600;
+  font-size: var(--fs-sm);
+  font-weight: 700;
   color: var(--muted);
   margin-bottom: 8px;
 }
@@ -2175,7 +2215,7 @@ html[data-tv] .player-float .btn:focus {
 }
 .person-info h1 {
   font-size: clamp(1.6rem, 3.5vw, 2.6rem);
-  font-weight: 900;
+  font-weight: 800;
 }
 .person-bio {
   line-height: 1.55;
@@ -2248,7 +2288,7 @@ html[data-tv] .player-float .btn:focus {
     margin: 0;
   }
   [data-theme='2'] .person-info > .credits {
-    font-size: 0.85rem;
+    font-size: var(--fs-sm);
   }
   [data-theme='2'] .person-info > :not(h1):not(.chip):not(.credits) {
     grid-column: 1 / -1;
@@ -2287,7 +2327,7 @@ html[data-tv] .player-float .btn:focus {
 }
 .pause-cast h2 {
   margin: 0 0 12px;
-  font-size: 0.85rem;
+  font-size: var(--fs-sm);
   text-transform: uppercase;
   letter-spacing: 0.08em;
   color: var(--muted);
@@ -2323,7 +2363,7 @@ html[data-tv] .player-float .btn:focus {
   display: flex;
   flex-direction: column;
   min-width: 0;
-  font-size: 0.85rem;
+  font-size: var(--fs-sm);
   line-height: 1.25;
 }
 .pause-cast-text strong,
@@ -2365,7 +2405,7 @@ html[data-tv] .player-float .btn:focus {
   margin-right: calc(var(--poster-w) * -0.03);
   padding-bottom: 40px;
   font-size: calc(var(--poster-w) * 0.7);
-  font-weight: 900;
+  font-weight: 800;
   line-height: 0.78;
   letter-spacing: -0.08em;
   color: var(--bg);
@@ -2422,7 +2462,7 @@ html[data-tv] .top10-rank {
 }
 .seek-preview-time {
   padding: 0 6px;
-  font-size: 0.85rem;
+  font-size: var(--fs-sm);
   font-weight: 700;
   font-variant-numeric: tabular-nums;
 }
@@ -2435,8 +2475,8 @@ html[data-tv] .top10-rank {
   z-index: 2;
   max-width: calc(100% - 2 * var(--gutter));
   padding: 8px 14px;
-  font-size: 0.9rem;
-  font-weight: 600;
+  font-size: var(--fs-md);
+  font-weight: 700;
   background: rgba(20, 20, 28, 0.88);
   border: 1px solid rgba(255, 255, 255, 0.25);
   border-radius: 999px;
@@ -2479,12 +2519,12 @@ html[data-tv] .top10-rank {
   margin-bottom: 22px;
 }
 .pause-info-title {
-  font-size: 1.1rem;
+  font-size: var(--fs-lg);
   line-height: 1.3;
 }
 .pause-info-overview {
   margin: 0;
-  font-size: 0.9rem;
+  font-size: var(--fs-md);
   line-height: 1.45;
   color: #ddd;
   display: -webkit-box;
@@ -2500,7 +2540,7 @@ html[data-tv] .top10-rank {
   }
   .player-chip {
     top: 76px;
-    font-size: 0.8rem;
+    font-size: var(--fs-xs);
   }
 }
 /* La lista del reparto se corta antes de los controles (overflow no recorta el padding). */
@@ -2584,7 +2624,7 @@ html[data-tv] .top10-rank {
   border: 3px dashed var(--accent);
   border-radius: var(--radius);
   background: rgba(0, 0, 0, 0.7);
-  font-size: 1.2rem;
+  font-size: var(--fs-xl);
   font-weight: 700;
   text-align: center;
   pointer-events: none;
@@ -2615,7 +2655,7 @@ html[data-tv] .top10-rank {
 }
 .stream-torrents-toggle {
   display: block;
-  font-size: 0.85rem;
+  font-size: var(--fs-sm);
 }
 .stream-hidden-reason {
   grid-column: 1 / -1;
@@ -2634,8 +2674,8 @@ html[data-tv] .top10-rank {
   margin-top: 4px;
 }
 .star-rating-label {
-  font-weight: 600;
-  font-size: 0.9rem;
+  font-weight: 700;
+  font-size: var(--fs-md);
   color: var(--muted);
 }
 .star-input {
@@ -2660,19 +2700,29 @@ html[data-tv] .top10-rank {
   font-size: 1.75rem;
   line-height: 1.1;
   text-align: center;
-  color: var(--line);
   color: color-mix(in srgb, var(--muted) 45%, transparent);
   transition: color 0.12s, transform 0.12s;
+}
+@supports not (color: color-mix(in srgb, red 50%, transparent)) {
+  .star {
+    color: var(--line);
+  }
 }
 .star-full {
   color: var(--accent);
 }
 .star-half {
   color: transparent;
-  background: linear-gradient(90deg, var(--accent) 50%, var(--line) 50%);
   background: linear-gradient(90deg, var(--accent) 50%, color-mix(in srgb, var(--muted) 45%, transparent) 50%);
   -webkit-background-clip: text;
   background-clip: text;
+}
+@supports not (color: color-mix(in srgb, red 50%, transparent)) {
+  .star-half {
+    background: linear-gradient(90deg, var(--accent) 50%, var(--line) 50%);
+    -webkit-background-clip: text;
+    background-clip: text;
+  }
 }
 .star-input:focus-visible .star-full,
 .star-input.drafting .star-full {
@@ -2683,7 +2733,7 @@ html[data-tv] .top10-rank {
 }
 .star-rating-hint {
   min-width: 4ch;
-  font-size: 0.85rem;
+  font-size: var(--fs-sm);
   color: var(--muted);
 }
 .star-clear {
@@ -2710,7 +2760,7 @@ html[data-tv] .top10-rank {
   z-index: 1;
   padding: 2px 8px;
   border-radius: 999px;
-  background: rgba(11, 11, 16, 0.82);
+  background: rgba(var(--bg-rgb), 0.82);
   pointer-events: none;
 }
 
@@ -2774,7 +2824,7 @@ html[data-tv] .top10-rank {
   background: none;
   color: var(--muted);
   font: inherit;
-  font-size: 0.9rem;
+  font-size: var(--fs-md);
   text-align: left;
   cursor: pointer;
 }
@@ -2806,7 +2856,7 @@ html[data-tv] .top10-rank {
   animation: rate-in 0.25s ease-out;
 }
 .player-rate-title {
-  font-size: 1rem;
+  font-size: var(--fs-base);
 }
 .player-rate-name {
   max-width: 260px;
@@ -2937,7 +2987,7 @@ html[data-tv] .top10-rank {
 .poster-rating b {
   background: var(--imdb);
   color: #000;
-  font-weight: 900;
+  font-weight: 800;
   font-size: 0.82em;
   letter-spacing: -0.02em;
   line-height: 1;
@@ -2982,7 +3032,7 @@ html[data-tv] .top10-rank {
 /* Tráiler al quedarse sobre un póster: tarjeta ampliada flotante (una sola a la vez). */
 .hover-trailer {
   position: fixed;
-  z-index: 60;
+  z-index: var(--z-layer);
   overflow: hidden;
   border-radius: var(--radius);
   background: var(--bg-2);
@@ -3036,7 +3086,7 @@ html[data-tv] .top10-rank {
   border-radius: 999px;
   background: var(--poster-badge-bg);
   color: var(--poster-badge-fg);
-  font-size: 0.8rem;
+  font-size: var(--fs-xs);
   font-weight: 700;
   cursor: pointer;
   user-select: none;
@@ -3052,7 +3102,7 @@ html[data-tv] .top10-rank {
   padding: 10px 14px 12px;
 }
 .ht-title {
-  font-size: 1rem;
+  font-size: var(--fs-base);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -3063,11 +3113,11 @@ html[data-tv] .top10-rank {
   align-items: center;
   gap: 4px 10px;
   color: var(--muted);
-  font-size: 0.8rem;
+  font-size: var(--fs-xs);
 }
 .ht-hint {
   color: var(--muted);
-  font-size: 0.72rem;
+  font-size: var(--fs-2xs);
 }
 
 @media (max-width: 760px) {
@@ -3152,7 +3202,7 @@ html[data-tv] .top10-rank {
 }
 .diary-wday {
   color: var(--muted);
-  font-size: 0.72rem;
+  font-size: var(--fs-2xs);
   text-transform: uppercase;
   letter-spacing: 0.05em;
 }
@@ -3213,7 +3263,7 @@ html[data-tv] .top10-rank {
   border-radius: 999px;
   background: var(--accent-fill);
   color: #fff;
-  font-size: 0.72rem;
+  font-size: var(--fs-2xs);
   font-weight: 700;
 }
 .diary-rating {
@@ -3322,7 +3372,7 @@ html[data-tv] .top10-rank {
 }
 .goal-presets .tab {
   padding: 6px 12px;
-  font-size: 0.85rem;
+  font-size: var(--fs-sm);
 }
 .goal-dot {
   display: inline-grid;
@@ -3356,7 +3406,7 @@ html[data-tv] .top10-rank {
   text-decoration: underline;
   text-transform: none;
   letter-spacing: 0;
-  font-weight: 600;
+  font-weight: 700;
 }
 
 /* Logros */
@@ -3364,7 +3414,7 @@ html[data-tv] .top10-rank {
   display: flex;
   align-items: baseline;
   gap: 10px;
-  font-size: 1.2rem;
+  font-size: var(--fs-xl);
   margin-bottom: 12px;
 }
 .achievements {
@@ -3389,6 +3439,11 @@ html[data-tv] .top10-rank {
   border-color: var(--accent);
   background: linear-gradient(135deg, color-mix(in srgb, var(--accent) 20%, transparent), transparent 65%), var(--bg-2);
 }
+@supports not (color: color-mix(in srgb, red 50%, transparent)) {
+  .achievement.on {
+    background: linear-gradient(135deg, rgba(var(--accent-rgb), 0.2), transparent 65%), var(--bg-2);
+  }
+}
 .achievement.new {
   box-shadow: 0 0 0 2px var(--accent-2);
 }
@@ -3401,6 +3456,11 @@ html[data-tv] .top10-rank {
   border-radius: 50%;
   background: color-mix(in srgb, var(--accent) 18%, transparent);
   color: var(--accent);
+}
+@supports not (color: color-mix(in srgb, red 50%, transparent)) {
+  .achievement-icon {
+    background: rgba(var(--accent-rgb), 0.18);
+  }
 }
 /* Bloqueado: el mismo ícono, atenuado y sin el acento. */
 .achievement:not(.on) .achievement-icon {
@@ -3461,6 +3521,11 @@ html[data-tv] .top10-rank {
 }
 [data-theme='2'] .achievement.on {
   border-color: color-mix(in srgb, var(--accent) 40%, var(--line));
+}
+@supports not (color: color-mix(in srgb, red 50%, transparent)) {
+  [data-theme='2'] .achievement.on {
+    border-color: rgb(111, 100, 140); /* el acento al 40 % sobre --line */
+  }
 }
 [data-theme='2'] .achievement.new {
   box-shadow: none;
@@ -3596,7 +3661,7 @@ html[data-tv] .top10-rank {
   width: 44px;
   height: 44px;
   margin: 0;
-  font-size: 1.1rem;
+  font-size: var(--fs-lg);
   border: 2px solid var(--bg-2);
 }
 .together-faces .cast-photo + .cast-photo {
@@ -3615,7 +3680,7 @@ html[data-tv] .top10-rank {
   background: var(--bg-2);
   color: var(--text);
   font: inherit;
-  font-size: 0.9rem;
+  font-size: var(--fs-md);
   cursor: pointer;
 }
 .picker-btn:focus-visible {
@@ -3632,7 +3697,7 @@ html[data-tv] .top10-rank {
   flex-shrink: 0;
 }
 .picker-value {
-  font-weight: 600;
+  font-weight: 700;
   min-width: 0;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -3645,7 +3710,7 @@ html[data-tv] .top10-rank {
 .picker-layer {
   position: fixed;
   inset: 0;
-  z-index: 60;
+  z-index: var(--z-layer);
 }
 .picker-pop {
   position: fixed;
@@ -3682,12 +3747,12 @@ html[data-tv] .top10-rank {
 }
 .picker-opt:focus-visible {
   background: var(--bg-3);
-  outline-offset: -3px;
+  outline-offset: var(--focus-inset);
 }
 @media (hover: hover) {
   .picker-opt:hover {
     background: var(--bg-3);
-    outline-offset: -3px;
+    outline-offset: var(--focus-inset);
   }
 }
 .picker-opt[aria-selected='true'] {
@@ -3706,7 +3771,7 @@ html[data-tv] .top10-rank {
 /* Descubrir (los filtros están en src/pages/discover/filters.css) */
 .discover-kw {
   color: var(--muted);
-  font-weight: 600;
+  font-weight: 700;
 }
 .discover-note {
   margin: 0 0 12px;
@@ -3766,7 +3831,7 @@ html[data-tv] .top10-rank {
 }
 button.chip-link {
   font: inherit;
-  font-size: 0.72rem;
+  font-size: var(--fs-2xs);
 }
 .curated-chip {
   text-decoration: none;
@@ -3796,7 +3861,7 @@ button.chip-link {
   width: 100%;
 }
 .list-tile-main h2 {
-  font-size: 1.1rem;
+  font-size: var(--fs-lg);
 }
 .list-tile-main p {
   margin: 0;
@@ -3877,19 +3942,19 @@ button.chip-link {
 }
 .together-result:focus-visible {
   background: var(--bg-3);
-  outline-offset: -3px;
+  outline-offset: var(--focus-inset);
 }
 @media (hover: hover) {
   .together-result:hover {
     background: var(--bg-3);
-    outline-offset: -3px;
+    outline-offset: var(--focus-inset);
   }
 }
 .together-result .cast-photo {
   width: 40px;
   height: 40px;
   margin: 0;
-  font-size: 1rem;
+  font-size: var(--fs-base);
   flex-shrink: 0;
 }
 .together-head {
@@ -4004,13 +4069,18 @@ button.chip-link {
   color: var(--accent);
   background: color-mix(in srgb, var(--accent) 18%, transparent);
 }
+@supports not (color: color-mix(in srgb, red 50%, transparent)) {
+  .addon-official {
+    background: rgba(var(--accent-rgb), 0.18);
+  }
+}
 .addon-resource {
   background: transparent;
   border: 1px solid var(--line);
 }
 .addon-installed {
   color: var(--ok);
-  font-weight: 600;
+  font-weight: 700;
   padding: 8px 12px;
   white-space: nowrap;
 }
@@ -4060,7 +4130,7 @@ button.chip-link {
 .stremio-import-form textarea {
   resize: vertical;
   font-family: ui-monospace, monospace;
-  font-size: 0.85rem;
+  font-size: var(--fs-sm);
 }
 .stremio-import-form input:focus-visible,
 .stremio-import-form textarea:focus-visible {
@@ -4166,7 +4236,7 @@ button.chip-link {
 }
 .catalog-manager-tmdb h2 {
   margin: 0 0 4px;
-  font-size: 1.1rem;
+  font-size: var(--fs-lg);
 }
 .catalog-manager-tmdb > p {
   margin: 0 0 12px;
@@ -4213,7 +4283,7 @@ button.chip-link {
   border: 1px solid var(--line);
   border-radius: var(--radius);
   background: var(--bg-2);
-  font-weight: 600;
+  font-weight: 700;
 }
 input[type='password'] {
   font: inherit;
@@ -4232,7 +4302,7 @@ input[type='password']:focus-visible {
 .offline-banner {
   position: sticky;
   top: var(--nav-h);
-  z-index: 15;
+  z-index: var(--z-banner);
   display: flex;
   flex-wrap: wrap;
   align-items: center;
@@ -4241,7 +4311,7 @@ input[type='password']:focus-visible {
   background: var(--bg-3);
   border-bottom: 1px solid var(--line);
   color: var(--text);
-  font-size: 0.9rem;
+  font-size: var(--fs-md);
   line-height: 1.4;
 }
 .offline-banner strong {
@@ -4292,7 +4362,7 @@ input[type='password']:focus-visible {
   color: var(--text);
   font: inherit;
   font-size: 1.05rem;
-  font-weight: 600;
+  font-weight: 700;
   cursor: pointer;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -4318,7 +4388,7 @@ input[type='password']:focus-visible {
   color: var(--on-accent);
 }
 .osk-actions .osk-key {
-  font-size: 0.85rem;
+  font-size: var(--fs-sm);
 }
 .osk-actions .osk-space {
   flex-grow: 3;
@@ -4346,7 +4416,7 @@ input[type='password']:focus-visible {
     border-radius: var(--radius-sm);
   }
   .osk-actions .osk-key {
-    font-size: 0.72rem;
+    font-size: var(--fs-2xs);
   }
   .osk-actions .osk-space {
     flex-grow: 2;
@@ -4357,13 +4427,18 @@ input[type='password']:focus-visible {
 .onboarding {
   position: fixed;
   inset: 0;
-  z-index: 200;
+  z-index: var(--z-modal);
   display: grid;
   place-items: center;
   padding: 16px;
   background: color-mix(in srgb, var(--bg) 88%, transparent);
   backdrop-filter: blur(6px);
   overflow-y: auto;
+}
+@supports not (color: color-mix(in srgb, red 50%, transparent)) {
+  .onboarding {
+    background: rgba(var(--bg-rgb), 0.88);
+  }
 }
 .ob-box {
   width: min(100%, 680px);
@@ -4378,7 +4453,7 @@ input[type='password']:focus-visible {
   border: 1px solid var(--line);
   border-radius: calc(var(--radius) * 1.5);
   background: var(--bg-2);
-  box-shadow: 0 30px 80px rgba(0, 0, 0, 0.5);
+  box-shadow: var(--shadow-3);
 }
 .ob-body {
   display: flex;
@@ -4404,7 +4479,7 @@ input[type='password']:focus-visible {
   font-size: 1.4rem;
 }
 .ob-body h3 {
-  font-size: 1rem;
+  font-size: var(--fs-base);
   margin-top: 6px;
 }
 .ob-body p {
@@ -4428,9 +4503,9 @@ html[data-tv] .ob-body label.check {
   gap: 16px;
   margin-top: 4px;
   padding: 16px 20px;
-  border-radius: var(--radius-sm, 12px);
+  border-radius: var(--radius-sm);
   background: var(--bg-3, var(--bg));
-  font-size: 1.1rem;
+  font-size: var(--fs-lg);
   cursor: pointer;
 }
 html[data-tv] .ob-body label.check input[type='checkbox'] {
@@ -4474,7 +4549,7 @@ html[data-tv] .ob-body label.check input[type='checkbox']:checked::after {
 .screensaver {
   position: fixed;
   inset: 0;
-  z-index: 1000;
+  z-index: var(--z-system);
   overflow: hidden;
   background: #000;
   color: #fff;
@@ -4532,7 +4607,7 @@ html[data-tv] .ob-body label.check input[type='checkbox']:checked::after {
 }
 .ss-time {
   font-size: clamp(2.4rem, 6vw, 5rem);
-  font-weight: 300;
+  font-weight: 400;
   font-variant-numeric: tabular-nums;
   line-height: 1;
 }
@@ -4548,7 +4623,7 @@ html[data-tv] .ob-body label.check input[type='checkbox']:checked::after {
   top: clamp(20px, 5vh, 60px);
   left: clamp(20px, 5vw, 80px);
   margin: 0;
-  font-size: 0.9rem;
+  font-size: var(--fs-md);
   opacity: 0;
   animation: ss-hint 6s ease both;
 }
@@ -4631,7 +4706,7 @@ html[data-tv] .ob-body label.check input[type='checkbox']:checked::after {
 .error-details summary {
   cursor: pointer;
   color: var(--muted);
-  font-size: 0.9rem;
+  font-size: var(--fs-md);
   margin-bottom: 8px;
 }
 .error-detail {
@@ -4639,7 +4714,7 @@ html[data-tv] .ob-body label.check input[type='checkbox']:checked::after {
   border: 1px solid var(--line);
   border-radius: var(--radius);
   color: var(--muted);
-  font-size: 0.8rem;
+  font-size: var(--fs-xs);
   padding: 12px;
   white-space: pre-wrap;
   word-break: break-word;
@@ -4690,7 +4765,7 @@ html[data-tv] .ob-body label.check input[type='checkbox']:checked::after {
 }
 .player-error p {
   margin: 0;
-  font-size: 1.1rem;
+  font-size: var(--fs-lg);
 }
 .player-error .hero-actions {
   justify-content: center;
@@ -4786,7 +4861,7 @@ html[data-tv] .ob-body label.check input[type='checkbox']:checked::after {
     left: 0;
     right: 0;
     bottom: 0;
-    z-index: 30;
+    z-index: var(--z-nav);
     display: flex;
     justify-content: space-around;
     background: var(--bg);
@@ -4813,7 +4888,7 @@ html[data-tv] .ob-body label.check input[type='checkbox']:checked::after {
     background: transparent;
     border: 0;
     font: inherit;
-    font-weight: 600;
+    font-weight: 700;
     cursor: pointer;
   }
 }
@@ -4821,7 +4896,7 @@ html[data-tv] .ob-body label.check input[type='checkbox']:checked::after {
 .nav-sheet-layer {
   position: fixed;
   inset: 0;
-  z-index: 60;
+  z-index: var(--z-layer);
   display: flex;
   align-items: flex-end;
   background: rgba(0, 0, 0, 0.55);
@@ -4861,7 +4936,7 @@ html[data-tv] .ob-body label.check input[type='checkbox']:checked::after {
   border-radius: var(--radius);
   color: var(--muted);
   font-size: 0.75rem;
-  font-weight: 600;
+  font-weight: 700;
   text-align: center;
 }
 .nav-sheet-icon {
@@ -4923,6 +4998,6 @@ html[data-tv] .ob-body label.check input[type='checkbox']:checked::after {
     width: 44px;
     height: 44px;
     padding: 0;
-    font-size: 1.1rem;
+    font-size: var(--fs-lg);
   }
 }

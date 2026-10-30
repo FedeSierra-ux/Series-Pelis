@@ -1,4 +1,6 @@
 import { useEffect } from 'react'
+import { matchesNow } from '../../lib/media'
+import { COARSE_POINTER_QUERY } from '../../lib/mediaQueries'
 
 // Pantalla completa y orientación del reproductor.
 //
@@ -87,7 +89,7 @@ export function unlockOrientation() {
  */
 export function isPhoneLike(): boolean {
   try {
-    const coarse = matchMedia('(pointer: coarse)').matches && !matchMedia('(any-pointer: fine)').matches
+    const coarse = matchesNow(COARSE_POINTER_QUERY) && !matchesNow('(any-pointer: fine)')
     return coarse && Math.min(screen.width, screen.height) <= 540
   } catch {
     return false

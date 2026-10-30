@@ -7,6 +7,7 @@ import { activeProfileId, markProfilePicked, PROFILE_FROM_LAUNCH } from '../lib/
 import { switchProfile } from '../lib/profileSwitch'
 import { profilesStore } from '../lib/store'
 import { useDirectPlay } from '../pages/home/useDirectPlay'
+import { NoticeCard } from './NoticeCard'
 
 /**
  * Abrir la app desde una tarjeta del inicio de Android TV (v0.21). Si la tarjeta es de otro perfil, se pasa
@@ -54,13 +55,10 @@ function LaunchHandler() {
 
   if (!pending) return null
   return (
-    <div className="update-toast" role="status" aria-live="polite">
-      <span className="update-toast-text">Buscando fuente…</span>
-      <div className="update-toast-actions">
-        <button type="button" className="btn btn-small" onClick={cancel}>
-          Cancelar
-        </button>
-      </div>
-    </div>
+    <NoticeCard text="Buscando fuente…" polite>
+      <button type="button" className="btn btn-small" onClick={cancel}>
+        Cancelar
+      </button>
+    </NoticeCard>
   )
 }

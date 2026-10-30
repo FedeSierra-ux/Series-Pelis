@@ -19,7 +19,7 @@ html[data-tv] .page.discover {
   right: 0;
   height: var(--billboard-h);
   /* Arriba de la barra de filtros pegajosa (16), debajo del riel (20). */
-  z-index: 18;
+  z-index: var(--z-hero);
   overflow: hidden;
   background: var(--bg);
   opacity: 0;
@@ -82,6 +82,13 @@ html[data-tv] .page.discover {
     linear-gradient(90deg, var(--bg) 22%, color-mix(in srgb, var(--bg) 82%, transparent) 34%, color-mix(in srgb, var(--bg) 25%, transparent) 62%, transparent 85%),
     linear-gradient(0deg, var(--bg) 0%, color-mix(in srgb, var(--bg) 60%, transparent) 16%, transparent 40%);
 }
+@supports not (color: color-mix(in srgb, red 50%, transparent)) {
+  .fbb-shade {
+    background:
+      linear-gradient(90deg, var(--bg) 22%, rgba(var(--bg-rgb), 0.82) 34%, rgba(var(--bg-rgb), 0.25) 62%, transparent 85%),
+      linear-gradient(0deg, var(--bg) 0%, rgba(var(--bg-rgb), 0.6) 16%, transparent 40%);
+  }
+}
 
 .fbb-info {
   position: absolute;
@@ -128,8 +135,8 @@ html[data-tv] .page.discover {
   white-space: nowrap;
   overflow: hidden;
   margin: 0;
-  font-size: 1rem;
-  font-weight: 600;
+  font-size: var(--fs-base);
+  font-weight: 700;
   color: var(--text-soft, var(--text));
 }
 .fbb-facts > span + span::before {
@@ -152,7 +159,7 @@ html[data-tv] .page.discover {
 }
 .fbb-desc {
   margin: 0;
-  font-size: 1rem;
+  font-size: var(--fs-base);
   line-height: 1.45;
   color: var(--text-soft, var(--text));
   display: -webkit-box;

@@ -1,5 +1,44 @@
 # Changelog
 
+## [0.36.0] - 2026-10-30
+
+Tercera tanda de los arreglos de la auditoría completa de la v0.33: rendimiento de carga y orden interno (14
+hallazgos aprobados en la página de votos). Casi nada cambia a la vista: las comparaciones de capturas antes y
+después en PC, celular y TV dan 0 píxeles de diferencia, salvo lo que se corrige a propósito. Queda para la v0.37 sacar
+el Tema 1 del CSS.
+
+### Corregido
+- **El aviso "Sin conexión" ya no queda tapado por la portada de Películas/Series**: sube sobre la portada fija y queda
+  bajo el riel.
+- **Las TVs con Chromium viejo (webOS 5/6/22, Tizen 5.5–7) vuelven a ver degradés y fondos**: los 63 `color-mix()` del CSS
+  tienen respaldo en un `@supports not (…color-mix…)`. Antes, sin soporte, quedaban transparentes (portada sin degradé,
+  botones sin fondo, asistente, guía de la TV y filtros transparentes). Una línea `rgba()` previa no alcanza cuando el valor
+  usa `var()`, por eso el respaldo va en `@supports`. Probado en simulación, no en una TV vieja real.
+- **Buscar ya no salta cuando llega el "Mejor resultado"**: se reserva su alto mientras carga (CLS de 0,17 a 0,005 en PC y
+  de 0,23 a 0,03 en celular).
+- **El modal del tráiler ya no empata con el protector de pantalla** en el orden de capas.
+
+### Cambiado
+- **Carga más rápida con red lenta** (Fast 3G, CPU 4×): primer pintado de Inicio, Películas y ficha de ~4,3 s a ~1,9 s; el
+  fondo de la portada de Películas/Series se pide con prioridad alta; Inicio ya no pide todos los pósters a la vez y el
+  slide siguiente de la portada espera a que cargue el actual; las fuentes van en el CSS inicial y no por `import()`.
+- **La primera visita baja menos**: el service worker no guarda hls.js ni el reproductor hasta que se usan (precache de
+  1686 a 1020 KiB, y quedan guardados para offline al primer uso); Ajustes, Login e invitación cargan bajo demanda.
+- **El tráiler de fondo espera a que el navegador esté ocioso** (en la TV, además 1 segundo sin teclas), así no compite con
+  las flechas del control remoto.
+- **Pantalla de arranque** con la F de Flix en lugar de una página vacía hasta que llega el JS (sin script inline: la CSP no
+  cambia).
+- **Un solo hook de `matchMedia` y un solo archivo de consultas** (`lib/media.ts`, `lib/mediaQueries.ts`): había seis copias
+  del hook y la consulta de 760 px definida cuatro veces. Un test vigila que nadie las vuelva a escribir a mano.
+- **Íconos con un marco compartido** (`components/Icon.tsx`) para los cinco sets y los SVG sueltos, con los glifos que estaban
+  repetidos (cerrar, flechas, más, check, info) en un solo lugar; cada set conserva su tamaño y su trazo. **Un solo aviso
+  base** (`components/NoticeCard.tsx`) para "Hay una versión nueva", la descarga de la app, "No se pudo guardar" y "Buscando
+  fuente…", y un solo `@keyframes` para los giros de carga y la entrada de los avisos.
+- **Escalas con variables, sin cambio visual**: capas (`--z-*`), anillo de foco (`--focus-ring`, `-sm`, `-lg`,
+  `--focus-offset`, `--focus-inset`), tamaños de letra (`--fs-2xs … --fs-2xl`, 171 declaraciones), sombras (`--shadow-1/2/3`)
+  y canales de color (`--bg-rgb`…). Los pesos 600/900/300, que nunca se cargaban, pasan a 700/800/400. Test nuevo
+  `cssTokens.test.ts` que vigila la escala, los respaldos de `color-mix()` y los tokens usados.
+
 ## [0.35.0] - 2026-10-30
 
 Segunda tanda de los arreglos de la auditoría completa de la v0.33: visual, UI, celular y táctil, y textos (47

@@ -18,7 +18,7 @@
 .detail-info .detail-title {
   margin: 0;
   font-size: clamp(1.7rem, 4vw, 3rem);
-  font-weight: 900;
+  font-weight: 800;
   line-height: 1.1;
 }
 .detail-title .detail-logo {
@@ -64,12 +64,7 @@
   border-radius: 50%;
   border: 3px solid currentColor;
   border-right-color: transparent;
-  animation: d-spin 0.8s linear infinite;
-}
-@keyframes d-spin {
-  to {
-    transform: rotate(360deg);
-  }
+  animation: spin 0.8s linear infinite;
 }
 @media (prefers-reduced-motion: reduce) {
   .d-play-spinner {
@@ -88,7 +83,7 @@
 }
 .d-play-sub {
   font-size: 0.78rem;
-  font-weight: 600;
+  font-weight: 700;
   opacity: 0.8;
   max-width: 26ch;
   overflow: hidden;
@@ -108,7 +103,7 @@
   min-width: 64px;
   padding: 4px 2px;
   border: 0;
-  border-radius: var(--radius-sm, 12px);
+  border-radius: var(--radius-sm);
   background: none;
   color: var(--text);
   font: inherit;
@@ -121,12 +116,12 @@
   height: 46px;
   border-radius: 50%;
   border: 2px solid var(--outline, var(--line));
-  background: rgba(11, 11, 16, 0.45);
+  background: rgba(var(--bg-rgb), 0.45);
   transition: background 0.15s, border-color 0.15s, transform 0.15s;
 }
 .d-icon-label {
   font-size: 0.74rem;
-  font-weight: 600;
+  font-weight: 700;
   text-shadow: 0 1px 3px rgba(0, 0, 0, 0.85);
   color: var(--text-soft, var(--text));
   white-space: nowrap;
@@ -147,7 +142,7 @@
   outline: none;
 }
 .d-icon-btn:focus-visible .d-icon-circle {
-  outline: var(--focus-ring, 3px solid var(--accent));
+  outline: var(--focus-ring);
   outline-offset: 3px;
   background: var(--tonal, var(--bg-3));
   transform: scale(1.06);
@@ -163,7 +158,7 @@
   position: absolute;
   bottom: 100%;
   left: 0;
-  z-index: 30;
+  z-index: var(--z-nav);
   max-width: 100%;
   margin-bottom: 8px;
   padding: 10px 16px;
@@ -180,7 +175,7 @@
 
 .d-menu {
   position: fixed;
-  z-index: 900;
+  z-index: var(--z-menu);
   width: max-content;
   min-width: 240px;
   max-width: calc(100vw - 16px);
@@ -200,11 +195,11 @@
   min-height: 46px;
   padding: 8px 12px;
   border: 0;
-  border-radius: var(--radius-sm, 10px);
+  border-radius: var(--radius-sm);
   background: none;
   color: var(--text);
   font: inherit;
-  font-weight: 600;
+  font-weight: 700;
   text-align: left;
   text-decoration: none;
   cursor: pointer;
@@ -218,8 +213,8 @@
   }
 }
 .d-menu .d-menu-item:focus-visible {
-  outline: 3px solid var(--accent);
-  outline-offset: -3px;
+  outline: var(--focus-ring-sm);
+  outline-offset: var(--focus-inset);
 }
 .d-menu-item > span:not(.d-menu-check) {
   flex: 1;
@@ -270,17 +265,17 @@
   height: 42px;
   border-radius: 50%;
   border: 1px solid rgba(255, 255, 255, 0.35);
-  background: rgba(11, 11, 16, 0.55);
+  background: rgba(var(--bg-rgb), 0.55);
   color: #fff;
   cursor: pointer;
 }
 .ht-ctrl:focus-visible {
-  background: rgba(11, 11, 16, 0.85);
+  background: rgba(var(--bg-rgb), 0.85);
   border-color: #fff;
 }
 @media (hover: hover) {
   .ht-ctrl:hover {
-    background: rgba(11, 11, 16, 0.85);
+    background: rgba(var(--bg-rgb), 0.85);
     border-color: #fff;
   }
 }
@@ -309,7 +304,7 @@
   flex: 0 0 auto;
   padding: 14px 16px 12px;
   border: 0;
-  border-radius: var(--radius-sm, 10px) var(--radius-sm, 10px) 0 0;
+  border-radius: var(--radius-sm) var(--radius-sm) 0 0;
   background: none;
   color: var(--muted);
   font: inherit;
@@ -346,7 +341,7 @@
   color: var(--text);
   background: var(--tonal, var(--bg-3));
   box-shadow: inset 0 0 0 3px var(--accent);
-  border-radius: var(--radius-sm, 12px);
+  border-radius: var(--radius-sm);
 }
 .dt-panel {
   padding-top: 12px;
@@ -377,7 +372,7 @@
   min-height: 44px;
   padding: 8px 16px;
   border-radius: 999px;
-  font-size: 1rem;
+  font-size: var(--fs-base);
 }
 .season-picker .picker-label {
   display: none;
@@ -388,9 +383,9 @@
   left: 6px;
   padding: 2px 8px;
   border-radius: 999px;
-  background: rgba(11, 11, 16, 0.82);
+  background: rgba(var(--bg-rgb), 0.82);
   color: var(--text);
-  font-size: 0.72rem;
+  font-size: var(--fs-2xs);
   font-weight: 800;
   letter-spacing: 0.02em;
 }
@@ -399,7 +394,7 @@
   color: var(--on-accent);
 }
 .ep-left {
-  font-size: 0.8rem;
+  font-size: var(--fs-xs);
   font-weight: 700;
   color: var(--accent);
 }
@@ -433,7 +428,7 @@
     padding: 4px 14px;
     color: var(--text);
     border-color: var(--outline, rgba(255, 255, 255, 0.4));
-    background: rgba(11, 11, 16, 0.55);
+    background: rgba(var(--bg-rgb), 0.55);
   }
   .detail-info .credits .person-link {
     display: inline-block;
@@ -476,14 +471,14 @@
 
 html[data-tv] .btn.d-play {
   min-height: 64px;
-  font-size: 1.2rem;
+  font-size: var(--fs-xl);
 }
 html[data-tv] .d-icon-circle {
   width: 54px;
   height: 54px;
 }
 html[data-tv] .d-icon-label {
-  font-size: 0.85rem;
+  font-size: var(--fs-sm);
 }
 html[data-tv] .d-icons {
   gap: 20px;
@@ -509,7 +504,7 @@ html[data-tv] .dt-tab {
   padding: 0;
   border-radius: 50%;
   border: 2px solid var(--outline, var(--line));
-  background: rgba(11, 11, 16, 0.55);
+  background: rgba(var(--bg-rgb), 0.55);
   color: var(--text);
   cursor: pointer;
   transition: background 0.15s, border-color 0.15s;
@@ -521,7 +516,7 @@ html[data-tv] .dt-tab {
   }
 }
 .detail-back:focus-visible {
-  outline: var(--focus-ring, 3px solid var(--accent));
+  outline: var(--focus-ring);
   outline-offset: 3px;
 }
 /* Lugar para el botón: sin póster el título arranca arriba a la izquierda. */

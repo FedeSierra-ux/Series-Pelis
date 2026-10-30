@@ -2,6 +2,7 @@ import { useState, type KeyboardEvent } from 'react'
 import { Link } from 'react-router-dom'
 import { ImdbRating } from '../../components/Rating'
 import { portraitLogo } from '../../components/focusBillboardData'
+import { GLYPHS, IconSvg } from '../../components/Icon'
 import { useLogoTone } from '../../lib/logoTone'
 import type { DetailLocationState } from '../detail/StreamList'
 
@@ -14,25 +15,20 @@ const PATHS = {
       <rect x="14" y="4.5" width="4" height="15" rx="1" fill="currentColor" stroke="none" />
     </>
   ),
-  plus: <path d="M12 5v14M5 12h14" />,
-  check: <path d="M5 12.5l4.5 4.5L19 7.5" />,
-  info: (
-    <>
-      <circle cx="12" cy="12" r="9" />
-      <path d="M12 11v6M12 7.5v.01" />
-    </>
-  ),
-  prev: <path d="M15 5l-7 7 7 7" />,
-  next: <path d="M9 5l7 7-7 7" />,
+  plus: GLYPHS.plus,
+  check: GLYPHS.check,
+  info: GLYPHS.info,
+  prev: GLYPHS.back,
+  next: GLYPHS.next,
 }
 
 export type HeroIconName = keyof typeof PATHS
 
 export function HeroIcon({ name, size = 22 }: { name: HeroIconName; size?: number }) {
   return (
-    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden focusable="false">
+    <IconSvg size={size} strokeWidth={2.2}>
       {PATHS[name]}
-    </svg>
+    </IconSvg>
   )
 }
 

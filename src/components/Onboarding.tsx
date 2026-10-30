@@ -3,6 +3,8 @@ import { useLocation } from 'react-router-dom'
 import { CINEMETA_URL } from '../lib/addons'
 import { useAuth, type AuthState } from '../lib/auth'
 import { useSyncStatus, type SyncStatus } from '../lib/cloudSync'
+import { matchesNow } from '../lib/media'
+import { COARSE_POINTER_QUERY } from '../lib/mediaQueries'
 import { focusInitialTarget, isTv } from '../lib/spatialNav'
 import { addonsStore, progressStore, settingsStore, useStore, watchlistStore, type Settings } from '../lib/store'
 import { LangChips } from '../pages/settings/PlayerSettings'
@@ -139,7 +141,7 @@ export function Onboarding() {
       wasShown.current = true
       const prev = document.activeElement
       before.current = prev instanceof HTMLElement && prev !== document.body ? prev : null
-      const touch = !document.documentElement.hasAttribute('data-tv') && typeof matchMedia === 'function' && matchMedia('(pointer: coarse)').matches
+      const touch = !document.documentElement.hasAttribute('data-tv') && matchesNow(COARSE_POINTER_QUERY)
       const tv = isTv()
       const first = touch
         ? boxRef.current

@@ -21,7 +21,7 @@
 }
 .sd-list dt {
   color: var(--muted);
-  font-size: 0.9rem;
+  font-size: var(--fs-md);
   /* Alineada con la primera línea del dato. */
   padding-top: 1px;
 }
@@ -39,7 +39,7 @@
 }
 .sd-kind {
   color: var(--text-soft, var(--muted));
-  font-weight: 600;
+  font-weight: 700;
 }
 .sd-source {
   display: block;
@@ -50,10 +50,10 @@
 
 /* En la TV se lee de lejos. */
 html[data-tv] .sd-list {
-  font-size: 1.1rem;
+  font-size: var(--fs-lg);
 }
 html[data-tv] .sd-list dt {
-  font-size: 1rem;
+  font-size: var(--fs-base);
 }
 
 /* Celular: la etiqueta arriba del dato (al lado no entra "Dónde ver en Argentina"). */

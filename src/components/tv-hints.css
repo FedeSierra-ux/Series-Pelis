@@ -4,13 +4,18 @@
 .tv-hints {
   position: fixed;
   inset: 0;
-  z-index: 205;
+  z-index: var(--z-hints);
   display: grid;
   place-items: center;
   padding: clamp(16px, 3vw, 48px);
   background: color-mix(in srgb, var(--bg) 90%, transparent);
   backdrop-filter: blur(8px);
   overflow-y: auto;
+}
+@supports not (color: color-mix(in srgb, red 50%, transparent)) {
+  .tv-hints {
+    background: rgba(var(--bg-rgb), 0.9);
+  }
 }
 .tv-hints-box {
   width: min(100%, 1560px);
@@ -45,7 +50,7 @@
   align-items: center;
   gap: 10px;
   padding: clamp(18px, 2vw, 32px) clamp(14px, 1.6vw, 24px);
-  border-radius: var(--radius-lg, calc(var(--radius) * 1.5));
+  border-radius: var(--radius-lg);
   background: var(--bg-2);
   border: 1px solid var(--line);
   text-align: center;
@@ -85,7 +90,7 @@
   outline-offset: 3px;
 }
 [data-theme='2'] .tv-hints-ok:focus {
-  outline: var(--focus-ring, 4px solid var(--accent));
+  outline: var(--focus-ring);
 }
 
 /* Tema 2: tarjetas tonales, como el resto de la interfaz. */

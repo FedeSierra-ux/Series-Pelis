@@ -4,10 +4,12 @@ import { Link } from 'react-router-dom'
 import { cardTarget, DEBOUNCE_MS, FADE_MS, Layer } from '../../components/FocusBillboard'
 import { loadBillboard, type BillboardInfo, type BillboardTarget } from '../../components/focusBillboardData'
 import { resolveTrailer } from '../../lib/hoverTrailer'
+import { isTv } from '../../lib/spatialNav'
+import { whenIdle } from '../../lib/whenIdle'
 import type { MetaPreview } from '../../lib/types'
 import { DetailIcon } from '../detail/DetailIcons'
 import { useBackdropTrailerAllowed } from '../detail/HeroTrailer'
-import { BACKDROP_DELAY_MS, embedTrailerUrl } from '../detail/trailers'
+import { BACKDROP_DELAY_MS, embedTrailerUrl, TRAILER_IDLE_MS, TRAILER_TV_QUIET_MS } from '../detail/trailers'
 import { useYtPlayer } from '../detail/useYtPlayer'
 import './browse.css'
 
@@ -67,6 +69,9 @@ export function BrowseHero({ title, first, exploreTo, rowsRef }: Props) {
   const [paused, setPaused] = useState(false)
   const allowed = useBackdropTrailerAllowed()
   const chosen = useRef(false)
+  // sistema-01: el fondo de la primera capa es el LCP de la pantalla y se pide con prioridad alta; las que se
+  // arman después al pasar por otros pósters no.
+  const firstKey = useRef<string>(undefined)
 
   // Al abrir, el primero del Top 10 (hasta que el usuario pase por otro póster).
   useEffect(() => {
@@ -141,7 +146,9 @@ export function BrowseHero({ title, first, exploreTo, rowsRef }: Props) {
     let alive = true
     loadBillboard(target)
       .then((info) => {
-        if (alive) setLayers((l) => (l.cur?.key === info.key ? l : { prev: l.cur, cur: info }))
+        if (!alive) return
+        firstKey.current ??= info.key
+        setLayers((l) => (l.cur?.key === info.key ? l : { prev: l.cur, cur: info }))
       })
       .catch(() => {})
     return () => {
@@ -161,6 +168,8 @@ export function BrowseHero({ title, first, exploreTo, rowsRef }: Props) {
     setTrailer(undefined)
     if (!allowed || !target) return
     let alive = true
+    let mountTimer: ReturnType<typeof setTimeout> | undefined
+    let cancelIdle: (() => void) | undefined
     const key = `${target.type}:${target.id}`
     const started = Date.now()
     const t = setTimeout(() => {
@@ -169,13 +178,24 @@ export function BrowseHero({ title, first, exploreTo, rowsRef }: Props) {
         .then(({ ytId }) => {
           if (!alive || !ytId) return
           const wait = Math.max(0, BACKDROP_DELAY_MS - (Date.now() - started))
-          setTimeout(() => alive && setTrailer({ key, ytId }), wait)
+          // v0.36 (sistema-05): el iframe de YouTube (~1 MB y mucho JS) se monta con el navegador ocioso, no justo
+          // a los 3 s; en la TV, además, sin teclas durante 1 s. Sigue valiendo "solo se ve con estado real de YouTube".
+          mountTimer = setTimeout(() => {
+            cancelIdle = whenIdle(
+              () => {
+                if (alive) setTrailer({ key, ytId })
+              },
+              { timeoutMs: TRAILER_IDLE_MS, quietKeysMs: isTv() ? TRAILER_TV_QUIET_MS : 0 },
+            )
+          }, wait)
         })
         .catch(() => {})
     }, RESOLVE_MS)
     return () => {
       alive = false
       clearTimeout(t)
+      clearTimeout(mountTimer)
+      cancelIdle?.()
     }
   }, [target, allowed])
 
@@ -188,8 +208,8 @@ export function BrowseHero({ title, first, exploreTo, rowsRef }: Props) {
   return (
     <section className="browse-hero" data-focus-billboard aria-label={cur ? `${title}: ${cur.name}` : title}>
       <div className="bh-layers">
-        {layers.prev && <Layer key={layers.prev.key} info={layers.prev} />}
-        {cur ? <Layer key={cur.key} info={cur} media={media} /> : <div className="bh-empty skeleton" />}
+        {layers.prev && <Layer key={layers.prev.key} info={layers.prev} priority={layers.prev.key === firstKey.current} />}
+        {cur ? <Layer key={cur.key} info={cur} media={media} priority={cur.key === firstKey.current} /> : <div className="bh-empty skeleton" />}
       </div>
       <div className="bh-top">
         <h1>{title}</h1>

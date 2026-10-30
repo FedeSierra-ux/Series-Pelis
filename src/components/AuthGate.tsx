@@ -1,9 +1,14 @@
-import type { ReactNode } from 'react'
+import { Suspense, type ReactNode } from 'react'
 import { useLocation } from 'react-router-dom'
 import { useAuth } from '../lib/auth'
-import { JoinPage } from '../pages/auth/JoinPage'
-import { Login } from '../pages/auth/Login'
+import { LazyJoinPage, LazyLogin } from '../pages/auth/lazyAuth'
 import { Spinner } from './Spinner'
+
+const loading = (
+  <main className="login" aria-busy="true">
+    <Spinner />
+  </main>
+)
 
 /**
  * Con casas (v0.17), la app pide entrar antes de mostrar nada. Sin la base en el sitio (o en local con
@@ -12,14 +17,11 @@ import { Spinner } from './Spinner'
 export function AuthGate({ children }: { children: ReactNode }) {
   const auth = useAuth()
   const { pathname } = useLocation()
-  if (auth.status === 'loading') {
-    return (
-      <main className="login" aria-busy="true">
-        <Spinner />
-      </main>
-    )
-  }
+  if (auth.status === 'loading') return loading
   // Sin entrar, solo la pantalla de entrada (o la de la invitación): nada de asistente ni protector encima.
-  if (auth.status === 'out') return pathname === '/unirse' ? <JoinPage /> : <Login needsSetup={auth.needsSetup} />
+  // Se bajan con carga diferida (v0.36): quien ya entró no las trae.
+  if (auth.status === 'out') {
+    return <Suspense fallback={loading}>{pathname === '/unirse' ? <LazyJoinPage /> : <LazyLogin needsSetup={auth.needsSetup} />}</Suspense>
+  }
   return <>{children}</>
 }

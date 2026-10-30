@@ -1,33 +1,24 @@
-import { useEffect, useRef, useState, useSyncExternalStore } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { saveDataOn } from '../../lib/dataSaver'
+import { useMediaQuery } from '../../lib/media'
+import { COARSE_POINTER_QUERY, REDUCED_MOTION_QUERY, WIDE_PAGE_QUERY } from '../../lib/mediaQueries'
+import { isTv } from '../../lib/spatialNav'
+import { whenIdle } from '../../lib/whenIdle'
 import { settingsStore, useStore } from '../../lib/store'
 import { DetailIcon } from './DetailIcons'
-import { BACKDROP_DELAY_MS, backdropTrailerAllowed, embedTrailerUrl } from './trailers'
+import { BACKDROP_DELAY_MS, backdropTrailerAllowed, embedTrailerUrl, TRAILER_IDLE_MS, TRAILER_TV_QUIET_MS } from './trailers'
 import { useYtPlayer } from './useYtPlayer'
 
 // Tráiler de fondo de la ficha (v0.14): a los ~3 s de abrirla, la imagen de la portada pasa al tráiler
 // sin sonido, como en Netflix y Disney+. Con botones para activar el sonido y pausar. No va en
 // celulares, con "reducir movimiento", con ahorro de datos ni con el tráiler de los pósters apagado.
 
-function useMatch(query: string): boolean {
-  return useSyncExternalStore(
-    (cb) => {
-      if (typeof matchMedia !== 'function') return () => {}
-      const mq = matchMedia(query)
-      mq.addEventListener('change', cb)
-      return () => mq.removeEventListener('change', cb)
-    },
-    () => typeof matchMedia === 'function' && matchMedia(query).matches,
-    () => false,
-  )
-}
-
 /** Si en este dispositivo y con estos ajustes corresponde el tráiler de fondo. */
 export function useBackdropTrailerAllowed(): boolean {
   const enabled = useStore(settingsStore).hoverTrailer
-  const reducedMotion = useMatch('(prefers-reduced-motion: reduce)')
-  const wide = useMatch('(min-width: 761px)')
-  const coarsePointer = useMatch('(pointer: coarse)')
+  const reducedMotion = useMediaQuery(REDUCED_MOTION_QUERY)
+  const wide = useMediaQuery(WIDE_PAGE_QUERY)
+  const coarsePointer = useMediaQuery(COARSE_POINTER_QUERY)
   return backdropTrailerAllowed({ enabled, saveData: saveDataOn(), reducedMotion, wide, coarsePointer })
 }
 
@@ -42,8 +33,16 @@ interface Props {
 export function HeroTrailer({ ytId, title, suspended }: Props) {
   const [started, setStarted] = useState(false)
   useEffect(() => {
-    const t = setTimeout(() => setStarted(true), BACKDROP_DELAY_MS)
-    return () => clearTimeout(t)
+    // v0.36 (sistema-05): pasado el retraso, el iframe de YouTube se monta con el navegador ocioso (en la TV, además,
+    // sin teclas durante 1 s): no compite con lo primero que el usuario hace en la ficha.
+    let cancelIdle: (() => void) | undefined
+    const t = setTimeout(() => {
+      cancelIdle = whenIdle(() => setStarted(true), { timeoutMs: TRAILER_IDLE_MS, quietKeysMs: isTv() ? TRAILER_TV_QUIET_MS : 0 })
+    }, BACKDROP_DELAY_MS)
+    return () => {
+      clearTimeout(t)
+      cancelIdle?.()
+    }
   }, [ytId])
   if (!started) return null
   return <HeroTrailerFrame key={ytId} ytId={ytId} title={title} suspended={suspended} />

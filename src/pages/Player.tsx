@@ -34,13 +34,11 @@ import {
   BAR_SELECTOR,
   keyboardFocusInBar,
   liftsSubForCorner,
-  NARROW_QUERY,
-  PHONE_LANDSCAPE_QUERY,
-  TINY_BAR_QUERY,
   tip,
   useCompactBar,
-  useMediaQuery,
 } from './player/controlBar'
+import { matchesNow, useMediaQuery } from '../lib/media'
+import { COARSE_POINTER_QUERY, NARROW_QUERY, PHONE_LANDSCAPE_QUERY, TINY_BAR_QUERY } from '../lib/mediaQueries'
 import { SubtitleMenu } from './player/SubtitleMenu'
 import { useMediaSession, usePictureInPicture, useWakeLock } from './player/useMediaSession'
 import { usePictureCueBottom } from './player/usePictureCue'
@@ -364,13 +362,7 @@ function PlayerView({
 
   // Celular: pantalla completa y horizontal al entrar (U34); gestos y bloqueo de pantalla (U35).
   const [phone] = useState(() => !tvMode && isPhoneLike())
-  const [touch] = useState(() => {
-    try {
-      return !tvMode && matchMedia('(pointer: coarse)').matches
-    } catch {
-      return false
-    }
-  })
+  const [touch] = useState(() => !tvMode && matchesNow(COARSE_POINTER_QUERY))
   usePlayerScreen(phone)
   const [locked, setLocked] = useState(false)
   const [unlockHint, setUnlockHint] = useState(false)

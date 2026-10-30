@@ -14,9 +14,48 @@
     <link rel="preconnect" href="https://image.tmdb.org" />
     <link rel="dns-prefetch" href="https://episodes.metahub.space" />
     <title>Flix</title>
+    <!-- Pantalla de arranque (v0.36): hasta que llega el JS el #root estaba vacío y la app parecía no abrir. Va con
+         <style> inline (la CSP permite estilos inline y ningún script) y React la reemplaza al montar. -->
+    <style>
+      html,
+      body {
+        margin: 0;
+        background: #0b0b10;
+      }
+      .boot {
+        position: fixed;
+        inset: 0;
+        display: grid;
+        place-items: center;
+      }
+      .boot svg {
+        width: 72px;
+        height: 72px;
+      }
+      @media (prefers-reduced-motion: no-preference) {
+        .boot svg {
+          animation: boot-pulse 1.6s ease-in-out infinite alternate;
+        }
+        @keyframes boot-pulse {
+          from {
+            opacity: 0.55;
+          }
+          to {
+            opacity: 1;
+          }
+        }
+      }
+    </style>
   </head>
   <body>
-    <div id="root"></div>
+    <div id="root">
+      <div class="boot" role="status" aria-label="Cargando Flix">
+        <svg viewBox="0 0 512 512" aria-hidden="true" focusable="false">
+          <rect width="512" height="512" rx="112" fill="#1d1538" />
+          <path d="M180 140H340V186H230V234H316V278H230V372H180Z" fill="none" stroke="#c4b0ff" stroke-width="12" stroke-linejoin="round" />
+        </svg>
+      </div>
+    </div>
     <script type="module" src="/src/main.tsx"></script>
   </body>
 </html>
