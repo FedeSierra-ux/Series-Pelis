@@ -1,9 +1,11 @@
+import { GLYPHS, IconSvg } from '../../components/Icon'
+
 // Íconos de la ficha (v0.14): trazo con `currentColor`, así toman el color del botón y del tema.
 
 const PATHS = {
   play: <path d="M7 4.5v15l12.5-7.5z" fill="currentColor" stroke="none" />,
-  plus: <path d="M12 5v14M5 12h14" />,
-  check: <path d="M5 12.5l4.5 4.5L19 7.5" />,
+  plus: GLYPHS.plus,
+  check: GLYPHS.check,
   star: <path d="M12 3.5l2.6 5.4 5.9.8-4.3 4.1 1 5.8L12 16.9l-5.2 2.7 1-5.8-4.3-4.1 5.9-.8z" />,
   starFilled: <path d="M12 3.5l2.6 5.4 5.9.8-4.3 4.1 1 5.8L12 16.9l-5.2 2.7 1-5.8-4.3-4.1 5.9-.8z" fill="currentColor" />,
   trailer: (
@@ -32,8 +34,8 @@ const PATHS = {
       <path d="M15.5 9a4.5 4.5 0 0 1 0 6M18 6.5a8 8 0 0 1 0 11" />
     </>
   ),
-  back: <path d="M15 5l-7 7 7 7" />,
-  close: <path d="M6 6l12 12M18 6L6 18" />,
+  back: GLYPHS.back,
+  close: GLYPHS.close,
   restart: <path d="M4 12a8 8 0 1 0 2.4-5.7M4 4v4.5h4.5" />,
   eye: (
     <>
@@ -54,20 +56,8 @@ export type DetailIconName = keyof typeof PATHS
 
 export function DetailIcon({ name, size = 22 }: { name: DetailIconName; size?: number }) {
   return (
-    <svg
-      className="d-icon"
-      width={size}
-      height={size}
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="2"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      aria-hidden
-      focusable="false"
-    >
+    <IconSvg size={size} className="d-icon">
       {PATHS[name]}
-    </svg>
+    </IconSvg>
   )
 }

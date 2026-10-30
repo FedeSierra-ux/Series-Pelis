@@ -149,6 +149,7 @@ export function ListPage() {
                 key={m.id}
                 meta={m}
                 eager={i < 12}
+                priority={i < 6}
                 to={curatedItemPath(m)}
               />
             ))

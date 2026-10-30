@@ -27,15 +27,15 @@
   border: 0;
   color: var(--accent);
   font: inherit;
-  font-size: 0.9rem;
-  font-weight: 600;
+  font-size: var(--fs-md);
+  font-weight: 700;
   line-height: 1.2;
   cursor: pointer;
   text-decoration: underline;
   text-underline-offset: 3px;
 }
 .d-read-more:focus-visible {
-  outline: var(--focus-ring, 3px solid var(--accent));
+  outline: var(--focus-ring);
   outline-offset: 3px;
   border-radius: 4px;
 }
@@ -101,7 +101,7 @@ html[data-tv] .d-read-more {
   border: 1px solid var(--outline, var(--line));
   background: var(--surface-1, var(--bg-2));
   font-weight: 700;
-  font-size: 1rem;
+  font-size: var(--fs-base);
   line-height: 1.5;
   color: var(--text);
   white-space: nowrap;
@@ -132,7 +132,7 @@ html[data-tv] .d-read-more {
   text-overflow: ellipsis;
 }
 html[data-tv] .sx-chip {
-  font-size: 1.1rem;
+  font-size: var(--fs-lg);
 }
 html[data-tv] .sx-src {
   font-size: 1.05rem;
@@ -167,7 +167,7 @@ html[data-tv] .sx-file {
 }
 .sx-empty .sx-kicker {
   color: var(--muted);
-  font-size: 0.85rem;
+  font-size: var(--fs-sm);
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.06em;
@@ -198,7 +198,7 @@ html[data-tv] .sx-file {
 .sx-empty .sx-hint {
   margin: 0;
   color: var(--muted);
-  font-size: 0.85rem;
+  font-size: var(--fs-sm);
 }
 /* TV: el botón arriba de la imagen, a la altura del primer episodio (si no, → desde la lista caía en
    «Marcar temporada como vista», que queda más cerca que un botón debajo de la foto). */
@@ -242,8 +242,8 @@ html[data-tv] .sx-empty .sx-empty-thumb {
     margin: 0 0 10px auto;
     min-height: 36px;
     padding: 6px 14px;
-    font-size: 0.85rem;
-    font-weight: 600;
+    font-size: var(--fs-sm);
+    font-weight: 700;
     border: 1px solid var(--outline, var(--line));
     border-radius: 999px;
     color: var(--text-soft, var(--text));
@@ -269,7 +269,7 @@ html[data-tv] .sx-empty .sx-empty-thumb {
     font-size: 0.78rem;
   }
   .episodes .episode-desc {
-    font-size: 0.8rem;
+    font-size: var(--fs-xs);
   }
   /* Círculo de 36 px con la misma zona táctil de 48 px (borde invisible). En la TV queda de 44. */
   .episodes .episode-check {
@@ -312,7 +312,7 @@ html[data-tv] .sx-empty .sx-empty-thumb {
   border-radius: 999px;
   background: var(--surface-2, var(--bg-3));
   color: var(--text-soft, var(--muted));
-  font-size: 0.8rem;
+  font-size: var(--fs-xs);
   font-style: normal;
 }
 .episode-desc.spoiler-hidden .spoiler-icon {
@@ -354,13 +354,13 @@ html[data-tv] .sx-empty .sx-empty-thumb {
 .detail-original {
   margin: 0;
   max-width: 62ch;
-  font-size: 0.9rem;
+  font-size: var(--fs-md);
   line-height: 1.35;
   color: var(--text-soft, var(--muted));
   text-shadow: 0 1px 6px rgba(0, 0, 0, 0.5);
 }
 .detail-original span {
-  font-weight: 600;
+  font-weight: 700;
   color: var(--text);
 }
 @media (max-width: 760px) {
@@ -371,12 +371,12 @@ html[data-tv] .sx-empty .sx-empty-thumb {
     font-size: 1.05rem;
   }
   .detail-original {
-    font-size: 0.85rem;
+    font-size: var(--fs-sm);
   }
 }
 /* En la TV se lee de lejos. */
 html[data-tv] .detail-local-name {
-  font-size: 1.5rem;
+  font-size: var(--fs-2xl);
 }
 html[data-tv] .detail-original {
   font-size: 1.05rem;

@@ -717,6 +717,37 @@ npm run preview    # sirve dist/ en http://localhost:4173
     episodio a 44 px en celular; al cambiar de perfil desde el selector abierto en el celular queda una entrada de historial de más; el
     estado vacío de Metas/Tu año es alto (~185 px); CSS sin uso `.not-interested` y la prop `alwaysToggle` de `KeyboardToggle`; la sección
     "Siguiente episodio" de Ajustes aloja en modo avanzado el campo del servidor de streaming (conviene moverlo a "Reproductor").
+- v0.36.0 hecha (rama `ccr-a630843d-khuv21`): **tercera tanda de la auditoría de la v0.33** (14: rendimiento de carga y orden interno; agentes
+  H carga, I CSS, J duplicados). Queda la v0.37.0 (sacar el Tema 1 de `styles.css`, `sistema-06`, aparte para poder revertirla). Casi nada
+  cambia a la vista: se comparó píxel a píxel antes/después en PC, celular y TV.
+  - **`color-mix()` con respaldo**: un `color-mix()` que use `var()` necesita su respaldo en `@supports not (color: color-mix(in srgb, red 50%,
+    transparent)) { misma regla { … rgba(var(--bg-rgb), .7) } }` pegado a la regla. **Una línea `rgba()` antes no sirve** (la declaración con `var()` no se
+    descarta al parsear y queda transparente en un navegador viejo) y lightningcss borra la previa de `color`, `text-shadow` y `filter`. Lo exige
+    `src/lib/cssTokens.test.ts`. Si cambia `--bg`, `--bg-2`, `--text`, `--accent` o `--danger`, hay que cambiar su `-rgb`. Esto cubre webOS 5/6/22/23 y
+    Tizen 5.5–8 (probado solo en simulación; el usuario había elegido "agregar respaldo", no solo documentar el piso). `:has()` (30 reglas) queda sin respaldo:
+    cada regla es suelta y degrada bien; un test vigila que ninguna lista de selectores la mezcle con otros.
+  - **Escalas**: capas `--z-*` en el `:root` de `styles.css` (protector 1000 > tráiler 990 > perfiles 950…; los internos -1 a 6 van a mano; el aviso sin conexión
+    es `--z-banner`, 19); foco `--focus-ring` (4px), `-sm` (3px), `-lg` (5px), `--focus-offset`, `--focus-inset` (quedan a mano los 54 anillos blancos `3px #fff` del Tema 1 del
+    reproductor y `.t2-pill`, que ganan por especificidad); tamaños `--fs-*` (solo los 8 más usados); sombras `--shadow-1/2/3/lift`; solo se declaran pesos
+    400/500/700/800, los que carga `main.tsx`. Pendiente anotado: los casi-duplicados de `font-size` (0,78/0,82/0,92/0,95/1,05 rem), 36 `clamp(…vw…)`, gaps y radios 6/8/10px sin token.
+  - **Media queries**: hook único `useMediaQuery` + `matchesNow`, `subscribeMedia` y `prefersReducedMotion` en `lib/media.ts`; **todas** las consultas con nombre en
+    `lib/mediaQueries.ts` (una nueva va ahí, un test falla si se escribe a mano). Los breakpoints CSS no se tocaron (700, 720 y 560 siguen en `me.css`, `auth.css`,
+    `tv-hints.css`, `shortcuts-help.css`). `hoverTrailer.ts` usa 760 y `WIDE_PAGE_QUERY` 761: a exactamente 760 px difieren (anotado, sin tocar).
+  - **Íconos y avisos**: `components/Icon.tsx` = `IconSvg` (marco) + `GLYPHS` (close, back, next, plus, check, info); cada set (Theme2, Player, Detail, Filter, Hero) conserva su registro,
+    tamaño y trazo. **No se unificaron** `play`, `pause`, `more`, `external`, `star`, `moon`, `gear` entre sets porque difieren en píxeles (se decide uno por uno). `components/NoticeCard.tsx`
+    es el aviso `.update-toast`. `@keyframes spin` y `toast-in` son los únicos de giro y de entrada: no crear uno por componente. Las 9 capas/scrims y los 5 spinners difieren a propósito.
+  - **Carga**: fuentes estáticas en `main.tsx` (`lib/theme.ts` solo tiene `dropThemeMirror`); `lib/whenIdle.ts` (`requestIdleCallback` con tope de 2 s y, en la TV, 1 s sin teclas) lo usan
+    `BrowseHero` y `HeroTrailer`; `PosterCard` y `Layer` tienen prop `priority` (`fetchPriority=high` solo con ella; `eager` solo manda `loading`); `HeroCarousel` monta el slide
+    siguiente cuando cargó el actual; `Search` reserva el alto del "Mejor resultado" (`.search-best.is-skeleton`); `index.html` trae un `<style>` y la F de Flix dentro de `#root`
+    (sin script inline, la CSP no cambia). **Service worker**: `globIgnores` saca `hls-*` y `Player-*` del precache y un `runtimeCaching` CacheFirst (`player-chunks`) los guarda al primer
+    uso; **el `urlPattern` de Workbox no puede usar variables de `vite.config.ts`** (se copia tal cual al `sw.js`). Ajustes, Login e invitación son `lazy()`, pero **el CSS de una página lazy
+    carga después de `theme2.css` y `a11y.css` y cambia la cascada**: por eso `settings-layout.css` y `auth.css` se importan estáticos.
+  - **Medir**: el TBT engaña cuando el FCP se adelanta (las tareas de arranque caen después); mirar también el tiempo total de tareas largas. Con YouTube bloqueado el LCP da igual, así que el
+    iframe no compite con el LCP en PC; la mejora del tráiler diferido se midió en modo TV (teclas cada 350 ms: latencia p90 de 215 a 148 ms). El preload de fuentes se probó y se descartó (FCP peor).
+  - **Pendientes anotados (sin implementar)**: LCP de la ficha 12,6–13,4 s con red lenta (el fondo es un `background-image` de CSS sin prioridad: un `<img fetchpriority=high>` o un preload lo
+    adelantaría); CLS 0,048 de la ficha y ~0,03 de Inicio por el cambio de fuente (un `@font-face` de reemplazo con `size-adjust`); `BACK_KEYS`/`CLOSE_KEYS` copiado en ~15 archivos;
+    íconos CSS `data:image/svg+xml` repiten glifos del set; `.update-toast` (z 70) queda bajo el reproductor (100) y `.undo-toast` (40) bajo `.hover-trailer` (60); botones sin `font-family: inherit`
+    (p. ej. `button.episode-check`) muestran Arial; ✓ y ⌫ usan la fuente del sistema; Ajustes lazy muestra un `Spinner` la primera vez (se podría precargar con `whenIdle`).
 - **Decisiones para la v0.17 (reemplazan el reparto del plan de abajo)**: addons y TorBox **iguales para todas las
   casas**, solo los cambia el admin (opción A). Ajustes generales (subtítulos, idiomas, autoplay, saltar intro, sin
   spoilers, reglas de fuentes) **iguales en toda la casa**; lo físico (modo TV, tamaño de la interfaz, protector,

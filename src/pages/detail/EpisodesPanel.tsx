@@ -1,8 +1,11 @@
 import { useEffect, useRef, type ReactNode, type RefObject } from 'react'
+import { IconSvg } from '../../components/Icon'
 import { Picker } from '../../components/Picker'
 import { UndoToast, useUndoToast } from '../../components/UndoToast'
 import { ImdbRating } from '../../components/Rating'
 import { SafeImg } from '../../components/SafeImg'
+import { useMediaQuery } from '../../lib/media'
+import { TOUCH_QUERY } from '../../lib/mediaQueries'
 import { remainingLabel } from '../../lib/remaining'
 import { RESUME_MIN_S, restoreWatchSnapshot, setWatched, setWatchedMany, snapshotWatch, type WatchEntry } from '../../lib/store'
 import { useTvMode } from '../../lib/tv'
@@ -18,7 +21,6 @@ import {
   seasonStatus,
   suggestedForPanel,
 } from './episodes'
-import { TOUCH_QUERY, useMediaQuery } from './useMediaQuery'
 import { useSeasonOverviews } from './useSeasonOverviews'
 
 // Pestaña "Episodios" de la ficha: selector de temporada, lista de episodios y fuentes del elegido.
@@ -266,9 +268,9 @@ export function EpisodesPanel(p: Props) {
 /** Ojo tachado, con el trazo de los íconos de la ficha (ficha-06). */
 function SpoilerIcon() {
   return (
-    <svg className="spoiler-icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden focusable="false">
+    <IconSvg size={14} className="spoiler-icon">
       <path d="M2.5 12S6 5.5 12 5.5c1.6 0 3 .4 4.2 1M21.5 12S18 18.5 12 18.5c-1.6 0-3-.4-4.2-1" />
       <path d="M9.9 9.9a3 3 0 0 0 4.2 4.2M4 20 20 4" />
-    </svg>
+    </IconSvg>
   )
 }

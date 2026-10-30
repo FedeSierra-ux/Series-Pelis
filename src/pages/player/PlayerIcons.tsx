@@ -1,3 +1,5 @@
+import { IconSvg } from '../../components/Icon'
+
 // Íconos de línea de los controles del reproductor (mismo trazo que Theme2Icons). Heredan el color del texto.
 
 const ten = (
@@ -125,19 +127,8 @@ export type PlayerIconName = keyof typeof PATHS
 
 export function PlayerIcon({ name, size = 24 }: { name: PlayerIconName; size?: number }) {
   return (
-    <svg
-      className="player-icon"
-      width={size}
-      height={size}
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth={2}
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      aria-hidden
-    >
+    <IconSvg size={size} className="player-icon">
       {PATHS[name]}
-    </svg>
+    </IconSvg>
   )
 }

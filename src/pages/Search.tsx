@@ -11,6 +11,8 @@ import { errorText } from '../lib/errors'
 import { useAddons, useTitle } from '../lib/hooks'
 import { requestTitles, useTitlesVersion } from '../lib/localTitles'
 import { typeLabel } from '../lib/i18n'
+import { useMediaQuery } from '../lib/media'
+import { NARROW_QUERY } from '../lib/mediaQueries'
 import { useOnline } from '../lib/online'
 import { debounce, echoQuery, MIN_QUERY, normalizeQuery, parseTogether, pushRecent, removeRecent } from '../lib/searchHistory'
 import {
@@ -182,26 +184,6 @@ function useCatalogSearch(query: string, retry: number, tmdbOn: boolean): Search
   return sources
 }
 
-const NARROW = '(max-width: 760px)'
-
-/** Pantalla de celular (el mismo corte que el CSS). */
-function useNarrow(): boolean {
-  const [narrow, setNarrow] = useState(() => typeof matchMedia === 'function' && matchMedia(NARROW).matches)
-  useEffect(() => {
-    if (typeof matchMedia !== 'function') return
-    const mq = matchMedia(NARROW)
-    const update = () => {
-      setNarrow(mq.matches)
-    }
-    update()
-    mq.addEventListener('change', update)
-    return () => {
-      mq.removeEventListener('change', update)
-    }
-  }, [])
-  return narrow
-}
-
 export function Search() {
   useTitle('Buscar')
   const addons = useAddons()
@@ -262,7 +244,8 @@ export function Search() {
     () => (active && groups.every((g) => !g.loading) && !people.loading ? pickBestResult(query, groups, people.people) : undefined),
     [active, groups, query, people.loading, people.people, titlesVersion],
   )
-  const narrow = useNarrow()
+  const bestPending = active && (people.loading || groups.some((g) => g.loading))
+  const narrow = useMediaQuery(NARROW_QUERY)
   const tabs = SEARCH_TABS.filter((t) => t.id !== 'people' || tmdbOn)
   const shownTab: SearchTab = tab === 'people' && !tmdbOn ? 'all' : tab
 
@@ -511,6 +494,9 @@ export function Search() {
         )}
 
         {shownTab === 'all' && best && <BestResult key={best.id} meta={best} />}
+        {/* v0.36 (visual-pc-02): mientras llegan los resultados se reserva el alto del "Mejor resultado" (si no, al
+            aparecer empujaba todo 340 px: CLS 0,16). Si al final no hay mejor resultado, se retira. */}
+        {shownTab === 'all' && !best && bestPending && <div className="search-best is-skeleton skeleton" aria-hidden />}
 
         {active && shownTab === 'all' && (people.loading || people.people.length > 0) && (
           <div className="search-people">

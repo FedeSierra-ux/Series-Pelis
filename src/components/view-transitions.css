@@ -33,7 +33,7 @@
   ::view-transition-group(sp-poster) {
     animation-duration: 340ms;
     animation-timing-function: cubic-bezier(0.2, 0.8, 0.2, 1);
-    border-radius: var(--radius-sm, 12px);
+    border-radius: var(--radius-sm);
     overflow: hidden;
   }
   ::view-transition-old(sp-poster),

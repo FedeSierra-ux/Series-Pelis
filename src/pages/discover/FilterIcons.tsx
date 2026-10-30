@@ -1,3 +1,5 @@
+import { GLYPHS, IconSvg } from '../../components/Icon'
+
 // Íconos de línea de la barra de filtros. Mismo trazo que Theme2Icons y heredan el color del texto.
 
 const PATHS = {
@@ -11,9 +13,9 @@ const PATHS = {
       <rect x="13" y="13" width="7" height="7" rx="1.5" />
     </>
   ),
-  close: <path d="M6 6l12 12M18 6L6 18" />,
-  prev: <path d="M15 5l-7 7 7 7" />,
-  next: <path d="M9 5l7 7-7 7" />,
+  close: GLYPHS.close,
+  prev: GLYPHS.back,
+  next: GLYPHS.next,
   tag: (
     <>
       <path d="M3 12V4h8l10 10-8 8z" />
@@ -27,20 +29,8 @@ export type FilterIconName = keyof typeof PATHS
 
 export function FilterIcon({ name, size = 20 }: { name: FilterIconName; size?: number }) {
   return (
-    <svg
-      className="fb-icon"
-      width={size}
-      height={size}
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth={2}
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      aria-hidden
-      focusable="false"
-    >
+    <IconSvg size={size} className="fb-icon">
       {PATHS[name]}
-    </svg>
+    </IconSvg>
   )
 }

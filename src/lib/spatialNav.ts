@@ -2,6 +2,7 @@
 // Busca el elemento enfocable más cercano en la dirección pedida y le pasa el foco.
 
 import { restoredElement } from './focusMemory'
+import { prefersReducedMotion } from './media'
 
 export type Dir = 'up' | 'down' | 'left' | 'right'
 
@@ -230,9 +231,7 @@ export function anchoredScrollLeft(o: { scrollLeft: number; itemLeft: number; sc
   return Math.max(0, Math.min(o.maxScroll, Math.round(target)))
 }
 
-function reducedMotion() {
-  return typeof matchMedia === 'function' && matchMedia('(prefers-reduced-motion: reduce)').matches
-}
+const reducedMotion = prefersReducedMotion
 
 /** Desde dónde se ve la página: 0, o lo que tapa una portada fija (`scroll-padding-top`, ver discover/browse.css). */
 export function visibleTop(): number {

@@ -3,7 +3,7 @@
 .pf-layer {
   position: fixed;
   inset: 0;
-  z-index: 950;
+  z-index: var(--z-profiles);
   display: grid;
   place-items: center;
   overflow-y: auto;
@@ -103,7 +103,7 @@ html[data-tv] .pf-add-icon {
 }
 html[data-tv] .pf-name {
   hyphens: auto;
-  font-size: 1.1rem;
+  font-size: var(--fs-lg);
 }
 .pf-tile-art {
   position: relative;
@@ -144,7 +144,7 @@ html[data-tv] .pf-name {
   overflow-wrap: break-word;
   text-align: center;
   font-size: 1.05rem;
-  font-weight: 600;
+  font-weight: 700;
 }
 .pf-tile:focus-visible .pf-name,
 .pf-tile[aria-current='true'] .pf-name {
@@ -289,7 +289,7 @@ html[data-tv] .pf-name {
 }
 .pf-label {
   padding: 0;
-  font-weight: 600;
+  font-weight: 700;
   font-size: 0.92rem;
 }
 /* El aro del color elegido (3 px + 6 px) sube sobre la muestra: el rótulo de un grupo necesita más aire que los 4 px
@@ -335,7 +335,7 @@ html[data-tv] .pf-name {
   background: transparent;
   color: var(--text);
   font: inherit;
-  font-size: 0.9rem;
+  font-size: var(--fs-md);
   cursor: pointer;
 }
 .pf-group[aria-pressed='true'] {
@@ -393,6 +393,11 @@ html[data-tv] .pf-name {
   padding: 16px;
   border-radius: var(--radius);
   background: color-mix(in srgb, var(--danger) 14%, transparent);
+}
+@supports not (color: color-mix(in srgb, red 50%, transparent)) {
+  .pf-confirm {
+    background: rgba(var(--danger-rgb), 0.14);
+  }
 }
 .pf-confirm p {
   margin: 0;

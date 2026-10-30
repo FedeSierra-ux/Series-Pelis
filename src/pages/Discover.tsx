@@ -269,7 +269,7 @@ function DiscoverGrid() {
 
       <div className="grid">
         {items.map((m, i) => (
-          <PosterCard key={m.id} meta={m} eager={i < 12} hideTop10Label />
+          <PosterCard key={m.id} meta={m} eager={i < 12} priority={i < 6} hideTop10Label />
         ))}
         {loading && Array.from({ length: items.length ? 6 : 18 }, (_, i) => <PosterSkeleton key={`s${i}`} />)}
       </div>

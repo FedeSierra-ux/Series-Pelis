@@ -119,7 +119,7 @@ function Billboard() {
  * Una capa del fondo: imagen, sombra y datos. `media` va entre la imagen y la sombra (el tráiler de la
  * portada de Películas y Series), así el texto queda siempre encima y legible.
  */
-export function Layer({ info, media }: { info: BillboardInfo; media?: ReactNode }) {
+export function Layer({ info, media, priority }: { info: BillboardInfo; media?: ReactNode; priority?: boolean }) {
   const [brokenLogo, setBrokenLogo] = useState(false)
   const [brokenBg, setBrokenBg] = useState(false)
   // v0.26 (explorar-02): mientras el fondo no llegó, la imagen de la tarjeta (ya en caché) difuminada hace de
@@ -146,6 +146,9 @@ export function Layer({ info, media }: { info: BillboardInfo; media?: ReactNode 
           src={bg}
           alt=""
           decoding="async"
+          // v0.36 (sistema-01): el fondo de la portada de Películas/Series es el LCP; sin esto Chrome lo pedía con
+          // prioridad baja, detrás de ~15 pósters.
+          fetchPriority={priority ? 'high' : undefined}
           onLoad={() => setBgState((s) => (s === 'wait' ? 'loaded' : s))}
           onError={() => setBrokenBg(true)}
         />

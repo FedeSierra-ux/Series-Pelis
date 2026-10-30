@@ -1,5 +1,5 @@
 import { storageIssueStore, useStorageIssue } from '../lib/store'
-import './update-toast.css'
+import { NoticeCard } from './NoticeCard'
 
 /**
  * Aviso cuando el navegador no deja guardar el progreso ni los ajustes (cuota llena, auditoría #5).
@@ -10,13 +10,10 @@ export function StorageWarning() {
   const issue = useStorageIssue()
   if (!issue) return null
   return (
-    <div className="update-toast" role="alert">
-      <span className="update-toast-text">{issue}</span>
-      <div className="update-toast-actions">
-        <button type="button" className="btn btn-small" onClick={storageIssueStore.dismiss}>
-          Entendido
-        </button>
-      </div>
-    </div>
+    <NoticeCard text={issue} role="alert">
+      <button type="button" className="btn btn-small" onClick={storageIssueStore.dismiss}>
+        Entendido
+      </button>
+    </NoticeCard>
   )
 }

@@ -62,3 +62,8 @@ export function backdropTrailerAllowed(env: BackdropEnv): boolean {
 
 /** A los cuántos milisegundos de abrir la ficha el fondo pasa al tráiler. */
 export const BACKDROP_DELAY_MS = 3000
+
+/** v0.36 (sistema-05): el iframe de YouTube se monta cuando el navegador queda ocioso, a lo sumo tras este tope. */
+export const TRAILER_IDLE_MS = 2000
+/** En la TV, además, sin teclas durante este tiempo (el iframe pesa ~1 MB y pisaba las primeras flechas). */
+export const TRAILER_TV_QUIET_MS = 1000

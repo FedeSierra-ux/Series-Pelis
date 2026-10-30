@@ -1,6 +1,8 @@
 import { useSyncExternalStore } from 'react'
 import { getMeta } from './addons'
 import { saveDataOn } from './dataSaver'
+import { matchesNow } from './media'
+import { COARSE_POINTER_QUERY, REDUCED_MOTION_QUERY } from './mediaQueries'
 import { addonsStore, settingsStore } from './store'
 import { getDetails, getDetailsByImdb, hasTmdb, ORIGINAL_TRAILER, parseTmdbId, pickTrailer, tmdbImg, trailerLangScore } from './tmdb'
 import type { Meta, MetaPreview } from './types'
@@ -88,14 +90,14 @@ export function trailerAllowed(env: TrailerEnv, via: TrailerVia): boolean {
 }
 
 function currentEnv(): TrailerEnv {
-  const mq = (q: string) => typeof matchMedia === 'function' && matchMedia(q).matches
+  const mq = matchesNow
   return {
     enabled: settingsStore.get().hoverTrailer,
     saveData: saveDataOn(),
-    reducedMotion: mq('(prefers-reduced-motion: reduce)'),
+    reducedMotion: mq(REDUCED_MOTION_QUERY),
     wide: mq('(min-width: 760px)'),
     finePointer: mq('(hover: hover) and (pointer: fine)'),
-    coarsePointer: mq('(pointer: coarse)'),
+    coarsePointer: mq(COARSE_POINTER_QUERY),
   }
 }
 

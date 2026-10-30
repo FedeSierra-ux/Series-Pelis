@@ -25,6 +25,11 @@ interface Props {
   subtitle?: string
   to?: string
   eager?: boolean
+  /**
+   * Pide la imagen con prioridad alta (v0.36, sistema-02): solo la primera fila visible de la pantalla. Las demás
+   * `eager` van con prioridad automática y no le quitan el ancho de banda al LCP (el fondo de la portada).
+   */
+  priority?: boolean
   /** Muestra un botón ✕ sobre la tarjeta (por ejemplo para sacarla de "Seguir viendo"). */
   onRemove?: () => void
   removeLabel?: string
@@ -43,7 +48,7 @@ interface Props {
   rank?: number
 }
 
-export const PosterCard = memo(function PosterCard({ meta, progress, watched, subtitle, to, eager, onRemove, removeLabel, landscape, hideTop10Label, rank }: Props) {
+export const PosterCard = memo(function PosterCard({ meta, progress, watched, subtitle, to, eager, priority, onRemove, removeLabel, landscape, hideTop10Label, rank }: Props) {
   const prefetched = useRef(false)
   // Precargamos la ficha cuando el usuario se detiene en el póster: al entrar ya está lista.
   const prefetch = () => {
@@ -126,7 +131,7 @@ export const PosterCard = memo(function PosterCard({ meta, progress, watched, su
             alt=""
             loading={eager ? 'eager' : 'lazy'}
             decoding="async"
-            fetchPriority={eager ? 'high' : 'auto'}
+            fetchPriority={priority ? 'high' : 'auto'}
             className={landscape && !backdrop ? 'is-poster' : undefined}
             onError={() => setBrokenSrc(src)}
           />

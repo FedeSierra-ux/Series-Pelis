@@ -24,10 +24,10 @@
   max-width: 720px;
   padding: 34px 32px;
   gap: 18px;
-  font-size: 1.2rem;
+  font-size: var(--fs-xl);
 }
 .player-error.player-error-tv p {
-  font-size: 1.2rem;
+  font-size: var(--fs-xl);
 }
 .player-error-tv .player-error-icon {
   width: 80px;

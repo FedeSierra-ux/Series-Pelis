@@ -1,11 +1,8 @@
-import { Component, useEffect, useState, useSyncExternalStore, type MouseEvent, type ReactNode } from 'react'
+import { Component, useEffect, useState, type MouseEvent, type ReactNode } from 'react'
 
 // Ajustes en dos columnas (v0.10, V5 de la auditoría): desde 1024 px, índice fijo a la izquierda
 // con la sección visible resaltada; en el celular, cada sección es un <details> plegable (las
 // cerradas de entrada y de a una por vez). Acá no hay lógica de ninguna sección: solo la estructura y el foco.
-
-/** Hasta este ancho, las secciones van plegadas; desde acá, índice + contenido. */
-export const WIDE_QUERY = '(min-width: 1024px)'
 
 export interface SettingsSectionDef {
   /** Ancla (`#id`) y clave del índice. */
@@ -13,19 +10,6 @@ export interface SettingsSectionDef {
   /** Título del índice y del resumen plegable (el h2 de la sección queda oculto en el celular). */
   title: string
   element: ReactNode
-}
-
-/** `matchMedia` como estado de React (sin librerías). En el servidor o en tests da `false`. */
-export function useMediaQuery(query: string): boolean {
-  return useSyncExternalStore(
-    (onChange) => {
-      const mq = window.matchMedia(query)
-      mq.addEventListener('change', onChange)
-      return () => mq.removeEventListener('change', onChange)
-    },
-    () => window.matchMedia(query).matches,
-    () => false,
-  )
 }
 
 const FOCUSABLE = 'a[href], button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea, [tabindex]:not([tabindex="-1"])'

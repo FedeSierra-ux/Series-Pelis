@@ -1,5 +1,7 @@
 import { useCallback, useEffect, useState, type ReactNode } from 'react'
 import { Link } from 'react-router-dom'
+import { prefersReducedMotion } from '../lib/media'
+import { GlyphIcon } from './Icon'
 import { PosterSkeleton } from './PosterCard'
 import { ReportButton } from './ReportButton'
 import './rows.css'
@@ -66,8 +68,7 @@ function useRowPaging(deps: unknown) {
   const page = (dir: -1 | 1) => {
     if (!el) return
     const pad = parseFloat(getComputedStyle(el).paddingLeft) || 0
-    const reduced = typeof matchMedia === 'function' && matchMedia('(prefers-reduced-motion: reduce)').matches
-    el.scrollBy({ left: dir * Math.max(120, el.clientWidth - pad * 2), behavior: reduced ? 'auto' : 'smooth' })
+    el.scrollBy({ left: dir * Math.max(120, el.clientWidth - pad * 2), behavior: prefersReducedMotion() ? 'auto' : 'smooth' })
   }
 
   return { ref: setEl, edges, page }
@@ -131,9 +132,7 @@ export function Row({ title, moreTo, loading, error, empty, errorNotice, reportC
               onMouseDown={noFocus}
               onClick={() => page(-1)}
             >
-              <svg viewBox="0 0 24 24" width="30" height="30" fill="none" stroke="currentColor" strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
-                <path d="M15 5l-7 7 7 7" />
-              </svg>
+              <GlyphIcon name="back" size={30} strokeWidth={2.6} />
             </button>
             <button
               type="button"
@@ -145,9 +144,7 @@ export function Row({ title, moreTo, loading, error, empty, errorNotice, reportC
               onMouseDown={noFocus}
               onClick={() => page(1)}
             >
-              <svg viewBox="0 0 24 24" width="30" height="30" fill="none" stroke="currentColor" strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
-                <path d="M9 5l7 7-7 7" />
-              </svg>
+              <GlyphIcon name="next" size={30} strokeWidth={2.6} />
             </button>
           </>
         )}

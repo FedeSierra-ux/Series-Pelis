@@ -23,10 +23,12 @@ import { History } from './pages/History'
 import { Me } from './pages/Me'
 import { Home } from './pages/Home'
 import { Search } from './pages/Search'
-import { Settings } from './pages/Settings'
+// El CSS de Ajustes queda en el CSS inicial aunque la página sea lazy: un CSS cargado después de a11y.css/theme2.css
+// cambiaría la cascada (v0.36: en el celular corría 12 px la lista de secciones).
+import './pages/settings/settings-layout.css'
 import { ProfileGate } from './pages/profiles/ProfileGate'
-import { JoinPage } from './pages/auth/JoinPage'
 import { Spinner } from './components/Spinner'
+import { LazyJoinPage } from './pages/auth/lazyAuth'
 
 // El reproductor (con hls.js) se descarga recién al dar play: la portada carga más liviana.
 const Player = lazy(() => import('./pages/Player').then((m) => ({ default: m.Player })))
@@ -38,6 +40,8 @@ const Together = lazy(() => import('./pages/Together').then((m) => ({ default: m
 const ListsIndex = lazy(() => import('./pages/Lists').then((m) => ({ default: m.ListsIndex })))
 const ListPage = lazy(() => import('./pages/Lists').then((m) => ({ default: m.ListPage })))
 const LinkDevice = lazy(() => import('./pages/auth/LinkDevice').then((m) => ({ default: m.LinkDevice })))
+// v0.36 (sistema-13): Ajustes (~55 KB) tampoco entra en el paquete inicial.
+const Settings = lazy(() => import('./pages/Settings').then((m) => ({ default: m.Settings })))
 const CatalogManager = lazy(() => import('./pages/CatalogManager').then((m) => ({ default: m.CatalogManager })))
 
 const pageFallback = <div className="page"><Spinner /></div>
@@ -138,7 +142,7 @@ export function App() {
                 </ErrorBoundary>
               }
             />
-            <Route path="/unirse" element={<JoinPage />} />
+            <Route path="/unirse" element={<Suspense fallback={pageFallback}><LazyJoinPage /></Suspense>} />
             <Route element={<Layout />}>
               <Route index element={<Home />} />
               <Route path="discover/:type" element={<Discover />} />
@@ -158,7 +162,7 @@ export function App() {
               <Route path="history/diary" element={<Navigate to="/history" replace />} />
               <Route path="history/goals" element={<Suspense fallback={pageFallback}><Goals /></Suspense>} />
               <Route path="calendar" element={<Suspense fallback={pageFallback}><Calendar /></Suspense>} />
-              <Route path="settings" element={<Settings />} />
+              <Route path="settings" element={<Suspense fallback={pageFallback}><Settings /></Suspense>} />
               <Route path="vincular" element={<Suspense fallback={pageFallback}><LinkDevice /></Suspense>} />
               <Route path="settings/catalogs" element={<Suspense fallback={pageFallback}><CatalogManager /></Suspense>} />
               <Route path="*" element={<Navigate to="/" replace />} />

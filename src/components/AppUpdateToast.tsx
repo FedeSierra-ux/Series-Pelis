@@ -1,11 +1,9 @@
-import { useEffect, useState, type KeyboardEvent } from 'react'
+import { useEffect, useState } from 'react'
 import { useLocation } from 'react-router-dom'
 import { appUpdatePostponed, checkAppUpdate, formatSize, installAppUpdate, postponeAppUpdate, useAppUpdate, type AppUpdateState } from '../lib/appUpdate'
 import { isDesktopApp } from '../lib/desktop'
 import { isNativeApp } from '../lib/native'
-import './update-toast.css'
-
-const BACK_KEYS = new Set(['Escape', 'GoBack', 'BrowserBack', 'Backspace'])
+import { NoticeCard } from './NoticeCard'
 
 /**
  * "Hay una versión nueva de la app" (v0.21, solo en la app de Android TV). Al abrir se pregunta a GitHub
@@ -34,31 +32,24 @@ export function AppUpdateToast() {
     postponeAppUpdate(version)
     setClosed(true)
   }
-  const onKeyDown = (e: KeyboardEvent<HTMLDivElement>) => {
-    if (!BACK_KEYS.has(e.key) || e.altKey || e.ctrlKey || e.metaKey) return
-    e.preventDefault()
-    e.stopPropagation()
-    if (state.step === 'available') later()
-    else setClosed(true)
-  }
+  const close = state.step === 'available' ? later : () => setClosed(true)
 
   return (
-    <div className="update-toast" role="status" aria-live="polite" onKeyDown={onKeyDown}>
-      <span className="update-toast-text">{text}</span>
-      {state.step === 'downloading' && (
-        <progress className="update-toast-progress" max={1} value={state.progress} aria-label="Descarga" />
-      )}
-      <div className="update-toast-actions">
-        {(state.step === 'available' || state.step === 'error' || (state.step === 'installer' && !desktop)) && (
-          <button type="button" className="btn btn-primary btn-small" onClick={() => void installAppUpdate()}>
-            {state.step === 'available' ? 'Actualizar' : state.step === 'installer' ? 'Abrir el instalador' : 'Reintentar'}
-          </button>
-        )}
-        <button type="button" className="btn btn-small" onClick={state.step === 'available' ? later : () => setClosed(true)}>
-          {state.step === 'available' ? 'Después' : 'Cerrar'}
+    <NoticeCard
+      text={text}
+      polite
+      onBack={close}
+      progress={state.step === 'downloading' && <progress className="update-toast-progress" max={1} value={state.progress} aria-label="Descarga" />}
+    >
+      {(state.step === 'available' || state.step === 'error' || (state.step === 'installer' && !desktop)) && (
+        <button type="button" className="btn btn-primary btn-small" onClick={() => void installAppUpdate()}>
+          {state.step === 'available' ? 'Actualizar' : state.step === 'installer' ? 'Abrir el instalador' : 'Reintentar'}
         </button>
-      </div>
-    </div>
+      )}
+      <button type="button" className="btn btn-small" onClick={close}>
+        {state.step === 'available' ? 'Después' : 'Cerrar'}
+      </button>
+    </NoticeCard>
   )
 }
 

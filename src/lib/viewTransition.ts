@@ -50,9 +50,7 @@ export function viewTransitionsSupported(): boolean {
   return typeof document !== 'undefined' && typeof (document as DocWithVT).startViewTransition === 'function'
 }
 
-export function prefersReducedMotion(): boolean {
-  return typeof matchMedia === 'function' && matchMedia('(prefers-reduced-motion: reduce)').matches
-}
+export { prefersReducedMotion } from './media'
 
 export function startViewTransition(update: () => Promise<void>): { finished: Promise<void> } | undefined {
   const start = (document as DocWithVT).startViewTransition

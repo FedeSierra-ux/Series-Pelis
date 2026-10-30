@@ -29,9 +29,19 @@
     left: 0;
     background: linear-gradient(to right, color-mix(in srgb, var(--bg) 92%, transparent), transparent);
   }
+  @supports not (color: color-mix(in srgb, red 50%, transparent)) {
+    html:not([data-tv]) .row-page.is-prev {
+      background: linear-gradient(to right, rgba(var(--bg-rgb), 0.92), transparent);
+    }
+  }
   html:not([data-tv]) .row-page.is-next {
     right: 0;
     background: linear-gradient(to left, color-mix(in srgb, var(--bg) 92%, transparent), transparent);
+  }
+  @supports not (color: color-mix(in srgb, red 50%, transparent)) {
+    html:not([data-tv]) .row-page.is-next {
+      background: linear-gradient(to left, rgba(var(--bg-rgb), 0.92), transparent);
+    }
   }
   html:not([data-tv]) .row-body:hover .row-page {
     opacity: 1;
@@ -72,12 +82,12 @@ html[data-tv][data-theme='2'] .row-body:has(> .row-page.is-prev:not([hidden])) >
 }
 [data-theme='2'] .row-sub {
   margin: 4px 0 0;
-  font-size: 0.85rem;
+  font-size: var(--fs-sm);
   line-height: 1.35;
   color: var(--muted);
 }
 html[data-tv][data-theme='2'] .row-sub {
-  font-size: 1rem;
+  font-size: var(--fs-base);
 }
 
 /* ---------- Tarjeta apaisada: ⓘ y ✕ arriba, ▶ al enfocar, "Buscando fuente…" y etiqueta ---------- */
@@ -145,6 +155,12 @@ html[data-tv][data-theme='2'] .row-sub {
   transition: opacity 0.18s ease, transform 0.18s ease;
   pointer-events: none;
 }
+@supports not (color: color-mix(in srgb, red 50%, transparent)) {
+  .t2-cont-play {
+    background: rgba(var(--bg-rgb), 0.62);
+    border: 2px solid rgba(var(--text-rgb), 0.7);
+  }
+}
 .t2-cont-play svg {
   margin-left: 3px;
 }
@@ -177,17 +193,22 @@ html[data-tv][data-theme='2'] .row-sub {
   font-weight: 700;
   font-size: 0.92rem;
 }
+@supports not (color: color-mix(in srgb, red 50%, transparent)) {
+  .t2-cont-busy {
+    background: rgba(var(--bg-rgb), 0.68);
+  }
+}
 .t2-cont-spinner {
   width: 22px;
   height: 22px;
   border-radius: 50%;
   border: 3px solid color-mix(in srgb, var(--text) 25%, transparent);
   border-top-color: var(--accent);
-  animation: t2-cont-spin 0.8s linear infinite;
+  animation: spin 0.8s linear infinite;
 }
-@keyframes t2-cont-spin {
-  to {
-    transform: rotate(360deg);
+@supports not (color: color-mix(in srgb, red 50%, transparent)) {
+  .t2-cont-spinner {
+    border: 3px solid rgba(var(--text-rgb), 0.25);
   }
 }
 @media (prefers-reduced-motion: reduce) {
@@ -197,14 +218,14 @@ html[data-tv][data-theme='2'] .row-sub {
 }
 
 html[data-tv] .t2-cont-badge {
-  font-size: 0.9rem;
+  font-size: var(--fs-md);
   padding: 4px 12px;
 }
 html[data-tv] .t2-cont-busy {
-  font-size: 1.1rem;
+  font-size: var(--fs-lg);
 }
 html[data-tv] .t2-cont-actions .poster-remove {
   width: 38px;
   height: 38px;
-  font-size: 1rem;
+  font-size: var(--fs-base);
 }

@@ -1,4 +1,6 @@
 import { useEffect, useRef, useState, type KeyboardEvent, type MouseEvent } from 'react'
+import { matchesNow } from '../lib/media'
+import { TOUCH_QUERY } from '../lib/mediaQueries'
 import { clearRating, setRating, useRating, type RatedTitle } from '../lib/ratings'
 import { useTvMode } from '../lib/tv'
 import { formatStars, MAX_STARS, starFill, starsFromKey, starsFromPointer, starsLabel } from '../lib/stars'
@@ -73,7 +75,7 @@ export function StarRatingInput({ title, tmdbId, label = 'Tu puntaje', autoFocus
   const shown = hover ?? draft ?? saved ?? 0
   // v0.26 (ficha-08): en el celular no hay flechas; la pista de ← → queda para PC y TV.
   const tv = useTvMode()
-  const touch = !tv && typeof matchMedia === 'function' && matchMedia('(hover: none) and (pointer: coarse)').matches
+  const touch = !tv && matchesNow(TOUCH_QUERY)
 
   const commit = (stars: number) => {
     setRating(title, stars, tmdbId)

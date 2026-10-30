@@ -1,5 +1,6 @@
 import { memo, useState, type KeyboardEvent, type MouseEvent } from 'react'
 import { Link } from 'react-router-dom'
+import { GlyphIcon } from './Icon'
 import { SafeImg } from './SafeImg'
 import { prefetchMeta } from '../lib/addons'
 import { useLocalTitle } from '../lib/localTitles'
@@ -174,10 +175,7 @@ export const LandscapeCard = memo(function LandscapeCard({
             // `data-nav-skip` (visual-05): ↓ desde la portada cae en la tarjeta, no en estos botoncitos (más cerca); con
             // ↑ desde la tarjeta se sigue llegando (`onKey`). Mouse y Tab, como siempre.
             <Link to={infoTo} state={INFO_STATE} className="poster-remove t2-cont-action t2-cont-info" aria-label={`Ficha de ${name}`} title="Ver la ficha" data-nav-skip>
-              <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" aria-hidden>
-                <circle cx="12" cy="12" r="9" />
-                <path d="M12 11v6M12 7.5v.01" />
-              </svg>
+              <GlyphIcon name="info" size={16} strokeWidth={2.4} />
             </Link>
           )}
           {onRemove && (

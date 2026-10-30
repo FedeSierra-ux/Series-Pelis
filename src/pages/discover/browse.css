@@ -10,7 +10,7 @@
   position: sticky;
   top: 0;
   /* Arriba de las filas, debajo del riel (20). */
-  z-index: 18;
+  z-index: var(--z-hero);
   height: var(--billboard-h);
   min-height: 300px;
   overflow: hidden;
@@ -98,6 +98,11 @@
   letter-spacing: -0.01em;
   text-shadow: 0 1px 12px color-mix(in srgb, var(--bg) 80%, transparent);
 }
+@supports not (color: color-mix(in srgb, red 50%, transparent)) {
+  .bh-top h1 {
+    text-shadow: 0 1px 12px rgba(var(--bg-rgb), 0.8);
+  }
+}
 .bh-explore {
   pointer-events: auto;
   padding: 7px 16px;
@@ -106,8 +111,14 @@
   background: color-mix(in srgb, var(--bg) 55%, transparent);
   color: var(--text);
   font-size: 0.92rem;
-  font-weight: 600;
+  font-weight: 700;
   backdrop-filter: blur(6px);
+}
+@supports not (color: color-mix(in srgb, red 50%, transparent)) {
+  .bh-explore {
+    border: 1px solid rgba(var(--text-rgb), 0.35);
+    background: rgba(var(--bg-rgb), 0.55);
+  }
 }
 .bh-explore:focus-visible {
   border-color: var(--accent);
@@ -137,18 +148,18 @@
   height: 44px;
   border-radius: 50%;
   border: 1px solid rgba(255, 255, 255, 0.35);
-  background: rgba(11, 11, 16, 0.55);
+  background: rgba(var(--bg-rgb), 0.55);
   color: #fff;
   cursor: pointer;
 }
 .bh-ctrl:focus-visible {
-  background: rgba(11, 11, 16, 0.85);
+  background: rgba(var(--bg-rgb), 0.85);
   border-color: #fff;
   outline: none;
 }
 @media (hover: hover) {
   .bh-ctrl:hover {
-    background: rgba(11, 11, 16, 0.85);
+    background: rgba(var(--bg-rgb), 0.85);
     border-color: #fff;
     outline: none;
   }
@@ -220,7 +231,7 @@ html[data-tv] .row-more-card {
   gap: 6px;
   border: 1px dashed var(--line);
   color: var(--muted);
-  font-weight: 600;
+  font-weight: 700;
 }
 .row-more-icon {
   font-size: 2.4rem;
@@ -259,6 +270,11 @@ html[data-tv] .row-more-card {
   }
   .browse-hero .fbb-shade {
     background: linear-gradient(0deg, var(--bg) 4%, color-mix(in srgb, var(--bg) 55%, transparent) 40%, transparent 70%);
+  }
+  @supports not (color: color-mix(in srgb, red 50%, transparent)) {
+    .browse-hero .fbb-shade {
+      background: linear-gradient(0deg, var(--bg) 4%, rgba(var(--bg-rgb), 0.55) 40%, transparent 70%);
+    }
   }
   .browse-hero .fbb-info {
     width: auto;

@@ -1,5 +1,6 @@
 import { beforeAll, describe, expect, it } from 'vitest'
-import { COMPACT_BAR_QUERY, liftsSubForCorner, PHONE_LANDSCAPE_QUERY, tip, TINY_BAR_QUERY } from './controlBar'
+import { COMPACT_BAR_QUERY, PHONE_LANDSCAPE_QUERY, TINY_BAR_QUERY } from '../../lib/mediaQueries'
+import { liftsSubForCorner, tip } from './controlBar'
 
 describe('barra del reproductor', () => {
   // Con `?raw` vitest devuelve vacío para los .css: se lee el archivo (con `node:fs`, como en focusMemory.test.ts).

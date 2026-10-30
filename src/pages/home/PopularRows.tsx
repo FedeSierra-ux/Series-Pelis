@@ -37,7 +37,7 @@ export function MixTop10Row({ tmdbOn, tmdbKey }: { tmdbOn: boolean; tmdbKey: str
           <span className="top10-rank" aria-hidden>
             {i + 1}
           </span>
-          <PosterCard meta={m} eager={i < 6} hideTop10Label rank={i + 1} />
+          <PosterCard meta={m} eager={i < 6} priority={i < 6} hideTop10Label rank={i + 1} />
         </div>
       ))}
     </Row>

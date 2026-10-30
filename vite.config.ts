@@ -53,6 +53,9 @@ const reportStatus: Connect.SimpleHandleFunction = (req, res) => {
   res.end(JSON.stringify({ ok: false, reason: 'disabled' }))
 }
 
+// Chunks del reproductor (src/pages/Player + hls.js): ver `workbox.globIgnores` más abajo.
+const PLAYER_CHUNKS_GLOB = ['**/hls-*.js', '**/Player-*.{js,css}']
+
 export default defineConfig({
   define: { __APP_VERSION__: JSON.stringify(pkg.version) },
   plugins: [
@@ -82,7 +85,22 @@ export default defineConfig({
         navigateFallback: '/index.html',
         // Sin conexión, cualquier ruta de la app abre desde la caché; /api/* no es una página.
         navigateFallbackDenylist: [/^\/api\//],
+        // v0.36 (sistema-12): hls.js y el Player (~660 KB, ~215 KB comprimidos) son de carga diferida a propósito y
+        // en la primera visita se bajaban igual a la caché, compitiendo con los pósters. Se guardan al primer play
+        // (runtimeCaching de abajo) y desde ahí andan sin conexión como antes.
+        globIgnores: PLAYER_CHUNKS_GLOB,
         runtimeCaching: [
+          {
+            // La función se copia tal cual al service worker: sin variables de afuera (el regex va adentro).
+            urlPattern: ({ url, sameOrigin }) => sameOrigin && /\/assets\/(hls|Player)-[^/]+\.(js|css)$/.test(url.pathname),
+            handler: 'CacheFirst',
+            options: {
+              cacheName: 'player-chunks',
+              // Con nombre hasheado: solo sobreviven las dos versiones más recientes de cada uno.
+              expiration: { maxEntries: 6, maxAgeSeconds: 60 * 60 * 24 * 90 },
+              cacheableResponse: { statuses: [200] },
+            },
+          },
           {
             // Fuentes del Tema 2 (empaquetadas): se guardan la primera vez que se usan y después andan sin conexión.
             urlPattern: ({ request, sameOrigin }) => sameOrigin && request.destination === 'font',

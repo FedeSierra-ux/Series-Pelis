@@ -82,8 +82,8 @@
   background: var(--text, #fff);
 }
 .vol-slider:focus-visible {
-  outline: 3px solid var(--accent);
-  outline-offset: 4px;
+  outline: var(--focus-ring-sm);
+  outline-offset: var(--focus-offset);
 }
 /* En la TV y en el celular manda el volumen del aparato (el control remoto o los botones del costado). */
 html[data-tv] .vol {
@@ -116,7 +116,7 @@ html[data-tv] .vol {
   text-align: center;
   font-variant-numeric: tabular-nums;
   background: rgba(0, 0, 0, 0.62);
-  border-radius: var(--radius, 18px);
+  border-radius: var(--radius);
   pointer-events: none;
 }
 .player-scrub-hint strong {
@@ -152,7 +152,7 @@ html[data-tv] .seek-preview.is-scrub .seek-preview-time {
   width: 168px;
   aspect-ratio: 16 / 9;
   overflow: hidden;
-  border-radius: calc(var(--radius, 18px) * 0.6);
+  border-radius: calc(var(--radius) * 0.6);
   background: var(--bg-3, #2a2732);
 }
 .next-thumb img,
@@ -186,13 +186,13 @@ html[data-tv] .seek-preview.is-scrub .seek-preview-time {
   min-width: 0;
 }
 .next-kicker {
-  font-size: 0.85rem;
+  font-size: var(--fs-sm);
   color: var(--muted, #a8a3b3);
   font-variant-numeric: tabular-nums;
 }
 .next-title {
   font-family: var(--font-display, inherit);
-  font-size: 1rem;
+  font-size: var(--fs-base);
   line-height: 1.3;
   display: -webkit-box;
   -webkit-box-orient: vertical;
@@ -224,7 +224,7 @@ html[data-tv] .next-thumb {
   width: min(560px, calc(100vw - 2 * var(--gutter)));
   padding: 14px;
   background: rgba(28, 26, 34, 0.95);
-  border-radius: var(--radius-lg, 22px);
+  border-radius: var(--radius-lg);
   animation: postplay-in 0.25s ease-out;
 }
 .postplay-head {
@@ -253,7 +253,7 @@ html[data-tv] .next-thumb {
   color: inherit;
   background: transparent;
   border: 0;
-  border-radius: calc(var(--radius, 18px) * 0.6);
+  border-radius: calc(var(--radius) * 0.6);
   cursor: pointer;
 }
 .postplay-item img,
@@ -262,13 +262,13 @@ html[data-tv] .next-thumb {
   width: 100%;
   aspect-ratio: 16 / 9;
   object-fit: cover;
-  border-radius: calc(var(--radius, 18px) * 0.6);
+  border-radius: calc(var(--radius) * 0.6);
   background: var(--bg-3, #2a2732);
 }
 .postplay-name {
   padding: 0 4px;
   font-size: 0.88rem;
-  font-weight: 600;
+  font-weight: 700;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -277,12 +277,12 @@ html[data-tv] .next-thumb {
   padding: 0 4px;
 }
 .postplay-item:focus-visible img {
-  outline: 3px solid var(--accent);
+  outline: var(--focus-ring-sm);
   outline-offset: 2px;
 }
 @media (hover: hover) {
   .postplay-item:hover img {
-    outline: 3px solid var(--accent);
+    outline: var(--focus-ring-sm);
     outline-offset: 2px;
   }
 }
@@ -320,8 +320,8 @@ html[data-tv] .next-thumb {
 }
 .qs-label {
   padding: 0 8px;
-  font-size: 0.85rem;
-  font-weight: 600;
+  font-size: var(--fs-sm);
+  font-weight: 700;
   color: var(--muted, #a8a3b3);
 }
 .qs-chips {
@@ -332,7 +332,7 @@ html[data-tv] .next-thumb {
 .player-menu .qs-chips button {
   padding: 8px 14px;
   text-align: center;
-  font-weight: 600;
+  font-weight: 700;
   border-radius: 999px;
   background: rgba(255, 255, 255, 0.08);
 }
@@ -414,12 +414,12 @@ html[data-tv] .next-thumb {
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  font-size: 0.9rem;
+  font-size: var(--fs-md);
 }
 .player-lock-layer {
   position: absolute;
   inset: 0;
-  z-index: 20;
+  z-index: var(--z-rail);
   display: flex;
   align-items: flex-start;
   justify-content: center;
@@ -558,7 +558,7 @@ html[data-tv] .next-thumb {
     gap: 6px;
   }
   .postplay-name {
-    font-size: 0.8rem;
+    font-size: var(--fs-xs);
   }
 }
 
@@ -567,7 +567,7 @@ html[data-tv] .next-thumb {
 /* "Otros idiomas (85)": los que no son preferidos quedan plegados. */
 .player-menu .sub-menu-more {
   color: var(--accent);
-  font-weight: 600;
+  font-weight: 700;
 }
 
 /* ---------- TV: zona segura (auditoría v0.25.1) ----------
@@ -699,7 +699,7 @@ html[data-tv] .pause-cast {
   box-shadow: 0 6px 18px rgba(0, 0, 0, 0.45);
   font-family: var(--font-body, inherit);
   font-size: 0.82rem;
-  font-weight: 600;
+  font-weight: 700;
   line-height: 1.2;
   letter-spacing: normal;
   text-shadow: none;
@@ -933,10 +933,10 @@ html[data-tv] .player-prepare-stats {
   gap: 12px 48px;
 }
 html[data-tv] .player-prepare-stats dd {
-  font-size: 1.5rem;
+  font-size: var(--fs-2xl);
 }
 html[data-tv] .player-prepare-stats dt {
-  font-size: 1.1rem;
+  font-size: var(--fs-lg);
 }
 
 /* v0.32: fondo de la peli o serie (borroso y con un zoom lento) detrás de la carga, como Stremio. */
@@ -1001,7 +1001,7 @@ html[data-tv] .player-prepare-name {
   max-height: min(72%, 560px);
   padding: 14px 16px;
   gap: 14px;
-  border-radius: var(--radius-lg, 24px);
+  border-radius: var(--radius-lg);
   box-shadow: 0 18px 60px rgba(0, 0, 0, 0.6);
 }
 .player-card-section {

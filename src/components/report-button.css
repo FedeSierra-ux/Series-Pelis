@@ -21,14 +21,14 @@
 }
 .report-status {
   color: var(--muted);
-  font-size: 0.9rem;
+  font-size: var(--fs-md);
 }
 .report-ok {
   padding: 6px 12px;
   border-radius: var(--radius);
   background: var(--accent);
   color: var(--on-accent, #fff);
-  font-weight: 600;
+  font-weight: 700;
 }
 
 /* Aviso "el addon no responde" de una fila (Row.tsx) con el botón al lado del texto. */

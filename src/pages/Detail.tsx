@@ -53,7 +53,8 @@ import { SeriesDetailsPanel } from './detail/SeriesDetailsPanel'
 import { StreamList, type DetailLocationState } from './detail/StreamList'
 import { detailNames, logoCaption, type DetailNames } from './detail/detailNames'
 import { isYtId } from './detail/trailers'
-import { NARROW_QUERY, useMediaQuery } from './detail/useMediaQuery'
+import { prefersReducedMotion, useMediaQuery } from '../lib/media'
+import { NARROW_QUERY } from '../lib/mediaQueries'
 import { ReadMore } from './detail/ReadMore'
 import '../components/empty-state.css'
 import './detail/detail-fixes.css'
@@ -270,7 +271,7 @@ function DetailTitle({ names, cinemeta, logo, logoLang, onLogoError }: { names: 
     </div>
   )
 }
-const reducedMotion = () => typeof matchMedia === 'function' && matchMedia('(prefers-reduced-motion: reduce)').matches
+const reducedMotion = prefersReducedMotion
 /** Cuánto espera el pedido de foco de las fuentes (los addons lentos tardan hasta ~15 s). */
 const CLAIM_MAX_MS = 20000
 /** "T2 · E4" para el botón principal. */
