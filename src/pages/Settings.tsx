@@ -7,11 +7,16 @@ import { fetchWithTimeout } from '../lib/abort'
 import { clearCache } from '../lib/cache'
 import { useAddons, useTitle } from '../lib/hooks'
 import { resourceLabel } from '../lib/i18n'
+import { UndoToast, useUndoToast } from '../components/UndoToast'
 import {
+  clearHistory,
   exportData,
   importData,
   moveAddon,
   removeAddon,
+  resetSettings,
+  restoreAddon,
+  restoreHistory,
   setAddonEnabled,
   settingsStore,
   useStore,
@@ -89,6 +94,8 @@ function AddonsReadOnly() {
 
 function AddonsSection() {
   const addons = useAddons()
+  // "Quitar" no pregunta: avisa y deja "Deshacer" (uso-07; el historial hace lo mismo).
+  const undo = useUndoToast()
   if (!useCanEditAddons()) return <AddonsReadOnly />
   return (
     <section className="settings-section">
@@ -148,8 +155,8 @@ function AddonsSection() {
                 <button
                   className="btn btn-ghost danger"
                   onClick={() => {
-                    const warn = a.transportUrl === CINEMETA_URL ? '\nCinemeta da el catálogo y los puntajes de IMDb.' : ''
-                    if (confirm(`¿Quitar “${name}”?${warn}`)) removeAddon(a.transportUrl)
+                    const removed = removeAddon(a.transportUrl)
+                    if (removed) undo.show(`Se quitó “${name}”`, () => restoreAddon(removed), a.transportUrl === CINEMETA_URL ? 'Cinemeta da el catálogo y los puntajes de IMDb' : undefined)
                   }}
                 >
                   Quitar
@@ -170,6 +177,7 @@ function AddonsSection() {
         <span className="muted small">Renombrar, ocultar, ordenar o juntar las filas de Inicio.</span>
       </div>
       <AddonExplorer />
+      <UndoToast api={undo} />
     </section>
   )
 }
@@ -258,10 +266,39 @@ function PlaybackSection() {
   )
 }
 
+/** Lo que se confirma en "Tus datos" antes de borrar (la confirmación va en la página, no en un cuadro del navegador). */
+type DataAction = 'history' | 'settings'
+
 function DataSection() {
   const inHouse = useAuth().status === 'in'
   const fileRef = useRef<HTMLInputElement>(null)
   const [msg, setMsg] = useState<string>()
+  const [asking, setAsking] = useState<DataAction>()
+  const undo = useUndoToast()
+  // Al abrir la confirmación el foco va a "Cancelar" (lo seguro); al cerrarla vuelve al botón que la abrió.
+  const cancelRef = useRef<HTMLButtonElement>(null)
+  const openerRef = useRef<HTMLButtonElement | null>(null)
+  useEffect(() => {
+    if (asking) cancelRef.current?.focus()
+  }, [asking])
+  const closeAsk = (restoreFocus = true) => {
+    setAsking(undefined)
+    if (restoreFocus) requestAnimationFrame(() => openerRef.current?.focus())
+  }
+  const ask = (what: DataAction, button: HTMLButtonElement) => {
+    openerRef.current = button
+    setAsking(what)
+  }
+  const confirmAsk = () => {
+    if (asking === 'history') {
+      const removed = clearHistory()
+      undo.show('Historial borrado', () => restoreHistory(removed))
+    } else if (asking === 'settings') {
+      const before = resetSettings()
+      undo.show('Ajustes restablecidos', () => settingsStore.set(before))
+    }
+    closeAsk()
+  }
 
   const download = () => {
     const blob = new Blob([JSON.stringify(exportData(), null, 2)], { type: 'application/json' })
@@ -329,6 +366,47 @@ function DataSection() {
         />
       </div>
       {msg && <p className="muted" role="status">{msg}</p>}
+
+      <h3>Empezar de cero</h3>
+      <div className="hero-actions">
+        <button type="button" className="btn" aria-expanded={asking === 'history'} onClick={(e) => ask('history', e.currentTarget)}>
+          Borrar historial
+        </button>
+        <button type="button" className="btn" aria-expanded={asking === 'settings'} onClick={(e) => ask('settings', e.currentTarget)}>
+          Restablecer ajustes
+        </button>
+      </div>
+      {asking && (
+        <div
+          className="data-confirm"
+          role="group"
+          aria-labelledby="data-confirm-title"
+          onKeyDown={(e) => {
+            if (e.key === 'Escape') {
+              e.stopPropagation()
+              closeAsk()
+            }
+          }}
+        >
+          <p id="data-confirm-title">
+            <strong>{asking === 'history' ? '¿Borrar el historial de este perfil?' : '¿Volver los ajustes a los valores de fábrica?'}</strong>
+          </p>
+          <p className="muted small">
+            {asking === 'history'
+              ? `Se vacían el historial, “Seguir viendo” y “Tu año” de este perfil. “Mi lista”, las estrellas y los addons quedan.${inHouse ? ' También se borra en los otros aparatos de la casa.' : ''}`
+              : `No se tocan los addons, la key de TMDB, tu sesión ni el historial.${inHouse ? ' Los idiomas, los subtítulos y las reglas de fuentes son de toda la casa: se restablecen para todos.' : ''}`}
+          </p>
+          <div className="hero-actions">
+            <button type="button" className="btn danger" onClick={confirmAsk}>
+              {asking === 'history' ? 'Sí, borrar historial' : 'Sí, restablecer'}
+            </button>
+            <button type="button" className="btn btn-ghost" ref={cancelRef} onClick={() => closeAsk()}>
+              Cancelar
+            </button>
+          </div>
+        </div>
+      )}
+      <UndoToast api={undo} />
     </section>
   )
 }

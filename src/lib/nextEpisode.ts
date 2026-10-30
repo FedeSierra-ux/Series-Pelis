@@ -141,6 +141,15 @@ export function acceptsPick(best: RankedStream | undefined, rules: Pick<SourceRu
   return !!best && (best.match !== 'none' || rules.mode === 'auto')
 }
 
+/**
+ * uso-02: ¿«Reproducir» arranca de verdad sin pasar por la lista de fuentes? Con el modo automático sí; en manual
+ * solo si hay una fuente recordada de ese título (`rememberLast`). Si no, el botón solo muestra las fuentes y el
+ * rótulo tiene que decir «Elegir fuente». Es lo mismo que decide `acceptsPick` con lo que trae `findResumeStream`.
+ */
+export function playsDirect(rules: Pick<SourceRules, 'mode' | 'rememberLast'>, last: LastSource | undefined): boolean {
+  return rules.mode === 'auto' || (rules.rememberLast && !!last)
+}
+
 function rememberSource(metaId: string, best: RankedStream, rules: SourceRules) {
   if (!rules.rememberLast) return
   lastSourceStore.set((all) => ({

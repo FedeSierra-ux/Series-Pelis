@@ -1,4 +1,4 @@
-import { resourceUrl } from './addons'
+import { resourceUrl, searchTerm } from './addons'
 import { cached, fetchJson, HttpError, isFresh, load, peek } from './cache'
 import {
   curatedById,
@@ -44,6 +44,8 @@ export async function searchCatalog(
   query: string,
   signal: AbortSignal,
 ): Promise<MetaPreview[]> {
+  // Solo barras ("/"): sin texto, pedir el catálogo devolvería lo popular como si fueran resultados.
+  if (!searchTerm(query)) return []
   const url = resourceUrl(addon, 'catalog', catalog.type, catalog.id, { search: query })
   const key = `catalog:${url}`
   const hit = await peek<MetaPreview[]>(key, false)

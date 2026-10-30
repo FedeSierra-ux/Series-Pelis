@@ -127,8 +127,9 @@ export function Onboarding() {
     setOpen(false)
   }, [skip])
 
-  // Con el control remoto: el foco arranca en el primer idioma. En pantallas táctiles (v0.26) va a la caja
-  // del diálogo: si no, el primer chip arrancaba con el anillo de foco, como si estuviera elegido de otra forma.
+  // Con teclado: el foco arranca en el primer idioma. En la TV (tv-08) va a «Empezar» (`data-autofocus`): el primer OK
+  // sobre un chip lo sacaba y renumeraba el resto; los chips se alcanzan con ↑. En pantallas táctiles (v0.26) va a la
+  // caja del diálogo: si no, el primer chip arrancaba con el anillo de foco, como si estuviera elegido de otra forma.
   // Al cerrar (a11y-03) el foco vuelve a donde estaba (el botón de Ajustes que lo abrió) o, en la TV, a lo primero
   // de la pantalla; antes quedaba en <body>.
   const before = useRef<HTMLElement | null>(null)
@@ -139,7 +140,12 @@ export function Onboarding() {
       const prev = document.activeElement
       before.current = prev instanceof HTMLElement && prev !== document.body ? prev : null
       const touch = !document.documentElement.hasAttribute('data-tv') && typeof matchMedia === 'function' && matchMedia('(pointer: coarse)').matches
-      const first = touch ? boxRef.current : boxRef.current?.querySelector<HTMLElement>('.ob-body button, .ob-body input, .ob-actions .btn-primary')
+      const tv = isTv()
+      const first = touch
+        ? boxRef.current
+        : tv
+          ? boxRef.current?.querySelector<HTMLElement>('[data-autofocus]')
+          : boxRef.current?.querySelector<HTMLElement>('.ob-body button, .ob-body input, .ob-actions .btn-primary')
       first?.focus({ preventScroll: true })
       return
     }
@@ -207,7 +213,7 @@ export function Onboarding() {
         <div className="ob-actions">
           <span className="spacer" />
           {/* `ob-skip`: los tests de Playwright cierran el asistente con esta clase. */}
-          <button type="button" className="btn btn-primary ob-skip" onClick={finish}>
+          <button type="button" className="btn btn-primary ob-skip" data-autofocus onClick={finish}>
             Empezar
           </button>
         </div>

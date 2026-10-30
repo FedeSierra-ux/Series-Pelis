@@ -1,6 +1,9 @@
 import { describe, expect, it } from 'vitest'
 import {
   cleanProfile,
+  colorName,
+  PROFILE_COLOR_NAMES,
+  spokenCountdown,
   DEFAULT_MAIN,
   initialOf,
   isProfileId,
@@ -54,5 +57,22 @@ describe('profileModel', () => {
     expect(nextColor(PROFILE_COLORS.map((c, i) => p(`id${i}xxxx`, i, c)))).toBe(PROFILE_COLORS[0])
     expect(initialOf(' ñandú')).toBe('Ñ')
     expect(initialOf('')).toBe('?')
+  })
+})
+
+describe('accesibilidad del editor y de la cuenta regresiva (a11y-14, a11y-17)', () => {
+  it('cada color tiene su nombre en español, en el mismo orden', () => {
+    expect(PROFILE_COLOR_NAMES).toHaveLength(PROFILE_COLORS.length)
+    expect(new Set(PROFILE_COLOR_NAMES).size).toBe(PROFILE_COLORS.length)
+    expect(colorName(PROFILE_COLORS[0])).toBe('Lila')
+    expect(colorName('#C4B0FF')).toBe('Lila')
+    expect(colorName(PROFILE_COLORS[7])).toBe('Arena')
+    expect(colorName('#123456')).toBe('#123456')
+  })
+
+  it('el lector anuncia el comienzo y los últimos 3 segundos, y nada en el medio', () => {
+    expect(spokenCountdown('Fede', 10, 10)).toBe('Entrando como Fede en 10 segundos. Tocá una tecla para esperar.')
+    for (const left of [9, 8, 7, 6, 5, 4]) expect(spokenCountdown('Fede', left, 10)).toBe('')
+    expect([3, 2, 1].map((n) => spokenCountdown('Fede', n, 10))).toEqual(['3', '2', '1'])
   })
 })

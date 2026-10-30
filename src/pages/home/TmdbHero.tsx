@@ -19,7 +19,7 @@ import {
 } from '../../lib/tmdb'
 import { HeroCarousel } from './HeroCarousel'
 import { HeroInfo } from './HeroInfo'
-import { resumeLabel, useDirectPlay } from './useDirectPlay'
+import { useDirectPlay, useResumeLabel } from './useDirectPlay'
 
 const CAST_SHOWN = 3
 
@@ -61,6 +61,7 @@ export function TmdbHero({ items, variant = 'compact', fallbackType = 'movie', e
   const watchlist = useStore(watchlistStore)
   const progress = useStore(progressStore)
   const { pending, play, cancel } = useDirectPlay()
+  const resumeLabel = useResumeLabel()
   const [index, setIndex] = useState(0)
   const [details, setDetails] = useState<{ key: string; data?: TmdbDetails }>()
   const [resolving, setResolving] = useState(false)

@@ -57,7 +57,24 @@ const COUNTDOWN = 3
  */
 const autoPlayed = createRecentSet(50)
 
-export function StreamList({ meta, video, nextVideoId }: { meta: Meta; video?: Video; nextVideoId?: string }) {
+/** Lo que cuenta como "el usuario tocó algo" mientras la lista espera para tomar el foco (`claimFocus`). */
+const CLAIM_CANCEL_EVENTS = ['keydown', 'pointerdown'] as const
+
+interface StreamListProps {
+  meta: Meta
+  video?: Video
+  nextVideoId?: string
+  /**
+   * tv-01 / tv-02: la ficha pide que el foco vaya a la fuente recomendada apenas la lista está lista (después de
+   * "Reproducir" de una serie o de elegir un episodio con el control remoto). Si el usuario toca una tecla o el
+   * puntero antes de que llegue, se suelta; con la cuenta regresiva del modo automático tampoco se toma.
+   */
+  claimFocus?: boolean
+  /** La ficha deja de pedir el foco (ya se tomó, o ya no corresponde). */
+  onClaimDone?: () => void
+}
+
+export function StreamList({ meta, video, nextVideoId, claimFocus, onClaimDone }: StreamListProps) {
   const addons = useAddons()
   const settings = useStore(settingsStore)
   // Con qué se abren los torrents: el servidor de Stremio de Ajustes o el motor de la app de Android.
@@ -207,6 +224,30 @@ export function StreamList({ meta, video, nextVideoId }: { meta: Meta; video?: V
     target.focus({ preventScroll: true })
     target.scrollIntoView({ block: 'nearest' })
   }, [bestId])
+
+  // tv-01 / tv-02: el foco a la recomendada (o a la primera fuente) cuando la lista está lista. Una tecla o un toque
+  // antes de eso suelta el pedido: no se le roba el foco a quien ya se movió.
+  useEffect(() => {
+    if (!claimFocus) return
+    const release = (e: Event) => {
+      if (e instanceof KeyboardEvent && e.repeat) return
+      onClaimDone?.()
+    }
+    for (const type of CLAIM_CANCEL_EVENTS) window.addEventListener(type, release, true)
+    return () => {
+      for (const type of CLAIM_CANCEL_EVENTS) window.removeEventListener(type, release, true)
+    }
+  }, [claimFocus, onClaimDone])
+  useLayoutEffect(() => {
+    if (!claimFocus || !settled) return
+    onClaimDone?.()
+    if (hasPending) return
+    const list = listRef.current
+    const target = list?.querySelector<HTMLElement>('.stream-item.recommended') ?? list?.querySelector<HTMLElement>('button.stream-item, a.stream-item')
+    if (!target) return
+    target.focus({ preventScroll: true })
+    target.scrollIntoView({ block: 'nearest' })
+  }, [claimFocus, settled, bestId, hasPending, onClaimDone])
 
   const cancelAuto = () => {
     setCountdown(undefined)

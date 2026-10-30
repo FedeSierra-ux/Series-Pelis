@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import { debounce, MAX_RECENT, normalizeQuery, parseTogether, pushRecent, removeRecent } from './searchHistory'
+import { debounce, ECHO_MAX, echoQuery, MAX_RECENT, normalizeQuery, parseTogether, pushRecent, removeRecent } from './searchHistory'
 
 describe('búsquedas recientes', () => {
   it('normaliza espacios', () => {
@@ -78,5 +78,14 @@ describe('debounce', () => {
     expect(fn).toHaveBeenCalledTimes(1)
     d.flush() // sin nada pendiente no hace nada
     expect(fn).toHaveBeenCalledTimes(1)
+  })
+})
+
+describe('echoQuery (uso-09)', () => {
+  it('deja igual lo corto y corta con "…" lo larguísimo', () => {
+    expect(echoQuery('breaking bad')).toBe('breaking bad')
+    const out = echoQuery('a'.repeat(300))
+    expect(out).toBe(`${'a'.repeat(ECHO_MAX)}…`)
+    expect(echoQuery('palabra '.repeat(20))).toMatch(/palabra…$/)
   })
 })

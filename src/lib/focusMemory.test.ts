@@ -2,6 +2,7 @@ import { beforeAll, describe, expect, it } from 'vitest'
 import {
   MAX_ENTRIES,
   RETRY_MS,
+  RESTORE_QUIET_MS,
   RETRY_NO_ROW_MS,
   STORAGE_KEY,
   needsReveal,
@@ -10,6 +11,7 @@ import {
   recallSnapshot,
   rememberSnapshot,
   selectorFor,
+  withinQuiet,
   type SnapshotStore,
 } from './focusMemory'
 
@@ -194,5 +196,14 @@ describe('cuánto esperar al elemento guardado (tv-15)', () => {
     expect(restoreWaitMs({ row: 'Seguir viendo' })).toBe(RETRY_MS)
     expect(restoreWaitMs({})).toBe(RETRY_NO_ROW_MS)
     expect(RETRY_NO_ROW_MS).toBeLessThan(RETRY_MS)
+  })
+})
+
+describe('tv-03: el tráiler espera después de restaurar el foco', () => {
+  it('poco después de restaurar el foco no se arma; después sí', () => {
+    expect(withinQuiet(1000, 1000 + RESTORE_QUIET_MS - 1)).toBe(true)
+    expect(withinQuiet(1000, 1000 + RESTORE_QUIET_MS)).toBe(false)
+    // Sin restauración previa (el valor inicial) nunca está "recién restaurado".
+    expect(withinQuiet(-Infinity, 5)).toBe(false)
   })
 })

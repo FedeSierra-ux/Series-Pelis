@@ -64,6 +64,8 @@ export function TmdbSettings() {
             value={draft}
             onChange={(e) => setDraft(e.target.value)}
             aria-label="Key de TMDB"
+            aria-invalid={msg && !msg.ok ? true : undefined}
+            aria-describedby={msg && !msg.ok ? 'tmdb-error' : undefined}
           />
           <button className="btn btn-primary" disabled={busy || !draft.trim()}>
             {busy ? 'Probando…' : 'Guardar'}
@@ -71,7 +73,11 @@ export function TmdbSettings() {
         </form>
       )}
       {!configured && <KeyboardToggle value={draft} onChange={setDraft} onDone={() => save()} doneLabel="Guardar" label="Teclado para la key de TMDB" />}
-      {msg && <p className={msg.ok ? 'ok' : 'error-text'}>{msg.text}</p>}
+      {msg && (
+        <p id={msg.ok ? undefined : 'tmdb-error'} className={msg.ok ? 'ok' : 'error-text'} role={msg.ok ? 'status' : 'alert'}>
+          {msg.text}
+        </p>
+      )}
       <p className="muted small">Datos e imágenes de TMDB. “Dónde ver” usa datos de JustWatch.</p>
     </section>
   )

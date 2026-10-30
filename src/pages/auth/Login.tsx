@@ -108,6 +108,8 @@ function InviteForm({ tv }: { tv: boolean }) {
         <input
           id="login-invite"
           type="text"
+          aria-invalid={error ? true : undefined}
+          aria-describedby={error ? 'login-invite-error' : undefined}
           value={code}
           onChange={(e) => setCode(e.target.value)}
           placeholder="ABCD-EFGH-JKMN"
@@ -121,7 +123,7 @@ function InviteForm({ tv }: { tv: boolean }) {
       </div>
       <KeyboardToggle value={code} onChange={setCode} onDone={() => void submit()} doneLabel="Entrar" label="Teclado para el código de invitación" />
       {error && (
-        <p className="login-error" role="alert">
+        <p id="login-invite-error" className="login-error" role="alert">
           {error}
         </p>
       )}
@@ -156,7 +158,15 @@ function AdminForm({ needsSetup, tv }: { needsSetup: boolean; tv: boolean }) {
       <label className="login-label" htmlFor="login-key">
         Clave del administrador
       </label>
-      <input id="login-key" type="password" value={key} onChange={(e) => setKey(e.target.value)} autoComplete="current-password" />
+      <input
+        id="login-key"
+        type="password"
+        value={key}
+        onChange={(e) => setKey(e.target.value)}
+        autoComplete="current-password"
+        aria-invalid={error ? true : undefined}
+        aria-describedby={error ? 'login-key-error' : undefined}
+      />
       {needsSetup && (
         <>
           <label className="login-label" htmlFor="login-house">
@@ -169,7 +179,7 @@ function AdminForm({ needsSetup, tv }: { needsSetup: boolean; tv: boolean }) {
         {busy ? 'Entrando…' : needsSetup ? 'Crear mi casa' : 'Entrar'}
       </button>
       {error && (
-        <p className="login-error" role="alert">
+        <p id="login-key-error" className="login-error" role="alert">
           {error}
         </p>
       )}

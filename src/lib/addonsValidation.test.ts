@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import { AddonFormatError, PREFETCH_DELAY_MS, addonName, cleanManifest, getCatalog, getMeta, getStreams, listField, prefetchMeta } from './addons'
+import { AddonFormatError, META_NOT_FOUND, PREFETCH_DELAY_MS, addonName, cleanManifest, getCatalog, getMeta, getStreams, listField, prefetchMeta } from './addons'
 import { errorText } from './errors'
 import type { AddonStreams, InstalledAddon } from './types'
 
@@ -96,5 +96,30 @@ describe('prefetchMeta con respiro (auditoría #5)', () => {
     await vi.runAllTimersAsync()
     expect(asked).toHaveLength(1)
     expect(asked[0]).toContain('tt-pre-9')
+  })
+})
+
+describe('ficha de un título que no existe (uso-05)', () => {
+  const metaAddon = addon('https://meta.example', ['meta'])
+
+  it('un addon que responde sin ficha da "No encontramos este título", sea cual sea el tipo', async () => {
+    // Así responde Cinemeta a una serie inventada (`{}`) y a un id con 404.
+    vi.stubGlobal('fetch', async () => json({}))
+    await expect(getMeta([metaAddon], 'series', 'tt0000000-a')).rejects.toThrow(META_NOT_FOUND)
+    vi.stubGlobal('fetch', async () => new Response('Cannot GET', { status: 404 }))
+    await expect(getMeta([metaAddon], 'movie', 'tt0000000-b')).rejects.toThrow(META_NOT_FOUND)
+  })
+
+  it('si hay addons de fichas pero ninguno entiende ese tipo, también es "no encontramos"', async () => {
+    await expect(getMeta([metaAddon], 'foo', 'bar')).rejects.toThrow(META_NOT_FOUND)
+  })
+
+  it('"Ningún addon" solo si no hay ninguno que dé fichas', async () => {
+    await expect(getMeta([addon('https://solo-streams.example')], 'movie', 'tt0000000-c')).rejects.toThrow(/Ningún addon/)
+  })
+
+  it('un error de red sigue siendo un error de red', async () => {
+    vi.stubGlobal('fetch', async () => new Response('x', { status: 500 }))
+    await expect(getMeta([metaAddon], 'movie', 'tt0000000-d')).rejects.not.toThrow(META_NOT_FOUND)
   })
 })

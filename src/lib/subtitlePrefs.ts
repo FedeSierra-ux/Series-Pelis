@@ -184,6 +184,20 @@ export function cuePlacement(position: number, clear = 0, bottom = 0, shiftBox =
   return { line: clear > 0 ? Math.min(92 - position, 98 - clear) : position > 0 ? 92 - position : undefined, shift: 0 }
 }
 
+/** Zona segura de la TV (overscan): el subtítulo no baja del 5 % de abajo, igual que la barra y los menús. */
+export const TV_SAFE_PCT = 5
+
+/**
+ * `bottom` de `cuePlacement` en la TV: el final del subtítulo queda a `TV_SAFE_PCT` % del borde de abajo aunque no
+ * haya controles ni nada en la esquina (antes quedaba a ~5 px y con overscan se perdía medio renglón). Si ya hay
+ * un `bottom` más alto (algo en la esquina), manda el más alto. Fuera de la TV no cambia nada.
+ */
+export function safeCueBottom(bottom: number, tv: boolean): number {
+  if (!tv) return bottom
+  const safe = 100 - TV_SAFE_PCT
+  return bottom > 0 ? Math.min(bottom, safe) : safe
+}
+
 let shiftsBox: boolean | undefined
 /**
  * ¿Se puede mover la caja de los subtítulos con CSS (`video::-webkit-media-text-track-container`)? Chromium

@@ -19,7 +19,7 @@ import { setReturnVideo } from '../lib/returnVideo'
 import { currentPlatform } from '../lib/platform'
 import { getSegments, imdbIdOf, type Segment, type Segments } from '../lib/segments'
 import { progressStore, rememberTracks, RESUME_MIN_S, saveProgress, settingsStore, trackPrefsStore, useStore } from '../lib/store'
-import { audioPrefs, guessAudioLang, lang3, langRank, subtitleClasses } from '../lib/subtitlePrefs'
+import { audioPrefs, guessAudioLang, lang3, langRank, safeCueBottom, subtitleClasses } from '../lib/subtitlePrefs'
 import { useTvMode } from '../lib/tv'
 import type { PlayState } from './Detail'
 import './player/player-fixes.css'
@@ -30,7 +30,17 @@ import { SeekPreview } from './player/SeekPreview'
 import { SourcesMenu, useSwitchSource, type Resume, type SwitchState } from './player/SourcesMenu'
 import { ReportButton } from '../components/ReportButton'
 import { PlayerIcon } from './player/PlayerIcons'
-import { liftsSubForCorner, NARROW_QUERY, PHONE_LANDSCAPE_QUERY, TINY_BAR_QUERY, tip, useCompactBar, useMediaQuery } from './player/controlBar'
+import {
+  BAR_SELECTOR,
+  keyboardFocusInBar,
+  liftsSubForCorner,
+  NARROW_QUERY,
+  PHONE_LANDSCAPE_QUERY,
+  TINY_BAR_QUERY,
+  tip,
+  useCompactBar,
+  useMediaQuery,
+} from './player/controlBar'
 import { SubtitleMenu } from './player/SubtitleMenu'
 import { useMediaSession, usePictureInPicture, useWakeLock } from './player/useMediaSession'
 import { useSubtitles } from './player/useSubtitles'
@@ -373,6 +383,8 @@ function PlayerView({
   )
   /** Con qué se tocó por última vez (mouse, touch, pen): el clic del mouse pausa, el toque no. */
   const lastPointer = useRef('mouse')
+  /** El último foco (o el que sigue) lo puso un clic o un toque, no Tab ni las flechas. */
+  const viaMouse = useRef(false)
   const lastWheel = useRef(0)
 
   // Adelantar manteniendo ← / → (U24).
@@ -437,7 +449,8 @@ function PlayerView({
     flash,
     closeMenu: () => setMenu(null),
     controlsClear,
-    cueBottom,
+    // En la TV el subtítulo respeta la zona segura de abajo aun sin controles (tv-07).
+    cueBottom: safeCueBottom(cueBottom, tvMode),
     videoSubs,
   })
   const pip = usePictureInPicture(videoRef)
@@ -656,12 +669,19 @@ function PlayerView({
   const showControls = useCallback(() => {
     setControls(true)
     clearTimeout(hideTimer.current)
-    hideTimer.current = setTimeout(() => {
-      if (videoRef.current && !videoRef.current.paused) {
+    const arm = () => {
+      hideTimer.current = setTimeout(() => {
+        if (!videoRef.current || videoRef.current.paused) return
+        // Foco de teclado en la barra o en un menú: se vuelve a mirar en un rato (a11y-01).
+        if (keyboardFocusInBar(viaMouse.current)) {
+          arm()
+          return
+        }
         setControls(false)
         setMenu(null)
-      }
-    }, HIDE_CONTROLS_MS)
+      }, HIDE_CONTROLS_MS)
+    }
+    arm()
   }, [])
 
   const togglePlay = () => {
@@ -1105,6 +1125,8 @@ function PlayerView({
     const onKey = (e: KeyboardEvent) => {
       // Los atajos del navegador (Ctrl+F, Cmd+R…) y lo que se escribe en un campo no son para el reproductor.
       if (e.ctrlKey || e.metaKey || e.altKey) return
+      // Tab y las flechas mueven el foco con el teclado: de ahí en más el foco ya no es "de mouse" (a11y-01/02).
+      if (e.key === 'Tab' || e.key.startsWith('Arrow')) viaMouse.current = false
       const target = e.target as HTMLElement | null
       if (target?.closest?.('input:not([type="range"]), textarea, [contenteditable="true"]')) return
       // Pantalla bloqueada (celular): no se toca nada hasta desbloquear.
@@ -1159,6 +1181,13 @@ function PlayerView({
           else exit()
           return
         case ' ':
+          // a11y-02: sobre un botón al que se llegó con el teclado (o dentro de un menú o de un cartel) Espacio lo
+          // activa, como en cualquier botón; la tecla K sigue pausando. Si el foco lo dejó un clic, Espacio sigue
+          // pausando. En la esquina ("Saltar intro"…) tampoco: toma el foco sola y Espacio no debería saltar nada.
+          if (active?.closest('button, a[href]') && !active.closest('.player-corner') && (menuEl || active.closest('.player-modal') || !viaMouse.current)) return
+          e.preventDefault()
+          togglePlay()
+          return
         case 'k':
         case 'MediaPlayPause':
           e.preventDefault()
@@ -1179,6 +1208,12 @@ function PlayerView({
           return
         case 'Enter':
           if (floating) return
+          // a11y-02: un botón de la barra con foco de teclado se activa al primer Enter aunque los controles
+          // estén ocultos (solo los mostraría y habría que apretar dos veces). En la TV no: ahí OK pausa.
+          if (!tvMode && focusedControl && !viaMouse.current) {
+            if (!controls) showControls()
+            return
+          }
           if (!controls || !focusedControl) {
             e.preventDefault()
             // En la TV, OK con los controles ocultos pausa (y los muestra), como dice la guía del control;
@@ -1319,7 +1354,11 @@ function PlayerView({
     // Reemplaza al reproductor: "Atrás" desde la ficha nueva vuelve a la de esta peli.
     navigate(`/detail/${pick.type}/${encodeURIComponent(pick.id)}`, { replace: true })
   }
-  const skipButton = (showSkip || inCredits) && (
+  // Terminó el video y no sigue ningún episodio: el reproductor queda quieto. Si no hay "Más como esto" (sin TMDB,
+  // o lo cerraste, o es el último episodio de una serie), la esquina deja un "Volver" (uso-06).
+  const videoEnded = duration > 0 && time >= duration - 1
+  const endedBack = videoEnded && !state.nextVideoId && !error
+  const skipButton = !endedBack && (showSkip || inCredits) && (
     <button
       key={skipKind ?? 'credits'}
       className="btn skip-btn"
@@ -1328,10 +1367,15 @@ function PlayerView({
       {skipKind === 'intro' ? 'Saltar intro' : skipKind === 'recap' ? 'Saltar resumen' : 'Saltar créditos'}
     </button>
   )
-  const showCorner = !menu && !error && !askStill && !sleepFired && !locked && (showNextCard || offerRecap || showSkip || inCredits || postPlayDue)
+  const endedButton = endedBack && (
+    <button type="button" className="btn skip-btn" onClick={exit}>
+      Volver
+    </button>
+  )
+  const showCorner = !menu && !error && !askStill && !sleepFired && !locked && (showNextCard || offerRecap || showSkip || inCredits || postPlayDue || endedBack)
   // El botón de saltar toma el foco solo si no estás en los controles o en un menú: si no, el OK
   // que ibas a usar para pausar saltaba la intro.
-  const skipAlone = showCorner && !offerRecap && !showNextCard && !postPlayDue && (showSkip || inCredits)
+  const skipAlone = showCorner && !offerRecap && !showNextCard && !postPlayDue && !endedBack && (showSkip || inCredits)
   const skipFocusKey = skipAlone ? (skipKind ?? 'credits') : null
   useEffect(() => {
     if (!skipFocusKey) return
@@ -1375,7 +1419,6 @@ function PlayerView({
   }, [liftForCorner, cornerKind])
   // TV: al terminar una peli el foco va a "¿Qué te pareció?" (las estrellas o "Ahora no") o, si no está, a la
   // esquina ("Más como esto"); si no, queda en <body> y las flechas no tienen de dónde salir.
-  const videoEnded = duration > 0 && time >= duration - 1
   useEffect(() => {
     if (!tvMode || !videoEnded || state.nextVideoId) return
     const root = rootRef.current
@@ -1401,6 +1444,7 @@ function PlayerView({
       {...subs.dropProps}
       onPointerDown={(e) => {
         lastPointer.current = e.pointerType
+        viaMouse.current = true
         // Un toque sobre el video lo maneja el gesto (muestra u oculta); sobre los controles, los mantiene visibles.
         if (!locked && (e.pointerType !== 'touch' || e.target !== videoRef.current)) showControls()
       }}
@@ -1409,6 +1453,11 @@ function PlayerView({
         if (e.pointerType !== 'touch' && !locked) showControls()
       }}
       onWheel={onWheel}
+      // a11y-01: con Tab (o las flechas) sobre la cabecera, la barra o un menú, los controles aparecen (estaban en
+      // opacity 0 y el anillo de foco no se veía). Si el foco lo puso un clic o un toque, no cambia nada.
+      onFocusCapture={(e) => {
+        if (!locked && !viaMouse.current && (e.target as HTMLElement).closest(BAR_SELECTOR)) showControls()
+      }}
     >
       <video
         ref={videoRef}
@@ -1632,9 +1681,13 @@ function PlayerView({
           ) : postPlayDue ? (
             <PostPlay imdbId={meta.id} due={postPlayDue} autoFocus={tvMode} onOpen={openPick} onClose={() => setPostPlayClosed(true)}>
               {skipButton}
+              {endedButton}
             </PostPlay>
           ) : (
-            skipButton
+            <>
+              {skipButton}
+              {endedButton}
+            </>
           )}
         </div>
       )}

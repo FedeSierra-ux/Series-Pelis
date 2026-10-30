@@ -86,7 +86,7 @@ export function LinkDevice() {
   }
 
   const notice = msg && (
-    <p className={msg.ok ? 'ok' : 'login-error'} role={msg.ok ? 'status' : 'alert'}>
+    <p id={msg.ok ? undefined : 'link-error'} className={msg.ok ? 'ok' : 'login-error'} role={msg.ok ? 'status' : 'alert'}>
       {msg.text}
     </p>
   )
@@ -142,6 +142,8 @@ export function LinkDevice() {
             autoComplete="one-time-code"
             className="auth-code-input"
             aria-label="Código de 6 números"
+            aria-invalid={msg && !msg.ok ? true : undefined}
+            aria-describedby={msg && !msg.ok ? 'link-error' : undefined}
             placeholder="000000"
             value={code}
             onChange={(e) => setCode(digits(e.target.value))}

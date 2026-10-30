@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { cleanStream, normalizeManifestUrl } from './addons'
+import { cleanStream, CINEMETA_ADDON, normalizeManifestUrl, resourceUrl, searchTerm } from './addons'
 
 describe('normalizeManifestUrl', () => {
   it('deja igual una URL completa', () => {
@@ -61,5 +61,23 @@ describe('normalizeManifestUrl: barra final (auditoría de uso #5)', () => {
 
   it('una URL sin manifest pero con query lo agrega antes de la query', () => {
     expect(normalizeManifestUrl('https://addon.example/cfg/?token=1')).toBe('https://addon.example/cfg/manifest.json?token=1')
+  })
+})
+
+describe('búsqueda con barras (uso-03)', () => {
+  it('searchTerm cambia las barras por espacios y junta los espacios', () => {
+    expect(searchTerm('Face/Off')).toBe('Face Off')
+    expect(searchTerm('AC/DC')).toBe('AC DC')
+    expect(searchTerm('a\\b // c')).toBe('a b c')
+    expect(searchTerm('  /  ')).toBe('')
+    expect(searchTerm('100% what? #1 a&b')).toBe('100% what? #1 a&b')
+  })
+
+  it('la URL de búsqueda no lleva %2F ni %5C, y lo demás se codifica igual', () => {
+    const url = resourceUrl(CINEMETA_ADDON, 'catalog', 'movie', 'top', { search: 'face/off' })
+    expect(url).toMatch(/\/catalog\/movie\/top\/search=face%20off\.json$/)
+    expect(resourceUrl(CINEMETA_ADDON, 'catalog', 'movie', 'top', { search: 'a&b?' })).toMatch(/search=a%26b%3F\.json$/)
+    // Otros extras no se tocan.
+    expect(resourceUrl(CINEMETA_ADDON, 'catalog', 'movie', 'top', { genre: 'Sci/Fi', skip: '20' })).toContain('genre=Sci%2FFi&skip=20')
   })
 })

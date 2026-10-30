@@ -10,6 +10,15 @@ export function normalizeQuery(q: string): string {
   return q.replace(/\s+/g, ' ').trim()
 }
 
+/** Cuánto del texto buscado se repite en los carteles ("No encontramos nada para …"): uno larguísimo los desbordaba. */
+export const ECHO_MAX = 40
+
+/** El texto buscado para mostrarlo en un cartel: si es muy largo, se corta con "…". */
+export function echoQuery(q: string): string {
+  const chars = [...q]
+  return chars.length > ECHO_MAX ? `${chars.slice(0, ECHO_MAX).join('').trimEnd()}…` : q
+}
+
 const same = (a: string, b: string) => a.localeCompare(b, 'es', { sensitivity: 'base' }) === 0
 
 /** Agrega la búsqueda arriba de todo, sin repetidos (sin importar mayúsculas ni tildes) y con tope. */

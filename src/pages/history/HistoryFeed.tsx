@@ -6,6 +6,7 @@ import { episodeLabel, formatTime, smallPoster } from '../../lib/format'
 import { groupHistory } from '../../lib/historyGroups'
 import { typeLabel } from '../../lib/i18n'
 import { localTitle, useLocalTitle, useTitlesVersion } from '../../lib/localTitles'
+import { isTv } from '../../lib/spatialNav'
 import { progressStore, removeHistory, restoreHistory, useStore, type RemovedHistory, type WatchEntry } from '../../lib/store'
 import { useNearOnce } from '../../lib/titleArt'
 import { formatWatchTime, plural, watchStats } from '../../lib/watchStats'
@@ -236,7 +237,8 @@ function useUndoRemove() {
   )
 
   const remove = useCallback((e: WatchEntry, button?: HTMLButtonElement) => {
-    // Con el control remoto o el teclado, el foco pasa al ✕ del que sigue (si no, quedaba en <body>).
+    // Con el control remoto o el teclado, el foco pasa al que sigue (si no, quedaba en <body>). En la TV, al enlace de la
+    // fila y no a su ✕ (tv-16): dos OK seguidos borraban dos ítems antes de leer el cartel; el «Deshacer» se alcanza con ↓.
     const keepFocus = !!button && document.activeElement === button
     const index = keepFocus ? removeButtons().indexOf(button) : -1
     const removed = removeHistory([e.videoId])
@@ -248,7 +250,8 @@ function useUndoRemove() {
     if (keepFocus) {
       requestAnimationFrame(() => {
         const list = removeButtons()
-        ;(list[index] ?? list[index - 1])?.focus()
+        const next = list[index] ?? list[index - 1]
+        ;(isTv() ? (next?.closest('li')?.querySelector<HTMLElement>('a.diary-link') ?? next) : next)?.focus()
       })
     }
   }, [])

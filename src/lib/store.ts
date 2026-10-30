@@ -11,6 +11,7 @@ import type { ExternalPlayerId } from './externalPlayers'
 import type { ScreensaverMinutes } from './idle'
 import type { TvModeSetting } from './platform'
 import type { InstalledAddon, Manifest, MetaPreview } from './types'
+import { cleanSettings } from './settingsModel'
 import { cleanProfile, MAIN_PROFILE, PROFILE_STORES, profileStorageKey, type Profile } from './profileModel'
 import { activeProfileId, profileWritesFrozen, setActiveProfileId } from './profiles'
 
@@ -30,13 +31,15 @@ function withDefaults<T>(defaults: T, stored: T): T {
   return out as T
 }
 
-export interface StoreOptions {
+export interface StoreOptions<T = unknown> {
   /** Hasta qué nivel se mezcla con lo de otras pestañas (1: por clave; 2: también un nivel adentro). */
   depth?: number
   /** Para una misma clave cambiada en dos pestañas, cuál queda (ver storeSync.ts). */
   resolve?: Resolver
   /** Cada perfil tiene el suyo (v0.18): se guarda en `p:<perfil>:<clave>`; el principal, en `<clave>`. */
   perProfile?: boolean
+  /** Revisa lo que llega de afuera (IndexedDB, copias) contra el valor de fábrica; por defecto, solo se completa con él. */
+  clean?: (stored: unknown, base: T) => T
 }
 
 // ---------- Problemas al guardar (cuota llena) ----------
@@ -74,7 +77,7 @@ export class PersistedStore<T> {
   constructor(
     private key: string,
     initial: T,
-    private opts: StoreOptions = {},
+    private opts: StoreOptions<T> = {},
   ) {
     this.value = initial
     this.initial = initial
@@ -89,7 +92,11 @@ export class PersistedStore<T> {
 
   /** Valores por defecto con lo que haya en `stored` encima (para importar copias viejas). */
   merge(stored: T) {
-    this.set(withDefaults(this.initial, stored))
+    this.set(this.restore(this.initial, stored))
+  }
+
+  private restore(base: T, stored: T): T {
+    return this.opts.clean ? this.opts.clean(stored, base) : withDefaults(base, stored)
   }
 
   async hydrate() {
@@ -98,7 +105,7 @@ export class PersistedStore<T> {
       const stored = await get<T>(this.storageKey, idb)
       if (stored !== undefined) {
         // En objetos de configuración completamos con los valores por defecto de campos nuevos.
-        this.value = withDefaults(this.value, stored)
+        this.value = this.restore(this.initial, stored)
       }
     } catch {
       // IndexedDB bloqueado (modo privado, por ejemplo): seguimos con los valores por defecto.
@@ -117,7 +124,7 @@ export class PersistedStore<T> {
     // Hubo un cambio acá mientras tanto: su escritura va después de esta lectura, así que se relee.
     if (seq !== this.seq) return this.refresh()
     if (stored === undefined) return
-    this.value = withDefaults(this.initial, stored)
+    this.value = this.restore(this.initial, stored)
     this.emit()
   }
 
@@ -194,7 +201,7 @@ export { addonKey, sameAddon } from './addonKey'
 import { addonKey, sameAddon } from './addonKey'
 
 export async function installAddon(manifestUrl: string): Promise<{ manifest: Manifest; status: InstallStatus }> {
-  const manifest = await fetchManifest(manifestUrl)
+  const manifest = await fetchManifest(manifestUrl, { strict: true })
   let status: InstallStatus = 'new'
   addonsStore.set((list) => {
     const existing = list.findIndex((a) => sameAddon(a.transportUrl, manifestUrl))
@@ -208,8 +215,24 @@ export async function installAddon(manifestUrl: string): Promise<{ manifest: Man
   return { manifest, status }
 }
 
-export function removeAddon(transportUrl: string) {
-  addonsStore.set((list) => list.filter((a) => a.transportUrl !== transportUrl))
+/** Quita un addon. Devuelve lo quitado y dónde estaba, para "Deshacer" (`restoreAddon`). */
+export function removeAddon(transportUrl: string): { addon: InstalledAddon; index: number } | undefined {
+  const list = addonsStore.get()
+  const index = list.findIndex((a) => a.transportUrl === transportUrl)
+  if (index < 0) return undefined
+  const addon = list[index]
+  addonsStore.set((all) => all.filter((a) => a.transportUrl !== transportUrl))
+  return { addon, index }
+}
+
+/** "Deshacer" de `removeAddon`: lo vuelve a poner en su lugar (si mientras tanto se agregó otra vez, no hace nada). */
+export function restoreAddon(removed: { addon: InstalledAddon; index: number }) {
+  addonsStore.set((list) => {
+    if (list.some((a) => sameAddon(a.transportUrl, removed.addon.transportUrl))) return list
+    const copy = [...list]
+    copy.splice(Math.min(removed.index, copy.length), 0, removed.addon)
+    return copy
+  })
 }
 
 /** Activa o desactiva un addon sin desinstalarlo. */
@@ -481,6 +504,53 @@ export function restoreHistory(removed: RemovedHistory) {
       return { ...d, entries }
     })
   }
+}
+
+/**
+ * Borra todo el historial del perfil activo: lo visto, "Seguir viendo" y el diario (uso-04). "Mi lista", las
+ * estrellas, las metas y los ajustes quedan. Son los mismos stores por perfil que usa `removeHistory`, así que con
+ * la casa se sincroniza igual (cada entrada borrada sube como lápida, en tandas). Devuelve lo borrado para "Deshacer".
+ */
+export function clearHistory(): RemovedHistory {
+  const removed: RemovedHistory = { progress: Object.values(progressStore.get()), diary: Object.values(diaryStore.get().entries) }
+  progressStore.set((all) => (Object.keys(all).length ? {} : all))
+  diaryStore.set((d) => (Object.keys(d.entries).length ? { ...d, entries: {} } : d))
+  return removed
+}
+
+/** Cómo estaban esos videos antes de marcarlos o desmarcarlos en bloque (una temporada), para "Deshacer". */
+export interface WatchSnapshot {
+  videoIds: string[]
+  progress: Record<string, WatchEntry>
+  diary: DiaryEntry[]
+}
+
+export function snapshotWatch(videoIds: string[]): WatchSnapshot {
+  const ids = new Set(videoIds)
+  const all = progressStore.get()
+  return {
+    videoIds,
+    progress: Object.fromEntries(videoIds.filter((id) => all[id]).map((id) => [id, all[id]])),
+    diary: Object.values(diaryStore.get().entries).filter((d) => ids.has(d.videoId)),
+  }
+}
+
+/** "Deshacer" de `setWatchedMany`: deja el progreso y el diario de esos videos como estaban en `snapshotWatch`. */
+export function restoreWatchSnapshot(snap: WatchSnapshot) {
+  const ids = new Set(snap.videoIds)
+  progressStore.set((all) => {
+    const copy = { ...all }
+    for (const id of snap.videoIds) {
+      if (snap.progress[id]) copy[id] = snap.progress[id]
+      else delete copy[id]
+    }
+    return copy
+  })
+  diaryStore.set((d) => {
+    const entries = Object.fromEntries(Object.entries(d.entries).filter(([, e]) => !ids.has(e.videoId)))
+    for (const e of snap.diary) entries[e.id] = e
+    return { ...d, entries }
+  })
 }
 
 /**
@@ -759,7 +829,8 @@ export interface Settings {
   uiScale: number
 }
 
-export const settingsStore = new PersistedStore<Settings>('settings', {
+/** Ajustes de fábrica (los de "Restablecer ajustes"). */
+export const DEFAULT_SETTINGS: Settings = {
   streamingServerUrl: '',
   subtitleLangs: ['spa', 'eng'],
   autoSubtitles: true,
@@ -797,7 +868,25 @@ export const settingsStore = new PersistedStore<Settings>('settings', {
   sendReports: false,
   autoSubsMigrated: false,
   uiScale: 100,
-})
+}
+
+export const settingsStore = new PersistedStore<Settings>('settings', DEFAULT_SETTINGS, { clean: cleanSettings })
+
+/**
+ * Marcas que no se tocan al restablecer: la key de TMDB es personal y las demás (asistente visto, guía del control,
+ * modo sin spoilers y subtítulos ya dados de fábrica, idiomas ya elegidos) son avisos de "esto ya pasó". Con la casa se
+ * sincronizan: volverlas a falso las subiría como cambio más nuevo y a los otros aparatos les reaparecería el asistente.
+ */
+const KEPT_ON_RESET = ['tmdbKey', 'onboardingDone', 'hintsSeen', 'spoilerDefaulted', 'langsChosen', 'autoSubsMigrated'] as const
+
+/** "Restablecer ajustes" (uso-04): todo a los valores de fábrica menos `KEPT_ON_RESET`. No toca addons, historial ni sesión. */
+export function resetSettings(): Settings {
+  const before = settingsStore.get()
+  const next: Settings = { ...DEFAULT_SETTINGS }
+  for (const k of KEPT_ON_RESET) (next as unknown as Record<string, unknown>)[k] = before[k]
+  settingsStore.set(next)
+  return before
+}
 
 /**
  * v0.22.3: el modo sin spoilers viene prendido de fábrica. A las casas que ya lo tenían apagado se les prende una
@@ -926,8 +1015,9 @@ export async function importData(raw: unknown): Promise<ImportReport> {
   if (watchlist) watchlistStore.set((all) => mergeWatchlist(all, Object.values(watchlist).filter((it) => typeof it.id === 'string')).result)
   if (isPlain(data.settings)) {
     // La key de TMDB de otra persona no se pisa con la copia (las copias nuevas ya no la traen).
-    const { tmdbKey: _tmdbKey, ...settings } = data.settings as Partial<Settings>
-    settingsStore.merge({ ...settingsStore.get(), ...settings })
+    // Cada campo se revisa contra su tipo y sus valores (uso-01): lo mal formado se descarta y queda lo de acá.
+    const { tmdbKey: _tmdbKey, ...settings } = data.settings
+    settingsStore.set((cur) => cleanSettings(settings, cur))
   }
   if (trackPrefs) trackPrefsStore.set((all) => newestByAt(all, trackPrefs))
   if (ratings) ratingsStore.set((all) => newestByAt(all, ratings))

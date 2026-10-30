@@ -39,6 +39,22 @@ export function liftsSubForCorner({ narrow, phoneLandscape, tv }: { narrow: bool
   return narrow || (phoneLandscape && !tv)
 }
 
+/** Lo que se oculta a los 3,5 s: la cabecera, la barra y los menús. */
+export const BAR_SELECTOR = '.player-top, .player-controls, .player-menu'
+
+/**
+ * a11y-01: con el foco adentro de la cabecera, la barra o un menú, los controles no se ocultan (un anillo de foco
+ * sobre una barra transparente no se ve). `viaMouse`: el último foco lo puso un clic o un toque (no Tab ni las
+ * flechas): ahí se oculta igual, como siempre. En la TV tampoco: ahí el foco siempre está en algún botón y el OK
+ * con los controles ocultos tiene que pausar. (No sirve `:focus-visible`: Chromium lo prende al apretar cualquier
+ * tecla con el botón enfocado, aunque el foco lo haya puesto un clic.)
+ */
+export function keyboardFocusInBar(viaMouse: boolean): boolean {
+  if (viaMouse || document.documentElement.hasAttribute('data-tv')) return false
+  const active = document.activeElement
+  return !!active && active !== document.body && !!active.closest(BAR_SELECTOR)
+}
+
 function matchesNow(query: string) {
   try {
     return matchMedia(query).matches

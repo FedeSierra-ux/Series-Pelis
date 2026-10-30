@@ -1203,3 +1203,124 @@ html[data-tv][data-theme='2'] .search-best-eyebrow {
 [data-theme='2'] .catalog-item-actions .btn-text[aria-pressed='false'] {
   color: var(--muted);
 }
+
+/* ---------- v0.34 (auditoría de la TV) ---------- */
+
+/* tv-04: zona segura en la TV (5vw / 5vh), como el reproductor. Una tele con overscan recorta justo lo de los bordes:
+   el avatar y «Ajustes» del riel, los títulos de arriba y la barra del modal de tráiler. Solo arriba y abajo (y el
+   modal): el contenido ya arranca a 144 px del borde izquierdo. */
+html[data-tv] {
+  --tv-safe-x: 5vw;
+  --tv-safe-y: 5vh;
+}
+@media (min-width: 761px) {
+  html[data-tv][data-theme='2'] .t2-rail {
+    padding-top: max(22px, var(--tv-safe-y));
+    padding-bottom: max(14px, var(--tv-safe-y));
+  }
+}
+html[data-tv] .page:not(.home):not(.detail):not(.browse) {
+  padding-top: max(24px, var(--tv-safe-y));
+}
+html[data-tv] .portada.portada--compact {
+  margin-top: max(22px, var(--tv-safe-y));
+}
+html[data-tv] .bh-top {
+  padding-top: max(20px, var(--tv-safe-y));
+}
+html[data-tv] .tp-bar {
+  padding-bottom: max(20px, var(--tv-safe-y));
+  padding-inline: max(var(--gutter, 24px), var(--tv-safe-x));
+}
+
+/* tv-09: con poca altura (un WebView de 960x540 = 1080p con dpr 2, o 720p) el riel se cortaba y los botones de la
+   portada se apilaban. El riel se compacta, y los botones van siempre en una fila (la portada los deja asomar un
+   poco sobre la imagen en vez de bajar a otro renglon). */
+html[data-tv] .portada .portada-actions {
+  flex-wrap: nowrap;
+  width: max-content;
+  max-width: 100%;
+}
+@media (min-width: 761px) and (max-height: 600px) {
+  html[data-tv] .t2-rail {
+    gap: 3px;
+  }
+  html[data-tv] .t2-profile {
+    margin-bottom: 6px;
+  }
+  html[data-tv] .t2-profile .pf-avatar {
+    width: 44px !important;
+    height: 44px !important;
+    font-size: 1.3rem !important;
+  }
+  html[data-tv] .t2-rail-link {
+    gap: 2px;
+    padding: 2px 0;
+    font-size: 0.72rem;
+  }
+  html[data-tv] .t2-pill {
+    height: 32px;
+    border-radius: 16px;
+  }
+  html[data-tv] .t2-pill svg {
+    width: 22px;
+    height: 22px;
+  }
+  html[data-tv] .portada .portada-content,
+  html[data-tv] .portada--compact .portada-content,
+  html[data-tv] .portada--full .portada-content {
+    max-width: min(900px, 74%);
+  }
+  html[data-tv] .portada .portada-btn {
+    height: 52px;
+    padding: 0 24px;
+    font-size: 1.05rem;
+  }
+  html[data-tv] .portada .portada-btn.is-play {
+    padding: 0 28px 0 22px;
+  }
+  html[data-tv] .portada .portada-facts {
+    font-size: 1rem;
+  }
+  /* Los indicadores ya no caben al lado de los botones: arriba a la derecha, sobre la imagen. */
+  html[data-tv] .portada .portada-main {
+    position: relative;
+  }
+  html[data-tv] .portada .portada-controls {
+    position: absolute;
+    top: 14px;
+    right: 20px;
+  }
+}
+
+/* tv-12: en la TV el episodio elegido y el enfocado no se confunden. El elegido: relleno sutil con el acento (sin borde;
+   lleva «Elegido» en la miniatura). El enfocado: el anillo rodea toda la fila (también el ✓), no solo `.episode-main`.
+   Sin :has() (WebViews viejos de TV) queda como estaba. */
+html[data-tv][data-theme='2'] .episode.selected {
+  border-color: transparent;
+  background: color-mix(in srgb, var(--accent) 14%, var(--surface-2));
+}
+@supports selector(:has(*)) {
+  html[data-tv][data-theme='2'] .episode:has(.episode-main:focus-visible) {
+    outline: var(--focus-ring);
+    outline-offset: 2px;
+  }
+  html[data-tv][data-theme='2'] .episode-main:focus-visible {
+    outline: none;
+  }
+}
+
+/* tv-14: «¿Quién está mirando?» en la TV: el perfil enfocado crece y los demás se apagan, como los pósters. */
+@supports selector(:has(*)) {
+  @media (prefers-reduced-motion: no-preference) {
+    html[data-tv] .pf-tile:focus-visible .pf-tile-art {
+      transform: scale(1.08);
+    }
+  }
+  html[data-tv] .pf-grid:has(.pf-tile:focus-visible) .pf-tile:not(:focus-visible) {
+    opacity: 0.6;
+  }
+}
+html[data-tv] .pf-tile {
+  transition: opacity 0.18s;
+}

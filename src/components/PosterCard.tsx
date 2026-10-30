@@ -4,6 +4,7 @@ import { prefetchMeta } from '../lib/addons'
 import { smallPoster } from '../lib/format'
 import { displayYear } from '../lib/yearLabel'
 import { genreLabel } from '../lib/i18n'
+import { justRestored } from '../lib/focusMemory'
 import { armTrailer, disarmTrailer, mouseMoveTrailer } from '../lib/hoverTrailer'
 import { LABEL_TEXT, usePosterLabel } from '../lib/posterLabels'
 import { useLocalTitle } from '../lib/localTitles'
@@ -81,7 +82,8 @@ export const PosterCard = memo(function PosterCard({ meta, progress, watched, su
   const onFocus = (e: FocusEvent<HTMLAnchorElement>) => {
     prefetch()
     // Solo con teclado o control remoto (no al hacer clic con el mouse).
-    if (e.currentTarget.matches(':focus-visible')) armTrailer({ anchor: e.currentTarget, meta, via: 'focus' })
+    // Tampoco cuando el foco vuelve solo (Atrás desde la ficha): el tráiler espera a que el usuario se mueva.
+    if (e.currentTarget.matches(':focus-visible') && !justRestored()) armTrailer({ anchor: e.currentTarget, meta, via: 'focus' })
   }
 
   const card = (

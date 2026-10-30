@@ -133,7 +133,15 @@ function move(from: DOMRect, dir: Dir, els: HTMLElement[], current: Element): HT
   const zone = zoneOf(current)
   if (dir === 'up' || dir === 'down') {
     const same = els.filter((el) => zoneOf(el) === zone)
+    // tv-17: el índice de Ajustes no se escapa con ↑ / ↓ al contenido (como el riel): para cambiar de zona, ← / →.
+    if (zone?.classList.contains('settings-index')) return best(from, dir, same, current)
     if (same.length < els.length) return best(from, dir, same, current) ?? best(from, dir, els, current)
+  }
+  // tv-06: → desde el riel en Ajustes entra por el índice (la sección marcada), no por lo que quede más cerca en vertical.
+  if (dir === 'right' && inRail(current)) {
+    const index = els.filter((el) => el.closest('.settings-index'))
+    const entry = index.find((el) => el.getAttribute('aria-current') === 'true') ?? index[0]
+    if (entry) return entry
   }
   if (dir === 'right' && zone?.classList.contains('settings-index')) {
     const id = zone.querySelector('[aria-current="true"]')?.getAttribute('href')?.slice(1)
@@ -148,6 +156,20 @@ function move(from: DOMRect, dir: Dir, els: HTMLElement[], current: Element): HT
     }
   }
   return best(from, dir, els, current)
+}
+
+/**
+ * `data-nav-<dirección>` en el elemento enfocado: un selector con el destino de esa flecha (el primero que se ve).
+ * Sin atributo, o sin destino a la vista, no hace nada y sigue la geometría.
+ */
+function navOverride(active: Element | null, dir: Dir, els: HTMLElement[]): HTMLElement | undefined {
+  const selector = active?.getAttribute(`data-nav-${dir}`)
+  if (!selector) return undefined
+  try {
+    return Array.from(document.querySelectorAll<HTMLElement>(selector)).find((el) => el !== active && els.includes(el))
+  } catch {
+    return undefined
+  }
 }
 
 function isTextInput(el: Element | null) {
@@ -319,6 +341,38 @@ function inOwnHorizontalScroller(el: HTMLElement): boolean {
  */
 export function revealRestored(el: HTMLElement, needed: boolean) {
   if (needed || (isTv() && el.closest('.row-scroller, .grid'))) reveal(el, true)
+  if (isTv() && el.closest('.row-scroller, .grid')) keepAnchored(el)
+}
+
+/** Cuánto se vuelve a anclar una fila restaurada mientras las de arriba terminan de cargar (tv-05). */
+export const KEEP_ANCHOR_MS = 2500
+let stopKeepAnchored: (() => void) | undefined
+
+/**
+ * tv-05: al volver con Atrás las filas de arriba todavía son esqueletos y, al cargar, crecen unos píxeles (22 px
+ * cada una): la fila quedaba corrida respecto de cuando se llega con las flechas y el título del póster, cortado
+ * contra el borde. Mientras la página cambia de alto (un tiempo acotado), se vuelve a anclar la fila; si el usuario
+ * toca algo, mueve el foco o se va el elemento, se deja de hacer.
+ */
+function keepAnchored(el: HTMLElement) {
+  stopKeepAnchored?.()
+  if (typeof ResizeObserver === 'undefined') return
+  const events = ['keydown', 'pointerdown', 'wheel', 'touchstart'] as const
+  let timer: ReturnType<typeof setTimeout> | undefined
+  const ro = new ResizeObserver(() => {
+    if (!el.isConnected || document.activeElement !== el) return stop()
+    reveal(el, true)
+  })
+  function stop() {
+    ro.disconnect()
+    clearTimeout(timer)
+    for (const type of events) window.removeEventListener(type, stop, true)
+    if (stopKeepAnchored === stop) stopKeepAnchored = undefined
+  }
+  stopKeepAnchored = stop
+  ro.observe(document.body)
+  timer = setTimeout(stop, KEEP_ANCHOR_MS)
+  for (const type of events) window.addEventListener(type, stop, true)
 }
 
 /** En la TV, si lo guardado no aparece, la primera tarjeta a la vista (si no, las flechas arrancan de cero). */
@@ -420,11 +474,11 @@ export function enterTogglesCheck(o: { tv: boolean; key: string; repeat?: boolea
 
 /**
  * tv-12: ↑ / ↓ sin destino no hacen el scroll de 40 px del navegador cuando el foco está anclado a algo: en una
- * capa modal (`data-nav-scope`), en el riel, con una portada fija (`data-focus-billboard`, la grilla) o en las
- * filas de Películas/Series. En el resto de las páginas el scroll nativo sigue (sirve para leer). Puro.
+ * capa modal (`data-nav-scope`), en el riel, con una portada fija (`data-focus-billboard`, la grilla), en las
+ * filas de Películas/Series o en el índice de Ajustes (tv-17). En el resto de las páginas el scroll nativo sigue (sirve para leer). Puro.
  */
-export function blocksPageScroll(o: { vertical: boolean; inScope: boolean; inRail: boolean; hasBillboard: boolean; inBrowseRow: boolean }): boolean {
-  return o.vertical && (o.inScope || o.inRail || o.hasBillboard || o.inBrowseRow)
+export function blocksPageScroll(o: { vertical: boolean; inScope: boolean; inRail: boolean; hasBillboard: boolean; inBrowseRow: boolean; inIndex?: boolean }): boolean {
+  return o.vertical && (o.inScope || o.inRail || o.hasBillboard || o.inBrowseRow || !!o.inIndex)
 }
 
 // ---------- "Atrás" en escalera (U1) ----------
@@ -541,6 +595,10 @@ export function initSpatialNav(onBack: () => void) {
       const target = document.querySelector<HTMLElement>(back.dataset.navLeft ?? '')
       if (target && els.includes(target)) next = target
     }
+    // Un elemento puede decir a dónde va una flecha (`data-nav-up`, `data-nav-right`…: un selector): el ✓ de un episodio
+    // va a la fuente recomendada, el primer episodio vuelve a la temporada elegida. Si el destino no se ve, manda la geometría.
+    const forced = navOverride(active, dir, els)
+    if (forced) next = forced
     if (next) {
       e.preventDefault()
       lastMove = now
@@ -556,6 +614,7 @@ export function initSpatialNav(onBack: () => void) {
         // Películas/Series: en la última fila, ↓ no hace el scroll de 40 px del navegador (el título de la
         // fila se metía debajo de la portada fija y asomaba la anterior).
         inBrowseRow: !!active?.closest('.page.browse .row-scroller'),
+        inIndex: !!active?.closest('.settings-index'),
       })
     ) {
       e.preventDefault()

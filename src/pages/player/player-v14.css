@@ -590,8 +590,11 @@ html[data-tv] .player-chip ~ .player-rate {
 /* visual-02: en pausa, la cabecera (título + addon, hasta 127 px de alto en la TV) tapaba el título y la
    sinopsis de `.pause-info`. Y la columna del reparto quedaba con el texto de 188 px: más ancha, el texto la usa. */
 html[data-tv] .pause-cast {
-  padding-top: 160px;
-  width: 520px;
+  padding-top: 190px;
+  width: 583px;
+  /* tv-13: la sinopsis arranca donde el título de la cabecera (zona segura + la flecha ← de 51 px y su separación de
+     12 px) y no más a la izquierda; con 160 px de relleno el título terminaba pegado al «T1 E4 · …». */
+  padding-left: calc(var(--gutter) + 63px);
 }
 
 /* code-04: los botones que se "deshabilitan" con el foco puesto ("Ver ahora", "Siguiente episodio",

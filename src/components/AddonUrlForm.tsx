@@ -1,6 +1,7 @@
-import { useState } from 'react'
+import { useEffect, useId, useRef, useState } from 'react'
 import { normalizeManifestUrl } from '../lib/addons'
 import { addonUrlProblem, errorText } from '../lib/errors'
+import { useAddons } from '../lib/hooks'
 import { installAddon, setAddonEnabled } from '../lib/store'
 import { useTvMode } from '../lib/tv'
 import { KeyboardToggle } from './OnScreenKeyboard'
@@ -16,6 +17,16 @@ export function AddonUrlForm({ disableEmpty }: { disableEmpty?: boolean }) {
   const [busy, setBusy] = useState(false)
   const [msg, setMsg] = useState<Msg>()
   const tv = useTvMode()
+  const errorId = useId()
+  const failed = !!msg && !msg.ok
+
+  // Si se quita un addon, el "Listo" o el "Activar" de antes ya no tienen que ver (uso-07).
+  const count = useAddons().length
+  const lastCount = useRef(count)
+  useEffect(() => {
+    if (count < lastCount.current) setMsg(undefined)
+    lastCount.current = count
+  }, [count])
 
   const change = (value: string) => {
     setUrl(value)
@@ -25,7 +36,12 @@ export function AddonUrlForm({ disableEmpty }: { disableEmpty?: boolean }) {
 
   const add = async (e?: React.FormEvent) => {
     e?.preventDefault()
-    if (!url.trim() || busy) return
+    if (busy) return
+    // Con el campo vacío Enter y "Agregar" no hacían nada (uso-08): ahora dicen qué falta.
+    if (!url.trim()) {
+      setMsg({ ok: false, text: 'Pegá la URL del manifest del addon (termina en /manifest.json).' })
+      return
+    }
     setBusy(true)
     setMsg(undefined)
     try {
@@ -63,6 +79,8 @@ export function AddonUrlForm({ disableEmpty }: { disableEmpty?: boolean }) {
           value={url}
           onChange={(e) => change(e.target.value)}
           aria-label="URL del manifest"
+          aria-invalid={failed || undefined}
+          aria-describedby={failed ? errorId : undefined}
           // Con el control remoto el campo queda fuera de las flechas (tv-11): enfocarlo abría el teclado del
           // sistema de Android TV. Se escribe con el botón "Teclado".
           tabIndex={tv ? -1 : undefined}
@@ -74,7 +92,7 @@ export function AddonUrlForm({ disableEmpty }: { disableEmpty?: boolean }) {
       </form>
       <KeyboardToggle value={url} onChange={change} onDone={() => add()} doneLabel="Agregar" label="Teclado para la URL del addon" />
       {msg && (
-        <p className={msg.ok ? 'ok' : 'error-text'} role="status">
+        <p id={failed ? errorId : undefined} className={msg.ok ? 'ok' : 'error-text'} role={msg.ok ? 'status' : 'alert'}>
           {msg.text}
           {msg.enableUrl && (
             <>

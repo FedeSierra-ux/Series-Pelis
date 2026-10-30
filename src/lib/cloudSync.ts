@@ -5,6 +5,7 @@ import { getAuth, reportUnauthorized, subscribeAuth, type AuthState } from './au
 import {
   addonsStore,
   applyHouseDefaults,
+  DEFAULT_SETTINGS,
   diaryStore,
   forgetAddonData,
   goalsStore,
@@ -17,6 +18,7 @@ import {
   watchlistStore,
   type Settings,
 } from './store'
+import { cleanSettings } from './settingsModel'
 import { applyItems, capture, emptyState, enforceReadOnly, fieldsAdapter, markSent, outgoing, pendingCount, recordAdapter, splitState, upgradeSchema, type ServerItem, type SyncAdapter, type SyncScope, type SyncState } from './syncCore'
 import { cleanProfile, MAIN_PROFILE, PROFILE_STORES, type Profile } from './profileModel'
 import { activeProfileId } from './profiles'
@@ -142,7 +144,7 @@ const profilesAdapter: SyncAdapter<Record<string, Profile>> = {
 
 export const ADAPTERS: SyncAdapter[] = [
   addonsAdapter,
-  fieldsAdapter('house', 'settings', settingsStore, HOUSE_SETTINGS),
+  fieldsAdapter('house', 'settings', settingsStore, HOUSE_SETTINGS, (s) => cleanSettings(s, DEFAULT_SETTINGS)),
   recordAdapter('house', 'trackPrefs', trackPrefsStore, 'at'),
   profilesAdapter,
   recordAdapter('profile', 'progress', progressStore, 'updatedAt'),

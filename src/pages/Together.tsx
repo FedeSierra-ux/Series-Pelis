@@ -46,16 +46,35 @@ export function Together() {
     ].filter((g) => g.list.length > 0)
   }, [data])
 
+  // Los estados vacíos o con error también llevan el título de la pantalla (a11y-23).
+  const heading = (
+    <header className="together-head">
+      <h1>Juntos</h1>
+    </header>
+  )
   if (!key)
     return (
       <div className="page">
+        {heading}
         <Empty>
           Para buscar títulos con dos personas juntas cargá una key de TMDB en <Link to="/settings">Ajustes</Link>.
         </Empty>
       </div>
     )
-  if (!valid) return <div className="page"><Empty>Elegí dos personas distintas.</Empty></div>
-  if (current?.error) return <div className="page"><ErrorBox message={`No se pudo cargar: ${current.error}`} /></div>
+  if (!valid)
+    return (
+      <div className="page">
+        {heading}
+        <Empty>Elegí dos personas distintas.</Empty>
+      </div>
+    )
+  if (current?.error)
+    return (
+      <div className="page">
+        {heading}
+        <ErrorBox message={`No se pudo cargar: ${current.error}`} />
+      </div>
+    )
 
   return (
     <div className="page together-page">
