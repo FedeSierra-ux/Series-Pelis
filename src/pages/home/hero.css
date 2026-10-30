@@ -200,31 +200,6 @@
   }
 }
 
-/* Reparto: fotos redondas con el nombre al lado. */
-.portada .portada-cast {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px 18px;
-  margin: 0;
-  padding: 0;
-  list-style: none;
-}
-.portada .portada-cast li {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  font-size: 0.88rem;
-  font-weight: 700;
-  color: var(--portada-soft);
-}
-.portada .portada-cast img {
-  width: 32px;
-  height: 32px;
-  border-radius: 50%;
-  object-fit: cover;
-  background: var(--bg-2);
-}
-
 /* ---- Botones: "Ver ahora" claro y sólido (el protagonista), el resto translúcido ---- */
 
 .portada .portada-actions {
@@ -518,48 +493,7 @@
   height: 46px;
 }
 
-/* ---------- Películas / Series: billboard de borde a borde (Netflix) ---------- */
-
-.portada.portada--full {
-  --portada-logo-h: clamp(80px, 17vh, 180px);
-  margin: -24px calc(-1 * var(--gutter)) 8px;
-}
-.portada--full .portada-bg {
-  object-position: center top;
-}
-/* Fundido abajo hasta el fondo de la página: el Top 10 queda montado encima sin corte. */
-.portada--full .portada-shade {
-  background:
-    linear-gradient(90deg, var(--portada-ink) 0%, color-mix(in srgb, var(--portada-ink) 80%, transparent) 24%, color-mix(in srgb, var(--portada-ink) 25%, transparent) 52%, transparent 72%),
-    linear-gradient(0deg, var(--bg) 0%, color-mix(in srgb, var(--bg) 85%, transparent) 14%, color-mix(in srgb, var(--bg) 30%, transparent) 34%, transparent 52%),
-    linear-gradient(180deg, color-mix(in srgb, var(--bg) 55%, transparent) 0%, transparent 18%);
-}
-@supports not (color: color-mix(in srgb, red 50%, transparent)) {
-  .portada--full .portada-shade {
-    background:
-      linear-gradient(90deg, var(--portada-ink) 0%, rgba(var(--portada-ink-rgb), 0.8) 24%, rgba(var(--portada-ink-rgb), 0.25) 52%, transparent 72%),
-      linear-gradient(0deg, var(--bg) 0%, rgba(var(--bg-rgb), 0.85) 14%, rgba(var(--bg-rgb), 0.3) 34%, transparent 52%),
-      linear-gradient(180deg, rgba(var(--bg-rgb), 0.55) 0%, transparent 18%);
-  }
-}
-/* La parte de arriba tiene su alto (la imagen respira sobre el logo) y el Top 10 se suma abajo. */
-.portada--full .portada-main {
-  min-height: clamp(440px, 66vh, 780px);
-  padding: 80px var(--gutter) 6px;
-}
-.portada--full:not(.has-row) .portada-main {
-  padding-bottom: 48px;
-}
-.portada--full .portada-content {
-  max-width: min(640px, 48vw);
-}
-.portada--full .portada-btn {
-  height: 54px;
-  font-size: 1.05rem;
-}
-.portada--full .portada-controls {
-  margin-bottom: 12px;
-}
+/* ---------- Fila encima del borde de abajo de la portada (prop `row` de HeroCarousel) ---------- */
 .portada .portada-row {
   position: relative;
 }
@@ -568,10 +502,6 @@
 }
 
 /* ---------- Esqueleto mientras llegan los títulos ---------- */
-
-.portada.portada--full.portada-skeleton {
-  min-height: clamp(560px, 90vh, 1000px);
-}
 .portada.portada-skeleton {
   background: linear-gradient(90deg, var(--bg-2) 0%, var(--bg-3) 50%, var(--bg-2) 100%);
   background-size: 200% 100%;
@@ -595,18 +525,16 @@
   .portada .portada-bg {
     object-position: center top;
   }
-  .portada .portada-shade,
-  .portada--full .portada-shade {
+  .portada .portada-shade {
     background: linear-gradient(180deg, transparent 0%, transparent 42%, color-mix(in srgb, var(--portada-ink) 70%, transparent) 76%, var(--portada-ink) 100%);
   }
   @supports not (color: color-mix(in srgb, red 50%, transparent)) {
-    .portada .portada-shade, .portada--full .portada-shade {
+    .portada .portada-shade {
       background: linear-gradient(180deg, transparent 0%, transparent 42%, rgba(var(--portada-ink-rgb), 0.7) 76%, var(--portada-ink) 100%);
     }
   }
   .portada .portada-main,
-  .portada--compact .portada-main,
-  .portada--full .portada-main {
+  .portada--compact .portada-main {
     flex-direction: column;
     align-items: stretch;
     gap: 14px;
@@ -614,8 +542,7 @@
     padding: calc(var(--portada-img-h) - 74px) 16px 18px;
   }
   .portada .portada-content,
-  .portada--compact .portada-content,
-  .portada--full .portada-content {
+  .portada--compact .portada-content {
     max-width: none;
     gap: 10px;
   }
@@ -635,16 +562,6 @@
     font-size: 0.92rem;
     -webkit-line-clamp: 3;
   }
-  .portada .portada-cast li {
-    font-size: var(--fs-xs);
-  }
-  .portada .portada-cast img {
-    width: 26px;
-    height: 26px;
-  }
-  .portada .portada-cast li:nth-child(n + 3) {
-    display: none;
-  }
   /* "Ver ahora" a lo ancho y los otros dos como íconos (el nombre sigue para los lectores de pantalla). */
   .portada .portada-actions {
     display: grid;
@@ -662,8 +579,7 @@
     text-overflow: ellipsis;
   }
   .portada .portada-btn,
-  .portada--compact .portada-btn,
-  .portada--full .portada-btn {
+  .portada--compact .portada-btn {
     height: 48px;
     font-size: 0.98rem;
   }
@@ -697,17 +613,7 @@
     background: var(--bg-3);
   }
 
-  /* Películas / Series: la imagen ocupa más y se funde en el fondo de la página. */
-  .portada.portada--full {
-    --portada-img-h: min(96cqw, 56vh);
-  }
-  .portada--full .portada-main,
-  .portada--full:not(.has-row) .portada-main {
-    min-height: 0;
-    padding-bottom: 4px;
-  }
-  .portada.portada-skeleton,
-  .portada.portada--full.portada-skeleton {
+  .portada.portada-skeleton {
     min-height: 460px;
   }
 }
@@ -729,9 +635,6 @@
   html:not([data-tv]) .portada--compact .portada-desc {
     -webkit-line-clamp: 2;
     font-size: var(--fs-md);
-  }
-  html:not([data-tv]) .portada--compact .portada-cast {
-    display: none;
   }
   html:not([data-tv]) .portada--compact .portada-btn {
     height: 44px;
@@ -772,8 +675,7 @@ html[data-tv] .portada .portada-btn.is-play {
   padding: 0 40px 0 30px;
 }
 html[data-tv] .portada .portada-content,
-html[data-tv] .portada--compact .portada-content,
-html[data-tv] .portada--full .portada-content {
+html[data-tv] .portada--compact .portada-content {
   max-width: min(900px, 58%);
 }
 html[data-tv] .portada .portada-btn:focus-visible {
@@ -793,13 +695,6 @@ html[data-tv] .portada .portada-genres {
 }
 html[data-tv] .portada .portada-desc {
   font-size: 1.15rem;
-}
-html[data-tv] .portada .portada-cast li {
-  font-size: var(--fs-base);
-}
-html[data-tv] .portada .portada-cast img {
-  width: 42px;
-  height: 42px;
 }
 html[data-tv] .portada .portada-dot {
   min-width: 32px;

@@ -767,9 +767,6 @@ html[data-tv][data-theme='2'] .row-scroller {
 [data-theme='2'] .stream-item.recommended {
   border-color: rgba(196, 176, 255, 0.55);
 }
-[data-theme='2'] .stream-title {
-  color: var(--text-soft);
-}
 [data-theme='2'] .stream-badge {
   background: var(--accent);
   color: var(--on-accent);
@@ -1438,8 +1435,7 @@ html[data-tv] .portada .portada-actions {
     height: 22px;
   }
   html[data-tv] .portada .portada-content,
-  html[data-tv] .portada--compact .portada-content,
-  html[data-tv] .portada--full .portada-content {
+  html[data-tv] .portada--compact .portada-content {
     max-width: min(900px, 74%);
   }
   html[data-tv] .portada .portada-btn {
