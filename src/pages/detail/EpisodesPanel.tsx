@@ -1,8 +1,9 @@
 import { useEffect, useRef, type ReactNode, type RefObject } from 'react'
 import { Picker } from '../../components/Picker'
+import { UndoToast, useUndoToast } from '../../components/UndoToast'
 import { ImdbRating } from '../../components/Rating'
 import { remainingLabel } from '../../lib/remaining'
-import { RESUME_MIN_S, setWatched, setWatchedMany, type WatchEntry } from '../../lib/store'
+import { RESUME_MIN_S, restoreWatchSnapshot, setWatched, setWatchedMany, snapshotWatch, type WatchEntry } from '../../lib/store'
 import { useTvMode } from '../../lib/tv'
 import type { Video } from '../../lib/types'
 import {
@@ -22,6 +23,11 @@ import { useSeasonOverviews } from './useSeasonOverviews'
 // Pestaña "Episodios" de la ficha: selector de temporada, lista de episodios y fuentes del elegido.
 // v0.14 (U20): con más de 6 temporadas, desplegable "Temporada 3 ▾" (el Picker, que anda con el
 // control remoto); "Quedan 23 min" en los empezados y la marca "Siguiente" en el sugerido.
+
+/** tv-02: → desde el ✓ de un episodio va a la fuente recomendada del panel (no al "Ocultos" que quede más cerca). */
+const NAV_TO_SOURCE = '.episode-streams .stream-item.recommended'
+/** tv-11: ↑ desde el primer episodio vuelve a la temporada elegida (el chip activo o el desplegable), no a la más cercana. */
+const NAV_TO_SEASON = '.season-tabs .tab.active, .season-picker-btn'
 
 /** Lo que se guarda al marcar un episodio como visto. */
 export type WatchBase = (v?: Video) => Pick<WatchEntry, 'videoId' | 'metaId' | 'type' | 'name' | 'poster' | 'season' | 'episode' | 'episodeTitle'>
@@ -44,6 +50,8 @@ interface Props {
   first?: Video
   /** Id de la serie en TMDB: con eso, la sinopsis de los episodios va en español (ficha-11). */
   tmdbId?: number
+  /** Idioma original de la serie (TMDB): los títulos de Cinemeta van en inglés salvo en las series en español (a11y-16). */
+  originalLang?: string
   hideSpoiler: (v: Video) => boolean
   watchBase: WatchBase
   /** Celular: las fuentes van dentro de la lista, debajo del episodio elegido. */
@@ -61,6 +69,14 @@ export function EpisodesPanel(p: Props) {
   const dropdown = seasonsAsDropdown(seasons)
   // v0.26 (ficha-11): sinopsis en español de TMDB (si está); si no, la de Cinemeta.
   const overviews = useSeasonOverviews(p.tmdbId, season, seasonVideos)
+  // "Marcar temporada…" cambia muchos episodios de una: avisa y deja "Deshacer" (uso-10, igual que el historial).
+  const undo = useUndoToast()
+  const markSeason = () => {
+    const watched = !seasonComplete
+    const snap = snapshotWatch(seasonReleased.map((v) => v.id))
+    setWatchedMany(seasonReleased.map((v) => p.watchBase(v)), watched)
+    undo.show(`${seasonLabel(season)} marcada como ${watched ? 'vista' : 'no vista'}`, () => restoreWatchSnapshot(snap))
+  }
   // v0.26 (ficha-06): en el celular se toca; con mouse o control remoto, se elige.
   const tv = useTvMode()
   const touch = useMediaQuery(TOUCH_QUERY) && !tv
@@ -110,7 +126,7 @@ export function EpisodesPanel(p: Props) {
           <button
             type="button"
             className="btn btn-ghost season-mark"
-            onClick={() => setWatchedMany(seasonReleased.map((v) => p.watchBase(v)), !seasonComplete)}
+            onClick={markSeason}
           >
             {seasonComplete ? '✓ Marcar temporada como no vista' : 'Marcar temporada como vista'}
           </button>
@@ -118,7 +134,7 @@ export function EpisodesPanel(p: Props) {
       </div>
       <div className="episodes-layout">
         <ol className="episodes" ref={p.listRef}>
-          {seasonVideos.map((v) => {
+          {seasonVideos.map((v, index) => {
             const w = progress[v.id]
             const released = formatReleaseDate(v)
             const upcoming = !isReleased(v)
@@ -129,7 +145,9 @@ export function EpisodesPanel(p: Props) {
             const spoil = !selected && v.id !== p.first?.id && p.hideSpoiler(v)
             const started = !!w && w.duration > 0 && !w.watched && w.position > RESUME_MIN_S
             const left = started ? remainingLabel(w.position, w.duration) : ''
-            const badge = episodeBadge(v, p.suggested, progress, p.started)
+            // tv-12: en la TV el episodio elegido lleva «Elegido» en la miniatura (sin borde: a 3 m el borde fino se
+            // confundía con el anillo del foco); «Continuar» / «Siguiente» ya dicen más.
+            const badge = episodeBadge(v, p.suggested, progress, p.started) ?? (tv && selected ? 'Elegido' : undefined)
             const title = v.title ?? v.name ?? `Episodio ${episodeNumber(v)}`
             const overview = overviews.get(v.id) ?? v.overview ?? v.description
             // v0.26 (ficha-04, "Vistos atenuados"): el siguiente a ver, resaltado.
@@ -142,6 +160,7 @@ export function EpisodesPanel(p: Props) {
                   data-focus-id={v.id}
                   data-autofocus={v.id === p.focusVideoId || undefined}
                   aria-current={selected || undefined}
+                  data-nav-up={index === 0 ? NAV_TO_SEASON : undefined}
                   onClick={() => p.onSelect(v)}
                 >
                   <div className={`episode-thumb${spoil ? ' spoiler-blur' : ''}`}>
@@ -154,7 +173,7 @@ export function EpisodesPanel(p: Props) {
                     )}
                   </div>
                   <div className="episode-text">
-                    <span className="episode-title">
+                    <span className="episode-title" lang={p.originalLang === 'es' ? undefined : 'en'}>
                       {episodeNumber(v)}. {title}
                     </span>
                     <span className="muted small">
@@ -175,7 +194,9 @@ export function EpisodesPanel(p: Props) {
                           Sin spoilers · {touch ? 'tocalo' : 'elegilo'} para ver la sinopsis
                         </span>
                       ) : (
-                        <span className="episode-desc">{overview}</span>
+                        <span className="episode-desc" lang={overviews.has(v.id) ? undefined : 'en'}>
+                          {overview}
+                        </span>
                       ))}
                   </div>
                 </button>
@@ -185,6 +206,7 @@ export function EpisodesPanel(p: Props) {
                   title={w?.watched ? 'Marcar como no vista' : 'Marcar como vista'}
                   aria-label={`${w?.watched ? 'Marcar como no vista' : 'Marcar como vista'}: ${episodeNumber(v)}. ${title}`}
                   aria-pressed={!!w?.watched}
+                  data-nav-right={!p.inlineStreams && selectedVideoId ? NAV_TO_SOURCE : undefined}
                   onClick={() => setWatched(p.watchBase(v), !w?.watched)}
                 >
                   ✓
@@ -235,6 +257,7 @@ export function EpisodesPanel(p: Props) {
           </aside>
         )}
       </div>
+      <UndoToast api={undo} />
     </section>
   )
 }

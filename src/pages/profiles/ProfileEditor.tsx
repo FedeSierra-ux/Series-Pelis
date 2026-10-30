@@ -2,7 +2,7 @@ import { useEffect, useRef, useState, type FormEvent } from 'react'
 import { KeyboardToggle } from '../../components/OnScreenKeyboard'
 import { ProfileAvatar } from '../../components/ProfileAvatar'
 import { AVATAR_GROUPS, AVATARS, avatarById, avatarUrl, randomAvatar, type AvatarGroup } from '../../lib/avatars'
-import { MAIN_PROFILE, MAX_NAME, PROFILE_COLORS, type Profile } from '../../lib/profileModel'
+import { colorName, MAIN_PROFILE, MAX_NAME, PROFILE_COLORS, type Profile } from '../../lib/profileModel'
 import { createProfile, deleteProfile, updateProfile } from '../../lib/profileSwitch'
 import { useTvMode } from '../../lib/tv'
 
@@ -64,6 +64,8 @@ export function ProfileEditor({ profile, defaultColor, takenAvatars = [], onClos
             value={name}
             maxLength={MAX_NAME}
             autoComplete="off"
+            aria-invalid={error ? true : undefined}
+            aria-describedby={error ? 'pf-error' : undefined}
             tabIndex={tv ? -1 : undefined}
             data-nav-skip={tv || undefined}
             onChange={(e) => {
@@ -99,14 +101,14 @@ export function ProfileEditor({ profile, defaultColor, takenAvatars = [], onClos
       <fieldset className="pf-field">
         <legend className="pf-label">Color de fondo</legend>
         <div className="pf-swatches">
-          {PROFILE_COLORS.map((c, i) => (
-            <button key={c} type="button" className="pf-swatch" style={{ background: c }} aria-pressed={color === c} aria-label={`Color ${i + 1}`} onClick={() => setColor(c)} />
+          {PROFILE_COLORS.map((c) => (
+            <button key={c} type="button" className="pf-swatch" style={{ background: c }} aria-pressed={color === c} aria-label={colorName(c)} title={colorName(c)} onClick={() => setColor(c)} />
           ))}
         </div>
       </fieldset>
 
       {error && (
-        <p className="login-error" role="alert">
+        <p id="pf-error" className="login-error" role="alert">
           {error}
         </p>
       )}

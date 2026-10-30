@@ -1,5 +1,64 @@
 # Changelog
 
+## [0.34.0] - 2026-10-30
+
+Primera tanda de los arreglos de la auditoría completa de la v0.33 (página de votos "Auditoría de Flix v0.33"):
+funcional, TV, reproductor, datos y accesibilidad (45 hallazgos). Quedan para la v0.35 (visual, celular y textos),
+la v0.36 (rendimiento y orden interno) y la v0.37 (sacar el Tema 1 del CSS).
+
+### Corregido
+- **TV: el botón principal de una serie y OK en un episodio llevan el foco a la fuente recomendada.** Antes quedaba en
+  el botón o en el episodio y hacían falta 8 o 11 pulsaciones; ahora son 2 y 8. → desde el ✓ de "Marcar como vista"
+  va a la fuente y no a "Ocultos por tus filtros". ↑ desde el primer episodio vuelve a la temporada elegida.
+- **TV: volver con Atrás deja la fila donde estaba** (las filas de arriba terminan de cargar después de restaurar y la
+  fila bajaba 44 px). El tráiler flotante no se arma solo al volver y no tapa el riel ni sale de la zona segura.
+- **TV: Ajustes y Historial.** → desde el riel entra por el índice de secciones y ↑/↓ en el índice no se escapan al
+  contenido; tras quitar un ítem del historial el foco queda en la fila y no en el ✕ del siguiente.
+- **TV: zona segura** (5vw/5vh) en el riel, los títulos, la portada de Inicio y la barra del tráiler. Con poca altura
+  (960×540 o 720p) el riel se compacta y los botones de la portada quedan en una fila.
+- **Reproductor: con Tab los controles aparecen y no se ocultan mientras el foco esté en ellos.** Antes el foco entraba
+  en una barra con opacidad 0 y no se veía nada (WCAG 2.4.7). **Espacio activa el botón enfocado con el teclado**
+  (antes pausaba el video); K sigue pausando.
+- **TV: los subtítulos respetan la zona segura de abajo** aunque no haya controles; en pausa la sinopsis no queda pegada
+  al título del encabezado; la guía ya no promete "episodios" al apretar ↑ en el reproductor.
+- **Importar una copia con ajustes mal formados ya no rompe Ajustes ni el reproductor.** Cada ajuste se revisa contra
+  su tipo y sus valores (también al arrancar y al bajar de la casa), y una sección de Ajustes que falle no tira a las
+  demás: "Tus datos" siempre queda a mano.
+- **Buscar títulos con barra** (Face/Off, AC/DC) manda la barra como espacio. Con una letra avisa que hacen falta dos y
+  un texto larguísimo ya no se sale del cartel.
+- **La ficha de un título que no existe** dice siempre "No encontramos este título".
+- **Addons**: el mensaje viejo se borra al quitar uno, con el campo vacío se avisa qué falta y un manifest sin nombre o
+  sin recursos se rechaza.
+- **Accesibilidad**: la barra de pestañas fija del celular y la barra de filtros de PC ya no tapan lo que se enfoca con
+  Tab; "Vos" queda como página actual en Historial, Calendario y Tu año; la sinopsis y los títulos de episodios de
+  Cinemeta en inglés llevan `lang="en"`; los indicadores de carga avisan a los lectores de pantalla; la cuenta de
+  "¿Quién está mirando?" se anuncia al empezar y en los últimos 3 segundos; los colores del editor de perfil tienen
+  nombre; los errores de formulario quedan vinculados a su campo; Juntos siempre tiene título.
+- **Contraste**: la sinopsis de la ficha sobre fondos claros pasa de 1,7:1 a no bajar de 5:1; en los episodios vistos solo
+  se atenúan la miniatura y el título; los placeholders (3,2:1 → 6:1) y los bordes de los campos y de los interruptores
+  apagados se ven.
+
+### Cambiado
+- **"Reproducir" dice "Elegir fuente" cuando no va a reproducir** (fuentes en manual y sin fuente recordada del
+  título), en la ficha y en la portada de Inicio.
+- **Asistente en la TV**: el foco arranca en "Empezar" y "Activarlos solos" es un interruptor grande. El episodio
+  elegido se distingue del enfocado y el perfil enfocado de "¿Quién está mirando?" crece y los demás se apagan.
+- **Nombre de los pósters para lectores de pantalla**: "Carrie, serie, 2026, IMDb 7,8, Estreno, Puesto 2" en vez de
+  empezar por "IMDb 7,8".
+- **Botones de sonido de los tráileres** con un rótulo fijo ("Sonido del tráiler") y el estado en `aria-pressed`.
+
+### Agregado
+- **Aviso al cambiar de pantalla** para lectores de pantalla (y, en PC y celular, el foco pasa al título si estaba en el
+  menú); en la TV el foco sigue como antes.
+- **Ajustes → Tus datos → "Empezar de cero"**: "Borrar historial" (del perfil activo) y "Restablecer ajustes" (sin tocar
+  addons, key de TMDB ni sesión), con confirmación dentro de la página y "Deshacer".
+- **"Deshacer"** al quitar un addon y al marcar una temporada como vista (reemplaza el cuadro de confirmación del
+  navegador).
+- **Pausa del tráiler de la portada de Películas y Series**, junto al botón de sonido.
+- **Botón "Volver" al terminar una peli o el último episodio** cuando no hay "Más como esto".
+- **Alto contraste de Windows**: interruptores, pestañas, chips y el ítem activo del menú se ven con los colores del
+  sistema. La ayuda de atajos dice que las flechas también mueven entre pósters en PC.
+
 ## [0.33.0] - 2026-10-27
 
 Cambios elegidos en la página de votos "Menús estilo Nuvio" y "Qué podemos agregar".

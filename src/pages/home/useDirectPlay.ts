@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { findResumeStream, type ResumeTarget } from '../../lib/nextEpisode'
-import { continueWatching, type WatchEntry } from '../../lib/store'
+import { findResumeStream, playsDirect, type ResumeTarget } from '../../lib/nextEpisode'
+import { continueWatching, lastSourceStore, settingsStore, useStore, type WatchEntry } from '../../lib/store'
 
 const BACK_KEYS = new Set(['Escape', 'GoBack', 'BrowserBack', 'Backspace'])
 
@@ -75,4 +75,14 @@ export function resumeLabel(metaId: string, type: string, progress: Record<strin
   const entries = Object.values(progress).filter((e) => e.metaId === metaId)
   if (type === 'series') return entries.length > 0 ? 'Continuar' : 'Reproducir'
   return continueWatching(Object.fromEntries(entries.map((e) => [e.videoId, e]))).length > 0 ? 'Continuar' : 'Reproducir'
+}
+
+/**
+ * uso-02: el rótulo del botón principal de la portada. Con el modo manual y sin una fuente recordada del título, el botón
+ * no reproduce (lleva a la ficha, a las fuentes): dice «Elegir fuente» (ver `playsDirect`). Si no, `resumeLabel`.
+ */
+export function useResumeLabel(): (metaId: string, type: string, progress: Record<string, WatchEntry>) => 'Continuar' | 'Reproducir' | 'Elegir fuente' {
+  const { sourceRules } = useStore(settingsStore)
+  const lastSources = useStore(lastSourceStore)
+  return (metaId, type, progress) => (playsDirect(sourceRules, lastSources[metaId]) ? resumeLabel(metaId, type, progress) : 'Elegir fuente')
 }

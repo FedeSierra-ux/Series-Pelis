@@ -5,6 +5,7 @@ import { AuthGate } from './components/AuthGate'
 import { ErrorBoundary } from './components/ErrorBoundary'
 import { Theme2Layout as Layout } from './components/Theme2Layout'
 import { Onboarding } from './components/Onboarding'
+import { RouteAnnouncer } from './components/RouteAnnouncer'
 import { Screensaver } from './components/Screensaver'
 import { ShortcutsHelp, useGlobalShortcuts } from './components/ShortcutsHelp'
 import { TvHints } from './components/TvHints'
@@ -25,6 +26,7 @@ import { Search } from './pages/Search'
 import { Settings } from './pages/Settings'
 import { ProfileGate } from './pages/profiles/ProfileGate'
 import { JoinPage } from './pages/auth/JoinPage'
+import { Spinner } from './components/Spinner'
 
 // El reproductor (con hls.js) se descarga recién al dar play: la portada carga más liviana.
 const Player = lazy(() => import('./pages/Player').then((m) => ({ default: m.Player })))
@@ -38,7 +40,7 @@ const ListPage = lazy(() => import('./pages/Lists').then((m) => ({ default: m.Li
 const LinkDevice = lazy(() => import('./pages/auth/LinkDevice').then((m) => ({ default: m.LinkDevice })))
 const CatalogManager = lazy(() => import('./pages/CatalogManager').then((m) => ({ default: m.CatalogManager })))
 
-const pageFallback = <div className="page"><div className="spinner" /></div>
+const pageFallback = <div className="page"><Spinner /></div>
 
 function SpatialNav() {
   const navigate = useNavigate()
@@ -108,6 +110,7 @@ export function App() {
       <SpatialNav />
       <GlobalShortcuts />
       <ScrollMemory />
+      <RouteAnnouncer />
       <ErrorBoundary keepMounted>
         {/* Con casas (v0.17), antes de todo la pantalla de entrada. */}
         <AuthGate>
@@ -129,7 +132,7 @@ export function App() {
               path="/watch/:type/:id"
               element={
                 <ErrorBoundary>
-                  <Suspense fallback={<div className="player"><div className="player-spinner" /></div>}>
+                  <Suspense fallback={<div className="player"><div className="player-spinner" role="status"><span className="sp-sr-only">Cargando…</span></div></div>}>
                     <Player />
                   </Suspense>
                 </ErrorBoundary>

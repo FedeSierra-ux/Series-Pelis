@@ -21,7 +21,7 @@ export function cardTarget(el: Element | null): BillboardTarget | undefined {
   if (!card || !card.closest('main') || !card.closest('.row-scroller, .grid')) return undefined
   const t = parseDetailHref(card.getAttribute('href'))
   const poster = card.querySelector<HTMLImageElement>('.poster-img > img')?.src || undefined
-  return t && { ...t, name: card.getAttribute('title') ?? undefined, poster }
+  return t && { ...t, name: card.getAttribute('data-name') ?? card.getAttribute('title') ?? undefined, poster }
 }
 
 /** La imagen ya está bajada (de la caché): se puede mostrar sin esperar el `load`. */

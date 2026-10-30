@@ -123,7 +123,7 @@ function HeroTrailerFrame({ ytId, title, suspended }: Props) {
             type="button"
             className="ht-ctrl"
             onClick={() => yt.setMuted(!yt.muted)}
-            aria-label={yt.muted ? 'Activar el sonido del tráiler de fondo' : 'Silenciar el tráiler de fondo'}
+            aria-label="Sonido del tráiler de fondo"
             aria-pressed={!yt.muted}
             title={yt.muted ? 'Activar sonido' : 'Silenciar'}
           >

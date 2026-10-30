@@ -136,6 +136,8 @@ describe('↑/↓ sin destino no scrollean la página de fondo (tv-12)', () => {
     expect(blocksPageScroll({ ...base, inRail: true })).toBe(true)
     expect(blocksPageScroll({ ...base, hasBillboard: true })).toBe(true)
     expect(blocksPageScroll({ ...base, inBrowseRow: true })).toBe(true)
+    // tv-17: el índice de Ajustes.
+    expect(blocksPageScroll({ ...base, inIndex: true })).toBe(true)
   })
   it('en una página común sigue el scroll nativo, y ←/→ nunca se frenan', () => {
     expect(blocksPageScroll(base)).toBe(false)

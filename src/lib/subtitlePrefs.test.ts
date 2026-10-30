@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { canShiftCueBox, cuePlacement, langTag, placeCue } from './subtitlePrefs'
+import { canShiftCueBox, cuePlacement, langTag, placeCue, safeCueBottom } from './subtitlePrefs'
 
 describe('langTag (srclang de la pista, a11y-12)', () => {
   it('traduce los códigos de 3 letras conocidos y deja los de 2', () => {
@@ -54,6 +54,31 @@ describe('cuePlacement', () => {
     expect(cuePlacement(0, 0, 73.46, false)).toEqual({ line: 73.4, shift: 0 })
     expect(cuePlacement(0, 0, 73.46, true)).toEqual({ line: undefined, shift: 26.6 })
     expect(cuePlacement(95, 0, 50, false)).toEqual({ line: 0, shift: 0 })
+  })
+})
+
+describe('safeCueBottom (zona segura de la TV, tv-07)', () => {
+  it('fuera de la TV no cambia nada', () => {
+    expect(safeCueBottom(0, false)).toBe(0)
+    expect(safeCueBottom(70, false)).toBe(70)
+  })
+
+  it('en la TV sin nada en la esquina el subtítulo termina al 95 % (5 % de zona segura abajo)', () => {
+    expect(safeCueBottom(0, true)).toBe(95)
+    expect(cuePlacement(0, 0, safeCueBottom(0, true), true)).toEqual({ line: undefined, shift: 5 })
+    expect(cuePlacement(0, 0, safeCueBottom(0, true), false)).toEqual({ line: 95, shift: 0 })
+  })
+
+  it('en la TV con controles queda donde estaba (manda lo que dejan libre)', () => {
+    // Antes: `line` = min(92 − posición, 98 − controles).
+    expect(cuePlacement(0, 25, safeCueBottom(0, true), false)).toEqual({ line: 73, shift: 0 })
+    expect(cuePlacement(10, 25, safeCueBottom(0, true), false)).toEqual({ line: 73, shift: 0 })
+    expect(cuePlacement(10, 0, safeCueBottom(0, true), false)).toEqual({ line: 82, shift: 0 })
+  })
+
+  it('algo en la esquina más arriba gana; nunca baja del 95 %', () => {
+    expect(safeCueBottom(70, true)).toBe(70)
+    expect(safeCueBottom(99, true)).toBe(95)
   })
 })
 

@@ -8,6 +8,7 @@ import {
   keepTrailer,
   placeCard,
   trailerSound,
+  tvCardBounds,
   useOpenTrailer,
   YT_LISTEN,
   YT_ORIGIN,
@@ -16,6 +17,7 @@ import {
   type OpenTrailer,
 } from '../lib/hoverTrailer'
 import { useLocalTitle } from '../lib/localTitles'
+import { isTv } from '../lib/spatialNav'
 import { displayYear } from '../lib/yearLabel'
 import { ImdbRating } from './Rating'
 
@@ -39,7 +41,10 @@ export function HoverTrailerLayer() {
 function HoverTrailerCard({ t }: { t: OpenTrailer }) {
   const [place] = useState(() => {
     const el = t.anchor.querySelector<HTMLElement>('.poster-img') ?? t.anchor
-    return placeCard(el.getBoundingClientRect(), window.innerWidth, window.innerHeight)
+    // tv-03: en la TV la tarjeta no pisa el riel ni sale de la zona segura.
+    const rail = isTv() ? document.querySelector('.t2-rail')?.getBoundingClientRect().right : undefined
+    const bounds = rail === undefined ? undefined : tvCardBounds(window.innerWidth, window.innerHeight, rail)
+    return placeCard(el.getBoundingClientRect(), window.innerWidth, window.innerHeight, bounds)
   })
   const [ready, setReady] = useState(false)
   const [muted, setMuted] = useState(true)

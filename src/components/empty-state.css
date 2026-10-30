@@ -23,12 +23,15 @@
   color: var(--accent);
 }
 .empty-state-title {
+  /* Un texto largo sin espacios (el eco de la búsqueda) no se sale de la tarjeta. */
+  overflow-wrap: anywhere;
   margin: 0;
   font-size: 1.25rem;
   font-weight: 700;
   color: var(--text);
 }
 .empty-state-text {
+  overflow-wrap: anywhere;
   margin: 0;
   font-size: 1rem;
   line-height: 1.5;

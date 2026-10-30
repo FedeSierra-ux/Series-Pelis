@@ -39,7 +39,7 @@ vi.mock('./stremioServer', async (orig) => ({
   ensureLocalStremio: stremio.ensure,
 }))
 
-import { acceptsPick, episodeToResume, findNextStream, findResumeStream, locateNextEpisode } from './nextEpisode'
+import { acceptsPick, episodeToResume, findNextStream, findResumeStream, locateNextEpisode, playsDirect } from './nextEpisode'
 import { lastSourceStore, progressStore, settingsStore, type WatchEntry } from './store'
 import type { InstalledAddon, Video } from './types'
 
@@ -132,6 +132,17 @@ describe('acceptsPick', () => {
     expect(acceptsPick(pick('addon'), { mode: 'manual' })).toBe(true)
     expect(acceptsPick(pick('binge'), { mode: 'manual' })).toBe(true)
     expect(acceptsPick(pick('none'), { mode: 'auto' })).toBe(true)
+  })
+})
+
+describe('playsDirect (uso-02)', () => {
+  const last = { addonUrl: 'https://addon.example/manifest.json', name: 'Mock 1080p' } as never
+  it('automático: siempre; manual: solo con una fuente recordada de ese título', () => {
+    expect(playsDirect({ mode: 'auto', rememberLast: false }, undefined)).toBe(true)
+    expect(playsDirect({ mode: 'manual', rememberLast: true }, last)).toBe(true)
+    expect(playsDirect({ mode: 'manual', rememberLast: true }, undefined)).toBe(false)
+    // Con "recordar la última" apagado, la fuente guardada no se usa.
+    expect(playsDirect({ mode: 'manual', rememberLast: false }, last)).toBe(false)
   })
 })
 

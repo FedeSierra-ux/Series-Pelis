@@ -192,3 +192,19 @@
     transition: none;
   }
 }
+
+/* "Tus datos": la confirmación de "Borrar historial" / "Restablecer ajustes" va acá, en la página (uso-04). */
+.data-confirm {
+  display: grid;
+  gap: 8px;
+  padding: 14px 16px;
+  border-radius: var(--radius);
+  background: var(--bg-2);
+  border: 1px solid var(--line);
+}
+.data-confirm .btn {
+  background: var(--bg-3);
+}
+.data-confirm .btn-ghost {
+  background: transparent;
+}

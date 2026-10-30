@@ -7,6 +7,7 @@ import { officialAddons } from '../../lib/stremioApi'
 import { isImportableAddon, toInstalledAddon, type StremioAddonDescriptor } from '../../lib/stremioLibrary'
 import { addInstalledAddons, installAddon, sameAddon } from '../../lib/store'
 import { errorText } from '../../lib/errors'
+import { Spinner } from '../../components/Spinner'
 
 /** Algunos logos de la colección vienen por http o ya no existen: mostramos la inicial. */
 function AddonLogo({ src, name }: { src?: string; name: string }) {
@@ -70,7 +71,7 @@ export function AddonExplorer() {
           </button>
         </div>
       )}
-      {!list && !error && <div className="spinner" aria-label="Cargando addons" />}
+      {!list && !error && <Spinner label="Cargando addons…" />}
       {list && list.length === 0 && <p className="muted">La colección oficial vino vacía.</p>}
       {list && list.length > 0 && (
         <ul className="addon-list">

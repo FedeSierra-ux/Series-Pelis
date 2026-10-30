@@ -13,6 +13,27 @@ export const MAX_NAME = 20
 /** Colores del perfil: fondo del avatar o de la inicial (sobre ellos va texto oscuro). */
 export const PROFILE_COLORS = ['#c4b0ff', '#ffb4a2', '#ffd57e', '#9be7c4', '#8fd3ff', '#f5a3d0', '#b8e986', '#d7c4a3'] as const
 
+/** Nombre de cada color (mismo orden que `PROFILE_COLORS`): para el lector de pantalla y el tooltip del editor. */
+export const PROFILE_COLOR_NAMES = ['Lila', 'Durazno', 'Amarillo', 'Menta', 'Celeste', 'Rosa', 'Lima', 'Arena'] as const
+
+/** Nombre del color si es uno de la lista; si no (un color viejo o raro), su código. */
+export function colorName(color: string): string {
+  const i = PROFILE_COLORS.findIndex((c) => c.toLowerCase() === color.toLowerCase())
+  return i >= 0 ? PROFILE_COLOR_NAMES[i] : color
+}
+
+/** Cuántos segundos finales de la cuenta regresiva del "¿Quién está mirando?" se anuncian de a uno. */
+const SPOKEN_LAST_S = 3
+
+/**
+ * Lo que lee el lector de pantalla de la cuenta regresiva: un aviso al empezar (con cómo frenarla) y los últimos
+ * segundos. En el medio queda vacío: el texto que se ve cuenta cada segundo y se anunciaría diez veces seguidas.
+ */
+export function spokenCountdown(name: string, left: number, total: number): string {
+  if (left >= total) return `Entrando como ${name} en ${total} segundos. Tocá una tecla para esperar.`
+  return left <= SPOKEN_LAST_S ? String(left) : ''
+}
+
 export interface Profile {
   id: string
   name: string

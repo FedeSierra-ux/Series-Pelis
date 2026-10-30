@@ -1,4 +1,4 @@
-import { useEffect, useState, useSyncExternalStore, type MouseEvent, type ReactNode } from 'react'
+import { Component, useEffect, useState, useSyncExternalStore, type MouseEvent, type ReactNode } from 'react'
 
 // Ajustes en dos columnas (v0.10, V5 de la auditoría): desde 1024 px, índice fijo a la izquierda
 // con la sección visible resaltada; en el celular, cada sección es un <details> plegable (la
@@ -156,6 +156,41 @@ export function SettingsIndex({
 }
 
 /**
+ * Si una sección falla al dibujarse (un dato guardado con mala forma, por ejemplo) solo ella se reemplaza por un
+ * aviso: las demás —en especial "Tus datos", donde se importa una copia— siguen a mano (uso-01).
+ */
+class SectionBoundary extends Component<{ title: string; children: ReactNode }, { error: Error | null }> {
+  state = { error: null as Error | null }
+
+  static getDerivedStateFromError(error: unknown) {
+    return { error: error instanceof Error ? error : new Error(String(error)) }
+  }
+
+  componentDidCatch(error: unknown) {
+    console.error(`[Flix] Error en Ajustes → ${this.props.title}:`, error)
+  }
+
+  render() {
+    if (!this.state.error) return this.props.children
+    return (
+      <section className="settings-section" role="alert">
+        <h2>{this.props.title}</h2>
+        <p className="muted">Esta sección no se pudo mostrar. Probá recargar; si sigue igual, en “Tus datos” podés restablecer los ajustes.</p>
+        <p className="muted small">{this.state.error.message}</p>
+        <div className="hero-actions">
+          <button className="btn" onClick={() => this.setState({ error: null })}>
+            Reintentar
+          </button>
+          <button className="btn" onClick={() => location.reload()}>
+            Recargar
+          </button>
+        </div>
+      </section>
+    )
+  }
+}
+
+/**
  * Envoltorio de cada sección: ancla en PC/TV y <details> plegable en el celular. El `open` inicial
  * lo pone React una sola vez; después manda el usuario (abrir/cerrar no vuelve a renderizar).
  */
@@ -163,7 +198,7 @@ export function SettingsBlock({ id, title, wide, defaultOpen, children }: { id: 
   if (wide) {
     return (
       <div className="settings-block" id={id}>
-        {children}
+        <SectionBoundary title={title}>{children}</SectionBoundary>
       </div>
     )
   }
@@ -175,7 +210,7 @@ export function SettingsBlock({ id, title, wide, defaultOpen, children }: { id: 
           ▾
         </span>
       </summary>
-      {children}
+      <SectionBoundary title={title}>{children}</SectionBoundary>
     </details>
   )
 }

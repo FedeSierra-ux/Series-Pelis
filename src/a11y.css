@@ -1,0 +1,150 @@
+/* ---------- v0.34 accesibilidad transversal (auditoría de la v0.33) ----------
+   Se carga al final (main.tsx), después de styles.css y theme2.css. Cada bloque dice qué hallazgo resuelve. */
+
+:root[data-theme='2'] {
+  /* a11y-12: el borde de los controles (campos de texto, interruptor apagado). El --outline de siempre da 1,9:1
+     contra las tarjetas; este llega a 3:1 o más contra --bg, --bg-2 y --bg-3 (1.4.11). */
+  --control-edge: #7d788f;
+}
+
+/* ---------- a11y-04: el título al que se lleva el foco al cambiar de pantalla ---------- */
+
+/* El foco de `RouteAnnouncer` es programático: se anuncia, no se dibuja (no es un control). */
+[data-route-focus] {
+  outline: none;
+}
+
+/* ---------- a11y-09: la barra de pestañas fija del celular no tapa lo que se enfoca (2.4.11) ----------
+   Mismo alto que `.t2-tabs` (72 px + la zona segura) más aire. Con la barra pegajosa de filtros (PC y celular),
+   lo que queda debajo de ella tampoco cuenta como visible. */
+@media (max-width: 760px) {
+  html {
+    scroll-padding-bottom: calc(72px + env(safe-area-inset-bottom) + 16px);
+  }
+}
+html:not([data-tv]):has(.fb) {
+  scroll-padding-top: 72px;
+}
+
+/* ---------- a11y-11: placeholders legibles (1.4.3) ----------
+   El gris de fábrica del navegador (117,117,117) daba 3,18:1 sobre los campos; --muted da ~5,8:1. */
+[data-theme='2'] ::placeholder {
+  color: var(--muted);
+  opacity: 1;
+}
+
+/* ---------- a11y-12: campos e interruptor apagado con borde (1.4.11) ----------
+   Se mantiene el relleno tonal; solo se suma el contorno fino. Con foco manda el anillo de siempre. */
+[data-theme='2']
+  :is(input[type='search'], input[type='url'], input[type='text'], input[type='password'], input[type='email'], input[type='number'], input[type='tel'], select):not(
+    :focus-visible
+  ) {
+  border-color: var(--control-edge);
+}
+.settings-section label.check input[type='checkbox']:not(:checked) {
+  box-shadow: inset 0 0 0 1px var(--control-edge);
+}
+
+/* ---------- a11y-08: episodios vistos atenuados pero legibles (1.4.3) ----------
+   Antes todo el texto del episodio iba a 0,55: la fecha, el IMDb y la sinopsis quedaban a 3:1. Ahora se atenúan
+   la miniatura (detail-v26.css, sin cambios) y el título; la fecha, el IMDb y la sinopsis quedan en --muted pleno.
+   El ✓ ya dice "vista". Vuelve a 1 con foco, hover o elegido, como antes. */
+[data-theme='2'] .episode.watched .episode-text {
+  opacity: 1;
+}
+[data-theme='2'] .episode.watched .episode-title {
+  opacity: 0.65;
+  transition: opacity 0.15s;
+}
+[data-theme='2'] .episode.watched:focus-within .episode-title,
+[data-theme='2'] .episode.watched.selected .episode-title {
+  opacity: 1;
+}
+@media (hover: hover) {
+  [data-theme='2'] .episode.watched:hover .episode-title {
+    opacity: 1;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  [data-theme='2'] .episode.watched .episode-title {
+    transition: none;
+  }
+}
+
+/* ---------- a11y-06: Alto contraste de Windows (forced-colors) (1.4.11) ----------
+   Con colores forzados el navegador pisa fondos y sombras: el interruptor (solo fondos), la selección de los chips
+   y pestañas (solo fondo y color) y el ítem activo del riel desaparecían. Acá se dibujan con colores de sistema:
+   lo activo/elegido con Highlight, lo demás con ButtonText. `!important` solo dentro de este bloque, para ganarle a
+   las reglas de cada pantalla. */
+@media (forced-colors: active) {
+  /* Interruptor: contorno ButtonText y pulgar ButtonText; encendido, Highlight con el pulgar HighlightText. */
+  .settings-section label.check input[type='checkbox'] {
+    forced-color-adjust: none;
+    background: Canvas !important;
+    border: 2px solid ButtonText;
+    box-shadow: none !important;
+  }
+  .settings-section label.check input[type='checkbox']::after {
+    forced-color-adjust: none;
+    top: 2px;
+    left: 2px;
+    background: ButtonText !important;
+  }
+  .settings-section label.check input[type='checkbox']:checked {
+    background: Highlight !important;
+    border-color: Highlight;
+  }
+  .settings-section label.check input[type='checkbox']:checked::after {
+    transform: translateX(18px);
+    background: HighlightText !important;
+  }
+
+  /* Lo elegido: pestañas, chips de filtros y de ajustes, menús, selectores. */
+  :is(
+      .tab.active,
+      .fb-chip[aria-pressed='true'],
+      .fb-provider[aria-pressed='true'],
+      .search-tab.active,
+      .settings-index-link.active,
+      .player-menu button.active,
+      .qs-chips button.active,
+      .player-error-sources button.active,
+      .controls-row button.active,
+      .catalog-shape-toggle[aria-pressed='true'],
+      .pf-swatch[aria-pressed='true'],
+      .pf-pick[aria-pressed='true'],
+      .pf-group[aria-pressed='true'],
+      .picker-opt[aria-selected='true'],
+      [role='radio'][aria-checked='true'],
+      [role='tab'][aria-selected='true']
+    ) {
+    forced-color-adjust: none;
+    background: Highlight !important;
+    color: HighlightText !important;
+    border-color: Highlight !important;
+  }
+  /* Los que no están elegidos llevan contorno (sin él son texto suelto). */
+  :is(.tab, .fb-chip, .search-tab):not(.active, [aria-pressed='true'], [aria-selected='true'], [aria-checked='true']) {
+    outline: 1px solid ButtonText;
+    outline-offset: -1px;
+  }
+  /* El subrayado de la pestaña de la ficha es un fondo: se pierde. */
+  .dt-tab.active::after {
+    forced-color-adjust: none;
+    background: Highlight !important;
+  }
+
+  /* Riel y barra de pestañas: la píldora del ítem activo. */
+  .t2-rail-link.active .t2-pill,
+  .t2-tab.active .t2-pill,
+  .t2-round.active {
+    forced-color-adjust: none;
+    background: Highlight !important;
+    color: HighlightText !important;
+  }
+  .t2-rail-link.active,
+  .t2-tab.active {
+    text-decoration: underline;
+    text-underline-offset: 4px;
+  }
+}

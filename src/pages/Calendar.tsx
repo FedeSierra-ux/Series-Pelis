@@ -7,6 +7,7 @@ import { useTitle } from '../lib/hooks'
 import { useLocalTitle } from '../lib/localTitles'
 import { useNearOnce } from '../lib/titleArt'
 import { episodeLink, useUpNext, type EpisodeItem } from '../lib/upNext'
+import { Spinner } from '../components/Spinner'
 
 const DAY = 24 * 60 * 60 * 1000
 
@@ -93,7 +94,7 @@ export function Calendar() {
             Episodios de las series que viste o tenés en Mi lista: los próximos 60 días y la última semana.
           </p>
         </div>
-        {loading && data && <span className="spinner" aria-label="Actualizando" />}
+        {loading && data && <Spinner as="span" label="Actualizando…" />}
       </header>
 
       {!data && loading && (

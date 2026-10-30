@@ -4241,6 +4241,55 @@ input[type='password']:focus-visible {
   border-top: 1px solid var(--line);
 }
 
+/* tv-08: en la TV, «Activarlos solos» es el interruptor de Ajustes (settings-layout.css), más grande: una casilla
+   de 20 px no se ve desde el sillón. Sigue siendo un <input type="checkbox"> (OK la tilda, ver `enterTogglesCheck`). */
+html[data-tv] .ob-body label.check {
+  justify-content: space-between;
+  gap: 16px;
+  margin-top: 4px;
+  padding: 16px 20px;
+  border-radius: var(--radius-sm, 12px);
+  background: var(--bg-3, var(--bg));
+  font-size: 1.1rem;
+  cursor: pointer;
+}
+html[data-tv] .ob-body label.check input[type='checkbox'] {
+  order: 2;
+  flex: none;
+  appearance: none;
+  position: relative;
+  width: 60px;
+  height: 34px;
+  margin: 0;
+  border-radius: 999px;
+  background: var(--outline, #4a4556);
+  transition: background 0.15s;
+}
+html[data-tv] .ob-body label.check input[type='checkbox']::after {
+  content: '';
+  position: absolute;
+  top: 4px;
+  left: 4px;
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  background: #fff;
+  transition: transform 0.15s;
+}
+html[data-tv] .ob-body label.check input[type='checkbox']:checked {
+  background: var(--accent);
+}
+html[data-tv] .ob-body label.check input[type='checkbox']:checked::after {
+  transform: translateX(26px);
+  background: var(--on-accent, #1f0f4d);
+}
+@media (prefers-reduced-motion: reduce) {
+  html[data-tv] .ob-body label.check input[type='checkbox'],
+  html[data-tv] .ob-body label.check input[type='checkbox']::after {
+    transition: none;
+  }
+}
+
 /* Protector de pantalla. */
 .screensaver {
   position: fixed;

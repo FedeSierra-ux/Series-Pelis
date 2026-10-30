@@ -1,4 +1,4 @@
-import { cached, fetchJson, load } from './cache'
+import { cached, fetchJson, HttpError, load } from './cache'
 import type { AddonStreams, CatalogDef, ExtraProp, InstalledAddon, Manifest, Meta, MetaPreview, ResourceDef, Stream, Subtitle, Video } from './types'
 import { errorText } from './errors'
 
@@ -63,9 +63,20 @@ function baseUrl(transportUrl: string): string {
   return transportUrl.replace(/\/manifest\.json(\?.*)?$/, '')
 }
 
+/**
+ * Texto de una búsqueda tal como se manda al addon (uso-03). "Face/Off" o "AC/DC" daban 404 en el navegador: la barra
+ * va como `%2F` y Cinemeta la rechaza según el camino de red (con curl directo anda, en Chromium no). Con espacio
+ * Cinemeta igual encuentra "Face/Off" y "AC/DC" (busca por palabras). Solo la búsqueda: el resto de los extras
+ * (`skip`, `genre`) no lleva barras.
+ */
+export function searchTerm(query: string): string {
+  return query.replace(/[/\\]+/g, ' ').replace(/\s+/g, ' ').trim()
+}
+
 function encodeExtra(extra?: Record<string, string | undefined>): string {
   if (!extra) return ''
   const parts = Object.entries(extra)
+    .map(([k, v]): [string, string | undefined] => [k, k === 'search' && v !== undefined ? searchTerm(v) : v])
     .filter(([, v]) => v !== undefined && v !== '')
     .map(([k, v]) => `${encodeURIComponent(k)}=${encodeURIComponent(v as string)}`)
   return parts.length ? '/' + parts.join('&') : ''
@@ -228,8 +239,18 @@ export function cleanManifest(raw: unknown): Manifest {
 /** Nombre para mostrar de un addon (los guardados antes de la validación pueden no tenerlo). */
 export const addonName = (m: Partial<Manifest> | undefined) => (typeof m?.name === 'string' && m.name.trim()) || m?.id || 'Addon'
 
-export async function fetchManifest(url: string): Promise<Manifest> {
-  return cleanManifest(await fetchJson<unknown>(url))
+/**
+ * Con `strict` (al instalar un addon a mano) se pide además nombre y al menos un recurso: sin nombre, el addon
+ * quedaba en la lista con su id ("x"); sin recursos no hace nada (uso-08). Al actualizar o importar no se exige.
+ */
+export async function fetchManifest(url: string, opts?: { strict?: boolean }): Promise<Manifest> {
+  const raw = await fetchJson<unknown>(url)
+  const manifest = cleanManifest(raw)
+  if (opts?.strict) {
+    if (!str((raw as Record<string, unknown>).name)?.trim()) throw new Error('El manifest no tiene nombre: no parece el de un addon de Stremio.')
+    if (manifest.resources.length === 0) throw new Error('El manifest no ofrece ningún recurso (catálogos, fichas o streams): el addon no haría nada.')
+  }
+  return manifest
 }
 
 export const catalogKey = (addon: InstalledAddon, c: CatalogDef, extra?: Record<string, string | undefined>) =>
@@ -272,6 +293,12 @@ export function searchableCatalogs(addons: InstalledAddon[]) {
 
 export const metaKey = (type: string, id: string) => `meta:${type}:${id}`
 
+/** Lo que dice la ficha cuando el título no existe (id viejo o mal copiado): no es un problema de configuración. */
+export const META_NOT_FOUND = 'No encontramos este título'
+
+/** ¿Hay algún addon que dé fichas (de cualquier tipo)? Sin ninguno, el aviso es otro: falta instalar uno. */
+const hasMetaAddon = (addons: InstalledAddon[]) => addons.some((a) => a.manifest.resources.some((r) => (typeof r === 'string' ? r : r.name) === 'meta'))
+
 export function getMeta(addons: InstalledAddon[], type: string, id: string): Promise<Meta> {
   return cached(
     metaKey(type, id),
@@ -280,18 +307,24 @@ export function getMeta(addons: InstalledAddon[], type: string, id: string): Pro
       // Los desactivados solo como último recurso, para que la ficha no se rompa si se apagó Cinemeta.
       const enabled = enabledAddons(all)
       const candidates = enabled.length > 0 ? enabled : all
-      let lastError: unknown = new Error('Ningún addon instalado da información de este título')
+      // Sin ningún addon de fichas es de configuración; si los hay pero ninguno entiende este tipo o id, el link está mal (uso-05).
+      let lastError: unknown = hasMetaAddon(addons) ? new Error(META_NOT_FOUND) : new Error('Ningún addon instalado da información de títulos')
+      // Un addon respondió bien pero sin ficha: esa es la respuesta ("no existe"), aunque otro haya fallado.
+      let answeredEmpty = false
       for (const addon of candidates) {
         try {
           const res = await fetchJson<unknown>(resourceUrl(addon, 'meta', type, id))
           const meta = isObj(res) ? cleanMeta(res.meta) : undefined
           if (meta) return meta
           if (isObj(res) && res.meta !== undefined && res.meta !== null) lastError = new AddonFormatError('meta')
+          else answeredEmpty = true
         } catch (err) {
           lastError = err
+          // Un 404 en la ficha también es "no existe" (Cinemeta lo da con ids de serie inventados).
+          if (err instanceof HttpError && err.status === 404) answeredEmpty = true
         }
       }
-      throw lastError
+      throw answeredEmpty ? new Error(META_NOT_FOUND) : lastError
     },
     META_TTL,
   )

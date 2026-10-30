@@ -87,7 +87,7 @@ const HINTS: Hint[] = [
   {
     id: 'player',
     title: 'En el reproductor',
-    text: '← y → saltan 10 segundos. OK pausa y reanuda. ↑ muestra los controles, los episodios y las fuentes.',
+    text: '← y → saltan 10 segundos. OK pausa y reanuda. ↑ muestra los controles (subtítulos, fuentes y siguiente episodio).',
     icon: PlayerIcon,
   },
 ]

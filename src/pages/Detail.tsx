@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
 import { Link, useLocation, useNavigate, useNavigationType, useParams, useSearchParams } from 'react-router-dom'
 import { GenreChips, PeopleLinks, tmdbPeopleIndex } from '../components/DetailTags'
 import { ImdbRating } from '../components/Rating'
@@ -17,7 +17,7 @@ import { useRating } from '../lib/ratings'
 import { remainingLabel } from '../lib/remaining'
 import { takeReturnVideo } from '../lib/returnVideo'
 import { hideTitleSynopsis } from '../lib/spoilers'
-import { findResumeStream } from '../lib/nextEpisode'
+import { findResumeStream, playsDirect } from '../lib/nextEpisode'
 import { hasSeriesDetails, seriesFacts } from '../lib/seriesDetails'
 import { lastSourceStore, progressStore, RESUME_MIN_S, setWatched, settingsStore, toggleWatchlist, useStore, watchlistStore } from '../lib/store'
 import {
@@ -37,6 +37,7 @@ import { focusInitialTarget } from '../lib/spatialNav'
 import { useTvMode } from '../lib/tv'
 import type { Meta, Video } from '../lib/types'
 import { errorText } from '../lib/errors'
+import { META_NOT_FOUND } from '../lib/addons'
 import { DetailActions, type PrimaryAction } from './detail/DetailActions'
 import { DetailIcon } from './detail/DetailIcons'
 import { DetailTabs, type DetailTab } from './detail/DetailTabs'
@@ -193,7 +194,7 @@ function TmdbOnlyDetail({ details: d, type, tmdbType }: { details: TmdbDetails; 
   )
 }
 
-const NOT_FOUND = 'No encontramos este título'
+const NOT_FOUND = META_NOT_FOUND
 /** Logo del título; un logo oscuro (Severance) lleva halo claro para leerse sobre la portada (`lib/logoTone`). */
 function DetailLogo({ src, alt, onError }: { src: string; alt: string; onError?: () => void }) {
   const tone = useLogoTone(src)
@@ -234,6 +235,8 @@ function DetailTitle({ names, cinemeta, logo, logoLang, onLogoError }: { names: 
   )
 }
 const reducedMotion = () => typeof matchMedia === 'function' && matchMedia('(prefers-reduced-motion: reduce)').matches
+/** Cuánto espera el pedido de foco de las fuentes (los addons lentos tardan hasta ~15 s). */
+const CLAIM_MAX_MS = 20000
 /** "T2 E4" para el botón principal. */
 const shortEp = (v: Video) => `T${v.season ?? 0} E${episodeNumber(v) ?? '?'}`
 
@@ -282,6 +285,15 @@ function DetailPage({ type, id, onRetry }: { type: string; id: string; onRetry: 
   const [starting, setStarting] = useState(false)
   const startAbort = useRef<AbortController>(undefined)
   useEffect(() => () => startAbort.current?.abort(), [])
+  // tv-01 / tv-02: pedido de foco para la fuente recomendada (lo toma `StreamList` cuando la lista está lista).
+  // Se vence solo por si la lista nunca llega (otra pestaña, otro episodio).
+  const [claimSource, setClaimSource] = useState(false)
+  const releaseClaim = useCallback(() => setClaimSource(false), [])
+  useEffect(() => {
+    if (!claimSource) return
+    const t = setTimeout(releaseClaim, CLAIM_MAX_MS)
+    return () => clearTimeout(t)
+  }, [claimSource, releaseClaim])
 
   const videos = useMemo(() => sortVideos(meta?.videos ?? []), [meta?.videos])
 
@@ -354,6 +366,7 @@ function DetailPage({ type, id, onRetry }: { type: string; id: string; onRetry: 
 
 
   if (loading && !meta) return detailSkeleton
+  if (error === NOT_FOUND && !meta) return <DetailError message={NOT_FOUND} />
   if (error && !meta) return <DetailError message={offlineMessage('esta ficha no está guardada') ?? `No se pudo cargar: ${error}`} onRetry={onRetry} />
   // Cinemeta responde con una ficha vacía para ids que no existen (`tt0000000`).
   if (!meta || !meta.name) return <DetailError message={NOT_FOUND} />
@@ -398,8 +411,10 @@ function DetailPage({ type, id, onRetry }: { type: string; id: string; onRetry: 
       else p.set('tab', tab)
     }, { ...(location.state as DetailLocationState | null), noAuto: true })
 
-  const selectVideo = (v: Video, opts?: { scroll?: boolean; fromStart?: boolean }) => {
+  const selectVideo = (v: Video, opts?: { scroll?: boolean; fromStart?: boolean; focusSource?: boolean }) => {
     scrollNext.current = !!opts?.scroll
+    // tv-01 / tv-02: el foco va a la fuente recomendada apenas está la lista, también si el episodio ya estaba elegido.
+    if (opts?.focusSource) setClaimSource(true)
     // Elegir un episodio sí puede arrancar el modo automático (sin `noAuto`).
     updateParams(
       (p) => {
@@ -440,7 +455,7 @@ function DetailPage({ type, id, onRetry }: { type: string; id: string; onRetry: 
       return fallback()
     }
     const rules = spoilerSettings.sourceRules
-    if (rules.mode !== 'auto' && !(rules.rememberLast && lastSources[id])) return fallback()
+    if (!playsDirect(rules, lastSources[id])) return fallback()
     const ctrl = new AbortController()
     startAbort.current = ctrl
     setStarting(true)
@@ -459,6 +474,8 @@ function DetailPage({ type, id, onRetry }: { type: string; id: string; onRetry: 
 
   // ---------- Botón principal y menú ⋯ ----------
   const movieStarted = !isSeries && !!movieProgress && !movieProgress.watched && movieProgress.position > RESUME_MIN_S
+  // uso-02: con el modo manual y sin una fuente recordada, el botón no reproduce: lleva a las fuentes.
+  const direct = playsDirect(spoilerSettings.sourceRules, lastSources[id])
   let primary: PrimaryAction | undefined
   if (isSeries) {
     const ep = continueEp ?? firstEp
@@ -468,15 +485,19 @@ function DetailPage({ type, id, onRetry }: { type: string; id: string; onRetry: 
       const midway = !!w && !w.watched && w.position > RESUME_MIN_S
       const epTitle = ep.title ?? ep.name
       primary = {
-        label: continueEp ? `${seriesProgress ? 'Continuar' : 'Reproducir'} ${shortEp(ep)}` : `Volver a ver ${shortEp(ep)}`,
+        label: !direct
+          ? `Elegir fuente ${shortEp(ep)}`
+          : continueEp
+            ? `${seriesProgress ? 'Continuar' : 'Reproducir'} ${shortEp(ep)}`
+            : `Volver a ver ${shortEp(ep)}`,
         sub: midway ? remainingLabel(w.position, w.duration) : epTitle,
         title: `${episodeLabel(ep.season, episodeNumber(ep))}${epTitle ? ` · ${epTitle}` : ''}`,
-        onClick: () => void play(() => selectVideo(ep, { scroll: true, fromStart: !continueEp }), ep, !continueEp),
+        onClick: () => void play(() => selectVideo(ep, { scroll: true, fromStart: !continueEp, focusSource: true }), ep, !continueEp),
       }
     }
   } else {
     primary = {
-      label: movieStarted ? 'Continuar' : 'Reproducir',
+      label: !direct ? 'Elegir fuente' : movieStarted ? 'Continuar' : 'Reproducir',
       sub: movieStarted ? remainingLabel(movieProgress.position, movieProgress.duration) : undefined,
       title: movieStarted
         ? `Te quedaste en ${formatTime(movieProgress.position)} de ${formatTime(movieProgress.duration)} · ${relativeDate(movieProgress.updatedAt)}`
@@ -492,7 +513,7 @@ function DetailPage({ type, id, onRetry }: { type: string; id: string; onRetry: 
       id: 'restart',
       label: 'Ver desde el principio',
       icon: 'restart',
-      onSelect: () => void play(() => selectVideo(firstEp, { scroll: true, fromStart: true }), firstEp, true),
+      onSelect: () => void play(() => selectVideo(firstEp, { scroll: true, fromStart: true, focusSource: true }), firstEp, true),
     })
   if (movieStarted)
     more.push({ id: 'restart', label: 'Ver desde el principio', icon: 'restart', onSelect: () => void play(() => goToSources(true), undefined, true) })
@@ -524,7 +545,7 @@ function DetailPage({ type, id, onRetry }: { type: string; id: string; onRetry: 
         {episodeLabel(selectedVideo.season, episodeNumber(selectedVideo))} · {selectedVideo.title ?? selectedVideo.name}
       </h2>
       <SectionBoundary what="las fuentes" resetKey={selectedVideo.id}>
-        <StreamList meta={fullMeta} video={selectedVideo} nextVideoId={nextVideo?.id} />
+        <StreamList meta={fullMeta} video={selectedVideo} nextVideoId={nextVideo?.id} claimFocus={claimSource} onClaimDone={releaseClaim} />
       </SectionBoundary>
     </>
   )
@@ -545,12 +566,14 @@ function DetailPage({ type, id, onRetry }: { type: string; id: string; onRetry: 
               })}
               progress={progress}
               selectedVideoId={selectedVideoId}
-              onSelect={(v) => selectVideo(v, { scroll: inlineStreams })}
+              // tv-02: con el control remoto, OK en un episodio lleva el foco a la fuente recomendada.
+              onSelect={(v) => selectVideo(v, { scroll: inlineStreams, focusSource: tv })}
               focusVideoId={focusVideoId}
               suggested={continueEp}
               started={seriesProgress}
               first={firstEp}
               tmdbId={tmdb?.id}
+              originalLang={tmdb?.original_language}
               hideSpoiler={(v) => hideEpisodeSpoiler({ metaId: id, videoId: v.id, season: v.season, episode: episodeNumber(v) })}
               watchBase={watchBase}
               inlineStreams={inlineStreams}
@@ -631,7 +654,8 @@ function DetailPage({ type, id, onRetry }: { type: string; id: string; onRetry: 
             <GenreChips type={type} tmdbGenres={tmdb?.genres} names={meta.genre ?? meta.genres} />
             {description && (
               <SpoilerText key={id} hidden={hideSynopsis}>
-                <ReadMore key={description} className="detail-desc" text={description} />
+                {/* Sin la de TMDB (español) queda la de Cinemeta, en inglés: el lector la pronuncia con su voz (a11y-16). */}
+                <ReadMore key={description} className="detail-desc" text={description} lang={tmdb?.overview ? undefined : 'en'} />
               </SpoilerText>
             )}
             {(meta.director?.length || (meta.cast?.length && !hasTmdbCast)) ? (

@@ -63,6 +63,8 @@ export function BrowseHero({ title, first, exploreTo, rowsRef }: Props) {
   const [layers, setLayers] = useState<{ cur?: BillboardInfo; prev?: BillboardInfo }>({})
   const [trailer, setTrailer] = useState<{ key: string; ytId: string }>()
   const [controls, setControls] = useState<HTMLDivElement | null>(null)
+  // a11y-15 (2.2.2): pausa del tráiler en bucle. Vale para toda la pantalla: con otro póster no arranca solo.
+  const [paused, setPaused] = useState(false)
   const allowed = useBackdropTrailerAllowed()
   const chosen = useRef(false)
 
@@ -180,7 +182,7 @@ export function BrowseHero({ title, first, exploreTo, rowsRef }: Props) {
   const cur = layers.cur
   const media =
     cur && trailer && trailer.key === cur.key ? (
-      <BrowseTrailer key={trailer.ytId} ytId={trailer.ytId} name={cur.name} controls={controls} />
+      <BrowseTrailer key={trailer.ytId} ytId={trailer.ytId} name={cur.name} controls={controls} paused={paused} onPaused={setPaused} />
     ) : undefined
 
   return (
@@ -200,9 +202,22 @@ export function BrowseHero({ title, first, exploreTo, rowsRef }: Props) {
   )
 }
 
-function BrowseTrailer({ ytId, name, controls }: { ytId: string; name: string; controls: HTMLDivElement | null }) {
-  // Con sonido, salvo que lo hayan silenciado antes. Sin "mostrar igual": sin un estado real de YouTube queda la imagen.
-  const [startMuted] = useState(savedMuted)
+function BrowseTrailer({
+  ytId,
+  name,
+  controls,
+  paused,
+  onPaused,
+}: {
+  ytId: string
+  name: string
+  controls: HTMLDivElement | null
+  paused: boolean
+  onPaused: (paused: boolean) => void
+}) {
+  // Con sonido, salvo que lo hayan silenciado antes (o que haya quedado en pausa: ni un instante de sonido).
+  // Sin "mostrar igual": sin un estado real de YouTube queda la imagen.
+  const [startMuted] = useState(() => paused || savedMuted())
   const yt = useYtPlayer(startMuted, false)
   const [pageVisible, setPageVisible] = useState(() => document.visibilityState !== 'hidden')
   const toggle = () => {
@@ -230,20 +245,21 @@ function BrowseTrailer({ ytId, name, controls }: { ytId: string; name: string; c
     }
   }, [])
 
-  // Con la pestaña oculta, en pausa.
+  // Con la pestaña oculta o pausado por el usuario, en pausa.
   const { ready, playing } = yt
   useEffect(() => {
     if (!ready) return
-    if (pageVisible && !playing) yt.play()
-    else if (!pageVisible && playing) yt.pause()
-  }, [pageVisible, ready])
+    const shouldPlay = pageVisible && !paused
+    if (shouldPlay && !playing) yt.play()
+    else if (!shouldPlay && playing) yt.pause()
+  }, [pageVisible, paused, ready])
 
   const origin = typeof location !== 'undefined' ? location.origin : undefined
   const muted = yt.muted
 
   return (
     <>
-      <div className={`bh-trailer${ready && playing ? ' ready' : ''}`} aria-hidden>
+      <div className={`bh-trailer${ready && playing && !paused ? ' ready' : ''}`} aria-hidden>
         <iframe
           ref={yt.frame}
           src={embedTrailerUrl(ytId, { muted: startMuted, loop: true, origin })}
@@ -257,16 +273,28 @@ function BrowseTrailer({ ytId, name, controls }: { ytId: string; name: string; c
       {ready &&
         controls &&
         createPortal(
-          <button
-            type="button"
-            className="bh-ctrl"
-            onClick={toggle}
-            aria-label={muted ? 'Activar el sonido del tráiler' : 'Silenciar el tráiler'}
-            aria-pressed={!muted}
-            title={muted ? 'Activar sonido (M)' : 'Silenciar (M)'}
-          >
-            <DetailIcon name={muted ? 'soundOff' : 'soundOn'} size={22} />
-          </button>,
+          <>
+            <button
+              type="button"
+              className="bh-ctrl"
+              onClick={() => onPaused(!paused)}
+              aria-label={paused ? 'Seguir el tráiler' : 'Pausar el tráiler'}
+              title={paused ? 'Seguir' : 'Pausar'}
+            >
+              <DetailIcon name={paused ? 'play' : 'pause'} size={22} />
+            </button>
+            {/* Rótulo fijo con `aria-pressed` (activado = suena): si el rótulo cambiara además, el lector diría dos estados. */}
+            <button
+              type="button"
+              className="bh-ctrl"
+              onClick={toggle}
+              aria-label="Sonido del tráiler"
+              aria-pressed={!muted}
+              title={muted ? 'Activar sonido (M)' : 'Silenciar (M)'}
+            >
+              <DetailIcon name={muted ? 'soundOff' : 'soundOn'} size={22} />
+            </button>
+          </>,
           controls,
         )}
     </>

@@ -12,7 +12,7 @@ import { useAddons, useTitle } from '../lib/hooks'
 import { requestTitles, useTitlesVersion } from '../lib/localTitles'
 import { typeLabel } from '../lib/i18n'
 import { useOnline } from '../lib/online'
-import { debounce, MIN_QUERY, normalizeQuery, parseTogether, pushRecent, removeRecent } from '../lib/searchHistory'
+import { debounce, echoQuery, MIN_QUERY, normalizeQuery, parseTogether, pushRecent, removeRecent } from '../lib/searchHistory'
 import {
   failedAddons,
   groupSources,
@@ -424,6 +424,13 @@ export function Search() {
         />
       )}
 
+      {/* Con una sola letra la pantalla sigue en lo de siempre: se avisa por qué no busca (uso-09). */}
+      {showRecents && text.trim().length === 1 && (
+        <p className="muted small search-min-hint" role="status">
+          Escribí al menos {MIN_QUERY} letras para buscar.
+        </p>
+      )}
+
       {showRecents && recents.length > 0 && (
         <section className="recent-searches" aria-label="Búsquedas recientes">
           <header className="recent-header">
@@ -555,7 +562,7 @@ export function Search() {
         {tabEmpty && (
           <EmptyState
             icon="search"
-            title={`No hay ${SEARCH_TABS.find((t) => t.id === shownTab)?.label.toLowerCase()} para “${query}”`}
+            title={`No hay ${SEARCH_TABS.find((t) => t.id === shownTab)?.label.toLowerCase()} para “${echoQuery(query)}”`}
             text="Mirá en las otras pestañas."
             action={{ label: 'Ver todo', onClick: () => setTab('all') }}
           />
@@ -573,13 +580,13 @@ export function Search() {
       {canSearch && outcome === 'error' && (
         <EmptyState
           icon="search"
-          title={`No pudimos buscar “${query}”`}
+          title={`No pudimos buscar “${echoQuery(query)}”`}
           text={`${failed.length ? `${failed.join(', ')}: ` : ''}${errorOf(sources) ?? 'El servicio de búsqueda no respondió.'}`}
           action={{ label: 'Reintentar', onClick: () => setRetry((n) => n + 1) }}
         />
       )}
       {canSearch && outcome === 'empty' && (
-        <EmptyState icon="search" title={`No encontramos nada para “${query}”`} text="Probá con otro nombre o con menos palabras." />
+        <EmptyState icon="search" title={`No encontramos nada para “${echoQuery(query)}”`} text="Probá con otro nombre o con menos palabras." />
       )}
     </div>
   )

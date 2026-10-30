@@ -19,7 +19,9 @@ import {
   addonKey,
   addonsStore,
   catalogPrefsStore,
+  clearHistory,
   continueWatching,
+  DEFAULT_SETTINGS,
   diaryStore,
   exportData,
   forgetAddonData,
@@ -31,11 +33,17 @@ import {
   MANIFEST_TTL_MS,
   progressStore,
   refreshManifests,
+  removeAddon,
   removeHistory,
+  resetSettings,
+  restoreAddon,
+  restoreWatchSnapshot,
   restartedWatched,
   restoreHistory,
   saveProgress,
   settingsStore,
+  setWatchedMany,
+  snapshotWatch,
   watchlistStore,
   type WatchEntry,
 } from './store'
@@ -209,6 +217,27 @@ describe('copia de seguridad (B25, B26)', () => {
     await importData({ app: 'series-pelis', settings: { tmdbKey: 'otra', autoplayNext: true } })
     expect(settingsStore.get().tmdbKey).toBe('mi-key')
     expect(settingsStore.get().autoplayNext).toBe(true)
+  })
+
+  it('ajustes mal formados en la copia no rompen nada (uso-01)', async () => {
+    await importData({ app: 'series-pelis', settings: { sourceRules: null, subtitleStyle: 5, audioLangs: 'es', autoplayNext: false } })
+    const s = settingsStore.get()
+    expect(s.sourceRules.mode).toBe('manual')
+    expect(s.subtitleStyle.position).toBe(0)
+    expect(s.audioLangs).toEqual(['spa', 'eng'])
+    expect(s.autoplayNext).toBe(false)
+    settingsStore.set(DEFAULT_SETTINGS)
+  })
+
+  it('lo mal formado que ya estaba guardado se limpia al arrancar (uso-01)', async () => {
+    idbSeed.set('settings', { sourceRules: null, subtitleStyle: { size: 'xl', position: 'x' }, uiScale: 115 })
+    await hydrateStores()
+    const s = settingsStore.get()
+    expect(s.sourceRules.mode).toBe('manual')
+    expect(s.subtitleStyle).toEqual({ ...DEFAULT_SETTINGS.subtitleStyle, size: 'xl' })
+    expect(s.uiScale).toBe(115)
+    idbSeed.delete('settings')
+    settingsStore.set(DEFAULT_SETTINGS)
   })
 
   it('rechaza lo que no es una copia', async () => {
@@ -423,5 +452,83 @@ describe('quitar del historial con "Deshacer" (auditoría v0.25.1)', () => {
     const fresh = progressStore.get().tt1
     restoreHistory(removed)
     expect(progressStore.get().tt1).toBe(fresh)
+  })
+})
+
+describe('instalar addons a mano: manifest completo (uso-08)', () => {
+  it('rechaza un manifest sin nombre o sin recursos', async () => {
+    const noName = { id: 'x', version: '1', resources: ['stream'], types: ['movie'], catalogs: [] } as unknown as Manifest
+    const noResources = { id: 'y', name: 'Y', version: '1', resources: [], types: ['movie'], catalogs: [] } as Manifest
+    fakeManifests({ 'https://a.example/manifest.json': noName, 'https://b.example/manifest.json': noResources })
+    await expect(installAddon('https://a.example/manifest.json')).rejects.toThrow(/no tiene nombre/)
+    await expect(installAddon('https://b.example/manifest.json')).rejects.toThrow(/ningún recurso/)
+    expect(addonsStore.get()).toHaveLength(1)
+  })
+})
+
+describe('quitar un addon y deshacerlo (uso-07)', () => {
+  it('lo devuelve en el mismo lugar y no duplica si ya volvió a estar', () => {
+    const a = addon(TORBOX, 'a')
+    const b = addon(RD, 'b')
+    addonsStore.set([CINEMETA_ADDON, a, b])
+    const removed = removeAddon(TORBOX)!
+    expect(addonsStore.get().map((x) => x.manifest.id)).toEqual([CINEMETA_ADDON.manifest.id, 'b'])
+    restoreAddon(removed)
+    expect(addonsStore.get().map((x) => x.manifest.id)).toEqual([CINEMETA_ADDON.manifest.id, 'a', 'b'])
+    restoreAddon(removed)
+    expect(addonsStore.get()).toHaveLength(3)
+    expect(removeAddon('https://no.esta/manifest.json')).toBeUndefined()
+  })
+})
+
+describe('borrar el historial y restablecer ajustes (uso-04)', () => {
+  it('clearHistory vacía historial y diario, deja Mi lista y se puede deshacer', async () => {
+    const { restoreHistory } = await import('./store')
+    progressStore.set({ a: entry(100, 6000, { videoId: 'a', metaId: 'a' }), b: entry(200, 6000, { videoId: 'b', metaId: 'b', watched: true }) })
+    setWatchedMany([{ ...base, videoId: 'c', metaId: 'c' }], true)
+    watchlistStore.set({ z: { id: 'z', type: 'movie', name: 'Z', addedAt: 1 } as never })
+    const removed = clearHistory()
+    expect(progressStore.get()).toEqual({})
+    expect(diaryStore.get().entries).toEqual({})
+    expect(Object.keys(watchlistStore.get())).toEqual(['z'])
+    expect(removed.progress).toHaveLength(3)
+    restoreHistory(removed)
+    expect(Object.keys(progressStore.get()).sort()).toEqual(['a', 'b', 'c'])
+    expect(Object.values(diaryStore.get().entries)).toHaveLength(1)
+  })
+
+  it('clearHistory sin nada no cambia las referencias (no sube filas vacías)', () => {
+    const before = progressStore.get()
+    clearHistory()
+    expect(progressStore.get()).toBe(before)
+  })
+
+  it('resetSettings vuelve a fábrica pero conserva la key de TMDB y las marcas de la casa; no toca addons', () => {
+    addonsStore.set([CINEMETA_ADDON, addon(TORBOX, 'a')])
+    settingsStore.set((s) => ({ ...s, tmdbKey: 'mi-key', autoplayNext: false, uiScale: 130, onboardingDone: true, langsChosen: true, spoilerDefaulted: true, autoSubsMigrated: true, hintsSeen: true, tvMode: 'on', subtitleLangs: ['fra'] }))
+    const before = resetSettings()
+    const now = settingsStore.get()
+    expect(now).toEqual({ ...DEFAULT_SETTINGS, tmdbKey: 'mi-key', onboardingDone: true, langsChosen: true, spoilerDefaulted: true, autoSubsMigrated: true, hintsSeen: true })
+    expect(before.autoplayNext).toBe(false)
+    expect(addonsStore.get()).toHaveLength(2)
+    settingsStore.set(before)
+    expect(settingsStore.get().uiScale).toBe(130)
+    settingsStore.set(DEFAULT_SETTINGS)
+  })
+})
+
+describe('marcar una temporada y deshacerlo (uso-10)', () => {
+  it('el snapshot devuelve progreso y diario como estaban', () => {
+    const ep = (n: number) => ({ ...base, videoId: `s:${n}`, metaId: 's', type: 'series', season: 1, episode: n })
+    progressStore.set({ 's:1': entry(50, 3000, { videoId: 's:1', metaId: 's', type: 'series', season: 1, episode: 1 }) })
+    const ids = ['s:1', 's:2', 's:3']
+    const snap = snapshotWatch(ids)
+    setWatchedMany(ids.map((_id, i) => ep(i + 1)), true)
+    expect(Object.values(progressStore.get()).every((e) => e.watched)).toBe(true)
+    expect(Object.keys(diaryStore.get().entries).length).toBeGreaterThan(0)
+    restoreWatchSnapshot(snap)
+    expect(Object.keys(progressStore.get())).toEqual(['s:1'])
+    expect(progressStore.get()['s:1'].watched).toBe(false)
+    expect(diaryStore.get().entries).toEqual({})
   })
 })

@@ -264,7 +264,7 @@ function patchRecord<E>(s: Record<string, E>, changes: Record<string, unknown | 
 }
 
 /** Algunos campos de un objeto de ajustes: cada campo es una fila. Lo que no tenga el mismo tipo se ignora. */
-export function fieldsAdapter<S extends object>(scope: SyncScope, name: string, store: StoreLike<S>, fields: readonly (keyof S & string)[]): SyncAdapter<S> {
+export function fieldsAdapter<S extends object>(scope: SyncScope, name: string, store: StoreLike<S>, fields: readonly (keyof S & string)[], clean?: (next: S) => S): SyncAdapter<S> {
   return {
     scope,
     name,
@@ -282,7 +282,8 @@ export function fieldsAdapter<S extends object>(scope: SyncScope, name: string, 
         // Los objetos (estilo de subtítulos, reglas de fuentes) se completan con lo de acá: un campo nuevo no se pierde.
         out[k] = isPlain(cur) && isPlain(v) ? { ...cur, ...v } : v
       }
-      return out as S
+      // Lo que baja de la casa puede venir de otra versión de la app: se revisa antes de aplicarlo (uso-01).
+      return clean ? clean(out as S) : (out as S)
     },
   }
 }

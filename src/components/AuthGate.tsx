@@ -3,6 +3,7 @@ import { useLocation } from 'react-router-dom'
 import { useAuth } from '../lib/auth'
 import { JoinPage } from '../pages/auth/JoinPage'
 import { Login } from '../pages/auth/Login'
+import { Spinner } from './Spinner'
 
 /**
  * Con casas (v0.17), la app pide entrar antes de mostrar nada. Sin la base en el sitio (o en local con
@@ -14,7 +15,7 @@ export function AuthGate({ children }: { children: ReactNode }) {
   if (auth.status === 'loading') {
     return (
       <main className="login" aria-busy="true">
-        <div className="spinner" />
+        <Spinner />
       </main>
     )
   }

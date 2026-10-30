@@ -133,13 +133,33 @@ export interface CardPlace {
   width: number
 }
 
-/** La tarjeta ampliada queda centrada sobre el póster, sin salirse de la pantalla. */
-export function placeCard(r: { left: number; top: number; width: number; height: number }, vw: number, vh: number): CardPlace {
-  const width = Math.round(Math.min(Math.max(r.width * 2.3, 340), 520, vw - 24))
+/** Zona en la que tiene que quedar la tarjeta (la TV: sin el riel y dentro del 5 % de seguridad). */
+export interface CardBounds {
+  left: number
+  right: number
+  top: number
+  bottom: number
+}
+
+/** tv-03: la zona de contenido de la TV: a la derecha del riel (más 5vw) y dentro de 5vw / 5vh de los bordes. Puro. */
+export function tvCardBounds(vw: number, vh: number, railRight: number): CardBounds {
+  return { left: Math.max(railRight, 0) + vw * 0.05, right: vw - vw * 0.05, top: vh * 0.05, bottom: vh - vh * 0.05 }
+}
+
+/**
+ * La tarjeta ampliada queda centrada sobre el póster, sin salirse de la pantalla (ni de `bounds`, si se pasa:
+ * en la TV, para que no se meta debajo del riel ni fuera de la zona segura).
+ */
+export function placeCard(r: { left: number; top: number; width: number; height: number }, vw: number, vh: number, bounds?: CardBounds): CardPlace {
+  const minLeft = Math.max(12, bounds?.left ?? 0)
+  const maxRight = Math.min(vw - 12, bounds?.right ?? vw)
+  const minTop = Math.max(MIN_TOP, bounds?.top ?? 0)
+  const maxBottom = Math.min(vh - 8, bounds?.bottom ?? vh)
+  const width = Math.round(Math.min(Math.max(r.width * 2.3, 340), 520, maxRight - minLeft))
   const videoH = (width * 9) / 16
-  const left = Math.min(Math.max(r.left + r.width / 2 - width / 2, 12), vw - width - 12)
-  const top = Math.min(Math.max(r.top + r.height / 2 - (videoH + INFO_H) / 2, MIN_TOP), vh - videoH - INFO_H - 8)
-  return { left: Math.round(left), top: Math.round(Math.max(top, MIN_TOP)), width }
+  const left = Math.min(Math.max(r.left + r.width / 2 - width / 2, minLeft), maxRight - width)
+  const top = Math.min(Math.max(r.top + r.height / 2 - (videoH + INFO_H) / 2, minTop), maxBottom - videoH - INFO_H)
+  return { left: Math.round(left), top: Math.round(Math.max(top, minTop)), width }
 }
 
 // ---------- Estado global (un solo tráiler a la vez) ----------

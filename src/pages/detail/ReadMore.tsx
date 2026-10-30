@@ -3,9 +3,9 @@ import { useLayoutEffect, useRef, useState } from 'react'
 /**
  * v0.26 (ficha-01/02): la sinopsis de la portada cortada (4 renglones en PC y TV, 3 en el celular, por CSS) con
  * «Leer más» que la abre. El botón aparece solo si el texto no entra; es un botón común, así lo alcanzan las
- * flechas del control remoto.
+ * flechas del control remoto. `lang`: el idioma del texto si no es el de la página (la de Cinemeta va en inglés, a11y-16).
  */
-export function ReadMore({ text, className = '' }: { text: string; className?: string }) {
+export function ReadMore({ text, className = '', lang }: { text: string; className?: string; lang?: string }) {
   const ref = useRef<HTMLParagraphElement>(null)
   const [open, setOpen] = useState(false)
   const [overflows, setOverflows] = useState(false)
@@ -27,7 +27,7 @@ export function ReadMore({ text, className = '' }: { text: string; className?: s
 
   return (
     <>
-      <p ref={ref} className={`${className}${open ? '' : ' is-clamped'}`}>
+      <p ref={ref} lang={lang} className={`${className}${open ? '' : ' is-clamped'}`}>
         {text}
       </p>
       {(overflows || open) && (

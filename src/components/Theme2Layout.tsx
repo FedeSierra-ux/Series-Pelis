@@ -1,4 +1,5 @@
-import { NavLink, Link, Outlet, useLocation } from 'react-router-dom'
+import type { ReactNode } from 'react'
+import { NavLink, Link, Outlet, useLocation, useMatch } from 'react-router-dom'
 import { ErrorBoundary } from './ErrorBoundary'
 import { HoverTrailerLayer } from './HoverTrailer'
 import { OfflineBanner } from './OfflineBanner'
@@ -55,18 +56,30 @@ function ProfileButton({ size, className }: { size: number; className: string })
   )
 }
 
+/**
+ * Enlace del riel / de la barra de pestañas con el estado "página actual" para los lectores de pantalla
+ * (a11y-13). `NavLink` pone `aria-current="page"` solo si la ruta coincide: en lo que cuelga de "Vos"
+ * (historial, calendario, Tu año) el riel lo marca activo (`forceActive`) y el lector no sabía dónde estaba.
+ * Ahí va `aria-current="true"` (la sección actual); en la ruta misma, `"page"`, como siempre.
+ */
+function NavItem({ item, base, forceActive, children }: { item: Item; base: string; forceActive?: boolean; children: ReactNode }) {
+  const here = !!useMatch({ path: item.to, end: item.end ?? false })
+  const current = here ? 'page' : forceActive ? 'true' : undefined
+  return (
+    <Link to={item.to} className={`${base}${current ? ' active' : ''}`} aria-current={current}>
+      {children}
+    </Link>
+  )
+}
+
 function RailLink({ item, forceActive }: { item: Item; forceActive?: boolean }) {
   return (
-    <NavLink
-      to={item.to}
-      end={item.end}
-      className={({ isActive }) => `t2-rail-link${isActive || forceActive ? ' active' : ''}`}
-    >
+    <NavItem item={item} base="t2-rail-link" forceActive={forceActive}>
       <span className="t2-pill" aria-hidden>
         <ItemIcon item={item} />
       </span>
       <span className="t2-rail-label">{item.label}</span>
-    </NavLink>
+    </NavItem>
   )
 }
 
@@ -107,17 +120,12 @@ export function Theme2Layout() {
 
       <nav className="t2-tabs" aria-label="Principal">
         {TABS.map((item) => (
-          <NavLink
-            key={item.to}
-            to={item.to}
-            end={item.end}
-            className={({ isActive }) => `t2-tab${isActive || (item.to === '/me' && inVos) ? ' active' : ''}`}
-          >
+          <NavItem key={item.to} item={item} base="t2-tab" forceActive={item.to === '/me' && inVos}>
             <span className="t2-pill" aria-hidden>
               <ItemIcon item={item} size={20} />
             </span>
             <span>{item.label}</span>
-          </NavLink>
+          </NavItem>
         ))}
       </nav>
     </div>

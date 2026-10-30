@@ -189,6 +189,21 @@ let listening = false
 /** Elemento restaurado en la pantalla actual (la navegación espacial lo prefiere). */
 let restored: { selector: string; row?: string; nth?: number } | undefined
 let cancelPending: (() => void) | undefined
+/** Cuándo se restauró el foco por última vez (para no armar el tráiler de un póster que recién volvió, tv-03). */
+let restoredAt = -Infinity
+
+/** Cuánto después de restaurar el foco el póster enfocado no abre solo su tráiler. */
+export const RESTORE_QUIET_MS = 600
+
+/** Puro: ¿pasó poco desde la restauración? */
+export function withinQuiet(at: number, now: number): boolean {
+  return now - at < RESTORE_QUIET_MS
+}
+
+/** ¿Se acaba de restaurar el foco (Atrás)? El tráiler flotante espera a que el usuario se mueva. */
+export function justRestored(): boolean {
+  return withinQuiet(restoredAt, performance.now())
+}
 
 function storage(): SnapshotStore | undefined {
   try {
@@ -206,6 +221,8 @@ export function trackFocus() {
   document.addEventListener('focusin', (e) => {
     const t = e.target
     if (!(t instanceof Element) || !t.closest(CONTAINER)) return
+    // El foco que lleva el aviso de pantalla nueva al título (`RouteAnnouncer`) no es un lugar al que volver.
+    if (t.hasAttribute('data-route-focus')) return
     lastFocus = describeElement(t)
     lastRow = rowKeyOf(t)
     lastNth = lastFocus ? Math.max(0, findAll(lastFocus).indexOf(t as HTMLElement)) : 0
@@ -333,6 +350,7 @@ export function restoreFocus(key: string, options: RestoreOptions = {}): boolean
     window.scrollTo(0, snap.scrollY)
     const scroller = el.closest('.row-scroller')
     if (scroller && snap.rowLeft) scroller.scrollLeft = snap.rowLeft
+    restoredAt = performance.now()
     el.focus({ preventScroll: true })
     // Lo que tapa una portada fija (`scroll-padding-top`, ver discover/browse.css) no cuenta como visible.
     const needed = revealNeeded(el)

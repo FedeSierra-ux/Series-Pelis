@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { createMouseTracker, hoverTrailerUrl, placeCard, trailerAllowed, trailerKeyFromMeta, ytCommand, ytPlayerState, type TrailerEnv } from './hoverTrailer'
+import { createMouseTracker, hoverTrailerUrl, placeCard, trailerAllowed, trailerKeyFromMeta, tvCardBounds, ytCommand, ytPlayerState, type TrailerEnv } from './hoverTrailer'
 
 describe('hoverTrailerUrl', () => {
   const url = new URL(hoverTrailerUrl('dQw4w9WgXcQ', 'http://localhost:4177'))
@@ -85,6 +85,22 @@ describe('placeCard', () => {
     expect(right.left + right.width).toBeLessThanOrEqual(1366 - 12)
     // Nunca tapa la barra de navegación.
     expect(right.top).toBeGreaterThanOrEqual(72)
+  })
+
+  it('tv-03: en la TV no pisa el riel ni sale de la zona segura (5vw / 5vh)', () => {
+    const bounds = tvCardBounds(1920, 1080, 104)
+    expect(bounds.left).toBeCloseTo(200, 0)
+    // Primera tarjeta de una fila, pegada al riel: la tarjeta arranca en el borde de la zona de contenido, no en x = 12.
+    const first = placeCard({ left: 144, top: 600, width: 240, height: 360 }, 1920, 1080, bounds)
+    expect(first.left).toBeGreaterThanOrEqual(200)
+    // Última tarjeta, contra el borde derecho.
+    const last = placeCard({ left: 1700, top: 600, width: 240, height: 360 }, 1920, 1080, bounds)
+    expect(last.left + last.width).toBeLessThanOrEqual(1920 - 96 + 1)
+    // Fila baja: la tarjeta entera (video + texto) queda arriba del 95 % de la altura.
+    const low = placeCard({ left: 600, top: 900, width: 240, height: 360 }, 1920, 1080, bounds)
+    expect(low.top + (low.width * 9) / 16 + 92).toBeLessThanOrEqual(1080 * 0.95 + 1)
+    // Sin zona (PC) queda como siempre.
+    expect(placeCard({ left: 0, top: 700, width: 160, height: 240 }, 1366, 800).left).toBe(12)
   })
 
   it('en pantallas angostas usa casi todo el ancho', () => {

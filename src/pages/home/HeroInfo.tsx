@@ -55,6 +55,8 @@ export interface HeroInfoProps {
   /** Géneros: en una línea aparte, así nunca queda un separador suelto al principio de un renglón. */
   genres?: string[]
   overview?: string
+  /** Idioma de la sinopsis si no es el de la página: la de Cinemeta va en inglés (a11y-16). */
+  overviewLang?: string
   cast?: { id: number | string; name: string; photo?: string }[]
   /** Ficha del título. */
   to: string
@@ -68,7 +70,7 @@ export interface HeroInfoProps {
 }
 
 /** Lo de adentro de la portada: logo, IMDb y datos, sinopsis, reparto y botones. */
-export function HeroInfo({ eyebrow, title, logo, titleReady = true, rating, facts, genres, overview, cast, to, list, play }: HeroInfoProps) {
+export function HeroInfo({ eyebrow, title, logo, titleReady = true, rating, facts, genres, overview, overviewLang, cast, to, list, play }: HeroInfoProps) {
   const [brokenLogo, setBrokenLogo] = useState<string>()
   // Si el logo no carga, volvemos al título en texto.
   const showLogo = logo && logo !== brokenLogo ? logo : undefined
@@ -122,7 +124,11 @@ export function HeroInfo({ eyebrow, title, logo, titleReady = true, rating, fact
         </p>
       )}
       {genres && genres.length > 0 && <p className="portada-genres">{genres.join(' · ')}</p>}
-      {overview && <p className="portada-desc">{overview}</p>}
+      {overview && (
+        <p className="portada-desc" lang={overviewLang}>
+          {overview}
+        </p>
+      )}
       {cast && cast.length > 0 && (
         <ul className="portada-cast" aria-label="Reparto">
           {cast.map((c) => (

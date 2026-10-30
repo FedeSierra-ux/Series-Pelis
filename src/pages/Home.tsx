@@ -23,7 +23,7 @@ import { HeroInfo } from './home/HeroInfo'
 import { useNearViewport } from './home/lazy'
 import { MergedCatalogRow } from './home/MergedCatalogRow'
 import { TmdbHero } from './home/TmdbHero'
-import { resumeLabel, useDirectPlay } from './home/useDirectPlay'
+import { useDirectPlay, useResumeLabel } from './home/useDirectPlay'
 import './home/home-v14.css'
 import { BecauseRow, TrendingWeekRow, useNowPlaying, type Seed } from './home/TmdbRows'
 import { MixTop10Row, PopularRow } from './home/PopularRows'
@@ -64,6 +64,7 @@ function Hero({ addon, catalog }: { addon: InstalledAddon; catalog: CatalogDef }
   const watchlist = useStore(watchlistStore)
   const progress = useStore(progressStore)
   const { pending, play, cancel } = useDirectPlay()
+  const resumeLabel = useResumeLabel()
   const [index, setIndex] = useState(0)
   const hidden = useHiddenIds()
   const pool = useMemo(
@@ -104,6 +105,7 @@ function Hero({ addon, catalog }: { addon: InstalledAddon; catalog: CatalogDef }
         facts={[displayYear({ id: meta.id, type, releaseInfo: meta.releaseInfo }) ?? '', type === 'movie' ? 'Película' : type === 'series' ? 'Serie' : ''].filter(Boolean)}
         genres={genres}
         overview={meta.description}
+        overviewLang="en"
         to={`/detail/${type}/${encodeURIComponent(meta.id)}`}
         list={{ inList: !!watchlist[meta.id], onToggle: () => toggleWatchlist({ ...meta, type }) }}
         play={{

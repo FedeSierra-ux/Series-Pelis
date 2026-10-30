@@ -2,7 +2,7 @@ import { useEffect, useRef, useState, type KeyboardEvent } from 'react'
 import { createPortal } from 'react-dom'
 import { ProfileAvatar } from '../../components/ProfileAvatar'
 import { Theme2Icon } from '../../components/Theme2Icons'
-import { MAX_PROFILES, nextColor, type Profile } from '../../lib/profileModel'
+import { MAX_PROFILES, nextColor, spokenCountdown, type Profile } from '../../lib/profileModel'
 import { activeProfileId, markProfilePicked } from '../../lib/profiles'
 import { switchProfile, useProfiles } from '../../lib/profileSwitch'
 import { focusInitialTarget, isTv } from '../../lib/spatialNav'
@@ -173,9 +173,15 @@ export function WhoIsWatching({ auto, startManaging = false, onClose }: { auto: 
                 </button>
               )}
             </div>
+            {/* Lo visible cuenta cada segundo y no se lee: el lector anunciaba 10 veces seguidas (a11y-14). */}
             {counting && focusedName && (
-              <p className="pf-countdown muted" aria-live="polite">
+              <p className="pf-countdown muted" aria-hidden>
                 Entrando como {focusedName} en {left} s
+              </p>
+            )}
+            {counting && (
+              <p className="pf-sr" role="status">
+                {focusedName ? spokenCountdown(focusedName, left, AUTO_ENTER_S) : ''}
               </p>
             )}
             <div className="pf-actions pf-foot">
