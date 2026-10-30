@@ -1,7 +1,7 @@
 /* ---------- Portada (v0.13): Inicio estilo Disney+ y Películas / Series estilo Netflix ---------- */
 
 /* Solo variables del tema (--bg, --bg-2, --text, --accent, --radius…): al cambiar la paleta, la
-   portada la sigue sola. Todo cuelga de .portada para ganarle a las reglas generales de theme2.css,
+   portada la sigue sola. Todo cuelga de .portada para ganarle a las reglas generales del Tema 2 (styles.css),
    que se carga después. `--portada-ink` es el color sobre el que va el texto (el degradé se funde en él). */
 
 .portada {
@@ -509,7 +509,7 @@
 
 /* ---------- Celular: imagen arriba y el texto donde se funde ----------
    No en el celular apaisado (puntero táctil y poca altura): ahí queda el diseño ancho, con el texto sobre la imagen
-   (visual-movil-03; el riel lateral también vuelve, ver theme2.css). */
+   (visual-movil-03; el riel lateral también vuelve, ver el bloque del Tema 2 de styles.css). */
 
 @media (max-width: 760px) and (min-height: 501px), (max-width: 760px) and (pointer: fine) {
   .portada {

@@ -73,7 +73,7 @@ const PARSED = Object.entries(SHEETS).map(([file, css]) => ({ file: file.replace
 const RULES: Array<{ file: string; selector: string; ancestors: string[]; node: Node }> = []
 for (const s of PARSED) walk(s.tree, (n, anc) => RULES.push({ file: s.file, selector: n.prelude, ancestors: anc, node: n }))
 
-/** Las variables de :root de styles.css y de theme2.css (que las pone con `:root:root`, ver su encabezado). */
+/** Las variables de :root de styles.css (la base y el bloque del Tema 2, que las pone con `:root:root`). */
 const TOKENS: Record<string, string> = {}
 for (const r of RULES) {
   if (/^:root(:root)?$/.test(r.selector)) for (const d of r.node.decls) if (d.prop.startsWith('--')) TOKENS[d.prop] = d.value.replace(/\s*\/\*.*$/, '').trim()
