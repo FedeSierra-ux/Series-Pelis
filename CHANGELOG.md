@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.37.1] - 2026-11-11
+
+### Corregido
+- **Los botones y campos ya no muestran Arial**: `button`, `input`, `select` y `textarea` heredan la fuente de la página. Antes los que no la
+  declaraban (✓ de episodio, "volver" de la ficha, flechas, puntos y pausa de la portada, flechas de las filas, perfil, voz) caían en la
+  fuente del sistema. Las reglas con su propia fuente (como las pestañas de la ficha, en Sora) siguen ganando.
+
 ## [0.37.0] - 2026-10-30
 
 Última tanda de la auditoría completa de la v0.33: sacar el Tema 1 del CSS (`sistema-06`, con el CSS muerto de `sistema-14`).

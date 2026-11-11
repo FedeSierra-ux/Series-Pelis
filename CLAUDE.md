@@ -766,6 +766,8 @@ npm run preview    # sirve dist/ en http://localhost:4173
   - Pendientes anotados (sin hacer): `.brand` sin uso en TSX y el comentario viejo "el menú pasa abajo" sobre `.main { padding-bottom: 70px }`; `HeroCarousel` conserva el
     prop `row`/clase `has-row` y `hero.css` `.portada-row` (solo los usaba la portada `full`); posibles clases sin uso `imdb-sm`, `player-ripple-left/right` (verificar si son dinámicas);
     partir en dos reglas las 3 declaraciones pisadas solo para parte de una lista de selectores (`html, body`; `.hero, .detail-hero`). No probado: otros navegadores, TVs viejas, impresión.
+- v0.37.1 hecha (rama `ccr-a630843d-khuv21`): **botones sin Arial**: regla base `button, input, select, textarea { font-family: inherit }` en `styles.css` (peso (0,0,1), no pisa
+  reglas con clase). Medido en 15 rutas × PC/celular: de 16 tipos de elemento con otra fuente quedan 2 (`.dt-tab`, que usa `--font-display` a propósito). Resuelve el pendiente de la v0.36.
 - **Decisiones para la v0.17 (reemplazan el reparto del plan de abajo)**: addons y TorBox **iguales para todas las
   casas**, solo los cambia el admin (opción A). Ajustes generales (subtítulos, idiomas, autoplay, saltar intro, sin
   spoilers, reglas de fuentes) **iguales en toda la casa**; lo físico (modo TV, tamaño de la interfaz, protector,

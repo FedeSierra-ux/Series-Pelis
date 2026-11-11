@@ -64,6 +64,15 @@ body {
   overflow-x: hidden;
 }
 
+/* Los controles de formulario no heredan la fuente solos: sin esto, los botones que no la declaran (pestañas de la ficha,
+   ✓ de episodio, volver, pausa de la portada) mostraban Arial. Peso (0,0,1): cualquier regla con clase que ponga otra la sigue ganando. */
+button,
+input,
+select,
+textarea {
+  font-family: inherit;
+}
+
 /* visual-movil-23: en la app instalada, arrastrar hacia abajo desde arriba no recarga la página (se perdía el estado). */
 @media (display-mode: standalone) {
   html {
