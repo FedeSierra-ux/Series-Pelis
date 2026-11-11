@@ -154,8 +154,8 @@
   justify-content: flex-end;
 }
 
-[data-theme='2'] .sh-box kbd,
-[data-theme='2'] .sh-row kbd {
+:root .sh-box kbd,
+:root .sh-row kbd {
   background: var(--surface-1, var(--bg-2));
   border-color: var(--outline, var(--line));
 }

@@ -26,8 +26,6 @@ interface Props {
   label: string
   /** Lo del título visible (logo, datos, sinopsis, botones). */
   children: ReactNode
-  /** Lo que va montado sobre el borde de abajo (el Top 10 en Películas / Series). */
-  row?: ReactNode
 }
 
 // Las flechas no se quedan con el foco al tocarlas.
@@ -59,7 +57,7 @@ function useOnScreen(ref: React.RefObject<HTMLElement | null>) {
  * Con el control remoto los indicadores son botones comunes: ←/→ los recorre `spatialNav` y al
  * enfocar uno se muestra ese título; desde el primero, ← sigue hacia los botones, sin trabar nada.
  */
-export function HeroCarousel({ slides, index, onIndex, label, children, row }: Props) {
+export function HeroCarousel({ slides, index, onIndex, label, children }: Props) {
   const ref = useRef<HTMLElement>(null)
   const onScreen = useOnScreen(ref)
   const reduced = useMediaQuery(REDUCED_MOTION_QUERY)
@@ -122,7 +120,7 @@ export function HeroCarousel({ slides, index, onIndex, label, children, row }: P
   return (
     <section
       ref={ref}
-      className={`portada portada--compact${running ? '' : ' is-held'}${row ? ' has-row' : ''}`}
+      className={`portada portada--compact${running ? '' : ' is-held'}`}
       aria-roledescription="carrusel"
       aria-label={label}
       onPointerEnter={(e) => e.pointerType === 'mouse' && setHover(true)}
@@ -203,8 +201,6 @@ export function HeroCarousel({ slides, index, onIndex, label, children, row }: P
           </div>
         )}
       </div>
-
-      {row && <div className="portada-row">{row}</div>}
     </section>
   )
 }

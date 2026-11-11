@@ -479,7 +479,7 @@ html[data-tv] .next-thumb {
   .controls-row button {
     padding: 6px 10px;
   }
-  [data-theme='2'] .controls-row .play-btn {
+  :root .controls-row .play-btn {
     min-width: 42px;
     height: 42px;
   }
@@ -625,27 +625,27 @@ html[data-tv] .pause-cast {
 /* reproductor-01: con una escena clara el título y el addon no se leían. Degradado más largo y oscuro,
    sombra suave en el texto y el nombre del addon más claro. En el celular apaisado (poco alto) el
    relleno de abajo no crece: le sacaría lugar al video para tocar. */
-[data-theme='2'] .player-top {
+:root .player-top {
   background: linear-gradient(to bottom, rgba(0, 0, 0, 0.82) 0%, rgba(0, 0, 0, 0.5) 55%, transparent 100%);
 }
 @media (min-height: 501px) {
-  [data-theme='2'] .player-top {
+  :root .player-top {
     padding-bottom: 56px;
   }
 }
-[data-theme='2'] .player-title,
-[data-theme='2'] .player-top .btn {
+:root .player-title,
+:root .player-top .btn {
   text-shadow:
     0 1px 2px rgba(0, 0, 0, 0.9),
     0 0 14px rgba(0, 0, 0, 0.55);
 }
-[data-theme='2'] .player-title .muted {
+:root .player-title .muted {
   color: rgba(255, 255, 255, 0.78);
 }
 
 /* reproductor-02: el spinner se perdía sobre un fotograma claro. Más grande, con un disco oscuro detrás y
    el arco en el acento; con movimiento reducido gira más lento. */
-[data-theme='2'] .player-spinner {
+:root .player-spinner {
   width: 64px;
   height: 64px;
   margin: -32px 0 0 -32px;
@@ -875,7 +875,7 @@ html[data-tv] .player-title span {
   text-align: center;
   color: #fff;
 }
-[data-theme='2'] .player-prepare-box .player-spinner {
+:root .player-prepare-box .player-spinner {
   position: static;
   margin: 0 0 14px;
 }

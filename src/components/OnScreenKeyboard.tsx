@@ -144,22 +144,20 @@ export function OnScreenKeyboard({
 }
 
 interface ToggleProps extends Omit<KeyboardProps, 'autoFocus'> {
-  /** Mostrar el botón "Teclado" también fuera del modo TV. */
-  alwaysToggle?: boolean
   /** En modo TV arranca abierto. */
   openInTv?: boolean
 }
 
 /**
- * Botón "⌨ Teclado" + teclado. En modo TV aparece siempre el botón (y si `openInTv`, el teclado ya abierto);
- * fuera del modo TV solo si `alwaysToggle`.
+ * Botón "⌨ Teclado" + teclado. Solo aparece en modo TV (y si `openInTv`, el teclado ya abierto): fuera de la TV se
+ * usa el teclado del aparato.
  */
-export function KeyboardToggle({ alwaysToggle, openInTv, onDone, ...props }: ToggleProps) {
+export function KeyboardToggle({ openInTv, onDone, ...props }: ToggleProps) {
   const tv = useTvMode()
   const [open, setOpen] = useState(tv && !!openInTv)
   const [focusKeys, setFocusKeys] = useState(tv && !!openInTv)
   const toggleRef = useRef<HTMLButtonElement>(null)
-  if (!tv && !alwaysToggle) return null
+  if (!tv) return null
   return (
     <div className="osk-wrap">
       <button

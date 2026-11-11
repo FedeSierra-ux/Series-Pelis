@@ -60,7 +60,7 @@ html[data-tv] .d-read-more {
   .detail-hero.has-bg {
     padding-top: 168px;
   }
-  [data-theme='2'] .detail-hero.has-bg {
+  :root .detail-hero.has-bg {
     padding-top: 168px;
   }
   .detail-hero .detail-head {
@@ -229,16 +229,16 @@ html[data-tv] .sx-empty .sx-empty-thumb {
     transition: none;
   }
 }
-[data-theme='2'] .episode.is-next:not(.selected) {
+:root .episode.is-next:not(.selected) {
   border-color: rgba(196, 176, 255, 0.55);
 }
 
 /* ---------- ficha-05: celular, episodios más prolijos ---------- */
 
 @media (max-width: 760px) {
-  /* Con el prefijo del tema: si no, «[data-theme='2'] .btn» (border: 0) y «.btn-ghost» le ganan. */
+  /* Con el prefijo `:root` (el del tema): si no, «:root .btn» (border: 0) y «.btn-ghost» le ganan. */
   .season-bar .season-mark,
-  [data-theme='2'] .season-bar .season-mark {
+  :root .season-bar .season-mark {
     margin: 0 0 10px auto;
     min-height: 36px;
     padding: 6px 14px;
@@ -387,8 +387,8 @@ html[data-tv] .detail-original {
    pantalla y las acciones quedaban abajo. Solo layout: sin póster repetido, logo y sinopsis más chicos, créditos
    fuera (el reparto sigue en su lugar más abajo) y «Reproducir» con los íconos al lado. */
 @media (pointer: coarse) and (max-height: 500px) {
-  html:not([data-tv])[data-theme='2'] .detail-hero,
-  html:not([data-tv])[data-theme='2'] .detail-hero.has-bg {
+  html:not([data-tv]):root .detail-hero,
+  html:not([data-tv]):root .detail-hero.has-bg {
     padding-top: 56px;
     padding-bottom: 18px;
   }

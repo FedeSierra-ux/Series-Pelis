@@ -31,7 +31,7 @@
   font-size: var(--fs-base);
 }
 
-/* Las filas (Seguir viendo, Mi lista…) van de borde a borde, como en Inicio (gana a `[data-theme='2'] .row`). */
+/* Las filas (Seguir viendo, Mi lista…) van de borde a borde, como en Inicio (gana a `:root .row`). */
 .page.me-page .row {
   margin-left: calc(-1 * var(--gutter));
   margin-right: calc(-1 * var(--gutter));
@@ -124,33 +124,33 @@
 /* v0.26: en el celular, Mi lista en 3 columnas (entran el doble de títulos por pantalla). Las estrellas propias
    bajan a la esquina de abajo a la izquierda del póster (2:3, alto = 150 % del ancho) para no pisar el IMDb. */
 @media (max-width: 560px) {
-  [data-theme='2'] .me-list > .grid {
+  :root .me-list > .grid {
     grid-template-columns: repeat(3, minmax(0, 1fr));
     gap: 14px 8px;
   }
-  [data-theme='2'] .me-list > .grid .poster-title {
+  :root .me-list > .grid .poster-title {
     font-size: var(--fs-sm);
   }
-  [data-theme='2'] .me-list > .grid .poster-sub {
+  :root .me-list > .grid .poster-sub {
     font-size: 0.75rem;
   }
-  [data-theme='2'] .me-list > .grid .rated-card {
+  :root .me-list > .grid .rated-card {
     container-type: inline-size;
   }
-  [data-theme='2'] .me-list > .grid .user-stars.on-poster {
+  :root .me-list > .grid .user-stars.on-poster {
     top: calc(150cqw - 30px);
     left: 6px;
     font-size: var(--fs-2xs);
     padding: 2px 7px;
   }
-  [data-theme='2'] .me-list > .grid .poster-rating {
+  :root .me-list > .grid .poster-rating {
     font-size: 0.7rem;
   }
 }
 
 /* v0.26: los estados vacíos de Vos (Mi lista, Lo que viste) más bajos: son dos seguidos con la cuenta nueva.
    v0.35 (visual-pc-12): en vez de dos tarjetas de 270 px, una tira (ícono · título y texto · botón) de ~90 px cada una. */
-[data-theme='2'] .me-page .empty-state {
+:root .me-page .empty-state {
   display: grid;
   grid-template-columns: auto minmax(0, 1fr) auto;
   grid-template-areas: 'icon title action' 'icon text action';
@@ -161,33 +161,33 @@
   padding: 18px 22px;
   text-align: left;
 }
-[data-theme='2'] .me-page .empty-state-icon {
+:root .me-page .empty-state-icon {
   grid-area: icon;
   width: 48px;
   height: 48px;
   margin: 0;
 }
-[data-theme='2'] .me-page .empty-state-title {
+:root .me-page .empty-state-title {
   grid-area: title;
   font-size: var(--fs-lg);
   align-self: end;
 }
-[data-theme='2'] .me-page .empty-state-text {
+:root .me-page .empty-state-text {
   grid-area: text;
   font-size: 0.95rem;
   align-self: start;
 }
-[data-theme='2'] .me-page .empty-state-action {
+:root .me-page .empty-state-action {
   grid-area: action;
   margin: 0;
 }
 @media (max-width: 560px) {
-  [data-theme='2'] .me-page .empty-state {
+  :root .me-page .empty-state {
     grid-template-columns: auto minmax(0, 1fr);
     grid-template-areas: 'icon title' 'icon text' 'action action';
     row-gap: 2px;
   }
-  [data-theme='2'] .me-page .empty-state-action {
+  :root .me-page .empty-state-action {
     justify-self: start;
     margin-top: 12px;
   }
@@ -233,7 +233,7 @@
    también recorta arriba y abajo: 8 px de lugar para el anillo de foco (borde + separación), sin cambiar el alto
    (como `.fb-genres-track` en discover/filters.css). */
 @media (max-width: 700px) {
-  [data-theme='2'] .history-filter-tabs {
+  :root .history-filter-tabs {
     flex-wrap: nowrap;
     overflow-x: auto;
     scrollbar-width: none;
@@ -241,10 +241,10 @@
     padding: 8px var(--gutter);
     scroll-padding-inline: var(--gutter);
   }
-  [data-theme='2'] .history-filter-tabs::-webkit-scrollbar {
+  :root .history-filter-tabs::-webkit-scrollbar {
     display: none;
   }
-  [data-theme='2'] .history-filter-tabs > * {
+  :root .history-filter-tabs > * {
     flex: none;
   }
 }

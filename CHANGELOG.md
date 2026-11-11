@@ -1,5 +1,18 @@
 # Changelog
 
+## [0.38.0] - 2026-11-11
+
+Se terminó de sacar el Tema 1 (lo que la v0.37 dejó anotado). No cambia nada a la vista.
+
+### Cambiado
+- **El `<html>` ya no lleva `data-theme="2"`.** Las ~80 reglas de los CSS de pantallas (`a11y`, `me`, `auth`, `search`, `player`, `detail`, `profiles`,
+  `rows`, `tv-hints`, `shortcuts-help`) que colgaban del atributo ahora arrancan con `:root`, con el mismo peso (`:root .x`, `:root:root` para las
+  variables, `html:not([data-tv]):root` y `html[data-tv]:root` para los cortes). Se comparó contra la v0.37.1 con estilos computados de todos los
+  elementos y capturas en PC, celular, apaisado, TV y alto contraste: sin diferencias sin explicar.
+- **CSS y código muerto fuera:** `.brand`, `.not-interested`, la fila sobre el borde de la portada (`row`, `has-row`, `.portada-row` y `children` de
+  `TmdbHero`) y la prop `alwaysToggle` de `KeyboardToggle`. Se partieron dos reglas que el tema pisaba solo a medias (`html, body` y
+  `.hero, .detail-hero`). El CSS del build baja de 199 219 a 198 228 B.
+
 ## [0.37.1] - 2026-11-11
 
 ### Corregido

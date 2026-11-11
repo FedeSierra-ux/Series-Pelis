@@ -1,7 +1,7 @@
 /* ---------- v0.34 accesibilidad transversal (auditoría de la v0.33) ----------
    Se carga al final (main.tsx), después de styles.css (que ya trae el Tema 2). Cada bloque dice qué hallazgo resuelve. */
 
-:root[data-theme='2'] {
+:root:root {
   /* a11y-12: el borde de los controles (campos de texto, interruptor apagado). El --outline de siempre da 1,9:1
      contra las tarjetas; este llega a 3:1 o más contra --bg, --bg-2 y --bg-3 (1.4.11). */
   --control-edge: #7d788f;
@@ -34,14 +34,14 @@ html:not([data-tv]):has(.fb) {
 
 /* ---------- a11y-11: placeholders legibles (1.4.3) ----------
    El gris de fábrica del navegador (117,117,117) daba 3,18:1 sobre los campos; --muted da ~5,8:1. */
-[data-theme='2'] ::placeholder {
+:root ::placeholder {
   color: var(--muted);
   opacity: 1;
 }
 
 /* ---------- a11y-12: campos e interruptor apagado con borde (1.4.11) ----------
    Se mantiene el relleno tonal; solo se suma el contorno fino. Con foco manda el anillo de siempre. */
-[data-theme='2']
+:root
   :is(input[type='search'], input[type='url'], input[type='text'], input[type='password'], input[type='email'], input[type='number'], input[type='tel'], select):not(
     :focus-visible
   ) {
@@ -56,24 +56,24 @@ label.settings-advanced-toggle input[type='checkbox']:not(:checked) {
    Antes todo el texto del episodio iba a 0,55: la fecha, el IMDb y la sinopsis quedaban a 3:1. Ahora se atenúan
    la miniatura (detail-v26.css, sin cambios) y el título; la fecha, el IMDb y la sinopsis quedan en --muted pleno.
    El ✓ ya dice "vista". Vuelve a 1 con foco, hover o elegido, como antes. */
-[data-theme='2'] .episode.watched .episode-text {
+:root .episode.watched .episode-text {
   opacity: 1;
 }
-[data-theme='2'] .episode.watched .episode-title {
+:root .episode.watched .episode-title {
   opacity: 0.65;
   transition: opacity 0.15s;
 }
-[data-theme='2'] .episode.watched:focus-within .episode-title,
-[data-theme='2'] .episode.watched.selected .episode-title {
+:root .episode.watched:focus-within .episode-title,
+:root .episode.watched.selected .episode-title {
   opacity: 1;
 }
 @media (hover: hover) {
-  [data-theme='2'] .episode.watched:hover .episode-title {
+  :root .episode.watched:hover .episode-title {
     opacity: 1;
   }
 }
 @media (prefers-reduced-motion: reduce) {
-  [data-theme='2'] .episode.watched .episode-title {
+  :root .episode.watched .episode-title {
     transition: none;
   }
 }

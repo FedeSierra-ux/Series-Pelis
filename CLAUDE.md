@@ -768,6 +768,13 @@ npm run preview    # sirve dist/ en http://localhost:4173
     partir en dos reglas las 3 declaraciones pisadas solo para parte de una lista de selectores (`html, body`; `.hero, .detail-hero`). No probado: otros navegadores, TVs viejas, impresión.
 - v0.37.1 hecha (rama `ccr-a630843d-khuv21`): **botones sin Arial**: regla base `button, input, select, textarea { font-family: inherit }` en `styles.css` (peso (0,0,1), no pisa
   reglas con clase). Medido en 15 rutas × PC/celular: de 16 tipos de elemento con otra fuente quedan 2 (`.dt-tab`, que usa `--font-display` a propósito). Resuelve el pendiente de la v0.36.
+- v0.38.0 hecha (rama `ccr-a630843d-khuv21`): **el `<html>` ya no tiene `data-theme`**. Todos los selectores del tema (en `styles.css`, los CSS de pantallas y `a11y.css`)
+  arrancan con `:root`: `:root .x`, variables con `:root:root`, TV con `html[data-tv]:root`, `html:not([data-tv]):root`. **Un selector nuevo de pantalla que quiera ganarle al tema
+  = `:root .x` o más peso; ya no hay atributo.** Se fueron `.brand`, `.not-interested`, `.portada-row`, la clase `has-row` y la prop `row` de `HeroCarousel` (y `children` de
+  `TmdbHero`) y `alwaysToggle`. `.imdb-sm` y `.player-ripple-left/-right` **no** estaban muertos (se arman con template strings). Se partieron `html, body` (la fuente queda solo en
+  `html`) y `.hero, .detail-hero` (el fondo queda solo en `.detail-hero`). Banco de comparación: **no correr nada más mientras corre** (una corrida con vitest y un build en paralelo dio
+  11 358 diferencias falsas); una diferencia que cambia de polaridad entre corridas (alto de página de 2–3 px, foco de la TV en Ajustes) es ruido y se confirma repitiendo la
+  pantalla sola. Pendiente anotado: `.main { padding-bottom: 70px }` (≤760 px) siempre se pisa (`.t2-app .t2-main`) y se puede borrar.
 - **Decisiones para la v0.17 (reemplazan el reparto del plan de abajo)**: addons y TorBox **iguales para todas las
   casas**, solo los cambia el admin (opción A). Ajustes generales (subtítulos, idiomas, autoplay, saltar intro, sin
   spoilers, reglas de fuentes) **iguales en toda la casa**; lo físico (modo TV, tamaño de la interfaz, protector,
