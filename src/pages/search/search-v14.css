@@ -426,7 +426,7 @@
   align-items: center;
   height: 42px;
   padding: 0 16px;
-  /* v0.26 (explorar-06): también el color de .fb-chip (antes, fondo transparente con borde de theme2.css). */
+  /* v0.26 (explorar-06): también el color de .fb-chip (antes, fondo transparente con borde del bloque del Tema 2 de styles.css). */
   border: 1px solid transparent;
   border-radius: 999px;
   background: var(--bg-2);

@@ -21,8 +21,6 @@ import { HeroCarousel } from './HeroCarousel'
 import { HeroInfo } from './HeroInfo'
 import { useDirectPlay, useResumeLabel } from './useDirectPlay'
 
-const CAST_SHOWN = 3
-
 /**
  * Logo del título con su nombre original: primero en inglés, después sin idioma y el doblado al
  * final (v0.28: el nombre va en español, pero los logos siguen en idioma original).
@@ -43,8 +41,6 @@ const typeOf = (item: TmdbListItem, fallback: TmdbType): TmdbType =>
 
 interface Props {
   items: TmdbListItem[]
-  /** `compact`: Inicio (carrusel en un banner redondeado). `full`: Películas / Series, de borde a borde y con reparto. */
-  variant?: 'compact' | 'full'
   /** Para listas que no traen `media_type` (los estrenos). */
   fallbackType?: TmdbType
   /** Texto chico arriba del título, por ejemplo "Estrenos en cines". */
@@ -54,10 +50,10 @@ interface Props {
 }
 
 /**
- * Portada con TMDB: fondo del título, logo, puntaje de IMDb, año, duración, géneros, sinopsis en
- * español y (en la completa) reparto. Sin tráiler: el tráiler queda para cuando se pasa por un póster.
+ * Portada con TMDB (Inicio, banner redondeado): fondo del título, logo, puntaje de IMDb, año, duración,
+ * géneros y sinopsis en español. Sin tráiler: el tráiler queda para cuando se pasa por un póster.
  */
-export function TmdbHero({ items, variant = 'compact', fallbackType = 'movie', eyebrow, children }: Props) {
+export function TmdbHero({ items, fallbackType = 'movie', eyebrow, children }: Props) {
   const watchlist = useStore(watchlistStore)
   const progress = useStore(progressStore)
   const { pending, play, cancel } = useDirectPlay()
@@ -76,15 +72,14 @@ export function TmdbHero({ items, variant = 'compact', fallbackType = 'movie', e
   const d = details?.key === itemKey ? details.data : undefined
   const detailsDone = details?.key === itemKey
 
-  const backdropSize = variant === 'full' ? 'original' : 'w1280'
   const slides = useMemo(
     () =>
       items.map((it) => ({
         key: `${typeOf(it, fallbackType)}:${it.id}`,
         title: spanishName(it) ?? originalTitle(it),
-        backdrop: tmdbImg(it.backdrop_path, backdropSize),
+        backdrop: tmdbImg(it.backdrop_path, 'w1280'),
       })),
-    [items, fallbackType, backdropSize],
+    [items, fallbackType],
   )
 
   // Detalles (logo, géneros, duración, reparto, id de IMDb) solo del slide visible; quedan en caché.
@@ -149,18 +144,11 @@ export function TmdbHero({ items, variant = 'compact', fallbackType = 'movie', e
   const title = (imdbId && localTitle(imdbId, '')) || spanishName(item) || savedName
   const logo = tmdbImg(originalLogo(d), 'w500')
   const overview = item.overview || d?.overview
-  const genres = (d?.genres ?? []).slice(0, variant === 'full' ? 3 : 2).map((g) => g.name)
+  const genres = (d?.genres ?? []).slice(0, 2).map((g) => g.name)
   const year = itemYear(item)
   // En las series la duración cambia en cada episodio: solo en las pelis.
   const runtime = type === 'movie' ? formatRuntime(d?.runtime || undefined) : ''
-  const facts = [year, runtime, variant === 'compact' ? (type === 'movie' ? 'Película' : 'Serie') : ''].filter(Boolean)
-  const cast =
-    variant === 'full'
-      ? (d?.credits?.cast ?? d?.aggregate_credits?.cast ?? [])
-          .filter((c) => c.profile_path)
-          .slice(0, CAST_SHOWN)
-          .map((c) => ({ id: c.id, name: c.name, photo: tmdbImg(c.profile_path, 'w185') }))
-      : undefined
+  const facts = [year, runtime, type === 'movie' ? 'Película' : 'Serie'].filter(Boolean)
   const inList = !!(imdbId && watchlist[imdbId])
   const appType = toAppType(type)
 
@@ -204,7 +192,6 @@ export function TmdbHero({ items, variant = 'compact', fallbackType = 'movie', e
       slides={slides}
       index={current}
       onIndex={setIndex}
-      variant={variant}
       label={eyebrow ?? (type === 'tv' ? 'Series destacadas' : 'Películas destacadas')}
       row={children}
     >
@@ -218,7 +205,6 @@ export function TmdbHero({ items, variant = 'compact', fallbackType = 'movie', e
         facts={facts}
         genres={genres}
         overview={overview}
-        cast={cast}
         to={tmdbDetailPath(item, fallbackType)}
         list={{ inList, busy: resolving, unavailable: notFound, onToggle: onList }}
         play={{ label: imdbId ? resumeLabel(imdbId, appType, progress) : 'Reproducir', busy: pending === itemKey, onPlay }}

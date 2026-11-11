@@ -20,7 +20,6 @@ import '@fontsource/dm-sans/latin-700.css'
 import '@fontsource/sora/latin-700.css'
 import '@fontsource/sora/latin-800.css'
 import './styles.css'
-import './theme2.css'
 import './a11y.css'
 
 // App de Android TV: el botón Atrás del control llega por acá (en el navegador no hace nada).

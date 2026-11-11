@@ -97,7 +97,7 @@ function Hero({ addon, catalog }: { addon: InstalledAddon; catalog: CatalogDef }
   const type = meta.type ?? catalog.type
   const logo = meta.logo ?? (meta.id.startsWith('tt') ? `https://images.metahub.space/logo/medium/${meta.id}/img` : undefined)
   return (
-    <HeroCarousel slides={slides} index={index % pool.length} onIndex={setIndex} variant="compact" label="Destacados">
+    <HeroCarousel slides={slides} index={index % pool.length} onIndex={setIndex} label="Destacados">
       <HeroInfo
         key={meta.id}
         title={title}
@@ -220,7 +220,7 @@ export function Home() {
       <h1 className="sp-sr-only">Inicio</h1>
       <FocusBillboard />
       {tmdbKey && heroItems.length > 0 ? (
-        <TmdbHero items={heroItems} variant="compact" fallbackType="movie" eyebrow="Estrenos en cines" />
+        <TmdbHero items={heroItems} fallbackType="movie" eyebrow="Estrenos en cines" />
       ) : tmdbKey && nowPlaying.loading ? (
         <div className="portada portada--compact portada-skeleton skeleton" />
       ) : (

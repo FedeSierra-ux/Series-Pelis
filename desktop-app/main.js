@@ -17,7 +17,7 @@ import { DEFAULT_HEIGHT, DEFAULT_WIDTH, loadWindowState, trackWindowState } from
 const here = path.dirname(fileURLToPath(import.meta.url))
 const require = createRequire(import.meta.url)
 
-/** El color de fondo del sitio (`--bg` de theme2.css): sin destello blanco al abrir. */
+/** El color de fondo del sitio (`--bg` de styles.css): sin destello blanco al abrir. */
 const BG = '#0b0b10'
 /** Cuánto esperamos al motor antes de abrir el sitio igual (sin torrents). */
 const ENGINE_WAIT_MS = 10_000

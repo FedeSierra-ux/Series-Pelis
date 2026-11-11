@@ -1,5 +1,6 @@
-// Hay un solo diseño (el que antes era el "Tema 2"). `data-theme="2"` va fijo en el <html> de
-// index.html y todo src/theme2.css cuelga de ese atributo, por encima de la base de styles.css.
+// Hay un solo diseño (el que antes era el "Tema 2"). `data-theme="2"` va fijo en el <html> de index.html: lo siguen
+// leyendo algunos CSS de pantallas (a11y.css, auth.css, me.css…). Desde la v0.37 el bloque del Tema 2 de src/styles.css
+// ya no cuelga del atributo: sus selectores arrancan con `:root`, que pesa lo mismo.
 //
 // Las fuentes (Sora y DM Sans, empaquetadas: andan sin conexión) se importan de forma estática en main.tsx:
 // entran en el CSS inicial. Hasta la v0.35 se pedían con `import()` después de arrancar la app y el texto

@@ -53,7 +53,6 @@ export interface HeroInfoProps {
   overview?: string
   /** Idioma de la sinopsis si no es el de la página: la de Cinemeta va en inglés (a11y-16). */
   overviewLang?: string
-  cast?: { id: number | string; name: string; photo?: string }[]
   /** Ficha del título. */
   to: string
   list: { inList: boolean; busy?: boolean; unavailable?: boolean; onToggle: () => void }
@@ -65,8 +64,8 @@ export interface HeroInfoProps {
   play?: { label: string; busy?: boolean; onPlay: () => void }
 }
 
-/** Lo de adentro de la portada: logo, IMDb y datos, sinopsis, reparto y botones. */
-export function HeroInfo({ eyebrow, title, logo, titleReady = true, rating, facts, genres, overview, overviewLang, cast, to, list, play }: HeroInfoProps) {
+/** Lo de adentro de la portada: logo, IMDb y datos, sinopsis y botones. */
+export function HeroInfo({ eyebrow, title, logo, titleReady = true, rating, facts, genres, overview, overviewLang, to, list, play }: HeroInfoProps) {
   const [brokenLogo, setBrokenLogo] = useState<string>()
   // Si el logo no carga, volvemos al título en texto.
   const showLogo = logo && logo !== brokenLogo ? logo : undefined
@@ -124,16 +123,6 @@ export function HeroInfo({ eyebrow, title, logo, titleReady = true, rating, fact
         <p className="portada-desc" lang={overviewLang}>
           {overview}
         </p>
-      )}
-      {cast && cast.length > 0 && (
-        <ul className="portada-cast" aria-label="Reparto">
-          {cast.map((c) => (
-            <li key={c.id}>
-              {c.photo && <img src={c.photo} alt="" loading="lazy" />}
-              <span>{c.name}</span>
-            </li>
-          ))}
-        </ul>
       )}
       <div className="portada-actions" onKeyDown={onActionsKey}>
         <Link

@@ -748,6 +748,24 @@ npm run preview    # sirve dist/ en http://localhost:4173
     adelantaría); CLS 0,048 de la ficha y ~0,03 de Inicio por el cambio de fuente (un `@font-face` de reemplazo con `size-adjust`); `BACK_KEYS`/`CLOSE_KEYS` copiado en ~15 archivos;
     íconos CSS `data:image/svg+xml` repiten glifos del set; `.update-toast` (z 70) queda bajo el reproductor (100) y `.undo-toast` (40) bajo `.hover-trailer` (60); botones sin `font-family: inherit`
     (p. ej. `button.episode-check`) muestran Arial; ✓ y ⌫ usan la fuente del sistema; Ajustes lazy muestra un `Spinner` la primera vez (se podría precargar con `whenIdle`).
+- v0.37.0 hecha (rama `ccr-a630843d-khuv21`): **se sacó el Tema 1 de `styles.css`** (`sistema-06` + `sistema-14`, la última de la auditoría de la v0.33; en
+  tres commits para poder revertir cada paso, de atrás para adelante: 3, 2, 1). Un agente con un banco de comparación (dos builds reales en paralelo,
+  estilos computados de todos los elementos + capturas en PC, celular, apaisado y TV, con un control base-contra-base para el ruido): **0 diferencias sin explicar**.
+  - **`src/theme2.css` ya no existe**: está al final de `src/styles.css` (bloque "v0.6 tema 2", después de la base, misma cascada). Sus selectores arrancan con
+    `:root` en vez de `[data-theme='2']` (mismo peso (0,1,0)): variables con `:root:root`, TV con `html[data-tv]:root`. Un selector nuevo del tema = `:root .x`.
+    `data-theme="2"` sigue en `index.html` porque lo leen `a11y.css` y ~10 CSS de pantallas (me, auth, search-v14, player-v14, detail-v26, profiles, rows, tv-hints,
+    shortcuts-help, detail-v14; unas 70 reglas + 9 de `a11y.css`): pasarlos a `:root` es el mismo reemplazo mecánico y recién ahí se puede sacar el atributo.
+  - Poda: se borró de la base lo que el tema pisa siempre (215 declaraciones; **no alcanza con que el selector exista en el tema**: hay que mirar contexto
+    `@media`/`@supports`, `!important` y shorthand), el menú del Tema 1 (`.nav*`, `.nav-sheet*`, `.nav-bottom`) y clases sin uso (`.stream-name`, `.stream-title`,
+    `.year-kicker`, `.diary-badge`, `.diary-more`); de la portada `full` (`.portada--full`, `.portada-cast` y sus ramas en `TmdbHero`/`HeroCarousel`/`HeroInfo`).
+    CSS del build 214 → 199 KB (gzip 39,0 → 36,9 KB). Quedan las **2476 declaraciones de la base que el tema no pisa** (siguen aplicándose; un ejemplo es el
+    resplandor violeta de `.btn-primary:hover`): conviene revisarlas mirando la pantalla, no por pisadas. 5 anillos `3px #fff` quedan (`.t2-pill`, `.player-rate .star-input`,
+    `.player-error-sources button`, `.tv-hints-ok`), no 54.
+  - **Orden real de la cascada**: los CSS que importan los componentes del árbol de `App` (hero, rows, filters, detail…) cargan **antes** de `styles.css`; solo `a11y.css`
+    y los de chunks lazy (Player) cargan después. Por eso los CSS de pantalla ganan por peso y no por orden.
+  - Pendientes anotados (sin hacer): `.brand` sin uso en TSX y el comentario viejo "el menú pasa abajo" sobre `.main { padding-bottom: 70px }`; `HeroCarousel` conserva el
+    prop `row`/clase `has-row` y `hero.css` `.portada-row` (solo los usaba la portada `full`); posibles clases sin uso `imdb-sm`, `player-ripple-left/right` (verificar si son dinámicas);
+    partir en dos reglas las 3 declaraciones pisadas solo para parte de una lista de selectores (`html, body`; `.hero, .detail-hero`). No probado: otros navegadores, TVs viejas, impresión.
 - **Decisiones para la v0.17 (reemplazan el reparto del plan de abajo)**: addons y TorBox **iguales para todas las
   casas**, solo los cambia el admin (opción A). Ajustes generales (subtítulos, idiomas, autoplay, saltar intro, sin
   spoilers, reglas de fuentes) **iguales en toda la casa**; lo físico (modo TV, tamaño de la interfaz, protector,
