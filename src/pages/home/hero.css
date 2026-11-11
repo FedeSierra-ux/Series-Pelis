@@ -493,14 +493,6 @@
   height: 46px;
 }
 
-/* ---------- Fila encima del borde de abajo de la portada (prop `row` de HeroCarousel) ---------- */
-.portada .portada-row {
-  position: relative;
-}
-.portada .portada-row .row {
-  margin: 14px 0 0;
-}
-
 /* ---------- Esqueleto mientras llegan los títulos ---------- */
 .portada.portada-skeleton {
   background: linear-gradient(90deg, var(--bg-2) 0%, var(--bg-3) 50%, var(--bg-2) 100%);

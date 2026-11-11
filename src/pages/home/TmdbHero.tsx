@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState, type ReactNode } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { getMeta } from '../../lib/addons'
 import { localTitle } from '../../lib/localTitles'
 import { spanishName } from '../../lib/localTitlesStore'
@@ -45,15 +45,13 @@ interface Props {
   fallbackType?: TmdbType
   /** Texto chico arriba del título, por ejemplo "Estrenos en cines". */
   eyebrow?: string
-  /** Lo que va encima del borde de abajo de la portada (el Top 10 en Películas / Series). */
-  children?: ReactNode
 }
 
 /**
  * Portada con TMDB (Inicio, banner redondeado): fondo del título, logo, puntaje de IMDb, año, duración,
  * géneros y sinopsis en español. Sin tráiler: el tráiler queda para cuando se pasa por un póster.
  */
-export function TmdbHero({ items, fallbackType = 'movie', eyebrow, children }: Props) {
+export function TmdbHero({ items, fallbackType = 'movie', eyebrow }: Props) {
   const watchlist = useStore(watchlistStore)
   const progress = useStore(progressStore)
   const { pending, play, cancel } = useDirectPlay()
@@ -193,7 +191,6 @@ export function TmdbHero({ items, fallbackType = 'movie', eyebrow, children }: P
       index={current}
       onIndex={setIndex}
       label={eyebrow ?? (type === 'tv' ? 'Series destacadas' : 'Películas destacadas')}
-      row={children}
     >
       <HeroInfo
         key={itemKey}
