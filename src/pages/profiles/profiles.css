@@ -71,7 +71,7 @@ html[data-tv] .pf-close {
   cursor: pointer;
 }
 /* El anillo va en el avatar, no alrededor de todo el botón (también en la TV). */
-[data-theme='2'] .pf-tile:focus-visible,
+:root .pf-tile:focus-visible,
 html[data-tv] .pf-tile:focus-visible {
   outline: none;
 }
@@ -284,7 +284,7 @@ html[data-tv] .pf-name {
   flex-grow: 2;
 }
 /* La caja es --bg-2 como el campo: sin foco no se veía. */
-[data-theme='2'] .pf-editor input[type='text'] {
+:root .pf-editor input[type='text'] {
   background-color: var(--bg-3);
 }
 .pf-label {
@@ -403,15 +403,15 @@ html[data-tv] .pf-name {
   margin: 0;
   line-height: 1.5;
 }
-[data-theme='2'] .btn.pf-danger {
+:root .btn.pf-danger {
   background: var(--danger);
   color: #1a0b0b;
 }
-[data-theme='2'] .btn.pf-danger:focus-visible {
+:root .btn.pf-danger:focus-visible {
   background: #fca5a5;
 }
 @media (hover: hover) {
-  [data-theme='2'] .btn.pf-danger:hover {
+  :root .btn.pf-danger:hover {
     background: #fca5a5;
   }
 }

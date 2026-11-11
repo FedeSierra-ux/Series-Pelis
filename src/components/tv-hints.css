@@ -89,12 +89,12 @@
   outline: 3px solid #fff;
   outline-offset: 3px;
 }
-[data-theme='2'] .tv-hints-ok:focus {
+:root .tv-hints-ok:focus {
   outline: var(--focus-ring);
 }
 
 /* Tema 2: tarjetas tonales, como el resto de la interfaz. */
-[data-theme='2'] .tv-hint {
+:root .tv-hint {
   background: var(--surface-1, var(--bg-2));
   border-color: var(--outline, var(--line));
 }

@@ -521,7 +521,7 @@ html[data-tv] .dt-tab {
 }
 /* Lugar para el botón: sin póster el título arranca arriba a la izquierda. */
 @media (min-width: 761px) {
-  html:not([data-tv])[data-theme='2'] .detail-hero {
+  html:not([data-tv]):root .detail-hero {
     padding-top: 68px;
   }
 }

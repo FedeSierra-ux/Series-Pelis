@@ -4479,10 +4479,11 @@ html[data-tv] .ob-body label.check input[type='checkbox']:checked::after {
 /* Tema 2 ("Sala oscura" + "Tonal" + "TV"): el único diseño (el Tema 1 se sacó en la v0.11). Las pantallas
    nuevas que usen las variables (--bg-2, --accent, --radius, --font-display…) heredan el tema solas. Se carga
    después de la base de arriba (la misma cascada de cuando eran dos archivos: styles.css y theme2.css).
-   Los selectores arrancan con `:root` y no con `[data-theme='2']` (v0.37): una pseudo-clase pesa lo mismo que un
-   atributo, así que cada regla sigue ganándole a la base y a los CSS de cada pantalla exactamente igual que antes.
-   Por eso el bloque de variables va con `:root:root` (antes `:root[data-theme='2']`, peso 0,2,0) y el de la TV con
-   `html[data-tv]:root`. Si algún día se quiere bajar el peso, hay que hacerlo regla por regla. */
+   Los selectores arrancan con `:root` y no con el atributo `data-theme` que tenía el <html> (v0.37 acá, v0.38 en los
+   CSS de pantallas; el atributo ya no existe): una pseudo-clase pesa lo mismo que un atributo, así que cada regla
+   sigue ganándole a la base y a los CSS de cada pantalla exactamente igual que antes.
+   Por eso el bloque de variables va con `:root:root` (peso 0,2,0) y el de la TV con `html[data-tv]:root`.
+   Si algún día se quiere bajar el peso, hay que hacerlo regla por regla. */
 
 :root:root {
   --bg: #0b0b10;
